@@ -63,10 +63,18 @@ CineFlow OS is a unified, multi-tenant SaaS platform engineered specifically for
 
 ---
 
-## 📂 System Documentation
+## 📂 System Documentation Suite
 
-Detailed technical architecture, database schemas, and implementation plans are available in:
-- [docs/ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md)
+Detailed technical architecture, database schemas, API contracts, design tokens, and user guides are organized in the [`docs/`](docs/) directory:
+
+- 📋 **[01. Product Requirements Specification (PRD)](docs/01_PRODUCT_REQUIREMENTS_SPECIFICATION.md)**: Personas, pain points, core feature matrix, and NFRs.
+- 📐 **[02. System Architecture & Data Flows](docs/02_SYSTEM_ARCHITECTURE_AND_DATA_FLOWS.md)**: High-level architecture, multi-tenant custom domain routing, and Mermaid sequence flows.
+- 🗄️ **[03. Database Schema & Data Models](docs/03_DATABASE_SCHEMA_AND_MODELS.md)**: Full Prisma ORM schema reference for all 18+ models and cascade relations.
+- ⚡ **[04. Server Actions & API Specification](docs/04_API_AND_SERVER_ACTIONS_SPECIFICATION.md)**: Next.js Server Actions with Zod schemas, atomic slot holds, and return types.
+- 🎨 **[05. Design System & UI Guidelines ("Nocturne Cine")](docs/05_DESIGN_SYSTEM_AND_UI_GUIDELINES.md)**: Visual standards, obsidian/amber tokens, and Emil Kowalski craft rules.
+- 📖 **[06. User Journey & Operations Manual](docs/06_USER_JOURNEY_AND_OPERATIONS_MANUAL.md)**: Operational guides for clients, studio producers, and platform super admins.
+- 🚀 **[07. Deployment & Configuration Guide](docs/07_DEPLOYMENT_AND_CONFIGURATION_GUIDE.md)**: Environment variables, local dev setup, PWA install, and custom domain DNS.
+- 🗺️ **[Detailed Architecture Plan](docs/ARCHITECTURE_PLAN.md)**: Implementation plan artifact and modular roadmap.
 
 ---
 
