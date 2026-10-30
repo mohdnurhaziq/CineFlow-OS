@@ -64,12 +64,21 @@ export function ShowcaseNav({ tenant, studioLead }: ShowcaseNavProps) {
         </div>
 
         {/* Action CTAs */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href={`/${tenant.slug}/visualizer`}
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-mono text-zinc-300 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+          >
+            <Aperture className="size-3.5 text-amber-400" />
+            <span>Wall Art</span>
+          </Link>
+
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-[0.98]"
+            aria-label={`Inquire with ${tenant.name} on WhatsApp`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <MessageSquare className="size-3.5 text-emerald-400" />
             <span className="hidden sm:inline">WhatsApp Dispatch</span>
@@ -78,7 +87,8 @@ export function ShowcaseNav({ tenant, studioLead }: ShowcaseNavProps) {
 
           <Link
             href={`/${tenant.slug}/book`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-black shadow-lg active:scale-[0.98] transition-all"
+            aria-label={`Book production session with ${tenant.name}`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-black shadow-lg active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
             style={{
               backgroundColor: brandColor,
               boxShadow: `0 4px 14px ${brandColor}30`,
