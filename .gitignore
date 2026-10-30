@@ -43,3 +43,9 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Agent working directories
+.agents/
+
+# Obsidian
+.obsidian/

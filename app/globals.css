@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Nocturne Cine - Force Cinema Dark as Canonical Default */
+    --background: 240 10% 3.9%;            /* #09090b - Obsidian Black */
+    --foreground: 0 0% 98%;                 /* #fafafa - Cinema White */
+
+    --card: 240 7% 7.8%;                    /* #121215 - Elevated Slate Surface */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 5.9% 10%;                /* #18181b - Modal & Drawer Surface */
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 38 92% 50%;                  /* #f59e0b - Brushed Amber Gold */
+    --primary-foreground: 0 0% 0%;          /* Pure Black on Amber for High Contrast */
+
+    --secondary: 240 5.9% 10%;              /* #18181b - Titanium Slate */
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 4% 16%;                    /* #27272a - Zinc 800 */
+    --muted-foreground: 240 5% 65%;         /* #a1a1aa - Zinc 400 (EXIF / Captions) */
+
+    --accent: 240 4% 16%;                   /* Surface hover highlight */
+    --accent-foreground: 38 92% 50%;        /* Amber text on hover */
+
+    --destructive: 0 84.2% 60.2%;           /* #ef4444 - Danger / Expired */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 4% 16%;                   /* #27272a / rgba(255,255,255,0.08) */
+    --input: 240 4% 16%;
+    --ring: 38 92% 50%;                     /* Amber Focus Ring */
+
+    --radius: 0.5rem;                       /* 8px Disciplined Corner Radius */
+
+    /* CineFlow OS Custom Semantic Tokens */
+    --cine-gold: #f59e0b;
+    --cine-gold-dark: #d97706;
+    --cine-obsidian: #09090b;
+    --cine-surface: #121215;
+    --cine-surface-elevated: #18181b;
+    --cine-border-subtle: rgba(255, 255, 255, 0.08);
+    --cine-border-strong: #27272a;
+    --cine-success: #10b981;
+    --cine-warning: #f59e0b;
+    --cine-danger: #ef4444;
+  }
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-cine-gold: var(--cine-gold);
+  --color-cine-gold-dark: var(--cine-gold-dark);
+  --color-cine-obsidian: var(--cine-obsidian);
+  --color-cine-surface: var(--cine-surface);
+  --color-cine-surface-elevated: var(--cine-surface-elevated);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Base Body Setup */
+body {
+  background-color: #09090b;
+  color: #fafafa;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Emil Kowalski Craft Utilities */
+.active-press {
+  transition: transform 100ms ease-out;
+}
+.active-press:active {
+  transform: scale(0.98);
+}
+
+.ease-spring {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

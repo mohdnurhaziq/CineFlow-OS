@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+    <rect width="200" height="60" rx="8" fill="#121215"/>
+    <circle cx="35" cy="30" r="14" stroke="#f59e0b" stroke-width="3"/>
+    <polygon points="32,23 42,30 32,37" fill="#f59e0b"/>
+    <text x="60" y="36" fill="#fafafa" font-family="sans-serif" font-weight="700" font-size="16" letter-spacing="1.5">LUMINA</text>
+    <text x="135" y="36" fill="#f59e0b" font-family="sans-serif" font-weight="400" font-size="14">CINE</text>
+  </svg>

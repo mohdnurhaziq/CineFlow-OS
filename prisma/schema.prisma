@@ -1,0 +1,554 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==============================================================================
+// 1. WORKSPACE & MULTI-TENANCY
+// ==============================================================================
+
+model Tenant {
+  id                 String              @id @default(cuid())
+  name               String
+  slug               String              @unique
+  customDomain       String?             @unique
+  discipline         String              @default("HYBRID") // PHOTOGRAPHY, VIDEOGRAPHY, HYBRID
+  tagline            String?
+  bio                String?
+  logoUrl            String?
+  brandColor         String?             @default("#f59e0b")
+  currency           String              @default("USD")
+  qrCodeUrl          String?             // Studio payment QR code image asset
+  bankDetails        String?             // Bank name, account number, account holder
+  subscriptionTier   String              @default("PRO") // STARTER, PRO, STUDIO_UNLIMITED
+  subscriptionStatus String              @default("ACTIVE") // ACTIVE, TRIALING, CANCELLED
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  users                  User[]
+  proposals              Proposal[]
+  proposalAddOnTemplates ProposalAddOnTemplate[]
+  invoices               MilestoneInvoice[]
+  projects               Project[]
+  inventoryItems         InventoryItem[]
+  kitBundles             KitBundle[]
+  frameDesigns           FrameDesign[]
+  printSizes             PrintSize[]
+  clientBookings         ClientBooking[]
+  bookingSlots           BookingSlot[]
+  servicePackages        ServicePackage[]
+  campaignCategories     CampaignCategory[]
+  showcaseItems          ShowcaseItem[]
+}
+
+model CampaignCategory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String   // e.g. "Convocation 2026", "Hari Raya Festive Special"
+  slug        String   // e.g. "convocation", "hari-raya"
+  badgeIcon   String?  // emoji or icon symbol e.g. "🎓", "🌙", "💍", "🎬"
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, isActive, sortOrder])
+}
+
+model ProposalAddOnTemplate {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String   // e.g. "Drone 4K Aerial Coverage", "RAW Footage SSD Drive"
+  description String
+  price       Float
+  unit        String   @default("fixed") // fixed, per_hour, per_day
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model BookingSlot {
+  id              String         @id @default(cuid())
+  tenantId        String
+  category        String         @default("STUDIO_PORTRAIT")
+  campaignTitle   String?
+  date            DateTime
+  startTime       String         // e.g. "10:00 AM"
+  endTime         String         // e.g. "11:00 AM"
+  status          String         @default("AVAILABLE") // AVAILABLE, HELD, PENDING_VERIFICATION, BOOKED, BLOCKED
+  heldUntil       DateTime?      // 10-minute hold expiration
+  heldBySessionId String?        // Client session holding slot
+  price           Float          @default(0.0)
+  depositRequired Float          @default(50.0)
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking         ClientBooking?
+
+  @@index([tenantId])
+  @@index([tenantId, date, status])
+  @@index([tenantId, category])
+  @@index([status, heldUntil])
+}
+
+model FrameDesign {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String   // e.g. "Matte Black Minimalist", "Warm Walnut Shadowbox"
+  material     String   // Wood, Aluminum, Acrylic
+  moldingWidth Float    // Border width in inches
+  frameColor   String   // Color code / finish
+  previewAsset String   // Texture / graphic preview URL
+  priceOffset  Float    @default(0.0)
+  isAvailable  Boolean  @default(true)
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, isAvailable])
+}
+
+model PrintSize {
+  id           String   @id @default(cuid())
+  tenantId     String
+  code         String   // e.g. "8R", "12R", "16R", "20R"
+  name         String   // e.g. "8R (8 x 10 in)"
+  widthInches  Float
+  heightInches Float
+  basePrice    Float
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ==============================================================================
+// 2. USERS & ROLES
+// ==============================================================================
+
+model User {
+  id                 String              @id @default(cuid())
+  tenantId           String?
+  name               String
+  email              String              @unique
+  phone              String?
+  role               String              @default("CLIENT") // SUPER_ADMIN, STUDIO_OWNER, PHOTOGRAPHER, VIDEOGRAPHER, CREW, CLIENT
+  passwordHash       String?
+  inviteToken        String?             @unique
+  inviteTokenExpires DateTime?
+  isQuickCreated     Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  tenant             Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientBookings     ClientBooking[]
+  clientProposals    Proposal[]          @relation("ClientProposals")
+  studioProposals    Proposal[]          @relation("StudioProposals")
+  clientProjects     Project[]           @relation("ClientProjects")
+  studioProjects     Project[]           @relation("StudioProjects")
+  invoices           MilestoneInvoice[]
+
+  @@index([tenantId])
+  @@index([role])
+}
+
+// ==============================================================================
+// 3. PROPOSALS, ADD-ONS & MILESTONE BILLING
+// ==============================================================================
+
+model Proposal {
+  id                   String              @id @default(cuid())
+  tenantId             String
+  proposalNumber       String              @unique
+  clientId             String
+  studioId             String
+  title                String
+  category             String              @default("COMMERCIAL")
+  discipline           String              // PHOTOGRAPHY, VIDEOGRAPHY, HYBRID
+  basePrice            Float
+  totalPrice           Float
+  depositPercentage    Float               @default(50.0)
+  depositAmount        Float
+  finalBalanceAmount   Float
+  status               String              @default("SENT") // DRAFT, SENT, ACCEPTED, DECLINED
+  contractTerms        String
+  clientSignature      String?
+  signedAt             DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client               User                @relation("ClientProposals", fields: [clientId], references: [id])
+  studio               User                @relation("StudioProposals", fields: [studioId], references: [id])
+  addOns               ProposalAddOn[]
+  invoices             MilestoneInvoice[]
+  project              Project?
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([studioId])
+  @@index([tenantId, status])
+}
+
+model ProposalAddOn {
+  id          String   @id @default(cuid())
+  proposalId  String
+  name        String
+  description String
+  price       Float
+  unit        String   @default("fixed") // fixed, per_hour, per_day
+  quantity    Int      @default(1)
+  isSelected  Boolean  @default(false)
+
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+}
+
+model MilestoneInvoice {
+  id               String    @id @default(cuid())
+  tenantId         String
+  invoiceNumber    String    @unique
+  proposalId       String?
+  projectId        String?
+  clientId         String
+  milestoneType    String    // RETAINER_50, FINAL_BALANCE_50, PRINT_FRAME_ORDER, BOOKING_DEPOSIT
+  amount           Float
+  status           String    @default("PENDING") // PENDING, PENDING_VERIFICATION, PAID, OVERDUE
+  paymentMethod    String?   // CARD, QR_CODE, CASH, BANK_TRANSFER
+  paymentProofUrl  String?
+  paymentReference String?
+  verifiedBy       String?
+  dueDate          DateTime
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  proposal         Proposal? @relation(fields: [proposalId], references: [id])
+  project          Project?  @relation(fields: [projectId], references: [id])
+  client           User      @relation(fields: [clientId], references: [id])
+
+  @@index([tenantId])
+  @@index([proposalId])
+  @@index([projectId])
+  @@index([clientId])
+  @@index([tenantId, status])
+  @@index([tenantId, milestoneType])
+}
+
+// ==============================================================================
+// 4. PRODUCTION OPERATIONS & LOGISTICS
+// ==============================================================================
+
+model Project {
+  id                 String              @id @default(cuid())
+  tenantId           String
+  projectNumber      String              @unique
+  title              String
+  category           String              @default("STUDIO_PORTRAIT")
+  clientId           String
+  studioLeadId       String
+  discipline         String              // PHOTOGRAPHY, VIDEOGRAPHY, HYBRID
+  proposalId         String?             @unique
+  status             String              @default("PRE_PRODUCTION") // PRE_PRODUCTION, PRODUCTION, POST_PRODUCTION, IN_REVIEW, DELIVERED
+  shootDates         String?
+  budget             Float
+  isFinalBalancePaid Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client             User                @relation("ClientProjects", fields: [clientId], references: [id])
+  studioLead         User                @relation("StudioProjects", fields: [studioLeadId], references: [id])
+  proposal           Proposal?           @relation(fields: [proposalId], references: [id])
+  callSheets         CallSheet[]
+  shotItems          ShotItem[]
+  digitalReleases    DigitalRelease[]
+  deliverables       ClientDeliverable[]
+  invoices           MilestoneInvoice[]
+  reservations       EquipmentReservation[]
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([studioLeadId])
+  @@index([tenantId, status])
+}
+
+model CallSheet {
+  id                 String   @id @default(cuid())
+  projectId          String
+  title              String
+  shootDate          DateTime
+  generalCallTime    String   // e.g. "07:30 AM"
+  locationName       String
+  locationAddress    String
+  locationPinUrl     String?
+  parkingNotes       String?
+  hospitalName       String?
+  hospitalAddress    String?
+  weatherSummary     String?
+  temperature        String?
+  sunriseTime        String?
+  sunsetTime         String?
+  goldenHourMorning  String?
+  goldenHourEvening  String?
+  notes              String?
+  crewJson           String?  // JSON string array of crew roster & individual call times
+  createdAt          DateTime @default(now())
+
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, shootDate])
+}
+
+model ShotItem {
+  id                String   @id @default(cuid())
+  projectId         String
+  sceneNumber       String
+  shotNumber        String
+  framing           String
+  cameraLens        String
+  lightingSetup     String
+  referenceImageUrl String?
+  description       String
+  status            String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, sortOrder])
+  @@index([projectId, status])
+}
+
+model DigitalRelease {
+  id               String   @id @default(cuid())
+  projectId        String
+  releaseType      String   // TALENT, LOCATION
+  signerName       String
+  signerEmail      String
+  signerPhone      String?
+  signerRole       String?
+  termsContent     String
+  signatureDataUrl String   // Base64 encoded signature image
+  signedAt         DateTime @default(now())
+  notes            String?
+
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, releaseType])
+}
+
+// ==============================================================================
+// 5. CLIENT DELIVERABLES VAULT
+// ==============================================================================
+
+model ClientDeliverable {
+  id             String            @id @default(cuid())
+  projectId      String
+  title          String
+  discipline     String
+  versionTag     String            @default("v1.0")
+  status         String            @default("READY")
+  createdAt      DateTime          @default(now())
+
+  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items          DeliverableItem[]
+
+  @@index([projectId])
+}
+
+model DeliverableItem {
+  id             String            @id @default(cuid())
+  deliverableId  String
+  itemType       String            // PHOTO, VIDEO
+  title          String
+  previewUrl     String            // Watermarked preview or streaming link
+  downloadUrl    String            // Unlocked high-res master download URL
+  thumbnailUrl   String?
+  resolution     String?
+  duration       String?
+  fileSize       String?
+  isClientFav    Boolean           @default(false)
+  clientNotes    String?
+
+  deliverable    ClientDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  @@index([deliverableId])
+  @@index([deliverableId, isClientFav])
+}
+
+// ==============================================================================
+// 6. EQUIPMENT INVENTORY & KIT BUNDLES (BOM)
+// ==============================================================================
+
+model InventoryItem {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  sku          String   @unique
+  serialNumber String?
+  discipline   String   @default("UNIVERSAL") // PHOTOGRAPHY, VIDEOGRAPHY, UNIVERSAL
+  category     String   // Cameras, Lenses, Lighting, Audio, Support
+  condition    String   @default("EXCELLENT") // EXCELLENT, GOOD, MAINTENANCE_NEEDED, DAMAGED
+  status       String   @default("AVAILABLE") // AVAILABLE, ON_SHOOT, RESERVED, MAINTENANCE
+  dailyRate    Float?
+  location     String?
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kitBundleItems KitBundleItem[]
+  reservations   EquipmentReservation[]
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, status])
+}
+
+model KitBundle {
+  id          String          @id @default(cuid())
+  tenantId    String
+  name        String
+  description String
+  discipline  String          // PHOTOGRAPHY, VIDEOGRAPHY, HYBRID
+  dailyRate   Float?
+
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items       KitBundleItem[]
+
+  @@index([tenantId])
+}
+
+model KitBundleItem {
+  id          String        @id @default(cuid())
+  bundleId    String
+  itemId      String
+  quantity    Int           @default(1)
+
+  bundle      KitBundle     @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, itemId])
+  @@index([bundleId])
+  @@index([itemId])
+}
+
+model EquipmentReservation {
+  id           String        @id @default(cuid())
+  projectId    String
+  itemId       String
+  startDate    DateTime
+  endDate      DateTime
+  status       String        @default("RESERVED") // RESERVED, CHECKED_OUT, RETURNED
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  item         InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  inspection   InspectionLog?
+
+  @@index([projectId])
+  @@index([itemId])
+  @@index([itemId, startDate, endDate])
+}
+
+model InspectionLog {
+  id                String               @id @default(cuid())
+  reservationId     String               @unique
+  inspectorName     String
+  checkoutCondition String
+  checkinCondition  String?
+  notes             String?
+  createdAt         DateTime             @default(now())
+
+  reservation       EquipmentReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
+
+// ==============================================================================
+// 7. INBOUND CLIENT BOOKINGS & SHOWCASE CMS
+// ==============================================================================
+
+model ClientBooking {
+  id             String       @id @default(cuid())
+  tenantId       String
+  trackingCode   String       @unique
+  category       String       @default("STUDIO_PORTRAIT")
+  clientName     String
+  clientEmail    String
+  clientPhone    String
+  discipline     String
+  serviceTier    String
+  targetDate     String?
+  creativeBrief  String?
+  status         String       @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  depositPaid    Boolean      @default(false)
+  depositAmount  Float        @default(0.0)
+  paymentMethod  String?      // CARD, QR_CODE, CASH
+  slotId         String?      @unique
+  userId         String?
+  createdAt      DateTime     @default(now())
+
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slot           BookingSlot? @relation(fields: [slotId], references: [id])
+  user           User?        @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([slotId])
+  @@index([tenantId, status])
+}
+
+model ServicePackage {
+  id           String         @id @default(cuid())
+  tenantId     String
+  category     String         @default("STUDIO_PORTRAIT")
+  name         String
+  discipline   String
+  price        Float
+  depositPrice Float          @default(50.0)
+  description  String
+  deliverables String
+  turnaround   String
+  isFeatured   Boolean        @default(false)
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  showcases    ShowcaseItem[]
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, isFeatured])
+}
+
+model ShowcaseItem {
+  id               String          @id @default(cuid())
+  tenantId         String
+  category         String          @default("STUDIO_PORTRAIT")
+  title            String
+  clientName       String
+  discipline       String
+  coverImageUrl    String
+  videoEmbedUrl    String?
+  galleryImages    String?         // JSON string array of preview image URLs
+  servicePackageId String?
+  isFeatured       Boolean         @default(true)
+  sortOrder        Int             @default(0)
+
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  servicePackage   ServicePackage? @relation(fields: [servicePackageId], references: [id])
+
+  @@index([tenantId])
+  @@index([servicePackageId])
+  @@index([tenantId, category, sortOrder])
+  @@index([tenantId, isFeatured])
+}
