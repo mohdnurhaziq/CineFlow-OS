@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  LayoutDashboard,
   Shield,
   Package,
   Calendar,
@@ -22,6 +23,12 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
   const pathname = usePathname();
 
   const navItems = [
+    {
+      href: `/${tenantSlug}/admin`,
+      label: "Overview",
+      icon: LayoutDashboard,
+      exact: true,
+    },
     {
       href: `/${tenantSlug}/admin/verification`,
       label: "Verification",
@@ -69,7 +76,7 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
     <nav className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-1 scrollbar-none">
       {navItems.map((item) => {
         const Icon = item.icon;
-        const isActive = pathname.startsWith(item.href);
+        const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
 
         return (
           <Link

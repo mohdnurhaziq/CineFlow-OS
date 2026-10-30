@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { sendNotification } from "@/lib/notifications";
 import {
   ProcessBookingCheckoutSchema,
   type ProcessBookingCheckoutInput,
@@ -149,6 +150,24 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
 
     safeRevalidate(`/${tenantSlug}/book`);
     safeRevalidate(`/${tenantSlug}/admin/verification`);
+
+    // Dispatch automated booking confirmation notification
+    if (clientEmail) {
+      sendNotification({
+        event: "BOOKING_CONFIRMED",
+        studioName: tenantSlug,
+        studioSlug: tenantSlug,
+        clientName,
+        clientEmail,
+        clientPhone: clientPhone || undefined,
+        packageName: "Studio Production Session",
+        slotDate: slot.date ? new Date(slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        depositAmount: slot.depositRequired,
+        currency: "USD",
+      }).catch((e) => console.error("Notification dispatch failed:", e));
+    }
 
     return {
       success: true,

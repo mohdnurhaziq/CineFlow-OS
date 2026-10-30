@@ -17,14 +17,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
-    select: { name: true, tagline: true, bio: true },
+    select: { name: true, tagline: true, bio: true, logoUrl: true },
   });
 
   if (!tenant) return { title: "Studio Not Found | CineFlow OS" };
 
+  const title = `${tenant.name} — ${tenant.tagline || "Creative Production Studio"}`;
+  const description =
+    tenant.bio ||
+    `Explore portfolio, campaign categories, and booking sessions for ${tenant.name}.`;
+
   return {
-    title: `${tenant.name} — ${tenant.tagline || "Creative Production Studio"}`,
-    description: tenant.bio || `Explore portfolio, campaign categories, and booking sessions for ${tenant.name}.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: tenant.logoUrl ? [{ url: tenant.logoUrl }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -106,8 +122,22 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
     select: { name: true, phone: true, email: true },
   });
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    name: tenant.name,
+    description: tenant.bio || tenant.tagline,
+    url: `/${tenant.slug}`,
+    image: tenant.logoUrl,
+    priceRange: "$$$",
+  };
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Studio Navigation Bar */}
       <ShowcaseNav tenant={tenant} studioLead={studioLead} />
 

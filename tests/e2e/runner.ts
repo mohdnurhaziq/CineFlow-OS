@@ -21,6 +21,7 @@ import { runTier2BoundaryTests } from "./tier2-boundary-corner-cases.test";
 import { runTier3CrossFeatureTests } from "./tier3-cross-feature-combinations.test";
 import { runTier4RealWorldScenariosTests } from "./tier4-real-world-scenarios.test";
 import { runTier5AdversarialHardeningTests } from "./tier5-adversarial-hardening.test";
+import { runTier6ProductionHardeningTests } from "./tier6-production-hardening.test";
 
 async function runMasterTestSuite() {
   const harness = new TestHarness("CineFlow OS", "Master E2E Verification Suite");
@@ -28,7 +29,7 @@ async function runMasterTestSuite() {
 
   console.log("================================================================================");
   console.log("   CINEFLOW OS — MASTER END-TO-END INTEGRATION & VERIFICATION RUNNER");
-  console.log("   Executing Tiers 1 through 5 (Comprehensive Feature Coverage & Hardening)");
+  console.log("   Executing Tiers 1 through 6 (Comprehensive Feature Coverage & Hardening)");
   console.log("================================================================================");
 
   try {
@@ -60,6 +61,11 @@ async function runMasterTestSuite() {
     // Tier 5: Adversarial Hardening & Stress Penetration Suites
     // --------------------------------------------------------------------------
     await runTier5AdversarialHardeningTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 6: Production Hardening, Operational Intelligence & Multi-Channel Comms
+    // --------------------------------------------------------------------------
+    await runTier6ProductionHardeningTests(harness);
   } catch (err: any) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {

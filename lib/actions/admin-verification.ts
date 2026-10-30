@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { sendNotification } from "@/lib/notifications";
 
 function safeRevalidate(path: string) {
   try {
@@ -106,6 +107,37 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
       safeRevalidate(`/${tenantSlug}/vault/${invoice.projectId}`);
     }
 
+    // Dispatch automated transactional notifications
+    if (invoice.client?.email) {
+      sendNotification({
+        event: "PAYMENT_APPROVED",
+        studioName: tenantSlug,
+        studioSlug: tenantSlug,
+        clientName: invoice.client.name,
+        clientEmail: invoice.client.email,
+        clientPhone: invoice.client.phone || undefined,
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.amount,
+        currency: "USD",
+        milestoneType: invoice.milestoneType,
+        projectTitle: invoice.project?.title || "Production Project",
+        projectId: invoice.projectId || undefined,
+      }).catch((e) => console.error("Notification dispatch failed:", e));
+
+      if (unlockedDownloads && invoice.projectId) {
+        sendNotification({
+          event: "VAULT_UNLOCKED",
+          studioName: tenantSlug,
+          studioSlug: tenantSlug,
+          clientName: invoice.client.name,
+          clientEmail: invoice.client.email,
+          clientPhone: invoice.client.phone || undefined,
+          projectTitle: invoice.project?.title || "Production Project",
+          vaultUrl: `/${tenantSlug}/vault/${invoice.projectId}`,
+        }).catch((e) => console.error("Notification dispatch failed:", e));
+      }
+    }
+
     return {
       success: true,
       invoiceNumber: invoice.invoiceNumber,
@@ -140,6 +172,7 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
     // Multi-tenant check
     const invoice = await db.milestoneInvoice.findFirst({
       where: { id: invoiceId, tenantId },
+      include: { client: true },
     });
 
     if (!invoice) {
@@ -218,6 +251,23 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
 
     safeRevalidate(`/${tenantSlug}/admin/verification`);
     safeRevalidate(`/${tenantSlug}/book`);
+
+    // Dispatch rejection notification
+    if (invoice.client?.email) {
+      sendNotification({
+        event: "PAYMENT_REJECTED",
+        studioName: tenantSlug,
+        studioSlug: tenantSlug,
+        clientName: invoice.client.name,
+        clientEmail: invoice.client.email,
+        clientPhone: invoice.client.phone || undefined,
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.amount,
+        currency: "USD",
+        reason,
+        reuploadUrl: `/${tenantSlug}/checkout?invoice=${invoice.id}`,
+      }).catch((e) => console.error("Notification dispatch failed:", e));
+    }
 
     return {
       success: true,

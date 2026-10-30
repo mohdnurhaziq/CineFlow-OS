@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { sendNotification } from "@/lib/notifications";
 import {
   SignProposalSchema,
   type SignProposalInput,
@@ -61,6 +62,7 @@ export async function acceptProposal(input: SignProposalInput) {
       where: { id: proposalId },
       include: {
         tenant: true,
+        client: true,
         addOns: true,
         project: true,
         invoices: true,
@@ -239,6 +241,23 @@ export async function acceptProposal(input: SignProposalInput) {
 
     safeRevalidate(`/${tenantSlug}/proposals/${proposal.id}`);
     safeRevalidate(`/${tenantSlug}/proposals/${proposal.proposalNumber}`);
+
+    // Dispatch automated signed proposal notification
+    if (proposal.client?.email) {
+      sendNotification({
+        event: "PROPOSAL_SIGNED",
+        studioName: proposal.tenant.name,
+        studioSlug: tenantSlug,
+        clientName: proposal.client.name,
+        clientEmail: proposal.client.email,
+        clientPhone: proposal.client.phone || undefined,
+        proposalNumber: proposal.proposalNumber,
+        projectTitle: result.project.title,
+        totalPrice,
+        depositRequired: depositAmount,
+        currency: proposal.tenant.currency || "USD",
+      }).catch((e) => console.error("Notification dispatch failed:", e));
+    }
 
     return {
       success: true,
