@@ -3,6 +3,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { Film, ArrowLeft } from "lucide-react";
 import { AdminNavBar } from "@/components/admin/admin-nav-bar";
+import { AdminUserNav } from "@/components/admin/admin-user-nav";
+import { getCurrentUser } from "@/lib/auth/session";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -12,16 +14,19 @@ interface AdminLayoutProps {
 export default async function AdminLayout({ children, params }: AdminLayoutProps) {
   const { tenantSlug } = await params;
 
-  const tenant = await db.tenant.findUnique({
-    where: { slug: tenantSlug },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      brandColor: true,
-      discipline: true,
-    },
-  });
+  const [tenant, currentUser] = await Promise.all([
+    db.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        brandColor: true,
+        discipline: true,
+      },
+    }),
+    getCurrentUser(),
+  ]);
 
   if (!tenant) notFound();
 
@@ -64,14 +69,18 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
               </span>
             </div>
 
-            {/* Public Showcase Quick Link */}
-            <Link
-              href={`/${tenant.slug}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-colors"
-            >
-              <ArrowLeft className="size-3.5 text-amber-400" />
-              <span>Public Showcase</span>
-            </Link>
+            {/* Right Header Actions: User Profile & Public Showcase */}
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/${tenant.slug}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-colors"
+              >
+                <ArrowLeft className="size-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Public Showcase</span>
+              </Link>
+              <div className="h-4 w-px bg-zinc-800" />
+              <AdminUserNav tenantSlug={tenant.slug} user={currentUser} />
+            </div>
           </div>
 
           {/* Administrative Domain Navigation Tabs */}

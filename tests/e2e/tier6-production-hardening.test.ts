@@ -10,6 +10,11 @@ import {
   sendNotification,
   getNotificationHistory,
 } from "../../lib/notifications";
+import {
+  createSessionToken,
+  verifySessionToken,
+  loginWithCredentials,
+} from "../../lib/auth/session";
 import sitemap from "../../app/sitemap";
 import robots from "../../app/robots";
 
@@ -218,5 +223,74 @@ export async function runTier6ProductionHardeningTests(harness: TestHarness) {
         "API routes disallowed"
       );
     }
+  });
+
+  // ============================================================================
+  // Suite 6.4: Cryptographic Session Authentication & Role Authorization
+  // ============================================================================
+  await harness.test("T6-F04-01: Cryptographic HMAC session tokens sign and verify accurately", async () => {
+    const user = {
+      id: "usr_lumina_owner",
+      email: "alex@luminacine.com",
+      name: "Alex Vance",
+      role: "STUDIO_OWNER",
+      tenantId: "tenant_lumina",
+      tenantSlug: "lumina-cine",
+    };
+
+    const token = await createSessionToken(user);
+    harness.assert(typeof token === "string", "Token is a string");
+    harness.assert(token.includes("."), "Token contains dot separator for signature");
+
+    const verified = await verifySessionToken(token);
+    harness.assert(verified !== null, "Valid token verifies successfully");
+    harness.assertEqual(verified?.email, "alex@luminacine.com", "Decoded email matches");
+    harness.assertEqual(verified?.role, "STUDIO_OWNER", "Decoded role matches");
+    harness.assertEqual(verified?.tenantSlug, "lumina-cine", "Decoded tenant slug matches");
+  });
+
+  await harness.test("T6-F04-02: Cryptographic token verifier strictly rejects forged or tampered signatures", async () => {
+    const user = {
+      id: "usr_lumina_owner",
+      email: "alex@luminacine.com",
+      name: "Alex Vance",
+      role: "STUDIO_OWNER",
+      tenantId: "tenant_lumina",
+      tenantSlug: "lumina-cine",
+    };
+
+    const token = await createSessionToken(user);
+    const [payloadBase64] = token.split(".");
+
+    // Attempt 1: Forged signature
+    const forgedToken = `${payloadBase64}.forged_tampered_signature_xyz123`;
+    const forgedResult = await verifySessionToken(forgedToken);
+    harness.assertEqual(forgedResult, null, "Forged signature rejected");
+
+    // Attempt 2: Malformed token
+    const malformedResult = await verifySessionToken("malformed_single_part_string");
+    harness.assertEqual(malformedResult, null, "Malformed token rejected");
+  });
+
+  await harness.test("T6-F04-03: loginWithCredentials validates bcrypt hash and enforces tenant scoping", async () => {
+    // 1. Valid Studio Owner login
+    const validLogin = await loginWithCredentials("alex@luminacine.com", "password123", "lumina-cine");
+    harness.assert(validLogin.success, "Valid owner login succeeds");
+    harness.assertEqual(validLogin.user?.role, "STUDIO_OWNER", "User has STUDIO_OWNER role");
+
+    // 2. Invalid password
+    const invalidPassword = await loginWithCredentials("alex@luminacine.com", "wrongpassword", "lumina-cine");
+    harness.assert(!invalidPassword.success, "Invalid password rejected");
+    harness.assertEqual(invalidPassword.error, "INVALID_CREDENTIALS", "Error is INVALID_CREDENTIALS");
+
+    // 3. Tenant mismatch (Lumina user trying to log into Apex Media)
+    const tenantMismatch = await loginWithCredentials("alex@luminacine.com", "password123", "apex-media");
+    harness.assert(!tenantMismatch.success, "Cross-tenant login rejected");
+    harness.assertEqual(tenantMismatch.error, "TENANT_MISMATCH", "Error is TENANT_MISMATCH");
+
+    // 4. Super Admin can access any tenant
+    const superAdminLogin = await loginWithCredentials("superadmin@cineflow.app", "password123", "lumina-cine");
+    harness.assert(superAdminLogin.success, "Super Admin can authenticate into tenant");
+    harness.assertEqual(superAdminLogin.user?.role, "SUPER_ADMIN", "Super Admin role preserved");
   });
 }
