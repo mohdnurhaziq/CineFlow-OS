@@ -6,7 +6,27 @@ const CUSTOM_DOMAIN_MAP: Record<string, string> = {
   "studio.apexfilms.com": "apex-media",
 };
 
-// Known platform hosts
+// ─── Auth helpers (Edge-compatible, no Node.js APIs) ────────────────────────
+const COOKIE_NAME = "cineflow_session";
+const ADMIN_PATTERN = /^\/([^/]+)\/admin(\/|$)/;
+const LOGIN_PATTERN = /^\/([^/]+)\/login(\/|$)/;
+
+/**
+ * Lightweight session check in Edge runtime.
+ * We only verify the cookie EXISTS and is structurally valid (two dot-separated
+ * base64url parts). Full HMAC verification happens in server components via
+ * `getCurrentUser()` — re-doing HMAC here would require the secret in Edge
+ * memory, which is acceptable, but a structural pre-check is sufficient to
+ * prevent unauthenticated page renders from reaching DB-heavy layout code.
+ */
+function hasValidSessionCookie(request: NextRequest): boolean {
+  const cookie = request.cookies.get(COOKIE_NAME);
+  if (!cookie?.value) return false;
+  const parts = cookie.value.split(".");
+  return parts.length === 2 && (parts[0]?.length ?? 0) > 0 && (parts[1]?.length ?? 0) > 0;
+}
+
+// Known platform hosts — cannot include DB-dependent logic (Edge runtime)
 const PLATFORM_HOSTS = new Set([
   "localhost",
   "127.0.0.1",
@@ -29,6 +49,18 @@ export function middleware(request: NextRequest) {
     pathname.includes(".")
   ) {
     return NextResponse.next();
+  }
+
+  // 2. Admin Route Guard — protect /[tenantSlug]/admin/* from unauthenticated access
+  const adminMatch = ADMIN_PATTERN.exec(pathname);
+  if (adminMatch) {
+    if (!hasValidSessionCookie(request)) {
+      const tenantSlug = adminMatch[1];
+      const loginUrl = new URL(`/${tenantSlug}/login`, request.url);
+      // Preserve the intended destination so the login form can redirect back
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   // 2. Extract Host Header
