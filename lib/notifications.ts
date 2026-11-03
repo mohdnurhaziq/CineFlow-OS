@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CineFlow OS Multi-Channel Transactional Notification Engine
  * Supports Responsive HTML Email and WhatsApp Dispatch
  */
@@ -100,10 +100,65 @@ export interface NotificationResult {
   whatsappUrl?: string;
   timestamp: string;
   success: boolean;
+  /** SENT: accepted by Resend. SKIPPED: no email requested or no RESEND_API_KEY. FAILED: provider/network error. */
+  emailDelivery: "SENT" | "SKIPPED" | "FAILED";
+  emailError?: string;
 }
 
 // In-memory audit trail for notifications
 const notificationLog: NotificationResult[] = [];
+
+/** Escapes untrusted text (client names, reviewer notes, ...) for safe use inside email HTML. */
+function esc(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const RESEND_TIMEOUT_MS = 8000;
+
+/**
+ * Sends one email through Resend's REST API. Never throws: the booking, payment
+ * and proposal flows that trigger notifications must not fail because mail did.
+ */
+async function deliverEmail(input: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<{ delivery: "SENT" | "SKIPPED" | "FAILED"; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return { delivery: "SKIPPED" };
+
+  try {
+    const res = await fetch(RESEND_ENDPOINT, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL?.trim() || "CineFlow OS <onboarding@resend.dev>",
+        to: [input.to],
+        // Strip line breaks so a hostile name can never inject extra header lines.
+        subject: input.subject.replace(/[\r\n]+/g, " ").trim(),
+        html: input.html,
+        text: input.text,
+      }),
+      signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => "")).slice(0, 300);
+      console.error(`Resend rejected email (${res.status}): ${detail}`);
+      return { delivery: "FAILED", error: `Resend responded ${res.status}` };
+    }
+    return { delivery: "SENT" };
+  } catch (err: any) {
+    console.error("Resend request failed:", err?.message || err);
+    return { delivery: "FAILED", error: err?.name === "TimeoutError" ? "Resend request timed out" : "Resend request failed" };
+  }
+}
 
 /**
  * Generates an email wrapped in the Nocturne Cine dark HTML layout.
@@ -114,7 +169,7 @@ function wrapEmailTemplate(studioName: string, title: string, bodyContent: strin
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${esc(title)}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #09090b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #fafafa;">
   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #09090b; padding: 40px 20px;">
@@ -128,7 +183,7 @@ function wrapEmailTemplate(studioName: string, title: string, bodyContent: strin
                 <tr>
                   <td>
                     <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; background-color: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; font-size: 11px; font-weight: bold; letter-spacing: 1px; font-family: monospace; text-transform: uppercase;">
-                      ${studioName}
+                      ${esc(studioName)}
                     </span>
                   </td>
                   <td align="right">
@@ -137,7 +192,7 @@ function wrapEmailTemplate(studioName: string, title: string, bodyContent: strin
                 </tr>
               </table>
               <h1 style="margin: 16px 0 0 0; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
-                ${title}
+                ${esc(title)}
               </h1>
             </td>
           </tr>
@@ -152,7 +207,7 @@ function wrapEmailTemplate(studioName: string, title: string, bodyContent: strin
           <!-- Footer -->
           <tr>
             <td style="padding: 24px 32px; border-top: 1px solid #27272a; background-color: #0d0d10; font-size: 12px; color: #71717a; text-align: center;">
-              <p style="margin: 0 0 6px 0;">This transmission was dispatched securely via <strong>${studioName}</strong> powered by CineFlow OS.</p>
+              <p style="margin: 0 0 6px 0;">This transmission was dispatched securely via <strong>${esc(studioName)}</strong> powered by CineFlow OS.</p>
               <p style="margin: 0; font-size: 11px; color: #52525b;">Automated transactional notice • No reply required</p>
             </td>
           </tr>
@@ -186,14 +241,14 @@ export async function sendNotification(
     case "BOOKING_CONFIRMED": {
       emailSubject = `Confirmed: Production Session with ${payload.studioName}`;
       bodyHtml = `
-        <p>Hi <strong>${payload.clientName}</strong>,</p>
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
         <p>Your studio production booking has been locked into our schedule.</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
-            <tr><td style="color: #71717a; padding: 4px 0;">Package:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${payload.packageName}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Date:</td><td style="color: #ffffff; text-align: right;">${payload.slotDate}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Time Window:</td><td style="color: #ffffff; text-align: right;">${payload.startTime} - ${payload.endTime}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Deposit Paid:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${payload.currency} ${payload.depositAmount.toFixed(2)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Package:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.packageName)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Date:</td><td style="color: #ffffff; text-align: right;">${esc(payload.slotDate)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Time Window:</td><td style="color: #ffffff; text-align: right;">${esc(payload.startTime)} - ${esc(payload.endTime)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Deposit Paid:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositAmount.toFixed(2))}</td></tr>
           </table>
         </div>
         <p>Our production team will contact you with call times, wardrobe guidelines, and location ephemeris.</p>
@@ -206,14 +261,14 @@ export async function sendNotification(
     case "PAYMENT_APPROVED": {
       emailSubject = `Payment Verified: Invoice #${payload.invoiceNumber} (${payload.currency} ${payload.amount.toFixed(2)})`;
       bodyHtml = `
-        <p>Hi <strong>${payload.clientName}</strong>,</p>
-        <p>Your recent payment proof for invoice <strong>${payload.invoiceNumber}</strong> has been audited and verified by our accounting team.</p>
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>Your recent payment proof for invoice <strong>${esc(payload.invoiceNumber)}</strong> has been audited and verified by our accounting team.</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
-            <tr><td style="color: #71717a; padding: 4px 0;">Invoice #:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${payload.invoiceNumber}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Project:</td><td style="color: #ffffff; text-align: right;">${payload.projectTitle}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Milestone:</td><td style="color: #ffffff; text-align: right;">${payload.milestoneType.replace(/_/g, " ")}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Amount Settled:</td><td style="color: #10b981; font-weight: bold; text-align: right;">${payload.currency} ${payload.amount.toFixed(2)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Invoice #:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.invoiceNumber)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Project:</td><td style="color: #ffffff; text-align: right;">${esc(payload.projectTitle)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Milestone:</td><td style="color: #ffffff; text-align: right;">${esc(payload.milestoneType.replace(/_/g, " "))}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Amount Settled:</td><td style="color: #10b981; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.amount.toFixed(2))}</td></tr>
           </table>
         </div>
         <p style="color: #10b981; font-weight: bold;">Status: 100% PAID & VERIFIED</p>
@@ -226,10 +281,10 @@ export async function sendNotification(
     case "PAYMENT_REJECTED": {
       emailSubject = `Action Required: Payment Verification for #${payload.invoiceNumber}`;
       bodyHtml = `
-        <p>Hi <strong>${payload.clientName}</strong>,</p>
-        <p>We encountered an issue verifying your payment submission for Invoice <strong>${payload.invoiceNumber}</strong>.</p>
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>We encountered an issue verifying your payment submission for Invoice <strong>${esc(payload.invoiceNumber)}</strong>.</p>
         <div style="background-color: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 8px; padding: 16px; margin: 20px 0; color: #fb7185;">
-          <strong>Reviewer Note:</strong> ${payload.reason}
+          <strong>Reviewer Note:</strong> ${esc(payload.reason)}
         </div>
         <p>Please submit an updated transaction receipt or payment slip to finalize verification.</p>
       `;
@@ -241,13 +296,13 @@ export async function sendNotification(
     case "PROPOSAL_SIGNED": {
       emailSubject = `Proposal Signed & Executed: ${payload.projectTitle}`;
       bodyHtml = `
-        <p>Hi <strong>${payload.clientName}</strong>,</p>
-        <p>Thank you for countersigning Proposal <strong>${payload.proposalNumber}</strong> for <strong>${payload.projectTitle}</strong>.</p>
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>Thank you for countersigning Proposal <strong>${esc(payload.proposalNumber)}</strong> for <strong>${esc(payload.projectTitle)}</strong>.</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
-            <tr><td style="color: #71717a; padding: 4px 0;">Proposal Ref:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${payload.proposalNumber}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Total Production:</td><td style="color: #ffffff; text-align: right;">${payload.currency} ${payload.totalPrice.toFixed(2)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">50% Retainer Due:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${payload.currency} ${payload.depositRequired.toFixed(2)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Proposal Ref:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.proposalNumber)}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Total Production:</td><td style="color: #ffffff; text-align: right;">${esc(payload.currency)} ${esc(payload.totalPrice.toFixed(2))}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">50% Retainer Due:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositRequired.toFixed(2))}</td></tr>
           </table>
         </div>
         <p>Our production team has moved the project into Pre-Production.</p>
@@ -260,11 +315,11 @@ export async function sendNotification(
     case "VAULT_UNLOCKED": {
       emailSubject = `Masters Ready: ${payload.projectTitle} Delivery Vault Unlocked`;
       bodyHtml = `
-        <p>Hi <strong>${payload.clientName}</strong>,</p>
-        <p>The final balance for <strong>${payload.projectTitle}</strong> has been cleared. The 50% milestone paywall is officially removed!</p>
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>The final balance for <strong>${esc(payload.projectTitle)}</strong> has been cleared. The 50% milestone paywall is officially removed!</p>
         <p>Your high-resolution master photographs, cinema video reels, and print-ready assets are available for uncompressed PKZIP download.</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${payload.vaultUrl}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+          <a href="${esc(payload.vaultUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
             Open Delivery Vault & Download Masters
           </a>
         </div>
@@ -283,6 +338,12 @@ export async function sendNotification(
     whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappText)}`;
   }
 
+  const wantsEmail = channel === "EMAIL" || channel === "BOTH";
+  const delivery =
+    wantsEmail && recipientEmail
+      ? await deliverEmail({ to: recipientEmail, subject: emailSubject, html: emailHtml, text: emailText })
+      : { delivery: "SKIPPED" as const };
+
   const result: NotificationResult = {
     id,
     event: payload.event,
@@ -294,7 +355,9 @@ export async function sendNotification(
     whatsappMessage: whatsappText,
     whatsappUrl,
     timestamp,
-    success: true,
+    success: delivery.delivery !== "FAILED",
+    emailDelivery: delivery.delivery,
+    emailError: delivery.error,
   };
 
   notificationLog.push(result);

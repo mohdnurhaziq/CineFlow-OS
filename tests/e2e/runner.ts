@@ -23,6 +23,10 @@ import { runTier4RealWorldScenariosTests } from "./tier4-real-world-scenarios.te
 import { runTier5AdversarialHardeningTests } from "./tier5-adversarial-hardening.test";
 import { runTier6ProductionHardeningTests } from "./tier6-production-hardening.test";
 import { runTier7ClientAccountsTests } from "./tier7-client-accounts-admin-booking.test";
+import { runTier8EmailDeliveryTests } from "./tier8-email-delivery.test";
+
+// Never let the suite send real email, even if a real key is present in the environment.
+process.env.RESEND_API_KEY = "";
 
 async function runMasterTestSuite() {
   const harness = new TestHarness("CineFlow OS", "Master E2E Verification Suite");
@@ -72,6 +76,11 @@ async function runMasterTestSuite() {
     // Tier 7: Client Accounts & Admin Booking on Behalf
     // --------------------------------------------------------------------------
     await runTier7ClientAccountsTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 8: Transactional Email Delivery (provider stubbed, no network)
+    // --------------------------------------------------------------------------
+    await runTier8EmailDeliveryTests(harness);
   } catch (err: any) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {
