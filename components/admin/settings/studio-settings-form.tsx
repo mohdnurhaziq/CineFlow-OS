@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Settings,
@@ -14,7 +14,10 @@ import {
   Copy,
   ExternalLink,
   Sparkles,
+  Upload,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 
 export interface StudioTenantData {
@@ -56,6 +59,104 @@ const CURRENCIES = [
 ];
 
 const DISCIPLINES = ["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"];
+
+function ImageUploadField({
+  label,
+  folder,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  folder: "logos" | "qrcodes";
+  value: string;
+  onChange: (url: string) => void;
+  placeholder: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG, JPG, WebP or SVG)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5MB or smaller");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("folder", folder);
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const json = await res.json();
+      if (!res.ok || !json.url) throw new Error(json.error || "Upload failed");
+      onChange(json.url);
+      toast.success("Image uploaded. Save settings to apply.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <label className="text-xs font-mono text-zinc-400 block mb-1.5">{label}</label>
+      <div className="flex items-center gap-3 mb-2">
+        <div className="size-14 shrink-0 rounded-xl border border-zinc-700 bg-zinc-900 flex items-center justify-center overflow-hidden">
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={value} alt={label} className="size-full object-contain" />
+          ) : (
+            <Upload className="size-5 text-zinc-600" />
+          )}
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          onChange={handleFile}
+          className="hidden"
+        />
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-700 bg-zinc-900 hover:border-amber-500 text-xs font-semibold text-white disabled:opacity-50 transition-colors"
+        >
+          {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+          {uploading ? "Uploading..." : value ? "Replace Image" : "Upload Image"}
+        </button>
+        {value && !uploading && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="inline-flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-red-400"
+          >
+            <X className="size-3.5" />
+            Remove
+          </button>
+        )}
+      </div>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+      />
+      <p className="text-[11px] text-zinc-500 mt-1">PNG, JPG, WebP or SVG, up to 5MB. Or paste a URL.</p>
+    </div>
+  );
+}
 
 export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
   const router = useRouter();
@@ -302,18 +403,13 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
           </div>
         </div>
 
-        <div>
-          <label className="text-xs font-mono text-zinc-400 block mb-1.5">
-            Logo Image Asset URL
-          </label>
-          <input
-            type="text"
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="/uploads/logos/lumina-logo.png"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-          />
-        </div>
+        <ImageUploadField
+          label="Studio Logo"
+          folder="logos"
+          value={logoUrl}
+          onChange={setLogoUrl}
+          placeholder="/uploads/logos/lumina-logo.png"
+        />
 
         <div>
           <label className="text-xs font-mono text-zinc-400 block mb-1.5">
@@ -393,18 +489,13 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
           Upload or link your studio's payment QR code (DuitNow, PromptPay, Venmo, CashApp, or direct banking QR).
         </p>
 
-        <div>
-          <label className="text-xs font-mono text-zinc-400 block mb-1.5">
-            QR Code Image URL
-          </label>
-          <input
-            type="text"
-            value={qrCodeUrl}
-            onChange={(e) => setQrCodeUrl(e.target.value)}
-            placeholder="/uploads/qrcodes/studio-duitnow.png"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-          />
-        </div>
+        <ImageUploadField
+          label="QR Code Image"
+          folder="qrcodes"
+          value={qrCodeUrl}
+          onChange={setQrCodeUrl}
+          placeholder="/uploads/qrcodes/studio-duitnow.png"
+        />
 
         {/* Live QR Preview */}
         {qrCodeUrl && (

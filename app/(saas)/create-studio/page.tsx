@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -21,6 +21,8 @@ import {
   ExternalLink,
   Shield,
   Loader2,
+  Upload,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
@@ -73,6 +75,42 @@ export default function CreateStudioPage() {
       name: val,
       slug: prev.slug === "" || prev.slug === autoSlug.slice(0, -1) ? autoSlug : prev.slug,
     }));
+  };
+
+  const [logoUploading, setLogoUploading] = useState<boolean>(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG, JPG, WebP or SVG)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Logo must be 5MB or smaller");
+      return;
+    }
+
+    setLogoUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("folder", "logos");
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const json = await res.json();
+      if (!res.ok || !json.url) {
+        throw new Error(json.error || "Upload failed");
+      }
+      setFormData((prev) => ({ ...prev, logoUrl: json.url }));
+      toast.success("Logo uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload logo");
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   const handleSlugBlur = async () => {
@@ -378,11 +416,52 @@ export default function CreateStudioPage() {
                     </div>
                   </div>
 
-                  {/* Logo URL */}
+                  {/* Logo Upload */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-                      Studio Logo Asset URL (Optional)
+                      Studio Logo (Optional)
                     </label>
+                    <div className="flex items-center gap-3">
+                      <div className="size-14 shrink-0 rounded-xl border border-zinc-700 bg-[#18181b] flex items-center justify-center overflow-hidden">
+                        {formData.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={formData.logoUrl} alt="Studio logo" className="size-full object-contain" />
+                        ) : (
+                          <Camera className="size-5 text-zinc-600" />
+                        )}
+                      </div>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        disabled={logoUploading}
+                        onClick={() => logoInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] hover:border-amber-500 text-xs font-semibold text-white disabled:opacity-50 transition-colors"
+                      >
+                        {logoUploading ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="size-3.5" />
+                        )}
+                        {logoUploading ? "Uploading..." : formData.logoUrl ? "Replace Logo" : "Upload Logo"}
+                      </button>
+                      {formData.logoUrl && !logoUploading && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, logoUrl: "" }))}
+                          className="inline-flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-red-400"
+                        >
+                          <X className="size-3.5" />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-zinc-500">PNG, JPG, WebP or SVG, up to 5MB. Or paste a URL below.</p>
                     <input
                       type="text"
                       placeholder="e.g. /uploads/logos/my-studio.png"
@@ -626,12 +705,19 @@ export default function CreateStudioPage() {
               <div className="space-y-4 relative z-10">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <div
-                    className="size-12 rounded-xl flex items-center justify-center font-bold text-black text-lg shadow-md"
-                    style={{ backgroundColor: formData.brandColor || "#f59e0b" }}
-                  >
-                    {formData.name.slice(0, 1).toUpperCase() || "C"}
-                  </div>
+                  {formData.logoUrl ? (
+                    <div className="size-12 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 shadow-md">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={formData.logoUrl} alt="Studio logo" className="size-full object-contain" />
+                    </div>
+                  ) : (
+                    <div
+                      className="size-12 rounded-xl flex items-center justify-center font-bold text-black text-lg shadow-md"
+                      style={{ backgroundColor: formData.brandColor || "#f59e0b" }}
+                    >
+                      {formData.name.slice(0, 1).toUpperCase() || "C"}
+                    </div>
+                  )}
                   <div>
                     <h3 className="text-lg font-bold text-white tracking-tight">
                       {formData.name || "Your Studio Name"}
