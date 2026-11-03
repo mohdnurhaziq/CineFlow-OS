@@ -45,7 +45,8 @@ yarn-error.log*
 *.sw?
 
 # Agent working directories
-.agents/
+.agents/*
+!.agents/skills/
 
 # Obsidian
 .obsidian/
