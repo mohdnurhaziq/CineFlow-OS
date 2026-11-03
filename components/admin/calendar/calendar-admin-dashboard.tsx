@@ -22,6 +22,7 @@ import { SingleSlotDialog, type BookingSlotRow, type CategoryOption } from "./si
 import { BatchGeneratorDialog } from "./batch-generator-dialog";
 import { ForceReleaseDialog } from "./force-release-dialog";
 import { SlotTable } from "./slot-table";
+import { BookForCustomerDialog, type ClientOption } from "./book-for-customer-dialog";
 
 interface CalendarAdminDashboardProps {
   tenantId: string;
@@ -29,6 +30,7 @@ interface CalendarAdminDashboardProps {
   currency: string;
   initialSlots: BookingSlotRow[];
   categories: CategoryOption[];
+  clients: ClientOption[];
 }
 
 export function CalendarAdminDashboard({
@@ -37,6 +39,7 @@ export function CalendarAdminDashboard({
   currency,
   initialSlots,
   categories,
+  clients,
 }: CalendarAdminDashboardProps) {
   const router = useRouter();
 
@@ -53,6 +56,9 @@ export function CalendarAdminDashboard({
 
   const [isForceReleaseOpen, setIsForceReleaseOpen] = useState(false);
   const [slotToRelease, setSlotToRelease] = useState<BookingSlotRow | null>(null);
+
+  const [isBookDialogOpen, setIsBookDialogOpen] = useState(false);
+  const [slotToBook, setSlotToBook] = useState<BookingSlotRow | null>(null);
 
   const [isCleaning, setIsCleaning] = useState(false);
 
@@ -289,6 +295,20 @@ export function CalendarAdminDashboard({
           setSlotToRelease(slot);
           setIsForceReleaseOpen(true);
         }}
+        onBookForCustomer={(slot) => {
+          setSlotToBook(slot);
+          setIsBookDialogOpen(true);
+        }}
+        onSuccess={handleSuccess}
+      />
+
+      <BookForCustomerDialog
+        isOpen={isBookDialogOpen}
+        onClose={() => setIsBookDialogOpen(false)}
+        tenantId={tenantId}
+        tenantSlug={tenantSlug}
+        slot={slotToBook}
+        clients={clients}
         onSuccess={handleSuccess}
       />
 

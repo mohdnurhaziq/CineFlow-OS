@@ -216,9 +216,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/calendar/page.tsx": {
-    "mtime": 1793726565.3254976,
-    "seen": 1793730103.9377255,
-    "ast_hash": "b80ed88d1129c14afaaec710531cc1a3",
+    "mtime": 1793734360.834865,
+    "seen": 1793734402.3036413,
+    "ast_hash": "d5bd5c2ab0463dc15a38edc5b255fa46",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/cms/page.tsx": {
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "components/admin/calendar/calendar-admin-dashboard.tsx": {
-    "mtime": 1793732124.7844346,
-    "seen": 1793732164.804195,
-    "ast_hash": "40dabc7b53eecc251376fc5f82bbc188",
+    "mtime": 1793734360.3829184,
+    "seen": 1793734402.3046482,
+    "ast_hash": "782317317fd99b57a5947568f6f8c81a",
     "semantic_hash": ""
   },
   "components/admin/calendar/force-release-dialog.tsx": {
@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "components/admin/calendar/slot-table.tsx": {
-    "mtime": 1793726565.361024,
-    "seen": 1793730103.9377255,
-    "ast_hash": "34dd5372294f1c0d1241b73f432ff1ef",
+    "mtime": 1793734358.8879964,
+    "seen": 1793734402.3046482,
+    "ast_hash": "1c23869f1c963b56184960821c31a5ca",
     "semantic_hash": ""
   },
   "components/admin/cms/cms-manager.tsx": {
@@ -2163,6 +2163,18 @@
     "mtime": 1793732297.198571,
     "seen": 1793732334.941719,
     "ast_hash": "e76e489aba25b7dfb92f5db599557c50",
+    "semantic_hash": ""
+  },
+  "components/admin/calendar/book-for-customer-dialog.tsx": {
+    "mtime": 1793734357.1509974,
+    "seen": 1793734402.3046482,
+    "ast_hash": "1f480a0035f034e7cdb96cc387119753",
+    "semantic_hash": ""
+  },
+  "lib/actions/admin-bookings.ts": {
+    "mtime": 1793734318.73615,
+    "seen": 1793734402.3046482,
+    "ast_hash": "cc641bd6b8ab5a9bdce41323978b0bbc",
     "semantic_hash": ""
   }
 }

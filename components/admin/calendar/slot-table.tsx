@@ -13,6 +13,7 @@ import {
   Mail,
   Loader2,
   CheckCircle,
+  CalendarPlus,
 } from "lucide-react";
 import {
   deleteBookingSlot,
@@ -29,6 +30,7 @@ interface SlotTableProps {
   categories: CategoryOption[];
   onEdit: (slot: BookingSlotRow) => void;
   onForceRelease: (slot: BookingSlotRow) => void;
+  onBookForCustomer: (slot: BookingSlotRow) => void;
   onSuccess: () => void;
 }
 
@@ -40,6 +42,7 @@ export function SlotTable({
   categories,
   onEdit,
   onForceRelease,
+  onBookForCustomer,
   onSuccess,
 }: SlotTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -328,6 +331,18 @@ export function SlotTable({
                     {/* Actions */}
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {/* Book on behalf of a customer */}
+                        {slot.status === "AVAILABLE" && (
+                          <button
+                            type="button"
+                            onClick={() => onBookForCustomer(slot)}
+                            className="p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/20 transition-colors"
+                            title="Book for Customer"
+                          >
+                            <CalendarPlus className="size-3.5" />
+                          </button>
+                        )}
+
                         {/* Toggle block/unblock for AVAILABLE and BLOCKED */}
                         {(slot.status === "AVAILABLE" || slot.status === "BLOCKED") && (
                           <button

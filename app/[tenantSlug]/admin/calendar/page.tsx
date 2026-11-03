@@ -78,6 +78,14 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
     orderBy: { sortOrder: "asc" },
   });
 
+  // 5. Customer accounts the admin can book on behalf of
+  const clients = await db.user.findMany({
+    where: { tenantId: tenant.id, role: "CLIENT" },
+    select: { id: true, name: true, email: true, phone: true },
+    orderBy: { name: "asc" },
+    take: 1000,
+  });
+
   return (
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <CalendarAdminDashboard
@@ -86,6 +94,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         currency={tenant.currency}
         initialSlots={slots as unknown as BookingSlotRow[]}
         categories={categories as unknown as CategoryOption[]}
+        clients={clients}
       />
     </div>
   );
