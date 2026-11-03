@@ -1,4 +1,4 @@
-# Project: CineFlow OS — The Multi-Tenant Creative Operating System
+﻿# Project: CineFlow OS — The Multi-Tenant Creative Operating System
 
 ## Architecture
 CineFlow OS is built as a production-grade multi-tenant creative operating system for boutique photography and videography studios.
@@ -146,12 +146,12 @@ CineFlow OS is built as a production-grade multi-tenant creative operating syste
 | M3 | `m3_checkout_proposals_vault` | Multi-Mode Checkout, Verification Console, Proposal Builder, 50% Retainer, Paywall Vault, Master Unlocking (Features 15-27) | M1, M2 | DONE |
 | M4 | `m4_logistics_gear_wall` | Call Sheets, Solar Engine, WhatsApp Dispatch, Mobile Shot List, Releases, Gear BOM, Wall Visualizer (Features 28-39) | M1, M3 | DONE |
 | M5 | `m5_admin_crud_production_verification` | Dynamic Admin CRUD (9 domains), TypeScript Compilation (`tsc`), Production Build (`pnpm build`) (Features 40-47) | M1, M2, M3, M4 | DONE |
-| M6 | `m6_e2e_integration_verification` | Final Integration: Pass 100% E2E Tests (Tiers 1-4) + Adversarial Hardening (Tier 5) (Features 48-49) | M5, E2E Track | PLANNED |
+| M6 | `m6_e2e_integration_verification` | Final Integration: Pass 100% E2E Tests (Tiers 1-4) + Adversarial Hardening (Tier 5) (Features 48-49). Verified: 1629 assertions pass across Tiers 1-7; `tsc` and `next build` clean. Tier 7 covers client accounts, admin booking on behalf, and upload hardening (staff-only folders, MIME-derived extensions, size caps, per-IP rate limit, sandboxing CSP on `/uploads`) | M5, E2E Track | DONE |
 
 ### Parallel Track: E2E Testing
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| E2E | `e2e_testing_track` | Opaque-box test infrastructure and comprehensive test suite across Tiers 1-4 (Features 1-47) | M1 (Schema ready) | PLANNED |
+| E2E | `e2e_testing_track` | Opaque-box test infrastructure and comprehensive test suite across Tiers 1-4 (Features 1-47) | M1 (Schema ready) | DONE |
 
 ---
 
