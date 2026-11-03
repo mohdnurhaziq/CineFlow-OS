@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2, Calendar } from "lucide-react";
 import { createSingleBookingSlot, updateBookingSlot } from "@/lib/actions/admin-calendar";
 import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 
 export interface BookingSlotRow {
   id: string;
@@ -199,30 +200,16 @@ export function SingleSlotDialog({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
-                Start Time * (e.g. 10:00 AM)
+                Start Time *
               </label>
-              <input
-                type="text"
-                required
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                placeholder="10:00 AM"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <TimePicker value={startTime} onChange={setStartTime} placeholder="Select start time" />
             </div>
 
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
-                End Time * (e.g. 11:30 AM)
+                End Time *
               </label>
-              <input
-                type="text"
-                required
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                placeholder="11:30 AM"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <TimePicker value={endTime} onChange={setEndTime} placeholder="Select end time" />
             </div>
           </div>
 

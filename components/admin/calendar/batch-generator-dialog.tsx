@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { X, Calendar, Layers, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
 import { batchGenerateBookingSlots } from "@/lib/actions/admin-calendar";
 import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { parseTimeToMinutes } from "@/lib/utils/time";
 import type { CategoryOption } from "./single-slot-dialog";
 
@@ -287,27 +288,13 @@ export function BatchGeneratorDialog({
               <label className="text-xs font-mono text-zinc-400 block mb-1">
                 Day Start Time *
               </label>
-              <input
-                type="text"
-                required
-                value={dayStartTime}
-                onChange={(e) => setDayStartTime(e.target.value)}
-                placeholder="09:00 AM"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <TimePicker value={dayStartTime} onChange={setDayStartTime} placeholder="Select start time" />
             </div>
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
                 Day End Time *
               </label>
-              <input
-                type="text"
-                required
-                value={dayEndTime}
-                onChange={(e) => setDayEndTime(e.target.value)}
-                placeholder="06:00 PM"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <TimePicker value={dayEndTime} onChange={setDayEndTime} placeholder="Select end time" />
             </div>
           </div>
 
