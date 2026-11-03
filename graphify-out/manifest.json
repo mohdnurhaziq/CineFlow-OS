@@ -1338,9 +1338,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/runner.ts": {
-    "mtime": 1793726565.512136,
-    "seen": 1793730103.9377255,
-    "ast_hash": "8edabea3eb99455a9c9a3b1e86ba32cf",
+    "mtime": 1793735820.736921,
+    "seen": 1793735897.4334152,
+    "ast_hash": "9e18c4e4e11a435bda82d0f31f2b83e3",
     "semantic_hash": ""
   },
   "tests/e2e/test-harness.ts": {
@@ -1374,9 +1374,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier1/05-admin-verification.test.ts": {
-    "mtime": 1793726565.5181372,
-    "seen": 1793730103.9377255,
-    "ast_hash": "944968d0d238b83867cebbb2d6a6dee2",
+    "mtime": 1793735722.900693,
+    "seen": 1793735897.4334152,
+    "ast_hash": "528d694bf185c17de9ab8dd48dd802a8",
     "semantic_hash": ""
   },
   "tests/e2e/tier2-boundary-corner-cases.test.ts": {
@@ -2175,6 +2175,414 @@
     "mtime": 1793734318.73615,
     "seen": 1793734402.3046482,
     "ast_hash": "cc641bd6b8ab5a9bdce41323978b0bbc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/assets/base.js": {
+    "mtime": 1793726565.2504985,
+    "seen": 1793735897.431904,
+    "ast_hash": "059f84401869a3c87212e3fc68f68272",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/assets/charts.js": {
+    "mtime": 1793726565.2504985,
+    "seen": 1793735897.431904,
+    "ast_hash": "9ce51b3b3ba15f4a8f144f5bbb71cde4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/assets/scenes/stage.js": {
+    "mtime": 1793726565.252499,
+    "seen": 1793735897.431904,
+    "ast_hash": "4c7759ef9b00c32d8b0f0e0b00c5e47c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/evals/evals.json": {
+    "mtime": 1793726565.2535005,
+    "seen": 1793735897.431904,
+    "ast_hash": "a75d8d5408057dc109ae483090e46187",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/app.json": {
+    "mtime": 1793726565.2544982,
+    "seen": 1793735897.431904,
+    "ast_hash": "976d160bba7f73576b5b9b6d88b0f203",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/directions.json": {
+    "mtime": 1793726565.2565024,
+    "seen": 1793735897.431904,
+    "ast_hash": "53f939fbb829e65bc9957297e9fc1a60",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/heroes.json": {
+    "mtime": 1793726565.2574983,
+    "seen": 1793735897.431904,
+    "ast_hash": "08b38a73b56ac1c3218aa35fc535bf37",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/motions.json": {
+    "mtime": 1793726565.2574983,
+    "seen": 1793735897.431904,
+    "ast_hash": "c9ce58c6f800b3bc7ef5aef47326231f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/palettes.json": {
+    "mtime": 1793726565.258503,
+    "seen": 1793735897.431904,
+    "ast_hash": "1290620b2708921c2e5387e1b4b041ee",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/photos.json": {
+    "mtime": 1793726565.260501,
+    "seen": 1793735897.431904,
+    "ast_hash": "f3c7152af24daf438b45c4b388c603bc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/sections.json": {
+    "mtime": 1793726565.2624993,
+    "seen": 1793735897.431904,
+    "ast_hash": "c01d0c653818f06c47ea99ebb3c6a09c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/sites.json": {
+    "mtime": 1793726565.2675023,
+    "seen": 1793735897.431904,
+    "ast_hash": "0a2218a4156e2e6dffafe2e9b83cc583",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/library/type.json": {
+    "mtime": 1793726565.2685003,
+    "seen": 1793735897.431904,
+    "ast_hash": "4e41448d6057326b535578d6a45ef525",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/assets.mjs": {
+    "mtime": 1793726565.2785003,
+    "seen": 1793735897.431904,
+    "ast_hash": "7e6a5f115b03d78e63198d94bed1a8a8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/draw.mjs": {
+    "mtime": 1793726565.2794976,
+    "seen": 1793735897.431904,
+    "ast_hash": "120e1cccaf53946269ba72c450e6bc62",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/inspect.mjs": {
+    "mtime": 1793726565.2805064,
+    "seen": 1793735897.431904,
+    "ast_hash": "78c3b2a4dd0d52b7ac83561199222f36",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/lib/app-draw.mjs": {
+    "mtime": 1793726565.281502,
+    "seen": 1793735897.431904,
+    "ast_hash": "b9039275b634c2636e42617f13cf8e50",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/lib/cdp.mjs": {
+    "mtime": 1793726565.281502,
+    "seen": 1793735897.431904,
+    "ast_hash": "9b3bc7a3912dbfb853cd2cb0947fc481",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/lib/inspection-files.mjs": {
+    "mtime": 1793726565.282501,
+    "seen": 1793735897.431904,
+    "ast_hash": "04cccc73d3b9119bb5a3bc89c4139ba1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/lib/probe.mjs": {
+    "mtime": 1793726565.2835004,
+    "seen": 1793735897.431904,
+    "ast_hash": "d515edefc76339f827e7cd204dee457d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/lib/rules.mjs": {
+    "mtime": 1793726565.2845018,
+    "seen": 1793735897.431904,
+    "ast_hash": "24752271a34e29b30e5deafdd30194b1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/lint.mjs": {
+    "mtime": 1793726565.285499,
+    "seen": 1793735897.431904,
+    "ast_hash": "c3f93ceaf0cb2ea3a6db1b05c91a2fe3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/scripts/scenes.mjs": {
+    "mtime": 1793726565.2865,
+    "seen": 1793735897.431904,
+    "ast_hash": "dc421250af452ffd028e182beac026b7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/assets/showcase/color-pair.tsx": {
+    "mtime": 1793726565.2945018,
+    "seen": 1793735897.431904,
+    "ast_hash": "deea9209282815e9639465ac4ff41a5e",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/assets/showcase/state-matrix.tsx": {
+    "mtime": 1793726565.2955003,
+    "seen": 1793735897.431904,
+    "ast_hash": "2a2bb1b70c07b3f2df8f4b8df2f47a62",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/evals/evals.json": {
+    "mtime": 1793726565.2994993,
+    "seen": 1793735897.431904,
+    "ast_hash": "ff2596fefcdd2ddb853a73870214164c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/scripts/showcase-coverage.mjs": {
+    "mtime": 1793726565.3054998,
+    "seen": 1793735897.431904,
+    "ast_hash": "2cbb4e479b376730348e82fea973d9bf",
+    "semantic_hash": ""
+  },
+  "tests/e2e/tier7-client-accounts-admin-booking.test.ts": {
+    "mtime": 1793735819.6689348,
+    "seen": 1793735897.4334152,
+    "ast_hash": "b0a348efa64bbfcc67a616c5afaf11d6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/animate/RECIPES.md": {
+    "mtime": 1793726565.2409806,
+    "seen": 1793735897.4334152,
+    "ast_hash": "278b01cdc80a6ec30b97e35f2e046c28",
+    "semantic_hash": ""
+  },
+  ".claude/skills/animate/SKILL.md": {
+    "mtime": 1793726565.2419832,
+    "seen": 1793735897.4334152,
+    "ast_hash": "f9a8ba37921b62c111e7d0fd325a5ec7",
+    "semantic_hash": ""
+  },
+  ".claude/skills/api-backend-dev/SKILL.md": {
+    "mtime": 1793726565.2424927,
+    "seen": 1793735897.4334152,
+    "ast_hash": "6ec923d70bba8eb2e50a5015b53b7525",
+    "semantic_hash": ""
+  },
+  ".claude/skills/build-awwwards-quality-sites/SKILL.md": {
+    "mtime": 1793726565.2435,
+    "seen": 1793735897.4334152,
+    "ast_hash": "b52aa3d47dc5a9a2f3869536003ec19a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/build-awwwards-quality-sites/agents/openai.yaml": {
+    "mtime": 1793726565.2435,
+    "seen": 1793735897.4334152,
+    "ast_hash": "ad0b1ca3191328b4f1e8174ff8e18c67",
+    "semantic_hash": ""
+  },
+  ".claude/skills/db-schema-migrations/SKILL.md": {
+    "mtime": 1793726565.2455013,
+    "seen": 1793735897.4334152,
+    "ast_hash": "8bb152f725940e432b9ec54302b35edc",
+    "semantic_hash": ""
+  },
+  ".claude/skills/debug-error-triage/SKILL.md": {
+    "mtime": 1793726565.2465022,
+    "seen": 1793735897.4334152,
+    "ast_hash": "974410ef39e2ba526dd1e55cd1cbbd59",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/README.md": {
+    "mtime": 1793726565.2475014,
+    "seen": 1793735897.4334152,
+    "ast_hash": "572eefa17225dca7b0e96b18f8bbcf7d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/SKILL.md": {
+    "mtime": 1793726565.2484996,
+    "seen": 1793735897.4334152,
+    "ast_hash": "928fa9b81025a85642f83b0a2b35bb6f",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/app-screens.md": {
+    "mtime": 1793726565.2704997,
+    "seen": 1793735897.4334152,
+    "ast_hash": "b05d8dde85ed5e8fbb287f224daad8ef",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/colour.md": {
+    "mtime": 1793726565.2704997,
+    "seen": 1793735897.4334152,
+    "ast_hash": "813d4dbbd43bcbb16635b475ef0a152b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/copy.md": {
+    "mtime": 1793726565.271501,
+    "seen": 1793735897.4334152,
+    "ast_hash": "f6a31b12e2a93044cf707b0b48ff54f2",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/critique.md": {
+    "mtime": 1793726565.271501,
+    "seen": 1793735897.4334152,
+    "ast_hash": "876353ccd5e73cd0da5ed361dae7a41b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/imagery.md": {
+    "mtime": 1793726565.2724998,
+    "seen": 1793735897.4334152,
+    "ast_hash": "20bc64cb09e3e9117991ade949013117",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/layout.md": {
+    "mtime": 1793726565.273499,
+    "seen": 1793735897.4334152,
+    "ast_hash": "f6ec23d6d9fb2b72c7aa8ef64967b95a",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/motion.md": {
+    "mtime": 1793726565.275499,
+    "seen": 1793735897.4334152,
+    "ast_hash": "a3aa668a4a47c951b4253d3a0750217c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/research.md": {
+    "mtime": 1793726565.2764988,
+    "seen": 1793735897.4334152,
+    "ast_hash": "80a1e52831085197e13b6e5a15fba92d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/scenes.md": {
+    "mtime": 1793726565.2764988,
+    "seen": 1793735897.4334152,
+    "ast_hash": "fafe4cfae94452813d057657e4f590d3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/tells.md": {
+    "mtime": 1793726565.2764988,
+    "seen": 1793735897.4334152,
+    "ast_hash": "575f2697b6725cd080c9b112ab4a848c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/design-taste-frontend/references/type.md": {
+    "mtime": 1793726565.2775025,
+    "seen": 1793735897.4334152,
+    "ast_hash": "3c038076f4078e89a5bcf4115f05e128",
+    "semantic_hash": ""
+  },
+  ".claude/skills/emil-design-eng/SKILL.md": {
+    "mtime": 1793726565.2885015,
+    "seen": 1793735897.4334152,
+    "ast_hash": "f1fd6a7bc856a0615044eb2a4854cf02",
+    "semantic_hash": ""
+  },
+  ".claude/skills/find-skills/SKILL.md": {
+    "mtime": 1793726565.2895014,
+    "seen": 1793735897.4334152,
+    "ast_hash": "0e99d6852ad24dc6a6d9392a6065a453",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/SKILL.md": {
+    "mtime": 1793726565.2905016,
+    "seen": 1793735897.4344227,
+    "ast_hash": "4a57d8723afac2230bc1738475c3e559",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/agents/openai.yml": {
+    "mtime": 1793726565.2915015,
+    "seen": 1793735897.4344227,
+    "ast_hash": "a93201a1b378a868c0795edbf1ae751c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/cli.md": {
+    "mtime": 1793726565.2965019,
+    "seen": 1793735897.4344227,
+    "ast_hash": "06dc1478b5449f2a3c60f4bf4e043687",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/customization.md": {
+    "mtime": 1793726565.2965019,
+    "seen": 1793735897.4344227,
+    "ast_hash": "f012ac15403e90fec2533ec7fc6638a6",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/design-system-page.md": {
+    "mtime": 1793726565.2975013,
+    "seen": 1793735897.4344227,
+    "ast_hash": "08e7dea8cfb14593d18e3db5ca57b266",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/design-system.md": {
+    "mtime": 1793726565.2985003,
+    "seen": 1793735897.4344227,
+    "ast_hash": "33bde97198b0d0a941643f25df17d31b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/mcp.md": {
+    "mtime": 1793726565.2994993,
+    "seen": 1793735897.4344227,
+    "ast_hash": "aa876f97643326a64e99b86d5ac41bc5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/registry.md": {
+    "mtime": 1793726565.300505,
+    "seen": 1793735897.4344227,
+    "ast_hash": "f7e28f2e510e8ec5847619641ddfeea4",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/rules/base-vs-radix.md": {
+    "mtime": 1793726565.3015018,
+    "seen": 1793735897.4344227,
+    "ast_hash": "582481904d3c35aae4125153db97fc37",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/rules/chat.md": {
+    "mtime": 1793726565.3025012,
+    "seen": 1793735897.4344227,
+    "ast_hash": "650b1871f8aea9e8f9ce486ba97e7bf5",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/rules/composition.md": {
+    "mtime": 1793726565.3035057,
+    "seen": 1793735897.4344227,
+    "ast_hash": "44ec3d642cf72d48e1d370fb267b79a3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/rules/forms.md": {
+    "mtime": 1793726565.3035057,
+    "seen": 1793735897.4344227,
+    "ast_hash": "41155ed5a844952613e717a5add76606",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/rules/icons.md": {
+    "mtime": 1793726565.304501,
+    "seen": 1793735897.4344227,
+    "ast_hash": "56b5a01599f8c03c90f248c5e5e01f67",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/rules/styling.md": {
+    "mtime": 1793726565.304501,
+    "seen": 1793735897.4344227,
+    "ast_hash": "3eaa3bb2a07262feabbea63b33fd0f67",
+    "semantic_hash": ""
+  },
+  ".claude/skills/stack-scaffolding/SKILL.md": {
+    "mtime": 1793726565.3065026,
+    "seen": 1793735897.4344227,
+    "ast_hash": "efb6205d014d0ccd23c30d8675ba0225",
+    "semantic_hash": ""
+  },
+  ".claude/skills/ui-component-design/SKILL.md": {
+    "mtime": 1793726565.3074992,
+    "seen": 1793735897.4344227,
+    "ast_hash": "ce159d181127cbc64f3e60f4b32edf03",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/assets/shadcn-small.png": {
+    "mtime": 1793726565.2924993,
+    "seen": 1793735897.4344227,
+    "ast_hash": "72349c6b7f303e6be598a2196391291b",
+    "semantic_hash": ""
+  },
+  ".claude/skills/shadcn/assets/shadcn.png": {
+    "mtime": 1793726565.2934995,
+    "seen": 1793735897.4344227,
+    "ast_hash": "cb56bf002d36bb860c3d320a23bd871a",
     "semantic_hash": ""
   }
 }
