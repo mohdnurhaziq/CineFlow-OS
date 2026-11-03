@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "app/api/upload/route.ts": {
-    "mtime": 1793726565.351022,
-    "seen": 1793730103.9377255,
-    "ast_hash": "2e0d59a418c02d2283b09d951ee0d7d7",
+    "mtime": 1793737840.4088619,
+    "seen": 1793737983.7057142,
+    "ast_hash": "8778abe5477ed09c9ce9d469f8934500",
     "semantic_hash": ""
   },
   "app/global-error.tsx": {
@@ -1230,15 +1230,15 @@
     "semantic_hash": ""
   },
   "next.config.ts": {
-    "mtime": 1793726565.4781377,
-    "seen": 1793730103.9377255,
-    "ast_hash": "16588247a368a6f800492facee444fb1",
+    "mtime": 1793737840.827503,
+    "seen": 1793737983.7057142,
+    "ast_hash": "ca4e079572635699c9ba51f3d9456165",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1793726565.4781377,
-    "seen": 1793730103.9377255,
-    "ast_hash": "c2a5d7341d9793d1b03adcf699a2c270",
+    "mtime": 1793737691.0732038,
+    "seen": 1793737983.7057142,
+    "ast_hash": "ebd2ceeb1c605cbd13321d9f5e6d0f38",
     "semantic_hash": ""
   },
   "pnpm-workspace.yaml": {
@@ -1350,9 +1350,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier1/01-framework-storage.test.ts": {
-    "mtime": 1793726565.5141354,
-    "seen": 1793730103.9377255,
-    "ast_hash": "40f0ad25c700d4eb7168fba8838771a2",
+    "mtime": 1793737856.5053935,
+    "seen": 1793737983.7057142,
+    "ast_hash": "df2a2d95f6fd5982aae9f23c1f784454",
     "semantic_hash": ""
   },
   "tests/e2e/tier1/02-saas-showcase.test.ts": {
@@ -1494,9 +1494,9 @@
     "semantic_hash": ""
   },
   "PROJECT.md": {
-    "mtime": 1793726565.3185,
-    "seen": 1793730103.9393456,
-    "ast_hash": "804b107eb9a14ac58ad6eafa73490fdb",
+    "mtime": 1793737964.10505,
+    "seen": 1793737983.706722,
+    "ast_hash": "80a341d340918d0dfca5db6a943fdb37",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1548,9 +1548,9 @@
     "semantic_hash": ""
   },
   "components/auth/client-auth-panel.tsx": {
-    "mtime": 1793726565.375022,
-    "seen": 1793730103.9377255,
-    "ast_hash": "234243690341f0737f6606fe4d37e119",
+    "mtime": 1793737197.903715,
+    "seen": 1793737983.7057142,
+    "ast_hash": "4c5c54b8c8643af07ef240c74e8eccd4",
     "semantic_hash": ""
   },
   "components/auth/client-register-card.tsx": {
@@ -1572,9 +1572,9 @@
     "semantic_hash": ""
   },
   "lib/actions/client-auth.ts": {
-    "mtime": 1793726565.4561357,
-    "seen": 1793730103.9377255,
-    "ast_hash": "b7b0901c4c0be904ae191816afc0fcb5",
+    "mtime": 1793737457.1485069,
+    "seen": 1793737983.7057142,
+    "ast_hash": "fec5d7ea45f0b5523c80baf13db7f6a4",
     "semantic_hash": ""
   },
   "lib/actions/my-booking.ts": {
@@ -2147,12 +2147,6 @@
     "ast_hash": "64b4f02f3ddbfe75d0c27661aec8561f",
     "semantic_hash": ""
   },
-  "public/uploads/logos/1793730717608-cd44f978bb0e.png": {
-    "mtime": 1793730717.6122465,
-    "seen": 1793731941.6350791,
-    "ast_hash": "78aa5f88b824bf79754647602a6f6549",
-    "semantic_hash": ""
-  },
   "components/ui/date-picker.tsx": {
     "mtime": 1793732114.3940742,
     "seen": 1793732164.804195,
@@ -2340,9 +2334,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier7-client-accounts-admin-booking.test.ts": {
-    "mtime": 1793735819.6689348,
-    "seen": 1793735897.4334152,
-    "ast_hash": "b0a348efa64bbfcc67a616c5afaf11d6",
+    "mtime": 1793737902.6386995,
+    "seen": 1793737983.7057142,
+    "ast_hash": "90316e453e7654fe156508132c0f4bc7",
     "semantic_hash": ""
   },
   ".claude/skills/animate/RECIPES.md": {
@@ -2583,6 +2577,30 @@
     "mtime": 1793726565.2934995,
     "seen": 1793735897.4344227,
     "ast_hash": "cb56bf002d36bb860c3d320a23bd871a",
+    "semantic_hash": ""
+  },
+  "tests/e2e/mocks/hooks.mjs": {
+    "mtime": 1793737663.3902543,
+    "seen": 1793737983.7057142,
+    "ast_hash": "46c0b9d5879f4e1d2d515c1a45c2d56a",
+    "semantic_hash": ""
+  },
+  "tests/e2e/mocks/next-headers-stub.mjs": {
+    "mtime": 1793737663.2285738,
+    "seen": 1793737983.7057142,
+    "ast_hash": "e5ea32c74b732164c6aea90518e66f27",
+    "semantic_hash": ""
+  },
+  "tests/e2e/mocks/register.mjs": {
+    "mtime": 1793737663.5694473,
+    "seen": 1793737983.7057142,
+    "ast_hash": "05db55601a61fd2cc7961d2b8c229b5e",
+    "semantic_hash": ""
+  },
+  "tests/e2e/mocks/session.ts": {
+    "mtime": 1793737664.07714,
+    "seen": 1793737983.7057142,
+    "ast_hash": "18e0aa099bd996df0911aa485685ba06",
     "semantic_hash": ""
   }
 }
