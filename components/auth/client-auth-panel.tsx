@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, Mail, Phone, Lock, Hash, AlertCircle, Loader2 } from "lucide-react";
+import { User, Mail, Phone, Lock, Hash, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
 
@@ -25,11 +25,19 @@ export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register
   const [needsClaim, setNeedsClaim] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [signedIn, setSignedIn] = useState<{ name: string; kind: "created" | "signedIn" } | null>(null);
 
   const switchMode = (next: "register" | "login") => {
     setMode(next);
     setError(null);
     setNeedsClaim(false);
+  };
+
+  /** Shows an explicit "you're signed in" state, then hands control back to the host page. */
+  const confirmSignedIn = async (displayName: string, kind: "created" | "signedIn") => {
+    setSignedIn({ name: displayName, kind });
+    await new Promise((resolve) => setTimeout(resolve, 1400));
+    onSuccess();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,7 +60,7 @@ export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register
           setError(res.message);
           return;
         }
-        onSuccess();
+        await confirmSignedIn(res.user.name, "created");
       } else {
         const res = await loginWithCredentials(email, password, tenantSlug);
         if (!res.success) {
@@ -72,7 +80,7 @@ export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register
           setError("That is a studio staff account. Please use Studio Login instead.");
           return;
         }
-        onSuccess();
+        await confirmSignedIn(res.user.name, "signedIn");
       }
     } catch {
       setError("An unexpected network error occurred. Please try again.");
@@ -80,6 +88,23 @@ export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register
       setLoading(false);
     }
   };
+
+  if (signedIn) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2"
+      >
+        <CheckCircle2 className="size-8 text-emerald-400 mx-auto" />
+        <div className="text-sm font-bold text-white">
+          {signedIn.kind === "created" ? "Account created" : "Welcome back"}, {signedIn.name.split(" ")[0]}
+        </div>
+        <p className="text-xs text-emerald-300">You&apos;re now signed in. Continuing…</p>
+        <Loader2 className="size-3.5 animate-spin text-emerald-400 mx-auto" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
