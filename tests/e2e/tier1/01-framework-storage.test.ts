@@ -9,11 +9,22 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "../test-harness";
+import { withSession } from "../mocks/session";
 
 export async function runFrameworkStorageTests(harness: TestHarness) {
   harness.setSuite("Tier 1", "Module 1: Framework, Tooling, Database & Storage (Features 1-5)");
 
   const rootDir = process.cwd();
+
+  /** The `general` folder is staff-only, so feature tests upload as a studio owner. */
+  const uploadAsStaff = async (req: NextRequest) => {
+    const owner = await db.user.findFirst({ where: { role: "STUDIO_OWNER" }, include: { tenant: { select: { slug: true } } } });
+    if (!owner) throw new Error("Seed studio owner required");
+    return withSession(
+      { id: owner.id, email: owner.email, name: owner.name, role: owner.role, tenantId: owner.tenantId, tenantSlug: owner.tenant?.slug ?? null } as any,
+      () => uploadHandler(req)
+    );
+  };
 
   // ============================================================================
   // Feature 1: Framework & Tooling Scaffolding (5 Tests)
@@ -440,7 +451,7 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
       body: formData,
     });
 
-    const res = await uploadHandler(req);
+    const res = await uploadAsStaff(req);
     harness.assert(res.status === 201, `Upload status is 201 Created (got ${res.status})`);
     const data = await res.json();
     harness.assert(data.success === true, "Upload response reports success: true");
@@ -499,7 +510,7 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
       body: formData,
     });
 
-    const res = await uploadHandler(req);
+    const res = await uploadAsStaff(req);
     harness.assert(res.status === 201, "Upload succeeded with 201 Created");
     const data = await res.json();
     const writtenPath = path.join(rootDir, "public", data.url.replace(/^\//, ""));

@@ -9,7 +9,11 @@
  * unauthenticated caller must never be able to book on a customer's behalf.
  */
 
+import fs from "node:fs/promises";
+import path from "node:path";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "./test-harness";
 import { registerClient } from "@/lib/actions/client-auth";
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
@@ -401,5 +405,96 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assert(badPayment.success === false, "Rejects unknown payment status");
     const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });
     harness.assertEqual(after?.status, "AVAILABLE", "Slot untouched by invalid calls");
+  });
+
+  // ============================================================================
+  // 7.3 Upload endpoint hardening
+  // ============================================================================
+  const uploadedFiles: string[] = [];
+  harness.registerTeardown(async () => {
+    for (const url of uploadedFiles) await fs.unlink(path.join(process.cwd(), "public", url.replace(/^\//, ""))).catch(() => null);
+  });
+
+  const upload = async (opts: {
+    folder?: string;
+    type?: string;
+    name?: string;
+    bytes?: BlobPart;
+    ip?: string;
+    user?: any;
+  }) => {
+    const form = new FormData();
+    form.append("file", new File([opts.bytes ?? "x"], opts.name ?? "a.png", { type: opts.type ?? "image/png" }));
+    if (opts.folder) form.append("folder", opts.folder);
+    const req = new NextRequest("http://localhost:3000/api/upload", {
+      method: "POST",
+      body: form,
+      headers: { "x-forwarded-for": opts.ip ?? `10.7.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` },
+    });
+    const res = await withSession(opts.user ?? null, () => uploadHandler(req));
+    const body: any = await res.json();
+    if (body.url) uploadedFiles.push(body.url);
+    return { status: res.status, body };
+  };
+
+  await harness.test("T7-UPL-01: anonymous visitors can upload only to logos and receipts", async () => {
+    const logo = await upload({ folder: "logos" });
+    harness.assertEqual(logo.status, 201, "Anonymous logo upload allowed (create-studio flow)");
+    const receipt = await upload({ folder: "receipts", type: "application/pdf", name: "r.pdf" });
+    harness.assertEqual(receipt.status, 201, "Anonymous receipt upload allowed (checkout flow)");
+    for (const folder of ["qrcodes", "frames", "showcase", "deliverables", "signatures", "general", "unknown-folder"]) {
+      const res = await upload({ folder });
+      harness.assertEqual(res.status, 401, `Anonymous upload to ${folder} requires sign-in`);
+    }
+  });
+
+  await harness.test("T7-UPL-02: CLIENT accounts cannot write to staff-only folders", async () => {
+    const client = await db.user.findFirst({ where: { tenantId: lumina.id, role: "CLIENT" } });
+    const res = await upload({ folder: "showcase", user: asUser(client!, "lumina-cine") });
+    harness.assertEqual(res.status, 403, "CLIENT role gets 403 for showcase");
+  });
+
+  await harness.test("T7-UPL-03: staff can upload to staff folders, including SVG and video", async () => {
+    const png = await upload({ folder: "showcase", user: luminaStaff });
+    harness.assertEqual(png.status, 201, "Staff image upload to showcase allowed");
+    const svg = await upload({ folder: "logos", type: "image/svg+xml", name: "l.svg", user: luminaStaff });
+    harness.assertEqual(svg.status, 201, "Staff SVG logo allowed");
+    const video = await upload({ folder: "deliverables", type: "video/mp4", name: "v.mp4", user: luminaStaff });
+    harness.assertEqual(video.status, 201, "Staff video allowed");
+  });
+
+  await harness.test("T7-UPL-04: anonymous uploads reject SVG and video even in public folders", async () => {
+    const svg = await upload({ folder: "logos", type: "image/svg+xml", name: "x.svg", bytes: "<svg onload=alert(1)/>" });
+    harness.assertEqual(svg.status, 400, "Anonymous SVG rejected");
+    const video = await upload({ folder: "receipts", type: "video/mp4", name: "x.mp4" });
+    harness.assertEqual(video.status, 400, "Anonymous video rejected");
+  });
+
+  await harness.test("T7-UPL-05: stored extension comes from MIME type, not the client filename", async () => {
+    const res = await upload({ folder: "logos", type: "image/png", name: "evil.html" });
+    harness.assertEqual(res.status, 201, "Upload accepted as a PNG");
+    harness.assert(String(res.body.url).endsWith(".png"), `Saved as .png (got ${res.body.url})`);
+    const traversal = await upload({ folder: "../../etc", type: "image/png", name: "../../x.png" });
+    harness.assertEqual(traversal.status, 401, "Path-traversal folder falls back to a staff-only folder");
+    harness.assert(!String(traversal.body.url ?? "").includes(".."), "No traversal in any returned URL");
+  });
+
+  await harness.test("T7-UPL-06: oversized files are rejected (10MB documents)", async () => {
+    const big = new Uint8Array(10 * 1024 * 1024 + 1);
+    const anon = await upload({ folder: "receipts", bytes: big });
+    harness.assertEqual(anon.status, 413, "Anonymous oversized image rejected with 413");
+    const staff = await upload({ folder: "showcase", bytes: big, user: luminaStaff });
+    harness.assertEqual(staff.status, 413, "Staff oversized image rejected with 413");
+  });
+
+  await harness.test("T7-UPL-07: anonymous uploads are rate limited per IP", async () => {
+    const ip = `203.0.113.${Math.floor(Math.random() * 250)}`;
+    let limited = false;
+    for (let i = 0; i < 25 && !limited; i++) {
+      limited = (await upload({ folder: "receipts", ip })).status === 429;
+    }
+    harness.assert(limited, "429 returned after repeated anonymous uploads");
+    const other = await upload({ folder: "receipts", ip: "198.51.100.9" });
+    harness.assertEqual(other.status, 201, "A different IP is unaffected");
   });
 }
