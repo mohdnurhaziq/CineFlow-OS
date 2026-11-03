@@ -147,6 +147,14 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
 
     return { success: true, user: sessionUser };
   } catch (err) {
+    // Lost a race with a concurrent registration of the same (studio, email).
+    if ((err as { code?: string })?.code === "P2002") {
+      return {
+        success: false,
+        error: "EMAIL_EXISTS",
+        message: "An account with this email already exists. Please sign in instead.",
+      };
+    }
     console.error("registerClient error:", err);
     return {
       success: false,

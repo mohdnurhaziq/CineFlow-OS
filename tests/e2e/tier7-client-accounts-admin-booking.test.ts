@@ -163,6 +163,28 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assert(replay.success === false && replay.error === "EMAIL_EXISTS", "Claimed account cannot be re-claimed");
   });
 
+  await harness.test("T7-REG-10: concurrent registrations of one email yield exactly one account", async () => {
+    const input = validInput("race");
+    const results = await Promise.all(Array.from({ length: 6 }, () => registerClient(input)));
+    const wins = results.filter((r) => r.success).length;
+    const internal = results.filter((r) => !r.success && r.error === "INTERNAL_ERROR").length;
+    const rows = await db.user.count({ where: { tenantId: lumina.id, email: input.email } });
+    harness.assertEqual(rows, 1, "Exactly one user row exists");
+    harness.assertEqual(wins, 1, "Exactly one registration reports success");
+    harness.assertEqual(internal, 0, "Losers get a clean rejection, not INTERNAL_ERROR");
+  });
+
+  await harness.test("T7-REG-11: repeated attempts are rate limited per studio+email", async () => {
+    const input = validInput("rate");
+    await registerClient(input);
+    let limited = false;
+    for (let i = 0; i < 12 && !limited; i++) {
+      const res = await registerClient(input);
+      limited = !res.success && res.error === "RATE_LIMITED";
+    }
+    harness.assert(limited, "RATE_LIMITED triggers within 12 attempts");
+  });
+
   // ============================================================================
   // 7.2 createBookingForCustomer
   // ============================================================================
