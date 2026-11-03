@@ -13,7 +13,7 @@ function safeRevalidate(path: string) {
   }
 }
 
-export const ApprovePaymentVerificationSchema = z.object({
+const ApprovePaymentVerificationSchema = z.object({
   invoiceId: z.string().min(1, "Invoice ID is required"),
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
@@ -154,7 +154,7 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
   }
 }
 
-export const RejectPaymentVerificationSchema = z.object({
+const RejectPaymentVerificationSchema = z.object({
   invoiceId: z.string().min(1, "Invoice ID is required"),
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),

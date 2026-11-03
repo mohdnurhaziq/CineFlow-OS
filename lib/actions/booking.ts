@@ -4,20 +4,20 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
 
-export const HoldSlotSchema = z.object({
+const HoldSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   slotId: z.string().min(1, "Slot ID is required"),
   sessionId: z.string().min(1, "Session ID is required"),
   previousSlotId: z.string().optional(),
 });
 
-export const ReleaseSlotSchema = z.object({
+const ReleaseSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   slotId: z.string().min(1, "Slot ID is required"),
   sessionId: z.string().min(1, "Session ID is required"),
 });
 
-export const CreateBookingInputSchema = z.object({
+const CreateBookingInputSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   slotId: z.string().min(1, "Slot ID is required"),
   sessionId: z.string().min(1, "Session ID is required"),
