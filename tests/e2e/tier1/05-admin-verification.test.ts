@@ -939,7 +939,9 @@ export async function runAdminVerificationTests(harness: TestHarness) {
   });
 
   await harness.test("T1-F46-05: Command pnpm typecheck (tsc --noEmit) exits with status 0 and zero type errors", async () => {
-    const output = execSync("pnpm typecheck", { cwd: rootDir, encoding: "utf-8" });
+    // Use whichever package manager launched the suite (pnpm, npm, ...) so the test is portable.
+    const runner = /pnpm/.test(process.env.npm_execpath ?? "") ? "pnpm" : "npm run";
+    const output = execSync(`${runner} typecheck`, { cwd: rootDir, encoding: "utf-8" });
     harness.assert(!output.includes("error TS"), "TypeScript compiler completed with zero errors");
   });
 
