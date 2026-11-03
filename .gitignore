@@ -50,3 +50,8 @@ yarn-error.log*
 # Obsidian
 .obsidian/
 *.tsbuildinfo
+
+# graphify local state (machine-specific / derived cache)
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
