@@ -24,7 +24,9 @@ model Tenant {
   currency           String              @default("USD")
   qrCodeUrl          String?             // Studio payment QR code image asset
   bankDetails        String?             // Bank name, account number, account holder
-  subscriptionTier   String              @default("PRO") // STARTER, PRO, STUDIO_UNLIMITED
+  toyyibpaySecretEnc    String?          // AES-GCM encrypted Toyyibpay userSecretKey (never stored in plaintext)
+  toyyibpayCategoryCode String?          // Toyyibpay category the studio's bills are created under
+  subscriptionTier  String              @default("PRO") // STARTER, PRO, STUDIO_UNLIMITED
   subscriptionStatus String              @default("ACTIVE") // ACTIVE, TRIALING, CANCELLED
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -234,6 +236,7 @@ model MilestoneInvoice {
   verifiedBy       String?
   dueDate          DateTime
   paidAt           DateTime?
+  gatewayBillCode  String?   @unique // Toyyibpay BillCode for online (FPX/card) payments
   createdAt        DateTime  @default(now())
 
   tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)

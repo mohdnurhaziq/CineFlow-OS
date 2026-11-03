@@ -191,6 +191,10 @@ export class TestHarness {
     if (exitCode === 0) {
       console.log("\x1b[32m✓ 100% OF TEST ASSERTIONS PASSED WITH STATUS CODE 0\x1b[0m\n");
     } else {
+      // Repeat every failure at the end so it can't be lost in a long log.
+      for (const r of this.results.filter((x) => !x.passed)) {
+        console.error(`\x1b[31m  FAILED [${r.tier} / ${r.suite}]: ${r.name}\x1b[0m${r.error ? `\n    ${r.error}` : ""}`);
+      }
       console.error("\x1b[31m✗ TEST SUITE FAILED WITH STATUS CODE 1\x1b[0m\n");
     }
   }

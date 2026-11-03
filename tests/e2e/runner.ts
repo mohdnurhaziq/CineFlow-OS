@@ -24,6 +24,7 @@ import { runTier5AdversarialHardeningTests } from "./tier5-adversarial-hardening
 import { runTier6ProductionHardeningTests } from "./tier6-production-hardening.test";
 import { runTier7ClientAccountsTests } from "./tier7-client-accounts-admin-booking.test";
 import { runTier8EmailDeliveryTests } from "./tier8-email-delivery.test";
+import { runTier9ToyyibpayTests } from "./tier9-toyyibpay-gateway.test";
 
 // Never let the suite send real email, even if a real key is present in the environment.
 process.env.RESEND_API_KEY = "";
@@ -81,6 +82,11 @@ async function runMasterTestSuite() {
     // Tier 8: Transactional Email Delivery (provider stubbed, no network)
     // --------------------------------------------------------------------------
     await runTier8EmailDeliveryTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 9: Toyyibpay payment gateway (API stubbed, no real money)
+    // --------------------------------------------------------------------------
+    await runTier9ToyyibpayTests(harness);
   } catch (err: any) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {
