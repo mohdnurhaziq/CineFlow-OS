@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { CheckoutShell } from "@/components/checkout/checkout-shell";
 import { Metadata } from "next";
+import { getSessionClient } from "@/lib/clients";
+import { CheckoutAuthGate } from "@/components/checkout/checkout-auth-gate";
 
 interface CheckoutPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -92,16 +94,28 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     });
   }
 
+  // 4. Booking a slot requires a client account (quick sign-up or sign-in)
+  const client = slot ? await getSessionClient(tenant.id) : null;
+
+  if (slot && !client) {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+        <CheckoutAuthGate tenantSlug={tenant.slug} tenantName={tenant.name} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
       <CheckoutShell
         tenant={tenant}
         slot={slot}
         invoice={invoice}
+        identityLocked={Boolean(slot && client)}
         initialData={{
-          name: search.name,
-          email: search.email,
-          phone: search.phone,
+          name: client?.name ?? search.name,
+          email: client?.email ?? search.email,
+          phone: client?.phone ?? search.phone,
           brief: search.brief,
           sessionId: search.sessionId,
         }}

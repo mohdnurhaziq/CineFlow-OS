@@ -178,12 +178,12 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
     harness.registerTeardown(async () => {
       if (checkoutRes.invoiceId) await db.milestoneInvoice.delete({ where: { id: checkoutRes.invoiceId } }).catch(() => null);
       if (checkoutRes.bookingId) await db.clientBooking.delete({ where: { id: checkoutRes.bookingId } }).catch(() => null);
-      await db.user.delete({ where: { email: clientEmail } }).catch(() => null);
+      await db.user.deleteMany({ where: { email: clientEmail } }).catch(() => null);
       await db.bookingSlot.delete({ where: { id: slot.id } }).catch(() => null);
     });
 
     harness.assert(checkoutRes.success === true, "Checkout succeeded");
-    const user = await db.user.findUnique({ where: { email: clientEmail } });
+    const user = await db.user.findFirst({ where: { email: clientEmail } });
     harness.assert(user !== null, "User record created in database");
     harness.assert(user?.role === "CLIENT", "User assigned role CLIENT");
   });

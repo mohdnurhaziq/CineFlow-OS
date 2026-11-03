@@ -62,7 +62,10 @@ export async function onboardStudio(formData: OnboardStudioInput) {
         throw new Error("SLUG_ALREADY_TAKEN");
       }
 
-      const existingUser = await tx.user.findUnique({ where: { email: data.ownerEmail } });
+      // Studio staff/owner emails stay globally unique; a client account elsewhere does not block onboarding.
+      const existingUser = await tx.user.findFirst({
+        where: { email: data.ownerEmail, role: { not: "CLIENT" } },
+      });
       if (existingUser) {
         throw new Error("EMAIL_ALREADY_TAKEN");
       }

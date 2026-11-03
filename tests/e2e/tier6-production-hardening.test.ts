@@ -10,11 +10,8 @@ import {
   sendNotification,
   getNotificationHistory,
 } from "../../lib/notifications";
-import {
-  createSessionToken,
-  verifySessionToken,
-  loginWithCredentials,
-} from "../../lib/auth/session";
+import { loginWithCredentials } from "../../lib/auth/session";
+import { createSessionToken, verifySessionToken } from "../../lib/auth/token";
 import sitemap from "../../app/sitemap";
 import robots from "../../app/robots";
 
@@ -286,7 +283,9 @@ export async function runTier6ProductionHardeningTests(harness: TestHarness) {
     // 3. Tenant mismatch (Lumina user trying to log into Apex Media)
     const tenantMismatch = await loginWithCredentials("alex@luminacine.com", "password123", "apex-media");
     harness.assert(!tenantMismatch.success, "Cross-tenant login rejected");
-    harness.assertEqual(tenantMismatch.error, "TENANT_MISMATCH", "Error is TENANT_MISMATCH");
+    // Accounts are per studio, so a user from another studio simply has no account here
+    // (INVALID_CREDENTIALS, which also avoids revealing that the email exists elsewhere).
+    harness.assertEqual(tenantMismatch.error, "INVALID_CREDENTIALS", "Error is INVALID_CREDENTIALS (no account in this studio)");
 
     // 4. Super Admin can access any tenant
     const superAdminLogin = await loginWithCredentials("superadmin@cineflow.app", "password123", "lumina-cine");

@@ -55,6 +55,8 @@ interface CheckoutShellProps {
     brief?: string;
     sessionId?: string;
   };
+  /** When true, name/email/phone come from the signed-in client account and cannot be edited. */
+  identityLocked?: boolean;
 }
 
 export function CheckoutShell({
@@ -62,6 +64,7 @@ export function CheckoutShell({
   slot,
   invoice,
   initialData,
+  identityLocked = false,
 }: CheckoutShellProps) {
   const [activeTab, setActiveTab] = useState<"CARD" | "QR_CODE" | "CASH">("CARD");
 
@@ -368,6 +371,7 @@ export function CheckoutShell({
                       placeholder="e.g. Maya Farhan"
                       value={clientInfo.name}
                       onChange={(e) => setClientInfo((prev) => ({ ...prev, name: e.target.value }))}
+                      readOnly={identityLocked}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500"
                       required
                     />
@@ -386,6 +390,7 @@ export function CheckoutShell({
                         placeholder="maya@example.com"
                         value={clientInfo.email}
                         onChange={(e) => setClientInfo((prev) => ({ ...prev, email: e.target.value }))}
+                      readOnly={identityLocked}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500"
                         required
                       />
@@ -403,6 +408,7 @@ export function CheckoutShell({
                         placeholder="+60 12-345 6789"
                         value={clientInfo.phone}
                         onChange={(e) => setClientInfo((prev) => ({ ...prev, phone: e.target.value }))}
+                      readOnly={identityLocked}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs font-mono focus:outline-none focus:border-amber-500"
                         required
                       />

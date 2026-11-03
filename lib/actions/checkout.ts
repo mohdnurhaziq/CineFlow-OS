@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
+import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
 import {
   ProcessBookingCheckoutSchema,
   type ProcessBookingCheckoutInput,
@@ -34,6 +35,9 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       paymentProofUrl,
       paymentReference,
     } = validated;
+
+    // A signed-in client books under their own account details.
+    const sessionClient = await getSessionClient(tenantId);
 
     // 1. Verify Slot Hold Ownership
     const slot = await db.bookingSlot.findUnique({
@@ -72,20 +76,15 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
 
     // 3. Execute Atomic Transaction
     const result = await db.$transaction(async (tx) => {
-      // Find or create User
-      let user = await tx.user.findUnique({ where: { email: clientEmail } });
-      if (!user) {
-        user = await tx.user.create({
-          data: {
-            tenantId,
-            name: clientName,
-            email: clientEmail,
-            phone: clientPhone,
-            role: "CLIENT",
-            isQuickCreated: true,
-          },
-        });
-      }
+      // Signed-in client account wins; otherwise fall back to the legacy guest path.
+      const user =
+        sessionClient ??
+        (await findOrCreateGuestClient(tx, {
+          tenantId,
+          name: clientName,
+          email: clientEmail,
+          phone: clientPhone,
+        }));
 
       // Proactively disassociate any cancelled booking still referencing this slot to prevent @unique collision
       await tx.clientBooking.updateMany({
@@ -119,9 +118,9 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
           tenantId,
           trackingCode,
           category: slot.category,
-          clientName,
-          clientEmail,
-          clientPhone,
+          clientName: user.name,
+          clientEmail: user.email,
+          clientPhone: user.phone ?? clientPhone,
           discipline: "PHOTOGRAPHY",
           serviceTier: slot.campaignTitle || "STANDARD",
           targetDate: slot.date instanceof Date ? slot.date.toISOString().split("T")[0] : String(slot.date).split("T")[0],
@@ -152,14 +151,15 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
     safeRevalidate(`/${tenantSlug}/admin/verification`);
 
     // Dispatch automated booking confirmation notification
-    if (clientEmail) {
+    const notifyEmail = result.booking.clientEmail;
+    if (notifyEmail) {
       sendNotification({
         event: "BOOKING_CONFIRMED",
         studioName: tenantSlug,
         studioSlug: tenantSlug,
-        clientName,
-        clientEmail,
-        clientPhone: clientPhone || undefined,
+        clientName: result.booking.clientName,
+        clientEmail: notifyEmail,
+        clientPhone: result.booking.clientPhone || undefined,
         packageName: "Studio Production Session",
         slotDate: slot.date ? new Date(slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
         startTime: slot.startTime,

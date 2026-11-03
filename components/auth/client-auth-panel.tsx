@@ -1,0 +1,207 @@
+"use client";
+
+import { useState } from "react";
+import { User, Mail, Phone, Lock, Hash, AlertCircle, Loader2 } from "lucide-react";
+import { registerClient } from "@/lib/actions/client-auth";
+import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
+
+interface ClientAuthPanelProps {
+  tenantSlug: string;
+  /** Called after a successful sign-in or account creation. */
+  onSuccess: () => void;
+  defaultMode?: "register" | "login";
+}
+
+const inputClass =
+  "w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 placeholder-zinc-500";
+
+export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register" }: ClientAuthPanelProps) {
+  const [mode, setMode] = useState<"register" | "login">(defaultMode);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [claimCode, setClaimCode] = useState("");
+  const [needsClaim, setNeedsClaim] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const switchMode = (next: "register" | "login") => {
+    setMode(next);
+    setError(null);
+    setNeedsClaim(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      if (mode === "register") {
+        const res = await registerClient({
+          tenantSlug,
+          name,
+          email,
+          phone,
+          password,
+          claimCode: needsClaim ? claimCode : undefined,
+        });
+        if (!res.success) {
+          if (res.error === "CLAIM_REQUIRED" || res.error === "CLAIM_INVALID") setNeedsClaim(true);
+          setError(res.message);
+          return;
+        }
+        onSuccess();
+      } else {
+        const res = await loginWithCredentials(email, password, tenantSlug);
+        if (!res.success) {
+          setError(
+            res.error === "RATE_LIMITED"
+              ? "Too many attempts. Please wait a few minutes and try again."
+              : res.error === "TENANT_MISMATCH"
+                ? "This account belongs to a different studio."
+                : res.error === "INVALID_CREDENTIALS"
+                  ? "Invalid email or password."
+                  : "Sign-in is temporarily unavailable. Please retry."
+          );
+          return;
+        }
+        if (res.user?.role !== "CLIENT") {
+          await logoutAction();
+          setError("That is a studio staff account. Please use Studio Login instead.");
+          return;
+        }
+        onSuccess();
+      }
+    } catch {
+      setError("An unexpected network error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div role="tablist" className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-[#18181b] border border-zinc-800">
+        {(
+          [
+            ["register", "Create account"],
+            ["login", "I have an account"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={mode === id}
+            onClick={() => switchMode(id)}
+            className={`py-1.5 rounded-md text-[11px] font-semibold transition-colors ${
+              mode === id ? "bg-amber-500 text-black" : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {error && (
+          <div
+            role="alert"
+            className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2 text-xs text-rose-300"
+          >
+            <AlertCircle className="size-4 text-rose-400 flex-shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {mode === "register" && (
+          <div className="relative">
+            <User className="absolute left-3 top-2.5 size-4 text-zinc-500" />
+            <input
+              type="text"
+              autoComplete="name"
+              placeholder="Full name"
+              aria-label="Full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+              required
+            />
+          </div>
+        )}
+
+        <div className="relative">
+          <Mail className="absolute left-3 top-2.5 size-4 text-zinc-500" />
+          <input
+            type="email"
+            autoComplete="email"
+            placeholder="Email address"
+            aria-label="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputClass}
+            required
+          />
+        </div>
+
+        {mode === "register" && (
+          <div className="relative">
+            <Phone className="absolute left-3 top-2.5 size-4 text-zinc-500" />
+            <input
+              type="tel"
+              autoComplete="tel"
+              placeholder="Mobile number (WhatsApp)"
+              aria-label="Mobile number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={`${inputClass} font-mono`}
+              required
+            />
+          </div>
+        )}
+
+        <div className="relative">
+          <Lock className="absolute left-3 top-2.5 size-4 text-zinc-500" />
+          <input
+            type="password"
+            autoComplete={mode === "register" ? "new-password" : "current-password"}
+            placeholder={mode === "register" ? "Password (min. 8 characters)" : "Password"}
+            aria-label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={`${inputClass} font-mono`}
+            minLength={mode === "register" ? 8 : undefined}
+            required
+          />
+        </div>
+
+        {mode === "register" && needsClaim && (
+          <div className="relative">
+            <Hash className="absolute left-3 top-2.5 size-4 text-zinc-500" />
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="Tracking code from your earlier booking"
+              aria-label="Tracking code"
+              value={claimCode}
+              onChange={(e) => setClaimCode(e.target.value)}
+              className={`${inputClass} font-mono uppercase`}
+              required
+            />
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider disabled:opacity-50 transition-colors"
+        >
+          {loading && <Loader2 className="size-3.5 animate-spin" />}
+          {mode === "register" ? "Create account & continue" : "Sign in & continue"}
+        </button>
+      </form>
+    </div>
+  );
+}

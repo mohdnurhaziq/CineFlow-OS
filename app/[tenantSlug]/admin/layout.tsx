@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Film, ArrowLeft } from "lucide-react";
@@ -29,6 +29,15 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
   ]);
 
   if (!tenant) notFound();
+
+  // Admin console is for this studio's staff (or platform super-admins) only.
+  if (!currentUser) {
+    redirect(`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(`/${tenantSlug}/admin`)}`);
+  }
+  if (currentUser.role === "CLIENT") redirect(`/${tenantSlug}/account`);
+  if (currentUser.role !== "SUPER_ADMIN" && currentUser.tenantId !== tenant.id) {
+    redirect(`/${tenantSlug}/login`);
+  }
 
   // Get live pending verification count for badge
   const pendingCount = await db.milestoneInvoice.count({

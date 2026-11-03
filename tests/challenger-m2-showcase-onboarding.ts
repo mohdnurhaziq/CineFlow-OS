@@ -324,7 +324,7 @@ export async function runChallengerM2Suite() {
 
   // Empirically verify that ZERO orphan records remain in SQLite dev.db
   const orphanTenant = await db.tenant.findUnique({ where: { slug: rollbackSlug } });
-  const orphanUser = await db.user.findUnique({ where: { email: rollbackEmail } });
+  const orphanUser = await db.user.findFirst({ where: { email: rollbackEmail } });
   const orphanCats = await db.campaignCategory.findMany({ where: { slug: { in: ["cat-1", "cat-2"] } } });
   const orphanPrints = await db.printSize.findMany({ where: { name: "8R", basePrice: 100 } });
 
@@ -598,7 +598,7 @@ export async function runChallengerM2Suite() {
   const reqLuminaCustom = new NextRequest("http://localhost:3000/book", {
     headers: { "x-custom-domain": "studio.luminacine.com" },
   });
-  const resLuminaCustom = middleware(reqLuminaCustom);
+  const resLuminaCustom = await middleware(reqLuminaCustom);
   if (
     resLuminaCustom.headers.get("x-tenant-slug") === "lumina-cine" &&
     resLuminaCustom.headers.get("x-is-custom-domain") === "true"
@@ -612,7 +612,7 @@ export async function runChallengerM2Suite() {
   const reqApexHost = new NextRequest("http://studio.apexfilms.com/", {
     headers: { host: "studio.apexfilms.com" },
   });
-  const resApexHost = middleware(reqApexHost);
+  const resApexHost = await middleware(reqApexHost);
   if (resApexHost.headers.get("x-tenant-slug") === "apex-media") {
     recordPass("Middleware", "Direct host 'studio.apexfilms.com' resolves to 'apex-media'");
   } else {
@@ -623,7 +623,7 @@ export async function runChallengerM2Suite() {
   const reqSubdomain = new NextRequest("http://lumina-cine.cineflow.app/book", {
     headers: { host: "lumina-cine.cineflow.app" },
   });
-  const resSubdomain = middleware(reqSubdomain);
+  const resSubdomain = await middleware(reqSubdomain);
   if (resSubdomain.headers.get("x-tenant-slug") === "lumina-cine") {
     recordPass("Middleware", "Subdomain 'lumina-cine.cineflow.app' resolves to 'lumina-cine'");
   } else {
@@ -636,7 +636,7 @@ export async function runChallengerM2Suite() {
     const reqPlatform = new NextRequest(`http://${host}/create-studio`, {
       headers: { host },
     });
-    const resPlatform = middleware(reqPlatform);
+    const resPlatform = await middleware(reqPlatform);
     if (resPlatform.headers.get("x-tenant-slug") === null) {
       recordPass("Middleware", `Platform host '${host}' passes through without tenant rewrite`);
     } else {
@@ -650,7 +650,7 @@ export async function runChallengerM2Suite() {
     const reqBypass = new NextRequest(`http://studio.luminacine.com${path}`, {
       headers: { "x-custom-domain": "studio.luminacine.com" },
     });
-    const resBypass = middleware(reqBypass);
+    const resBypass = await middleware(reqBypass);
     if (resBypass.headers.get("x-tenant-slug") === null) {
       recordPass("Middleware", `Bypass path '${path}' passes through without tenant rewrite`);
     } else {

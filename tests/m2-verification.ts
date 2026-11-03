@@ -35,7 +35,7 @@ async function runM2Verification() {
     const reqLumina = new NextRequest("http://localhost:3000/book", {
       headers: { "x-custom-domain": "studio.luminacine.com" },
     });
-    const resLumina = middleware(reqLumina);
+    const resLumina = await middleware(reqLumina);
     assert(
       resLumina.headers.get("x-tenant-slug") === "lumina-cine",
       "Middleware resolves 'studio.luminacine.com' to 'lumina-cine'",
@@ -50,7 +50,7 @@ async function runM2Verification() {
     const reqApex = new NextRequest("http://localhost:3000/", {
       headers: { "x-custom-domain": "studio.apexfilms.com" },
     });
-    const resApex = middleware(reqApex);
+    const resApex = await middleware(reqApex);
     assert(
       resApex.headers.get("x-tenant-slug") === "apex-media",
       "Middleware resolves 'studio.apexfilms.com' to 'apex-media'",
@@ -61,7 +61,7 @@ async function runM2Verification() {
     const reqOverride = new NextRequest("http://localhost:3000/admin", {
       headers: { "x-tenant-slug": "custom-test-slug" },
     });
-    const resOverride = middleware(reqOverride);
+    const resOverride = await middleware(reqOverride);
     assert(
       resOverride.headers.get("x-tenant-slug") === "custom-test-slug",
       "Middleware honors 'x-tenant-slug' direct override header"
@@ -69,7 +69,7 @@ async function runM2Verification() {
 
     // D: Test standard platform route passthrough (no rewrite)
     const reqPlatform = new NextRequest("http://localhost:3000/create-studio");
-    const resPlatform = middleware(reqPlatform);
+    const resPlatform = await middleware(reqPlatform);
     assert(
       resPlatform.headers.get("x-tenant-slug") === null,
       "Platform routes pass through without unwanted tenant rewrites"

@@ -31,7 +31,7 @@ export async function runSaaSShowcaseTests(harness: TestHarness) {
     const req = new NextRequest("http://studio.luminacine.com/book", {
       headers: { host: "studio.luminacine.com" },
     });
-    const res = middleware(req);
+    const res = await middleware(req);
     harness.assert(res !== undefined, "Middleware returned a response");
     const rewriteHeader = res.headers.get("x-middleware-rewrite");
     const tenantSlug = res.headers.get("x-tenant-slug");
@@ -46,7 +46,7 @@ export async function runSaaSShowcaseTests(harness: TestHarness) {
     const req = new NextRequest("http://studio.apexfilms.com/services", {
       headers: { host: "studio.apexfilms.com" },
     });
-    const res = middleware(req);
+    const res = await middleware(req);
     const tenantSlug = res.headers.get("x-tenant-slug");
     harness.assert(tenantSlug === "apex-media", "Middleware set x-tenant-slug: apex-media");
   });
@@ -58,7 +58,7 @@ export async function runSaaSShowcaseTests(harness: TestHarness) {
         "x-tenant-slug": "lumina-cine",
       },
     });
-    const res = middleware(req);
+    const res = await middleware(req);
     harness.assert(res.headers.get("x-tenant-slug") === "lumina-cine", "Honored simulated x-tenant-slug header");
   });
 
@@ -68,7 +68,7 @@ export async function runSaaSShowcaseTests(harness: TestHarness) {
       const req = new NextRequest(`http://localhost:3000${route}`, {
         headers: { host: "localhost:3000" },
       });
-      const res = middleware(req);
+      const res = await middleware(req);
       harness.assert(res.headers.get("x-tenant-slug") === null, `Route ${route} passed through without tenant rewrite`);
     }
   });
@@ -84,7 +84,7 @@ export async function runSaaSShowcaseTests(harness: TestHarness) {
       const req = new NextRequest(`http://localhost:3000${path}`, {
         headers: { host: "localhost:3000" },
       });
-      const res = middleware(req);
+      const res = await middleware(req);
       harness.assert(res.headers.get("x-tenant-slug") === null, `Path ${path} bypassed middleware tenant processing`);
     }
   });

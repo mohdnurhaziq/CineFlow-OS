@@ -14,7 +14,10 @@ interface StudioLoginFormProps {
 export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || `/${tenantSlug}/admin`;
+  const rawCallback = searchParams.get("callbackUrl");
+  // Only allow same-site relative paths to prevent open redirects.
+  const callbackUrl =
+    rawCallback && rawCallback.startsWith("/") && !rawCallback.startsWith("//") ? rawCallback : null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +34,8 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
       if (!result.success) {
         if (result.error === "INVALID_CREDENTIALS") {
           setError("Invalid email or password. Please verify your credentials.");
+        } else if (result.error === "RATE_LIMITED") {
+          setError("Too many attempts. Please wait a few minutes and try again.");
         } else if (result.error === "TENANT_MISMATCH") {
           setError(`Account does not have access permissions for ${tenantName}.`);
         } else {
@@ -40,7 +45,13 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         return;
       }
 
-      router.push(callbackUrl);
+      const isClient = result.user?.role === "CLIENT";
+      const target = isClient
+        ? callbackUrl && !callbackUrl.includes("/admin")
+          ? callbackUrl
+          : `/${tenantSlug}/account`
+        : callbackUrl || `/${tenantSlug}/admin`;
+      router.push(target);
       router.refresh();
     } catch {
       setError("An unexpected network error occurred.");
@@ -66,7 +77,7 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         </span>
         <h1 className="text-2xl font-black tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400">
-          Sign in to access the studio administrative suite, production call sheets, and fleet management.
+          Studio team: sign in to the admin suite. Clients: sign in to see your bookings, photos and invoices.
         </p>
       </div>
 
@@ -172,7 +183,13 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         </div>
       </div>
 
-      <div className="pt-2 text-center">
+      <div className="pt-2 text-center space-y-2">
+        <Link
+          href={`/${tenantSlug}/register`}
+          className="block text-xs font-mono text-amber-400 hover:text-amber-300 transition-colors"
+        >
+          New client? Create a quick account
+        </Link>
         <Link
           href={`/${tenantSlug}`}
           className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"

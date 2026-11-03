@@ -66,8 +66,28 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
             </span>
           </div>
 
-          <div>
-            Powered by <Link href="/" className="text-white hover:text-amber-400">CineFlow OS</Link> Multi-Tenant System
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link
+              href={`/${tenant.slug}/account`}
+              className="text-zinc-300 hover:text-amber-400 transition-colors"
+            >
+              Client Login
+            </Link>
+            <Link
+              href={`/${tenant.slug}/my-booking`}
+              className="text-zinc-300 hover:text-amber-400 transition-colors"
+            >
+              Track Booking
+            </Link>
+            <Link
+              href={`/${tenant.slug}/login`}
+              className="text-zinc-300 hover:text-amber-400 transition-colors"
+            >
+              Studio Login
+            </Link>
+            <span>
+              Powered by <Link href="/" className="text-white hover:text-amber-400">CineFlow OS</Link> Multi-Tenant System
+            </span>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { CinemaBookingShell } from "@/components/booking/cinema-booking-shell";
+import { getSessionClient } from "@/lib/clients";
 
 interface BookingPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -79,10 +80,14 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
+  // 5. Signed-in client for this studio (if any) books under their own account
+  const client = await getSessionClient(tenant.id);
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <CinemaBookingShell
+          clientAccount={client ? { name: client.name, email: client.email, phone: client.phone ?? "" } : null}
           tenant={tenant}
           categories={categories}
           initialSlots={slots}

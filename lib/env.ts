@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { DEV_FALLBACK_AUTH_SECRET } from "@/lib/auth/dev-secret";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().default("file:./dev.db"),
-  AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters long").default("cineflow_super_secure_random_session_secret_32_chars_min"),
+  AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters long").default(DEV_FALLBACK_AUTH_SECRET),
   NEXT_PUBLIC_APP_DOMAIN: z.string().default("cineflow.app"),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 });

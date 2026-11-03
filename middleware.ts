@@ -6,24 +6,68 @@ const CUSTOM_DOMAIN_MAP: Record<string, string> = {
   "studio.apexfilms.com": "apex-media",
 };
 
-// ─── Auth helpers (Edge-compatible, no Node.js APIs) ────────────────────────
+// ─── Auth helpers (Edge-compatible, Web Crypto only) ────────────────────────
 const COOKIE_NAME = "cineflow_session";
-const ADMIN_PATTERN = /^\/([^/]+)\/admin(\/|$)/;
-const LOGIN_PATTERN = /^\/([^/]+)\/login(\/|$)/;
+const ADMIN_PATTERN = /^\/([^/]+)\/admin(\/|$)/i;
+const DEV_FALLBACK_AUTH_SECRET = "cineflow_super_secure_random_session_secret_32_chars_min";
+
+interface EdgeSession {
+  role: string;
+  tenantSlug: string | null;
+}
+
+function base64urlToBytes(input: string): Uint8Array {
+  const b64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+}
+
+function bytesToBase64url(bytes: Uint8Array): string {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
 
 /**
- * Lightweight session check in Edge runtime.
- * We only verify the cookie EXISTS and is structurally valid (two dot-separated
- * base64url parts). Full HMAC verification happens in server components via
- * `getCurrentUser()` — re-doing HMAC here would require the secret in Edge
- * memory, which is acceptable, but a structural pre-check is sufficient to
- * prevent unauthenticated page renders from reaching DB-heavy layout code.
+ * Fully verifies the signed session cookie (HMAC-SHA256 + expiry) in the Edge
+ * runtime. This runs BEFORE any page renders, which matters: Next.js renders
+ * layouts and pages in parallel, so a redirect inside a layout does not stop
+ * the page's data fetching or keep its output out of the response.
  */
-function hasValidSessionCookie(request: NextRequest): boolean {
-  const cookie = request.cookies.get(COOKIE_NAME);
-  if (!cookie?.value) return false;
-  const parts = cookie.value.split(".");
-  return parts.length === 2 && (parts[0]?.length ?? 0) > 0 && (parts[1]?.length ?? 0) > 0;
+async function readSession(request: NextRequest): Promise<EdgeSession | null> {
+  try {
+    const token = request.cookies.get(COOKIE_NAME)?.value;
+    if (!token) return null;
+    const parts = token.split(".");
+    if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+    const [payloadB64, signature] = parts;
+
+    const secret = process.env.AUTH_SECRET || DEV_FALLBACK_AUTH_SECRET;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const expected = bytesToBase64url(
+      new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payloadB64)))
+    );
+
+    // Constant-time comparison
+    if (expected.length !== signature.length) return null;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+    if (diff !== 0) return null;
+
+    const payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(payloadB64)));
+    if (typeof payload.exp !== "number" || Date.now() > payload.exp) return null;
+    if (typeof payload.role !== "string") return null;
+
+    return { role: payload.role, tenantSlug: payload.tenantSlug ?? null };
+  } catch {
+    return null;
+  }
 }
 
 // Known platform hosts — cannot include DB-dependent logic (Edge runtime)
@@ -36,7 +80,7 @@ const PLATFORM_HOSTS = new Set([
   "cineflow.local",
 ]);
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const pathname = url.pathname;
 
@@ -49,18 +93,6 @@ export function middleware(request: NextRequest) {
     pathname.includes(".")
   ) {
     return NextResponse.next();
-  }
-
-  // 2. Admin Route Guard — protect /[tenantSlug]/admin/* from unauthenticated access
-  const adminMatch = ADMIN_PATTERN.exec(pathname);
-  if (adminMatch) {
-    if (!hasValidSessionCookie(request)) {
-      const tenantSlug = adminMatch[1];
-      const loginUrl = new URL(`/${tenantSlug}/login`, request.url);
-      // Preserve the intended destination so the login form can redirect back
-      loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
   }
 
   // 2. Extract Host Header
@@ -91,7 +123,40 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 4. Handle Custom Domain / Subdomain Rewrites
+  // 4. Admin Route Guard. Runs on the effective (post-rewrite) path so custom
+  // domains and subdomains cannot reach /admin unguarded, and on a normalised
+  // path so encoded or doubled slashes cannot slip past the pattern.
+  let decodedPath = pathname;
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch {
+    // keep raw path
+  }
+  decodedPath = decodedPath.replace(/\/{2,}/g, "/");
+  const effectivePath =
+    resolvedTenantSlug && !decodedPath.toLowerCase().startsWith(`/${resolvedTenantSlug.toLowerCase()}/`) &&
+    decodedPath.toLowerCase() !== `/${resolvedTenantSlug.toLowerCase()}`
+      ? `/${resolvedTenantSlug}${decodedPath}`
+      : decodedPath;
+
+  const adminMatch = ADMIN_PATTERN.exec(effectivePath);
+  if (adminMatch) {
+    const slug = adminMatch[1] ?? "";
+    const session = await readSession(request);
+    if (!session) {
+      const loginUrl = new URL(`/${slug}/login`, request.url);
+      loginUrl.searchParams.set("callbackUrl", `/${slug}/admin`);
+      return NextResponse.redirect(loginUrl);
+    }
+    if (session.role === "CLIENT") {
+      return NextResponse.redirect(new URL(`/${slug}/account`, request.url));
+    }
+    if (session.role !== "SUPER_ADMIN" && session.tenantSlug?.toLowerCase() !== slug.toLowerCase()) {
+      return NextResponse.redirect(new URL(`/${slug}/login`, request.url));
+    }
+  }
+
+  // 5. Handle Custom Domain / Subdomain Rewrites
   if (resolvedTenantSlug) {
     // Avoid double-prefixing if the path already starts with the tenant slug
     const targetPath = pathname.startsWith(`/${resolvedTenantSlug}`)
@@ -107,7 +172,7 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // 5. Standard Platform Request
+  // 6. Standard Platform Request
   const response = NextResponse.next();
   response.headers.set("x-platform-host", hostname);
   return response;

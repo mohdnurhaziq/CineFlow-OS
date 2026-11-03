@@ -1,87 +1,14 @@
 "use server";
 
-import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
+import { isRateLimited } from "@/lib/rate-limit";
+import { COOKIE_NAME, setSessionCookie, verifySessionToken, type SessionUser } from "./token";
 
-export interface SessionUser {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  tenantId: string | null;
-  tenantSlug: string | null;
-}
-
-interface TokenPayload extends SessionUser {
-  exp: number;
-}
-
-const COOKIE_NAME = "cineflow_session";
-const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-
-/**
- * Signs a session payload using HMAC-SHA256 with AUTH_SECRET.
- */
-function createSignature(payloadBase64: string): string {
-  return crypto
-    .createHmac("sha256", env.AUTH_SECRET)
-    .update(payloadBase64)
-    .digest("base64url");
-}
-
-/**
- * Creates a signed session token.
- */
-export async function createSessionToken(user: SessionUser): Promise<string> {
-  const payload: TokenPayload = {
-    ...user,
-    exp: Date.now() + SESSION_EXPIRY_MS,
-  };
-
-  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = createSignature(payloadBase64);
-  return `${payloadBase64}.${signature}`;
-}
-
-/**
- * Verifies and parses a signed session token.
- */
-export async function verifySessionToken(token: string): Promise<SessionUser | null> {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 2) return null;
-
-    const [payloadBase64, providedSignature] = parts;
-    if (!payloadBase64 || !providedSignature) return null;
-
-    const expectedSignature = createSignature(payloadBase64);
-    if (!crypto.timingSafeEqual(Buffer.from(providedSignature), Buffer.from(expectedSignature))) {
-      return null;
-    }
-
-    const payload: TokenPayload = JSON.parse(
-      Buffer.from(payloadBase64, "base64url").toString("utf-8")
-    );
-
-    if (Date.now() > payload.exp) {
-      return null;
-    }
-
-    return {
-      id: payload.id,
-      email: payload.email,
-      name: payload.name,
-      role: payload.role,
-      tenantId: payload.tenantId,
-      tenantSlug: payload.tenantSlug,
-    };
-  } catch (err) {
-    return null;
-  }
-}
+// NOTE: this is a "use server" module, so every export is a public server
+// action. Token minting/verification lives in ./token (not an action module).
+export type { SessionUser } from "./token";
 
 /**
  * Retrieves the authenticated user from the active session cookie.
@@ -100,6 +27,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
 /**
  * Authenticates user credentials and sets the session cookie.
+ *
+ * Accounts are unique per (studio, email), so when a studio slug is given the
+ * lookup is scoped to that studio; platform super-admins can sign in anywhere.
  */
 export async function loginWithCredentials(
   email: string,
@@ -109,10 +39,20 @@ export async function loginWithCredentials(
   try {
     const normalizedEmail = email.trim().toLowerCase();
 
-    const user = await db.user.findUnique({
-      where: { email: normalizedEmail },
-      include: { tenant: true },
-    });
+    if (isRateLimited(`login:${tenantSlug ?? "*"}:${normalizedEmail}`, 10)) {
+      return { success: false, error: "RATE_LIMITED" };
+    }
+
+    const user = tenantSlug
+      ? ((await db.user.findFirst({
+          where: { email: normalizedEmail, tenant: { slug: tenantSlug } },
+          include: { tenant: true },
+        })) ??
+        (await db.user.findFirst({
+          where: { email: normalizedEmail, role: "SUPER_ADMIN" },
+          include: { tenant: true },
+        })))
+      : await db.user.findFirst({ where: { email: normalizedEmail }, include: { tenant: true } });
 
     if (!user || !user.passwordHash) {
       return { success: false, error: "INVALID_CREDENTIALS" };
@@ -137,20 +77,7 @@ export async function loginWithCredentials(
       tenantSlug: user.tenant?.slug ?? null,
     };
 
-    const token = await createSessionToken(sessionUser);
-
-    try {
-      const cookieStore = await cookies();
-      cookieStore.set(COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60,
-        path: "/",
-      });
-    } catch {
-      // Non-request context fallback (e.g. CLI runner or automated test)
-    }
+    await setSessionCookie(sessionUser);
 
     return { success: true, user: sessionUser };
   } catch (err: any) {

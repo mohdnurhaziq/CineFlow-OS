@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
 
 export const HoldSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -226,6 +227,9 @@ export async function createClientBooking(input: CreateBookingInput) {
       return { success: false, error: "Slot not found" };
     }
 
+    // A signed-in client books under their own account details.
+    const sessionClient = await getSessionClient(tenantId);
+
     // Must be either held by this session (and not expired) or available
     const now = new Date();
     const isHeldByMe = slot.status === "HELD" && slot.heldBySessionId === sessionId && slot.heldUntil && slot.heldUntil > now;
@@ -238,20 +242,15 @@ export async function createClientBooking(input: CreateBookingInput) {
     const trackingCode = `BK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
     const booking = await db.$transaction(async (tx) => {
-      // Create user if not exists
-      let user = await tx.user.findUnique({ where: { email: clientEmail } });
-      if (!user) {
-        user = await tx.user.create({
-          data: {
-            tenantId,
-            name: clientName,
-            email: clientEmail,
-            phone: clientPhone,
-            role: "CLIENT",
-            isQuickCreated: true,
-          },
-        });
-      }
+      // Signed-in client account wins; otherwise fall back to the legacy guest path.
+      const user =
+        sessionClient ??
+        (await findOrCreateGuestClient(tx, {
+          tenantId,
+          name: clientName,
+          email: clientEmail,
+          phone: clientPhone,
+        }));
 
       // Create ClientBooking
       const createdBooking = await tx.clientBooking.create({
@@ -259,9 +258,9 @@ export async function createClientBooking(input: CreateBookingInput) {
           tenantId,
           trackingCode,
           category,
-          clientName,
-          clientEmail,
-          clientPhone,
+          clientName: user.name,
+          clientEmail: user.email,
+          clientPhone: user.phone ?? clientPhone,
           discipline,
           serviceTier,
           targetDate: slot.date.toISOString().split("T")[0],

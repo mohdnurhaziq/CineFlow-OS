@@ -141,7 +141,7 @@ model User {
   id                 String              @id @default(cuid())
   tenantId           String?
   name               String
-  email              String              @unique
+  email              String
   phone              String?
   role               String              @default("CLIENT") // SUPER_ADMIN, STUDIO_OWNER, PHOTOGRAPHER, VIDEOGRAPHER, CREW, CLIENT
   passwordHash       String?
@@ -159,6 +159,8 @@ model User {
   studioProjects     Project[]           @relation("StudioProjects")
   invoices           MilestoneInvoice[]
 
+  // One account per email per studio, so the same person can be a client of several studios.
+  @@unique([tenantId, email])
   @@index([tenantId])
   @@index([role])
 }

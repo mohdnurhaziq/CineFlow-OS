@@ -34,6 +34,7 @@ interface CinemaBookingShellProps {
   initialSlots: BookingSlotItem[];
   initialCategory?: string;
   initialPackageId?: string;
+  clientAccount?: { name: string; email: string; phone: string } | null;
 }
 
 export function CinemaBookingShell({
@@ -42,6 +43,7 @@ export function CinemaBookingShell({
   initialSlots,
   initialCategory = "all",
   initialPackageId,
+  clientAccount = null,
 }: CinemaBookingShellProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -338,6 +340,7 @@ export function CinemaBookingShell({
         slot={heldSlot}
         sessionId={sessionId}
         brandColor={tenant.brandColor}
+        clientAccount={clientAccount}
         onBookingConfirmed={(code) => {
           setHeldSlot(null);
           setHeldUntil(null);

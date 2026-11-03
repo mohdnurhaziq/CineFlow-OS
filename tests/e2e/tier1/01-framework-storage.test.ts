@@ -164,19 +164,23 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
     const superAdmin = await db.user.findFirst({ where: { role: "SUPER_ADMIN" } });
     harness.assert(superAdmin !== null, "Super admin user exists");
 
+    // Emails are unique per studio (tenantId + email), so duplicate within the same studio.
+    const luminaOwner = await db.user.findFirst({ where: { tenantId: lumina!.id, role: "STUDIO_OWNER" } });
+    harness.assert(luminaOwner !== null, "Lumina studio owner exists");
+
     await harness.assertRejects(
       () =>
         db.user.create({
           data: {
             tenantId: lumina!.id,
-            email: superAdmin!.email,
+            email: luminaOwner!.email,
             name: "Fake Admin",
             role: "STAFF",
             passwordHash: "hash",
           },
         }),
       "Unique constraint failed",
-      "Duplicate User.email rejected by database unique constraint"
+      "Duplicate User.email within a studio rejected by database unique constraint"
     );
   });
 
