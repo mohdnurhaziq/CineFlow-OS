@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { X, Calendar, Layers, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
 import { batchGenerateBookingSlots } from "@/lib/actions/admin-calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import { parseTimeToMinutes } from "@/lib/utils/time";
 import type { CategoryOption } from "./single-slot-dialog";
 
@@ -204,24 +205,24 @@ export function BatchGeneratorDialog({
               <label className="text-xs font-mono text-zinc-400 block mb-1">
                 Start Date *
               </label>
-              <input
-                type="date"
-                required
+              <DatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                onChange={(v) => {
+                  setStartDate(v);
+                  if (v && endDate && endDate < v) setEndDate(v);
+                }}
+                placeholder="Select start date"
               />
             </div>
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
                 End Date *
               </label>
-              <input
-                type="date"
-                required
+              <DatePicker
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                onChange={setEndDate}
+                min={startDate || undefined}
+                placeholder="Select end date"
               />
             </div>
           </div>

@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cleanupExpiredHolds } from "@/lib/actions/admin-calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import { SingleSlotDialog, type BookingSlotRow, type CategoryOption } from "./single-slot-dialog";
 import { BatchGeneratorDialog } from "./batch-generator-dialog";
 import { ForceReleaseDialog } from "./force-release-dialog";
@@ -220,13 +221,15 @@ export function CalendarAdminDashboard({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 font-mono focus:outline-none focus:border-amber-500 transition-colors"
-            title="Filter by exact date"
-          />
+          <div className="w-44">
+            <DatePicker
+              value={dateFilter}
+              onChange={setDateFilter}
+              placeholder="Filter by date"
+              clearable
+              title="Filter by exact date"
+            />
+          </div>
 
           <select
             value={selectedStatus}

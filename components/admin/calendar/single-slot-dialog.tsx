@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2, Calendar } from "lucide-react";
 import { createSingleBookingSlot, updateBookingSlot } from "@/lib/actions/admin-calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 
 export interface BookingSlotRow {
   id: string;
@@ -192,13 +193,7 @@ export function SingleSlotDialog({
             <label className="text-xs font-mono text-zinc-400 block mb-1">
               Session Date *
             </label>
-            <input
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-            />
+            <DatePicker value={date} onChange={setDate} placeholder="Select session date" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
