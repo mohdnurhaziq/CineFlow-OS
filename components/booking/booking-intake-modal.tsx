@@ -54,6 +54,7 @@ export function BookingIntakeModal({
   });
 
   const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
+  const [depositPaid, setDepositPaid] = useState(false);
 
   if (!isOpen || !slot) return null;
 
@@ -90,10 +91,18 @@ export function BookingIntakeModal({
 
       const result = await createClientBooking(payload);
 
-      if (result.success && result.trackingCode) {
+      if (result.success && result.paymentUrl) {
+        // Card payments are completed on the payment gateway's page.
+        window.location.assign(result.paymentUrl);
+      } else if (result.success && result.trackingCode) {
+        setDepositPaid(result.status === "PAID");
         setConfirmedCode(result.trackingCode);
         onBookingConfirmed(result.trackingCode);
-        toast.success("Booking confirmed! Your slot is officially locked.");
+        toast.success(
+          result.status === "PAID"
+            ? "Booking confirmed! Your slot is officially locked."
+            : "Booking received! The studio will confirm it once your payment is verified."
+        );
       } else {
         toast.error(result.error || "Failed to confirm booking.");
       }
@@ -130,9 +139,13 @@ export function BookingIntakeModal({
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xl font-bold text-white tracking-tight">Reservation Confirmed!</h4>
+              <h4 className="text-xl font-bold text-white tracking-tight">
+                {depositPaid ? "Reservation Confirmed!" : "Booking Received"}
+              </h4>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                Your session slot has been permanently locked. A confirmation email and calendar invite have been dispatched.
+                {depositPaid
+                  ? "Your session slot has been permanently locked. A confirmation email and calendar invite have been dispatched."
+                  : "Your slot is reserved while the studio verifies your deposit payment. You'll be notified once it's confirmed."}
               </p>
             </div>
 

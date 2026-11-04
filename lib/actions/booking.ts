@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
+import { processBookingCheckout } from "@/lib/actions/checkout";
 
 const HoldSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -202,95 +202,50 @@ export async function getTenantBookingSlots(params: {
   }
 }
 
+/**
+ * Books a held slot from the booking-page popup.
+ *
+ * This goes through the same checkout path as the dedicated checkout page, so
+ * every booking gets its deposit invoice (which is what the studio's
+ * Verification console lists) and card payments go through the studio's
+ * payment gateway instead of being confirmed without payment.
+ */
 export async function createClientBooking(input: CreateBookingInput) {
   try {
     const validated = CreateBookingInputSchema.parse(input);
-    const {
-      tenantId,
-      slotId,
-      sessionId,
-      clientName,
-      clientEmail,
-      clientPhone,
-      creativeBrief,
-      serviceTier,
-      discipline,
-      category,
-      paymentMethod,
-    } = validated;
 
-    const slot = await db.bookingSlot.findUnique({
-      where: { id: slotId },
+    const tenant = await db.tenant.findUnique({
+      where: { id: validated.tenantId },
+      select: { slug: true },
     });
-
-    if (!slot || slot.tenantId !== tenantId) {
-      return { success: false, error: "Slot not found" };
+    if (!tenant) {
+      return { success: false, error: "Studio not found" };
     }
 
-    // A signed-in client books under their own account details.
-    const sessionClient = await getSessionClient(tenantId);
-
-    // Must be either held by this session (and not expired) or available
-    const now = new Date();
-    const isHeldByMe = slot.status === "HELD" && slot.heldBySessionId === sessionId && slot.heldUntil && slot.heldUntil > now;
-    const isAvailable = slot.status === "AVAILABLE";
-
-    if (!isHeldByMe && !isAvailable) {
-      return { success: false, error: "Slot is no longer available" };
-    }
-
-    const trackingCode = `BK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-    const booking = await db.$transaction(async (tx) => {
-      // Signed-in client account wins; otherwise fall back to the legacy guest path.
-      const user =
-        sessionClient ??
-        (await findOrCreateGuestClient(tx, {
-          tenantId,
-          name: clientName,
-          email: clientEmail,
-          phone: clientPhone,
-        }));
-
-      // Create ClientBooking
-      const createdBooking = await tx.clientBooking.create({
-        data: {
-          tenantId,
-          trackingCode,
-          category,
-          clientName: user.name,
-          clientEmail: user.email,
-          clientPhone: user.phone ?? clientPhone,
-          discipline,
-          serviceTier,
-          targetDate: slot.date.toISOString().split("T")[0],
-          creativeBrief: creativeBrief || null,
-          status: paymentMethod === "CARD" ? "CONFIRMED" : "PENDING",
-          depositPaid: paymentMethod === "CARD",
-          depositAmount: slot.depositRequired,
-          paymentMethod,
-          slotId: slot.id,
-          userId: user.id,
-        },
-      });
-
-      // Update slot status
-      await tx.bookingSlot.update({
-        where: { id: slot.id },
-        data: {
-          status: paymentMethod === "CARD" ? "BOOKED" : "PENDING_VERIFICATION",
-          heldUntil: null,
-          heldBySessionId: null,
-        },
-      });
-
-      return createdBooking;
+    const result = await processBookingCheckout({
+      tenantId: validated.tenantId,
+      tenantSlug: tenant.slug,
+      slotId: validated.slotId,
+      sessionId: validated.sessionId,
+      clientName: validated.clientName,
+      clientEmail: validated.clientEmail,
+      clientPhone: validated.clientPhone,
+      creativeBrief: validated.creativeBrief,
+      paymentMethod: validated.paymentMethod,
     });
+
+    if (!result.success) {
+      return { success: false, error: result.message || "Failed to create booking" };
+    }
 
     return {
       success: true,
-      bookingId: booking.id,
-      trackingCode: booking.trackingCode,
+      bookingId: result.bookingId,
+      trackingCode: result.trackingCode,
+      invoiceNumber: result.invoiceNumber,
+      status: result.status,
+      // Present only when the client must finish paying on the gateway's page.
+      paymentUrl: "paymentUrl" in result ? result.paymentUrl : undefined,
     };
   } catch (err: any) {
     console.error("Error creating booking:", err);

@@ -121,11 +121,30 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
         },
       });
 
+      // Every booking carries its deposit invoice: unpaid ones are what the
+      // Verification console lists for approval; paid ones keep the ledger complete.
+      await tx.milestoneInvoice.create({
+        data: {
+          tenantId: data.tenantId,
+          invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+          clientId: customer.id,
+          milestoneType: "BOOKING_DEPOSIT",
+          amount: slot.depositRequired,
+          status: isPaid ? "PAID" : "PENDING_VERIFICATION",
+          paymentMethod: data.paymentMethod,
+          paymentReference: `STAFF_BOOKING:${trackingCode}`,
+          verifiedBy: isPaid ? session.name : null,
+          dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000),
+          paidAt: isPaid ? new Date() : null,
+        },
+      });
+
       return { booking, customerName: customer.name };
     });
 
     try {
       revalidatePath(`/${data.tenantSlug}/admin/calendar`);
+      revalidatePath(`/${data.tenantSlug}/admin/verification`);
       revalidatePath(`/${data.tenantSlug}/book`);
       revalidatePath(`/${data.tenantSlug}/account`);
     } catch {

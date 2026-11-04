@@ -17,6 +17,8 @@ import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "./test-harness";
 import { registerClient } from "@/lib/actions/client-auth";
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
+import { createClientBooking } from "@/lib/actions/booking";
+import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { loginWithCredentials, getCurrentUser, logoutAction } from "@/lib/auth/session";
 import { getSessionClient } from "@/lib/clients";
 import { withSession, withRequest, COOKIE_NAME } from "./mocks/session";
@@ -35,6 +37,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
 
   harness.registerTeardown(async () => {
     await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t7-" } } });
+    await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t7-" } } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: createdSlotIds } } });
     await db.user.deleteMany({ where: { email: { startsWith: "t7-" } } });
   });
@@ -407,6 +410,126 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assert(badPayment.success === false, "Rejects unknown payment status");
     const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });
     harness.assertEqual(after?.status, "AVAILABLE", "Slot untouched by invalid calls");
+  });
+
+  // ============================================================================
+  // 7.2b Every booking path produces a deposit invoice the studio can verify
+  // ============================================================================
+  const pendingDepositInvoice = (clientId: string) =>
+    db.milestoneInvoice.findFirst({
+      where: { tenantId: lumina.id, clientId, milestoneType: "BOOKING_DEPOSIT" },
+      orderBy: { createdAt: "desc" },
+    });
+
+  await harness.test("T7-BKG-01: booking-page popup (QR) creates a deposit invoice awaiting verification", async () => {
+    const slot = await makeSlot(lumina.id);
+    const e = email("popup-qr");
+    createdUserEmails.push(e);
+    const res: any = await withSession(null, () =>
+      createClientBooking({
+        tenantId: lumina.id,
+        slotId: slot.id,
+        sessionId: `t7-popup-${run}`,
+        clientName: "Popup Client",
+        clientEmail: e,
+        clientPhone: "0123456789",
+        paymentMethod: "QR_CODE",
+      })
+    );
+    harness.assert(res.success === true, `Popup booking created (${res.error ?? "ok"})`);
+    const booking = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
+    harness.assertEqual(booking?.status, "PENDING", "Booking is PENDING");
+    const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    harness.assertEqual(after?.status, "PENDING_VERIFICATION", "Slot is PENDING_VERIFICATION");
+    const invoice = booking?.userId ? await pendingDepositInvoice(booking.userId) : null;
+    harness.assert(!!invoice, "Deposit invoice exists for the booking's client");
+    harness.assertEqual(invoice?.status, "PENDING_VERIFICATION", "Invoice is in the verification queue");
+    harness.assertEqual(invoice?.amount, slot.depositRequired, "Invoice amount equals the slot deposit");
+    harness.assertEqual(invoice?.paymentMethod, "QR_CODE", "Invoice records the QR payment method");
+  });
+
+  await harness.test("T7-BKG-02: popup card booking cannot skip payment when no gateway is set up", async () => {
+    const slot = await makeSlot(lumina.id);
+    const e = email("popup-card");
+    createdUserEmails.push(e);
+    const prev = process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+    process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "false";
+    try {
+      const res: any = await withSession(null, () =>
+        createClientBooking({
+          tenantId: lumina.id,
+          slotId: slot.id,
+          sessionId: `t7-popup-card-${run}`,
+          clientName: "Card Client",
+          clientEmail: e,
+          clientPhone: "0123456789",
+          paymentMethod: "CARD",
+        })
+      );
+      harness.assert(res.success === false, "Card booking without a gateway is refused");
+    } finally {
+      process.env.ALLOW_SIMULATED_CARD_PAYMENTS = prev;
+    }
+    const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    harness.assertEqual(after?.status, "AVAILABLE", "Slot stays AVAILABLE");
+    const booking = await db.clientBooking.findFirst({ where: { clientEmail: e } });
+    harness.assert(!booking, "No booking was created");
+  });
+
+  await harness.test("T7-BKG-03: unpaid staff booking is verifiable and approval confirms it", async () => {
+    const slot = await makeSlot(lumina.id);
+    const e = email("staff-unpaid");
+    createdUserEmails.push(e);
+    const res: any = await withSession(luminaStaff, () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: slot.id,
+        newClient: { name: "Counter Client", email: e, phone: "0123456789" },
+        paymentMethod: "CASH",
+      })
+    );
+    harness.assert(res.success === true, `Staff booking created (${res.error ?? "ok"})`);
+    const booking = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
+    const invoice = booking?.userId ? await pendingDepositInvoice(booking.userId) : null;
+    harness.assertEqual(invoice?.status, "PENDING_VERIFICATION", "Unpaid staff booking has an invoice to verify");
+    harness.assertEqual(invoice?.amount, slot.depositRequired, "Invoice amount equals the slot deposit");
+
+    const approved: any = await withSession(luminaStaff, () =>
+      approvePaymentVerification({
+        invoiceId: invoice!.id,
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        staffName: "T7 Verifier",
+      })
+    );
+    harness.assert(approved.success === true, `Approval succeeds (${approved.message ?? "ok"})`);
+    const confirmed = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
+    harness.assertEqual(confirmed?.status, "CONFIRMED", "Booking CONFIRMED after approval");
+    harness.assertEqual(confirmed?.depositPaid, true, "Deposit marked paid");
+    const bookedSlot = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    harness.assertEqual(bookedSlot?.status, "BOOKED", "Slot BOOKED after approval");
+  });
+
+  await harness.test("T7-BKG-04: paid staff booking records a PAID deposit invoice", async () => {
+    const slot = await makeSlot(lumina.id);
+    const e = email("staff-paid");
+    createdUserEmails.push(e);
+    const res: any = await withSession(luminaStaff, () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: slot.id,
+        newClient: { name: "Paid Client", email: e, phone: "0123456789" },
+        paymentStatus: "PAID",
+        paymentMethod: "CASH",
+      })
+    );
+    harness.assert(res.success === true, `Staff booking created (${res.error ?? "ok"})`);
+    const booking = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
+    const invoice = booking?.userId ? await pendingDepositInvoice(booking.userId) : null;
+    harness.assertEqual(invoice?.status, "PAID", "Invoice is PAID");
+    harness.assert(!!invoice?.paidAt && !!invoice?.verifiedBy, "Invoice records who took the payment and when");
   });
 
   // ============================================================================
