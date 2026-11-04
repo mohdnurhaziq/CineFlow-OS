@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "tsx --import ./tests/e2e/mocks/register.mjs tests/e2e/runner.ts",
+    "test:e2e": "node tests/e2e/run.mjs",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",

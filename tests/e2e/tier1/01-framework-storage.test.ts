@@ -70,7 +70,7 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
   await harness.test("T1-F01-03: lib/env.ts validates environment variables and enforces required secrets", async () => {
     const { env } = await import("@/lib/env");
     harness.assert(typeof env.DATABASE_URL === "string" && env.DATABASE_URL.length > 0, "env.DATABASE_URL is defined");
-    harness.assert(env.DATABASE_URL.includes("dev.db"), "env.DATABASE_URL points to dev.db");
+    harness.assert(/^file:.+\.db$/.test(env.DATABASE_URL), "env.DATABASE_URL points to a SQLite database file");
     harness.assert(typeof env.AUTH_SECRET === "string" && env.AUTH_SECRET.length >= 32, "env.AUTH_SECRET meets minimum 32-character requirement");
   });
 

@@ -29,6 +29,14 @@ import { runTier8EmailDeliveryTests } from "./tier8-email-delivery.test";
 import { runTier9ToyyibpayTests } from "./tier9-toyyibpay-gateway.test";
 import { runTier10AuthorizationTests } from "./tier10-authorization.test";
 
+// The suite creates and mutates lots of records; refuse to run against anything but the
+// throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
+if (!/^file:.*\btest\.db$/.test(process.env.DATABASE_URL ?? "")) {
+  throw new Error(
+    `Refusing to run E2E tests against DATABASE_URL="${process.env.DATABASE_URL ?? ""}". Use \`npm run test:e2e\`.`
+  );
+}
+
 // Never let the suite send real email, even if a real key is present in the environment.
 process.env.RESEND_API_KEY = "";
 // Earlier tiers exercise the fake instant card flow; Tier 9 tests the real gateway path explicitly.
