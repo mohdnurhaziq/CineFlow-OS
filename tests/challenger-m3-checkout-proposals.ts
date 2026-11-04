@@ -349,7 +349,6 @@ async function runChallengerM3Suite() {
       clientEmail: `card.${Date.now()}@test.com`,
       clientPhone: "+15554444",
       paymentMethod: "CARD",
-      cardDetails: { cardNumber: "4242424242424242" },
     });
 
     assert(cardRes.success === true, "Card checkout succeeds");

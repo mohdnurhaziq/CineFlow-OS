@@ -32,9 +32,17 @@ export default async function AdminSettingsPage({ params }: SettingsPageProps) {
 
   if (!tenant) notFound();
 
+  // Pass only what the form needs: never the encrypted gateway secret.
+  const { toyyibpaySecretEnc, toyyibpayCategoryCode, ...safeTenant } = tenant;
+  const data = {
+    ...safeTenant,
+    gatewayConfigured: Boolean(toyyibpaySecretEnc && toyyibpayCategoryCode),
+    gatewayCategoryCode: toyyibpayCategoryCode,
+  };
+
   return (
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <StudioSettingsForm tenant={tenant as unknown as StudioTenantData} />
+      <StudioSettingsForm tenant={data as unknown as StudioTenantData} />
     </div>
   );
 }

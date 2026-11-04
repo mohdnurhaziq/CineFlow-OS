@@ -19,6 +19,124 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
+import { saveGatewayCredentials, removeGatewayCredentials } from "@/lib/actions/admin-payments";
+
+function GatewaySettings({
+  tenantId,
+  tenantSlug,
+  configured,
+  initialCategoryCode,
+}: {
+  tenantId: string;
+  tenantSlug: string;
+  configured: boolean;
+  initialCategoryCode: string;
+}) {
+  const router = useRouter();
+  const [secretKey, setSecretKey] = useState("");
+  const [categoryCode, setCategoryCode] = useState(initialCategoryCode);
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await saveGatewayCredentials({ tenantId, tenantSlug, secretKey: secretKey || undefined, categoryCode });
+      if (res.success) {
+        toast.success("Online payment settings saved.");
+        setSecretKey("");
+        router.refresh();
+      } else {
+        toast.error(res.message || "Could not save payment settings.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async () => {
+    setBusy(true);
+    try {
+      const res = await removeGatewayCredentials({ tenantId, tenantSlug });
+      if (res.success) {
+        toast.success("Online payments disabled.");
+        setCategoryCode("");
+        setSecretKey("");
+        router.refresh();
+      } else {
+        toast.error(res.message || "Could not remove payment settings.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const inputCls =
+    "w-full px-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500";
+
+  return (
+    <div className="p-6 rounded-2xl border border-zinc-800 bg-[#0d0d10] space-y-5">
+      <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
+        <CreditCard className="size-5 text-amber-400" />
+        <h2 className="text-base font-bold text-white tracking-tight">Online Payments (Toyyibpay)</h2>
+        <span
+          className={`ml-auto text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
+            configured ? "text-emerald-400 border-emerald-500/30" : "text-zinc-400 border-zinc-700"
+          }`}
+        >
+          {configured ? "Connected" : "Not connected"}
+        </span>
+      </div>
+      <p className="text-xs text-zinc-400 leading-relaxed">
+        Let clients pay by FPX online banking or card. Payments go straight to your own Toyyibpay account. Find the
+        secret key and a category code in your Toyyibpay dashboard. Without this, clients can only pay by QR or cash.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <label className="space-y-1 block">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">User Secret Key</span>
+          <input
+            type="password"
+            autoComplete="off"
+            value={secretKey}
+            onChange={(e) => setSecretKey(e.target.value)}
+            placeholder={configured ? "Saved (leave blank to keep)" : "xxxxxxxx-xxxx-xxxx-xxxx"}
+            className={inputCls}
+          />
+        </label>
+        <label className="space-y-1 block">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">Category Code</span>
+          <input
+            type="text"
+            autoComplete="off"
+            value={categoryCode}
+            onChange={(e) => setCategoryCode(e.target.value)}
+            placeholder="e.g. a1b2c3d4"
+            className={inputCls}
+          />
+        </label>
+      </div>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={save}
+          disabled={busy || !categoryCode.trim() || (!configured && !secretKey)}
+          className="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+        >
+          {busy ? "Saving..." : "Save payment settings"}
+        </button>
+        {configured && (
+          <button
+            type="button"
+            onClick={remove}
+            disabled={busy}
+            className="px-4 py-2.5 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+          >
+            Disconnect
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export interface StudioTenantData {
   id: string;
@@ -35,6 +153,8 @@ export interface StudioTenantData {
   bankDetails?: string | null;
   subscriptionTier: string;
   subscriptionStatus: string;
+  gatewayConfigured?: boolean;
+  gatewayCategoryCode?: string | null;
 }
 
 interface StudioSettingsFormProps {
@@ -516,6 +636,14 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
           </div>
         )}
       </div>
+
+      {/* Section 3b: Online payments (Toyyibpay) */}
+      <GatewaySettings
+        tenantId={tenant.id}
+        tenantSlug={tenant.slug}
+        configured={Boolean(tenant.gatewayConfigured)}
+        initialCategoryCode={tenant.gatewayCategoryCode ?? ""}
+      />
 
       {/* Section 4: Workspace & License Information */}
       <div className="p-6 rounded-2xl border border-zinc-800 bg-[#0d0d10] space-y-4">

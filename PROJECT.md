@@ -206,3 +206,10 @@ function generateWhatsAppCallSheetUrl(callSheet: CallSheetWithDetails): {
   previewText: string;
 };
 ```
+
+## Online payments (Toyyibpay) - DONE
+- Each studio connects its own Toyyibpay account in Admin > Settings (secret key stored AES-256-GCM encrypted; never sent to the browser).
+- Card/FPX checkout creates a PENDING booking + invoice, holds the slot 30 min and redirects to the hosted Toyyibpay page. No card data touches this app.
+- Settlement (return page and /api/payments/toyyibpay/callback) never trusts the request: it re-checks the bill server-to-server, matches amount and invoice reference, and is idempotent. Late payments after the slot was re-booked are recorded as REFUND REQUIRED.
+- Without a gateway, card is refused unless ALLOW_SIMULATED_CARD_PAYMENTS=true (dev/test only). Set TOYYIBPAY_BASE_URL=https://dev.toyyibpay.com for sandbox.
+- Open: no automated refunds, no admin UI listing 'REFUND REQUIRED' invoices yet.

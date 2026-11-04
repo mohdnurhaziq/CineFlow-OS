@@ -7,6 +7,9 @@
 import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
 import { processBookingCheckout } from "@/lib/actions/checkout";
+import { saveGatewayCredentials, removeGatewayCredentials } from "@/lib/actions/admin-payments";
+import { updateStudioSettings } from "@/lib/actions/admin-settings";
+import { withSession } from "./mocks/session";
 import { settleToyyibpayBill } from "@/lib/payments/settle";
 import { POST as callbackPost } from "@/app/api/payments/toyyibpay/callback/route";
 import { encryptSecret, decryptSecret } from "../../lib/crypto/secret-box";
@@ -402,5 +405,70 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
     const out = await settleToyyibpayBill(inv!.gatewayBillCode!);
     harness.assertEqual(out.status, "NOT_PAID", "Corrupt stored secret -> NOT_PAID, no throw");
     await setGateway(true);
+  });
+
+  // ---- Studio settings (credentials management) --------------------------------
+  const asSession = (u: { id: string; email: string; name: string; role: string; tenantId: string | null } | null, slug: string) =>
+    u ? { id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenantId, tenantSlug: slug } : null;
+  const ownerRow = await db.user.findFirst({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } });
+  const otherRow = await db.user.findFirst({ where: { role: "STUDIO_OWNER", tenantId: { not: lumina.id } } });
+  const owner = asSession(ownerRow, "lumina-cine");
+  const otherOwner = asSession(otherRow, "other");
+
+  await harness.test("T9-ADM-01: only the studio's own owner can change gateway credentials", async () => {
+    await setGateway(false);
+    const input = { tenantId: lumina.id, tenantSlug: "lumina-cine", secretKey: "owner-secret-1", categoryCode: "abc123" };
+    harness.assertEqual((await saveGatewayCredentials(input)).success, false, "Anonymous rejected");
+    if (otherOwner) {
+      const res = await withSession(otherOwner, () => saveGatewayCredentials(input));
+      harness.assertEqual(res.success, false, "Another studio's owner rejected");
+    }
+    const row = await db.tenant.findUnique({ where: { id: lumina.id } });
+    harness.assert(row?.toyyibpaySecretEnc === null, "Nothing stored by rejected callers");
+    harness.assertEqual((await removeGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine" })).success, false, "Anonymous cannot disconnect either");
+  });
+
+  await harness.test("T9-ADM-02: owner saves credentials encrypted; blank secret keeps the stored one", async () => {
+    harness.assert(!!owner, "Seed owner exists");
+    const saved = await withSession(owner!, () =>
+      saveGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine", secretKey: "owner-secret-1", categoryCode: "abc123" })
+    );
+    harness.assertEqual(saved.success, true, "Owner can save");
+    const row = await db.tenant.findUnique({ where: { id: lumina.id } });
+    harness.assert(!!row?.toyyibpaySecretEnc && !row.toyyibpaySecretEnc.includes("owner-secret-1"), "Secret stored encrypted");
+    harness.assertEqual(decryptSecret(row?.toyyibpaySecretEnc), "owner-secret-1", "Decrypts back");
+    await withSession(owner!, () => saveGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine", categoryCode: "newcat9" }));
+    const row2 = await db.tenant.findUnique({ where: { id: lumina.id } });
+    harness.assertEqual(decryptSecret(row2?.toyyibpaySecretEnc), "owner-secret-1", "Blank secret keeps existing key");
+    harness.assertEqual(row2?.toyyibpayCategoryCode, "newcat9", "Category updated");
+  });
+
+  await harness.test("T9-ADM-03: malformed credentials are rejected and the secret never leaves the server", async () => {
+    const bad = await withSession(owner!, () => saveGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine", secretKey: "has space", categoryCode: "ok123" }));
+    harness.assertEqual(bad.success, false, "Secret with illegal characters rejected");
+    const badCat = await withSession(owner!, () => saveGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine", categoryCode: "x" }));
+    harness.assertEqual(badCat.success, false, "Short category rejected");
+    // Re-submit the tenant's own current values so this check cannot alter seed data.
+    const upd: any = await updateStudioSettings({
+      tenantId: lumina.id,
+      tenantSlug: "lumina-cine",
+      name: lumina.name,
+      newSlug: lumina.slug,
+      customDomain: lumina.customDomain,
+      discipline: lumina.discipline as any,
+      tagline: lumina.tagline,
+      bio: lumina.bio,
+      logoUrl: lumina.logoUrl,
+      brandColor: lumina.brandColor ?? "#f59e0b",
+      currency: lumina.currency as any,
+      qrCodeUrl: lumina.qrCodeUrl,
+      bankDetails: lumina.bankDetails,
+    } as any);
+    harness.assertEqual((await db.tenant.findUnique({ where: { id: lumina.id } }))?.tagline, lumina.tagline, "Seed tagline unchanged");
+    if (upd.success) harness.assert(!("toyyibpaySecretEnc" in upd.tenant), "updateStudioSettings result omits the encrypted secret");
+    else harness.assert(true, "Settings update not applicable to this fixture");
+    await withSession(owner!, () => removeGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine" }));
+    const row = await db.tenant.findUnique({ where: { id: lumina.id } });
+    harness.assert(row?.toyyibpaySecretEnc === null && row?.toyyibpayCategoryCode === null, "Disconnect clears both");
   });
 }

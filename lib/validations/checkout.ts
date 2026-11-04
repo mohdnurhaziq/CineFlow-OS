@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Card details are deliberately not part of these schemas: card payments happen on
+// the payment gateway's hosted page, never through this application.
+
 export const ProcessBookingCheckoutSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
@@ -12,17 +15,9 @@ export const ProcessBookingCheckoutSchema = z.object({
   paymentMethod: z.enum(["CARD", "QR_CODE", "CASH"]),
   paymentProofUrl: z.string().optional(),
   paymentReference: z.string().optional(),
-  cardDetails: z
-    .object({
-      cardNumber: z.string().optional(),
-      cardExp: z.string().optional(),
-      cardCvc: z.string().optional(),
-      cardholderName: z.string().optional(),
-    })
-    .optional(),
 });
 
-export type ProcessBookingCheckoutInput = z.infer<typeof ProcessBookingCheckoutSchema>;
+export type ProcessBookingCheckoutInput = z.input<typeof ProcessBookingCheckoutSchema>;
 
 export const ProcessInvoicePaymentSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -31,14 +26,6 @@ export const ProcessInvoicePaymentSchema = z.object({
   paymentMethod: z.enum(["CARD", "QR_CODE", "CASH"]),
   paymentProofUrl: z.string().optional(),
   paymentReference: z.string().optional(),
-  cardDetails: z
-    .object({
-      cardNumber: z.string().optional(),
-      cardExp: z.string().optional(),
-      cardCvc: z.string().optional(),
-      cardholderName: z.string().optional(),
-    })
-    .optional(),
 });
 
-export type ProcessInvoicePaymentInput = z.infer<typeof ProcessInvoicePaymentSchema>;
+export type ProcessInvoicePaymentInput = z.input<typeof ProcessInvoicePaymentSchema>;

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { CheckoutShell } from "@/components/checkout/checkout-shell";
 import { Metadata } from "next";
 import { getSessionClient } from "@/lib/clients";
+import { getGatewayCredentials } from "@/lib/payments/settle";
 import { CheckoutAuthGate } from "@/components/checkout/checkout-auth-gate";
 
 interface CheckoutPageProps {
@@ -40,20 +41,24 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const search = await searchParams;
 
   // 1. Resolve Tenant
-  const tenant = await db.tenant.findUnique({
-    where: { slug: tenantSlug },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      brandColor: true,
-      currency: true,
-      qrCodeUrl: true,
-      bankDetails: true,
-    },
-  });
+  const tenantRow = await db.tenant.findUnique({ where: { slug: tenantSlug } });
+  if (!tenantRow) notFound();
 
-  if (!tenant) notFound();
+  // Only non-sensitive fields cross to the client component; gateway credentials stay on the server.
+  const tenant = {
+    id: tenantRow.id,
+    name: tenantRow.name,
+    slug: tenantRow.slug,
+    brandColor: tenantRow.brandColor,
+    currency: tenantRow.currency,
+    qrCodeUrl: tenantRow.qrCodeUrl,
+    bankDetails: tenantRow.bankDetails,
+  };
+  const cardMode: "GATEWAY" | "SIMULATED" | "OFF" = getGatewayCredentials(tenantRow)
+    ? "GATEWAY"
+    : process.env.ALLOW_SIMULATED_CARD_PAYMENTS === "true"
+      ? "SIMULATED"
+      : "OFF";
 
   // 2. Resolve Slot (if booking a held session slot)
   let slot = null;
@@ -112,6 +117,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         slot={slot}
         invoice={invoice}
         identityLocked={Boolean(slot && client)}
+        cardMode={cardMode}
         initialData={{
           name: client?.name ?? search.name,
           email: client?.email ?? search.email,

@@ -468,12 +468,6 @@ async function runChallengerSuite() {
     tenantSlug: lumina!.slug,
     invoiceId: luminaOrderRes.invoiceId!,
     paymentMethod: "CARD",
-    cardDetails: {
-      cardNumber: "4242424242424242",
-      cardExp: "12/28",
-      cardCvc: "123",
-      cardholderName: "Eleanor Vance",
-    },
   });
 
   assert(paymentRes.success === true, "Simulated card checkout payment succeeds on print order invoice");

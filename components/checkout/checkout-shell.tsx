@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CreditCard, QrCode, Banknote, User, Mail, Phone, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { OrderSummaryCard } from "./order-summary-card";
-import { CardPaymentForm } from "./card-payment-form";
+import { OnlinePaymentForm } from "./online-payment-form";
 import { QrPaymentForm } from "./qr-payment-form";
 import { CashPaymentForm } from "./cash-payment-form";
 import { PaymentSuccessCard } from "./payment-success-card";
@@ -57,6 +57,8 @@ interface CheckoutShellProps {
   };
   /** When true, name/email/phone come from the signed-in client account and cannot be edited. */
   identityLocked?: boolean;
+  /** GATEWAY: studio has Toyyibpay; SIMULATED: dev/test fake card; OFF: no online payment available. */
+  cardMode?: "GATEWAY" | "SIMULATED" | "OFF";
 }
 
 export function CheckoutShell({
@@ -65,8 +67,9 @@ export function CheckoutShell({
   invoice,
   initialData,
   identityLocked = false,
+  cardMode = "OFF",
 }: CheckoutShellProps) {
-  const [activeTab, setActiveTab] = useState<"CARD" | "QR_CODE" | "CASH">("CARD");
+  const [activeTab, setActiveTab] = useState<"CARD" | "QR_CODE" | "CASH">(cardMode === "OFF" ? "QR_CODE" : "CARD");
 
   const [clientInfo, setClientInfo] = useState({
     name: initialData?.name || invoice?.client?.name || "",
@@ -105,15 +108,11 @@ export function CheckoutShell({
     return true;
   };
 
-  const handleCardSubmit = async (cardData: {
-    cardNumber: string;
-    cardExp: string;
-    cardCvc: string;
-    cardholderName: string;
-  }) => {
+  const handleCardSubmit = async () => {
     if (!isDirectInvoice && !validateClientInfo()) return;
 
     setIsSubmitting(true);
+    let redirecting = false;
     try {
       if (slot) {
         const res = await processBookingCheckout({
@@ -126,10 +125,12 @@ export function CheckoutShell({
           clientPhone: clientInfo.phone.trim(),
           creativeBrief: clientInfo.brief.trim() || undefined,
           paymentMethod: "CARD",
-          cardDetails: cardData,
         });
 
-        if (res.success && res.invoiceNumber) {
+        if (res.success && "paymentUrl" in res && res.paymentUrl) {
+          redirecting = true;
+          window.location.assign(res.paymentUrl);
+        } else if (res.success && res.invoiceNumber) {
           setCheckoutResult({
             trackingCode: res.trackingCode,
             invoiceNumber: res.invoiceNumber,
@@ -137,7 +138,7 @@ export function CheckoutShell({
             paymentMethod: "CARD",
             amount: amountToPay,
           });
-          toast.success("Card payment authorized! Slot officially confirmed.");
+          toast.success("Simulated payment accepted. Slot confirmed.");
         } else {
           toast.error(res.message || "Failed to process card checkout.");
         }
@@ -147,10 +148,12 @@ export function CheckoutShell({
           tenantSlug: tenant.slug,
           invoiceId: invoice.id,
           paymentMethod: "CARD",
-          cardDetails: cardData,
         });
 
-        if (res.success && res.invoiceNumber) {
+        if (res.success && "paymentUrl" in res && res.paymentUrl) {
+          redirecting = true;
+          window.location.assign(res.paymentUrl);
+        } else if (res.success && res.invoiceNumber) {
           setCheckoutResult({
             invoiceNumber: res.invoiceNumber,
             status: "PAID",
@@ -170,9 +173,10 @@ export function CheckoutShell({
       }
     } catch (err: any) {
       console.error("Card payment error:", err);
-      toast.error(err.message || "An unexpected error occurred during card authorization.");
+      toast.error(err.message || "An unexpected error occurred starting the payment.");
     } finally {
-      setIsSubmitting(false);
+      // Keep the button disabled while the browser navigates to the gateway.
+      if (!redirecting) setIsSubmitting(false);
     }
   };
 
@@ -444,7 +448,8 @@ export function CheckoutShell({
             </div>
 
             {/* Payment Method Tabs */}
-            <div className="grid grid-cols-3 gap-2.5 p-1 rounded-xl bg-[#18181b] border border-zinc-800">
+            <div className={`grid ${cardMode === "OFF" ? "grid-cols-2" : "grid-cols-3"} gap-2.5 p-1 rounded-xl bg-[#18181b] border border-zinc-800`}>
+              {cardMode !== "OFF" && (
               <button
                 type="button"
                 onClick={() => setActiveTab("CARD")}
@@ -455,9 +460,10 @@ export function CheckoutShell({
                 }`}
               >
                 <CreditCard className="size-4" />
-                <span className="hidden sm:inline">Online Card</span>
-                <span className="sm:hidden">Card</span>
+                <span className="hidden sm:inline">{cardMode === "GATEWAY" ? "FPX / Card" : "Online Card"}</span>
+                <span className="sm:hidden">{cardMode === "GATEWAY" ? "FPX / Card" : "Card"}</span>
               </button>
+              )}
 
               <button
                 type="button"
@@ -490,12 +496,13 @@ export function CheckoutShell({
 
             {/* Dynamic Form Render */}
             <div>
-              {activeTab === "CARD" && (
-                <CardPaymentForm
+              {activeTab === "CARD" && cardMode !== "OFF" && (
+                <OnlinePaymentForm
                   amount={amountToPay}
                   currency={tenant.currency}
                   isSubmitting={isSubmitting}
-                  onSubmit={handleCardSubmit}
+                  mode={cardMode}
+                  onPay={handleCardSubmit}
                 />
               )}
 

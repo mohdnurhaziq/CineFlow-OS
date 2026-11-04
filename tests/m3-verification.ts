@@ -66,12 +66,6 @@ async function runM3Verification() {
       clientPhone: "+1 (555) 234-5678",
       creativeBrief: "High fashion editorial with amber backlights",
       paymentMethod: "CARD",
-      cardDetails: {
-        cardNumber: "4242424242424242",
-        cardExp: "12/28",
-        cardCvc: "888",
-        cardholderName: "Elena Rostova",
-      },
     });
 
     assert(checkoutRes.success === true, "Card checkout returned success: true");

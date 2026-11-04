@@ -87,6 +87,9 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
       },
     });
 
+    // Never hand the encrypted gateway secret back to the browser.
+    const { toyyibpaySecretEnc: _secret, ...publicTenant } = updated;
+
     safeRevalidate(`/${tenantSlug}/admin/settings`);
     safeRevalidate(`/${newSlug}/admin/settings`);
     safeRevalidate(`/${tenantSlug}`);
@@ -98,7 +101,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
       success: true,
       slugChanged: newSlug !== tenantSlug,
       newSlug,
-      tenant: updated,
+      tenant: publicTenant,
     };
   } catch (error: any) {
     return {
