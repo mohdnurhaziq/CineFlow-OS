@@ -13,6 +13,7 @@ import {
   Sparkles,
   Settings,
   CalendarCheck,
+  Receipt,
 } from "lucide-react";
 
 interface AdminNavBarProps {
@@ -40,6 +41,11 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
       href: `/${tenantSlug}/admin/bookings`,
       label: "Bookings",
       icon: CalendarCheck,
+    },
+    {
+      href: `/${tenantSlug}/admin/invoices`,
+      label: "Invoices",
+      icon: Receipt,
     },
     {
       href: `/${tenantSlug}/admin/services`,

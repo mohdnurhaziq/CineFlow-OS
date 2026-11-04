@@ -335,7 +335,9 @@ function BookingDetailsBody({
         {inv ? (
           <>
             <Row label="Invoice">
-              <span className="font-mono">{inv.invoiceNumber}</span>{" "}
+              <Link href={`/${tenantSlug}/admin/invoices/${inv.id}`} className="font-mono text-amber-400 hover:underline">
+                {inv.invoiceNumber}
+              </Link>{" "}
               <span className="text-zinc-500">· {titleCase(inv.status)}</span>
             </Row>
             {inv.verifiedBy && (
@@ -376,7 +378,12 @@ function BookingDetailsBody({
               </span>
             </Row>
             <Row label="Invoice">
-              <span className="font-mono">{booking.balanceInvoice.invoiceNumber}</span>{" "}
+              <Link
+                href={`/${tenantSlug}/admin/invoices/${booking.balanceInvoice.id}`}
+                className="font-mono text-amber-400 hover:underline"
+              >
+                {booking.balanceInvoice.invoiceNumber}
+              </Link>{" "}
               <span className="text-zinc-500">· {titleCase(booking.balanceInvoice.status)}</span>
             </Row>
             {booking.balanceInvoice.verifiedBy && (

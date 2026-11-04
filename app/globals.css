@@ -104,3 +104,12 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Printing (invoices and receipts): plain white paper, no dark app chrome. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000;
+  }
+}

@@ -276,7 +276,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               {invoices.map((inv) => (
                 <li key={inv.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div className="space-y-0.5">
-                    <div className="font-mono text-zinc-200">{inv.invoiceNumber}</div>
+                    <Link
+                      href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                      className="font-mono text-zinc-200 underline decoration-zinc-600 underline-offset-2 hover:text-amber-400 hover:decoration-amber-400"
+                    >
+                      {inv.invoiceNumber}
+                    </Link>
                     <div className="text-zinc-500">
                       {humanize(inv.milestoneType)} · due {date(inv.dueDate)}
                     </div>
@@ -284,6 +289,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-zinc-200">{money(inv.amount)}</span>
                     <Badge status={inv.status} />
+                    <Link
+                      href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                      className="px-2.5 py-1 rounded-md border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors"
+                    >
+                      {inv.status === "PAID" ? "Receipt" : "View"}
+                    </Link>
                     {(inv.status === "PENDING" || inv.status === "OVERDUE") && (
                       <Link
                         href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}

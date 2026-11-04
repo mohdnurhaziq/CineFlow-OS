@@ -30,6 +30,7 @@ import { runTier9ToyyibpayTests } from "./tier9-toyyibpay-gateway.test";
 import { runTier10AuthorizationTests } from "./tier10-authorization.test";
 import { runTier11BookingCalendarTests } from "./tier11-booking-calendar.test";
 import { runTier12BillingTests } from "./tier12-billing.test";
+import { runTier13InvoiceTests } from "./tier13-invoices.test";
 
 // The suite creates and mutates lots of records; refuse to run against anything but the
 // throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
@@ -129,6 +130,11 @@ async function runMasterTestSuite() {
     // Tier 12: Booking billing (package pricing, balance invoice, 24h deposit hold)
     // --------------------------------------------------------------------------
     await runTier12BillingTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 13: Invoice documents (content and who may open them)
+    // --------------------------------------------------------------------------
+    await runTier13InvoiceTests(harness);
   } catch (err: any) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {
