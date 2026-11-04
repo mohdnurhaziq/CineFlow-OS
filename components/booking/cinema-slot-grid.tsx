@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, ShieldAlert, Sparkles, Check, AlertCircle } from "lucide-react";
+import { Clock } from "lucide-react";
+import { minutesOfDay, sessionBlock } from "@/lib/slot-time";
 
 export interface BookingSlotItem {
   id: string;
@@ -41,39 +42,21 @@ export function CinemaSlotGrid({
     return (
       <div className="py-16 text-center rounded-2xl border border-zinc-800 bg-[#121215] space-y-3">
         <Clock className="size-8 mx-auto text-zinc-500" />
-        <h4 className="text-base font-bold text-white">No Calendar Slots Available</h4>
+        <h4 className="text-base font-bold text-white">No Upcoming Slots</h4>
         <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-          The studio has not published calendar slots for the selected category. Please select another category or contact the studio on WhatsApp.
+          The studio has no upcoming sessions open for this category. Please select another category or contact the studio on WhatsApp.
         </p>
       </div>
     );
   }
 
-  // Categorize slots by time block
-  const morningSlots: BookingSlotItem[] = [];
-  const afternoonSlots: BookingSlotItem[] = [];
-  const eveningSlots: BookingSlotItem[] = [];
-
-  for (const slot of slots) {
-    const timeUpper = slot.startTime.toUpperCase();
-    if (timeUpper.includes("AM") || timeUpper.startsWith("09:") || timeUpper.startsWith("10:") || timeUpper.startsWith("11:")) {
-      morningSlots.push(slot);
-    } else if (
-      timeUpper.startsWith("12:") ||
-      timeUpper.startsWith("01:") ||
-      timeUpper.startsWith("02:") ||
-      timeUpper.startsWith("03:") ||
-      timeUpper.startsWith("04:") ||
-      timeUpper.startsWith("13:") ||
-      timeUpper.startsWith("14:") ||
-      timeUpper.startsWith("15:") ||
-      timeUpper.startsWith("16:")
-    ) {
-      afternoonSlots.push(slot);
-    } else {
-      eveningSlots.push(slot);
-    }
-  }
+  // Group by real clock time and order within each block by start time, not by text.
+  const byStart = (a: BookingSlotItem, b: BookingSlotItem) =>
+    (minutesOfDay(a.startTime) ?? 0) - (minutesOfDay(b.startTime) ?? 0);
+  const ordered = [...slots].sort(byStart);
+  const morningSlots = ordered.filter((s) => sessionBlock(s.startTime) === "morning");
+  const afternoonSlots = ordered.filter((s) => sessionBlock(s.startTime) === "afternoon");
+  const eveningSlots = ordered.filter((s) => sessionBlock(s.startTime) === "evening");
 
   const renderSlotBlock = (title: string, subtitle: string, blockSlots: BookingSlotItem[]) => {
     if (blockSlots.length === 0) return null;
@@ -191,9 +174,9 @@ export function CinemaSlotGrid({
 
   return (
     <div className="space-y-8">
-      {renderSlotBlock("Morning Call Session", "09:00 AM – 12:00 PM Call Time", morningSlots)}
-      {renderSlotBlock("Afternoon Production Session", "01:00 PM – 05:00 PM Call Time", afternoonSlots)}
-      {renderSlotBlock("Golden Hour & Evening Sessions", "05:00 PM – 08:00 PM Solar Prime", eveningSlots)}
+      {renderSlotBlock("Morning Call Session", "Before 12:00 PM", morningSlots)}
+      {renderSlotBlock("Afternoon Production Session", "12:00 PM – 5:00 PM", afternoonSlots)}
+      {renderSlotBlock("Golden Hour & Evening Sessions", "From 5:00 PM", eveningSlots)}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
 import { env } from "@/lib/env";
 import { createBill, toSen } from "@/lib/payments/toyyibpay";
 import { getGatewayCredentials, releaseAbandonedOnlineBooking, ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
+import { isSlotInPast } from "@/lib/slot-time";
 import {
   ProcessBookingCheckoutSchema,
   type ProcessBookingCheckoutInput,
@@ -52,6 +53,14 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
     }
 
     const now = new Date();
+    if (isSlotInPast(slot, now)) {
+      return {
+        success: false,
+        error: "SLOT_IN_PAST",
+        message: "This session time has already passed. Please choose an upcoming slot.",
+      };
+    }
+
     const isHeldByMe =
       slot.status === "HELD" &&
       slot.heldBySessionId === sessionId &&

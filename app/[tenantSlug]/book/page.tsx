@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { CinemaBookingShell } from "@/components/booking/cinema-booking-shell";
 import { getSessionClient } from "@/lib/clients";
+import { isSlotInPast, studioNow } from "@/lib/slot-time";
 
 interface BookingPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -74,11 +75,14 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
     },
   });
 
-  // 4. Fetch scoped slots
-  const slots = await db.bookingSlot.findMany({
-    where: { tenantId: tenant.id },
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
-  });
+  // 4. Fetch upcoming slots only: sessions that have already started can't be booked.
+  const today = studioNow(now);
+  const slots = (
+    await db.bookingSlot.findMany({
+      where: { tenantId: tenant.id, date: { gte: new Date(`${today.dateKey}T00:00:00.000Z`) } },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    })
+  ).filter((slot) => !isSlotInPast(slot, now));
 
   // 5. Signed-in client for this studio (if any) books under their own account
   const client = await getSessionClient(tenant.id);

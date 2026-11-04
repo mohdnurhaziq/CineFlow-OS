@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { processBookingCheckout } from "@/lib/actions/checkout";
+import { isSlotInPast } from "@/lib/slot-time";
 
 const HoldSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -42,6 +43,15 @@ export async function holdBookingSlot(input: z.infer<typeof HoldSlotSchema>) {
     const now = new Date();
     const holdDurationMs = 10 * 60 * 1000; // Exactly 10 minutes
     const heldUntil = new Date(Date.now() + holdDurationMs);
+
+    // A session that has already started can't be held or booked.
+    const target = await db.bookingSlot.findFirst({
+      where: { id: slotId, tenantId },
+      select: { date: true, startTime: true },
+    });
+    if (target && isSlotInPast(target, now)) {
+      return { success: false, error: "SLOT_IN_PAST", message: "This session time has already passed. Please choose an upcoming slot." };
+    }
 
     // 1. Atomic conditional hold update on target slot FIRST
     const result = await db.bookingSlot.updateMany({

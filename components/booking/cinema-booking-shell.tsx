@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, ShieldCheck, Sparkles, X, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { CinemaSlotGrid, type BookingSlotItem } from "./cinema-slot-grid";
 import { SlotCountdownTimer } from "./slot-countdown-timer";
 import { BookingIntakeModal } from "./booking-intake-modal";
 import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
+import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
 
 interface TenantData {
   id: string;
@@ -54,6 +55,7 @@ export function CinemaBookingShell({
   const [heldSlot, setHeldSlot] = useState<BookingSlotItem | null>(null);
   const [heldUntil, setHeldUntil] = useState<string | null>(null);
   const [intakeOpen, setIntakeOpen] = useState<boolean>(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Initialize or read client sessionId
   useEffect(() => {
@@ -175,6 +177,27 @@ export function CinemaBookingShell({
     return slot.category.toLowerCase() === selectedCategory.toLowerCase();
   });
 
+  // One day at a time: the same time on different days must never look like the same session.
+  const days = useMemo(() => {
+    const map = new Map<string, { key: string; total: number; open: number }>();
+    for (const slot of filteredSlots) {
+      const key = slotDateKey(slot.date);
+      const day = map.get(key) ?? { key, total: 0, open: 0 };
+      day.total += 1;
+      if (slot.status === "AVAILABLE" || (slot.status === "HELD" && slot.heldBySessionId === sessionId)) day.open += 1;
+      map.set(key, day);
+    }
+    return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
+  }, [filteredSlots, sessionId]);
+
+  // Keep the chosen day if it still exists under the current category, else the first day with open slots.
+  const activeDate =
+    (selectedDate && days.some((d) => d.key === selectedDate) ? selectedDate : null) ??
+    days.find((d) => d.open > 0)?.key ??
+    days[0]?.key ??
+    null;
+  const daySlots = activeDate ? filteredSlots.filter((slot) => slotDateKey(slot.date) === activeDate) : [];
+
   const currencySymbol = tenant.currency === "MYR" ? "RM " : "$";
 
   return (
@@ -253,9 +276,58 @@ export function CinemaBookingShell({
       {/* Status Legend Bar */}
       <StatusLegendBar brandColor={tenant.brandColor} />
 
+      {/* Date Strip */}
+      {days.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Choose a date:</span>
+          <div className="flex items-stretch gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {days.map((day) => {
+              const active = day.key === activeDate;
+              const full = day.open === 0;
+              return (
+                <button
+                  key={day.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setSelectedDate(day.key)}
+                  className={`shrink-0 min-w-[84px] px-3 py-2.5 rounded-xl border text-center transition-all active:scale-[0.98] ${
+                    active
+                      ? "bg-amber-500 border-amber-500 text-black shadow-md shadow-amber-500/20"
+                      : "bg-[#121215] border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-white"
+                  }`}
+                >
+                  <span className={`block text-[10px] font-mono uppercase tracking-wider ${active ? "text-black/70" : "text-zinc-500"}`}>
+                    {formatSlotDate(day.key, { weekday: "short" })}
+                  </span>
+                  <span className="block text-lg font-black leading-tight tabular-nums">
+                    {formatSlotDate(day.key, { day: "numeric" })}
+                  </span>
+                  <span className={`block text-[10px] font-mono ${active ? "text-black/70" : "text-zinc-500"}`}>
+                    {formatSlotDate(day.key, { month: "short" })}
+                  </span>
+                  <span
+                    className={`mt-1 block text-[10px] font-mono font-bold ${
+                      active ? "text-black" : full ? "text-zinc-600" : "text-emerald-400"
+                    }`}
+                  >
+                    {full ? "Full" : `${day.open} open`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {activeDate && (
+        <h2 className="text-lg font-bold text-white tracking-tight">
+          {formatSlotDate(activeDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+        </h2>
+      )}
+
       {/* Cinema Seating Slot Grid */}
       <CinemaSlotGrid
-        slots={filteredSlots}
+        slots={daySlots}
         sessionId={sessionId}
         currentHeldSlotId={heldSlot?.id || null}
         onSlotClick={handleSlotClick}
@@ -282,11 +354,7 @@ export function CinemaBookingShell({
                     Slot Held
                   </span>
                   <span className="text-sm font-bold text-white">
-                    {new Date(heldSlot.date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}{" "}
+                    {formatSlotDate(heldSlot.date, { weekday: "short", day: "numeric", month: "short" })}{" "}
                     • {heldSlot.startTime} – {heldSlot.endTime}
                   </span>
                 </div>

@@ -28,6 +28,7 @@ import { runTier7ClientAccountsTests } from "./tier7-client-accounts-admin-booki
 import { runTier8EmailDeliveryTests } from "./tier8-email-delivery.test";
 import { runTier9ToyyibpayTests } from "./tier9-toyyibpay-gateway.test";
 import { runTier10AuthorizationTests } from "./tier10-authorization.test";
+import { runTier11BookingCalendarTests } from "./tier11-booking-calendar.test";
 
 // The suite creates and mutates lots of records; refuse to run against anything but the
 // throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
@@ -117,6 +118,11 @@ async function runMasterTestSuite() {
     // Tier 10: Server-action authorization (every staff action guards itself)
     // --------------------------------------------------------------------------
     await runTier10AuthorizationTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 11: Public booking calendar (dates, clock-time order, no past sessions)
+    // --------------------------------------------------------------------------
+    await runTier11BookingCalendarTests(harness);
   } catch (err: any) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {

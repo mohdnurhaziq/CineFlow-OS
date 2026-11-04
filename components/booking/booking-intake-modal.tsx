@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, CheckCircle2, User, Mail, Phone, FileText, Loader2, Calendar, CreditCard, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { createClientBooking, type CreateBookingInput } from "@/lib/actions/booking";
+import { formatSlotDate } from "@/lib/slot-time";
 import { ClientAuthPanel } from "@/components/auth/client-auth-panel";
 import { logoutAction } from "@/lib/auth/session";
 
@@ -59,12 +60,7 @@ export function BookingIntakeModal({
   if (!isOpen || !slot) return null;
 
   const currencySymbol = currency === "MYR" ? "RM " : "$";
-  const slotDateStr = new Date(slot.date).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const slotDateStr = formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
