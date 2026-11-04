@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
 import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
+import { env } from "@/lib/env";
+import { createBill, toSen } from "@/lib/payments/toyyibpay";
+import { getGatewayCredentials, releaseAbandonedOnlineBooking, ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
 import {
   ProcessBookingCheckoutSchema,
   type ProcessBookingCheckoutInput,
@@ -69,9 +72,28 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
     const trackingCode = `BK-${tenantSlug.toUpperCase().slice(0, 4)}-${Date.now().toString(36).toUpperCase()}-${randomHex}`;
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const isCard = paymentMethod === "CARD";
-    const invoiceStatus = isCard ? "PAID" : "PENDING_VERIFICATION";
-    const slotStatus = isCard ? "BOOKED" : "PENDING_VERIFICATION";
+    // Card payments go through the studio's Toyyibpay account. Without one, card is
+    // only available as a simulation (dev/test) and is refused in production.
+    let creds: ReturnType<typeof getGatewayCredentials> = null;
+    if (paymentMethod === "CARD") {
+      const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
+      creds = tenant ? getGatewayCredentials(tenant) : null;
+      if (!creds && process.env.ALLOW_SIMULATED_CARD_PAYMENTS !== "true") {
+        return {
+          success: false,
+          error: "CARD_UNAVAILABLE",
+          message: "Online payment is not set up for this studio. Please choose QR or cash.",
+        };
+      }
+      if (creds && toSen(slot.depositRequired) < 100) {
+        return { success: false, error: "AMOUNT_TOO_LOW", message: "Online payment requires a deposit of at least RM 1.00." };
+      }
+    }
+    const online = paymentMethod === "CARD" && creds !== null;
+
+    const isCard = paymentMethod === "CARD" && !online; // simulated card: settles instantly
+    const invoiceStatus = isCard ? "PAID" : online ? "PENDING" : "PENDING_VERIFICATION";
+    const slotStatus = isCard ? "BOOKED" : online ? "HELD" : "PENDING_VERIFICATION";
     const bookingStatus = isCard ? "CONFIRMED" : "PENDING";
 
     // 3. Execute Atomic Transaction
@@ -91,6 +113,8 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         where: { slotId: slot.id, status: "CANCELLED" },
         data: { slotId: null },
       });
+      // An unpaid online booking whose hold lapsed must not block the slot.
+      await releaseAbandonedOnlineBooking(tx, slot.id);
 
       // Create MilestoneInvoice
       const invoice = await tx.milestoneInvoice.create({
@@ -105,7 +129,9 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
           paymentProofUrl: paymentProofUrl || null,
           paymentReference: isCard
             ? `CARD-AUTH-${Math.random().toString(16).substring(2, 10).toUpperCase()}`
-            : (paymentReference || (paymentMethod === "CASH" ? "CASH_COUNTER" : "QR_SLIP_UPLOAD")),
+            : online
+              ? trackingCode // links the invoice to its booking until the gateway settles it
+              : (paymentReference || (paymentMethod === "CASH" ? "CASH_COUNTER" : "QR_SLIP_UPLOAD")),
           verifiedBy: isCard ? "System Auto" : null,
           dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000),
           paidAt: isCard ? new Date() : null,
@@ -139,8 +165,8 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         where: { id: slot.id },
         data: {
           status: slotStatus,
-          heldUntil: null,
-          heldBySessionId: null,
+          heldUntil: online ? new Date(Date.now() + ONLINE_HOLD_MINUTES * 60_000) : null,
+          heldBySessionId: online ? sessionId : null,
         },
       });
 
@@ -149,6 +175,41 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
 
     safeRevalidate(`/${tenantSlug}/book`);
     safeRevalidate(`/${tenantSlug}/admin/verification`);
+
+    if (online && creds) {
+      const bill = await createBill(creds, {
+        reference: result.invoice.invoiceNumber,
+        name: "Booking Deposit",
+        description: `Deposit ${result.booking.trackingCode}`,
+        amountMyr: slot.depositRequired,
+        payer: { name: result.booking.clientName, email: result.booking.clientEmail, phone: result.booking.clientPhone },
+        returnUrl: `${env.NEXT_PUBLIC_APP_URL}/${tenantSlug}/checkout/payment-return`,
+        callbackUrl: `${env.NEXT_PUBLIC_APP_URL}/api/payments/toyyibpay/callback`,
+        expiryMinutes: ONLINE_HOLD_MINUTES,
+      });
+      if (!bill.ok) {
+        // Undo: free the slot and drop the unpaid booking so the client can retry or pick another method.
+        await db.$transaction(async (tx) => {
+          await tx.clientBooking.update({ where: { id: result.booking.id }, data: { status: "CANCELLED", slotId: null } });
+          await tx.milestoneInvoice.update({ where: { id: result.invoice.id }, data: { status: "OVERDUE" } });
+          await tx.bookingSlot.update({ where: { id: slot.id }, data: { status: "AVAILABLE", heldUntil: null, heldBySessionId: null } });
+        });
+        safeRevalidate(`/${tenantSlug}/book`);
+        return { success: false, error: "GATEWAY_ERROR", message: bill.error };
+      }
+      await db.milestoneInvoice.update({ where: { id: result.invoice.id }, data: { gatewayBillCode: bill.billCode } });
+      return {
+        success: true,
+        bookingId: result.booking.id,
+        trackingCode: result.booking.trackingCode,
+        invoiceId: result.invoice.id,
+        invoiceNumber: result.invoice.invoiceNumber,
+        status: invoiceStatus,
+        paymentMethod,
+        amount: slot.depositRequired,
+        paymentUrl: bill.paymentUrl,
+      };
+    }
 
     // Dispatch automated booking confirmation notification
     const notifyEmail = result.booking.clientEmail;
@@ -165,7 +226,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         startTime: slot.startTime,
         endTime: slot.endTime,
         depositAmount: slot.depositRequired,
-        currency: "USD",
+        currency: "MYR",
       }).catch((e) => console.error("Notification dispatch failed:", e));
     }
 
@@ -205,6 +266,43 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
 
     if (invoice.status === "PAID") {
       return { success: false, error: "ALREADY_PAID", message: "Invoice is already paid." };
+    }
+
+    if (paymentMethod === "CARD") {
+      const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
+      const creds = tenant ? getGatewayCredentials(tenant) : null;
+      if (creds) {
+        const bill = await createBill(creds, {
+          reference: invoice.invoiceNumber,
+          name: invoice.milestoneType === "FINAL_BALANCE_50" ? "Final Balance" : "Invoice Payment",
+          description: `Invoice ${invoice.invoiceNumber}`,
+          amountMyr: invoice.amount,
+          payer: { name: invoice.client.name, email: invoice.client.email, phone: invoice.client.phone ?? "" },
+          returnUrl: `${env.NEXT_PUBLIC_APP_URL}/${tenantSlug}/checkout/payment-return`,
+          callbackUrl: `${env.NEXT_PUBLIC_APP_URL}/api/payments/toyyibpay/callback`,
+        });
+        if (!bill.ok) return { success: false, error: "GATEWAY_ERROR", message: bill.error };
+        await db.milestoneInvoice.update({
+          where: { id: invoice.id },
+          data: { gatewayBillCode: bill.billCode, paymentMethod: "CARD" },
+        });
+        return {
+          success: true,
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          status: "PENDING",
+          unlockedDownloads: false,
+          paymentMethod,
+          paymentUrl: bill.paymentUrl,
+        };
+      }
+      if (process.env.ALLOW_SIMULATED_CARD_PAYMENTS !== "true") {
+        return {
+          success: false,
+          error: "CARD_UNAVAILABLE",
+          message: "Online payment is not set up for this studio. Please choose QR or cash.",
+        };
+      }
     }
 
     const isCard = paymentMethod === "CARD";

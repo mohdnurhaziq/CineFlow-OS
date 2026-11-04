@@ -4,7 +4,11 @@
  * (no network, no real money).
  */
 
+import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
+import { processBookingCheckout } from "@/lib/actions/checkout";
+import { settleToyyibpayBill } from "@/lib/payments/settle";
+import { POST as callbackPost } from "@/app/api/payments/toyyibpay/callback/route";
 import { encryptSecret, decryptSecret } from "../../lib/crypto/secret-box";
 import { createBill, findSuccessfulPayment, sanitizeBillText, toSen } from "../../lib/payments/toyyibpay";
 
@@ -165,5 +169,238 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
     }) as typeof fetch;
     harness.assert((await findSuccessfulPayment(creds, "b")) === null, "Network error -> null");
     console.error = originalError;
+  });
+
+  // ============================================================================
+  // Stage 2: checkout wiring and settlement
+  // ============================================================================
+  const lumina = await db.tenant.findUnique({ where: { slug: "lumina-cine" } });
+  if (!lumina) throw new Error("Seed tenant lumina-cine is required");
+  const run = Date.now().toString(36);
+  const slotIds: string[] = [];
+  const savedGateway = { enc: lumina.toyyibpaySecretEnc, cat: lumina.toyyibpayCategoryCode };
+  const savedFlag = process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+
+  harness.registerTeardown(async () => {
+    if (savedFlag === undefined) delete process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+    else process.env.ALLOW_SIMULATED_CARD_PAYMENTS = savedFlag;
+    await db.tenant.update({ where: { id: lumina.id }, data: { toyyibpaySecretEnc: savedGateway.enc, toyyibpayCategoryCode: savedGateway.cat } });
+    await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t9-" } } } });
+    await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t9-" } } });
+    await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
+    await db.user.deleteMany({ where: { email: { startsWith: "t9-" } } });
+  });
+
+  const setGateway = (on: boolean) =>
+    db.tenant.update({
+      where: { id: lumina.id },
+      data: on ? { toyyibpaySecretEnc: encryptSecret("sk-test-123"), toyyibpayCategoryCode: "cat123" } : { toyyibpaySecretEnc: null, toyyibpayCategoryCode: null },
+    });
+
+  const makeSlot = async (deposit = 100) => {
+    const s = await db.bookingSlot.create({
+      data: { tenantId: lumina.id, date: new Date(Date.now() + 86400000 * 30), startTime: "9:00 AM", endTime: "10:00 AM", status: "AVAILABLE", price: 400, depositRequired: deposit },
+    });
+    slotIds.push(s.id);
+    return s;
+  };
+
+  let seq = 0;
+  const checkout = (slotId: string, paymentMethod: "CARD" | "CASH" = "CARD") => {
+    seq += 1;
+    return processBookingCheckout({
+      tenantId: lumina.id,
+      tenantSlug: "lumina-cine",
+      slotId,
+      sessionId: `t9-session-${run}-${seq}`,
+      clientName: "Gateway Tester",
+      clientEmail: `t9-${run}-${seq}@example.test`,
+      clientPhone: "0123456789",
+      paymentMethod,
+    });
+  };
+
+  /** Stubs fetch: createBill -> BillCode; getBillTransactions -> `txns()` (or []). */
+  let billSeq = 0; // bill codes are unique per database, like the real gateway's
+  const gateway = (opts: { txns?: () => any[]; failCreate?: boolean } = {}) => {
+    return stub((c) => {
+      if (c.url.endsWith("/createBill")) {
+        if (opts.failCreate) return { body: "[KEY-DID-NOT-EXIST]" };
+        billSeq += 1;
+        return { body: JSON.stringify([{ BillCode: `bill${run}${billSeq}` }]) };
+      }
+      return { body: JSON.stringify(opts.txns ? opts.txns() : []) };
+    });
+  };
+  const paidTxn = (ref: string, amount: string) => [
+    { billpaymentStatus: "1", billpaymentAmount: amount, billpaymentInvoiceNo: "TP-1", billExternalReferenceNo: ref },
+  ];
+
+  await harness.test("T9-CHK-01: card is refused without a gateway unless simulation is enabled", async () => {
+    await setGateway(false);
+    delete process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+    const slot = await makeSlot();
+    const res: any = await checkout(slot.id);
+    harness.assertEqual(res.error, "CARD_UNAVAILABLE", "Card refused with no gateway");
+    const untouched = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    harness.assertEqual(untouched?.status, "AVAILABLE", "Slot untouched");
+
+    process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "true";
+    const sim: any = await checkout(slot.id);
+    harness.assert(sim.success === true && sim.status === "PAID" && !sim.paymentUrl, "Simulation flag restores the instant fake card");
+    const cash: any = await checkout((await makeSlot()).id, "CASH");
+    harness.assert(cash.success === true && cash.status === "PENDING_VERIFICATION", "Cash is unaffected");
+  });
+
+  await harness.test("T9-CHK-02: with a gateway, card checkout returns a payment URL and holds the slot unpaid", async () => {
+    process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "true"; // gateway must win over simulation
+    await setGateway(true);
+    const calls = gateway();
+    const slot = await makeSlot(100);
+    const res: any = await checkout(slot.id);
+    harness.assert(res.success === true && typeof res.paymentUrl === "string", "Success with paymentUrl");
+    harness.assertEqual(res.status, "PENDING", "Not paid yet");
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    harness.assertEqual(inv?.status, "PENDING", "Invoice PENDING");
+    harness.assert(!!inv?.gatewayBillCode, "Bill code stored");
+    const booking = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
+    harness.assertEqual(booking?.status, "PENDING", "Booking PENDING");
+    harness.assertEqual(booking?.depositPaid, false, "Deposit not marked paid");
+    const held = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    harness.assertEqual(held?.status, "HELD", "Slot held while paying");
+    harness.assert(!!held?.heldUntil && held.heldUntil.getTime() > Date.now() + 20 * 60_000, "Hold extended for payment");
+    const create = calls.find((c) => c.url.endsWith("/createBill"))!;
+    harness.assertEqual(create.body.get("billAmount"), "10000", "Amount in sen");
+    harness.assertEqual(create.body.get("billExternalReferenceNo"), res.invoiceNumber, "Invoice number is the reference");
+    harness.assert(create.body.get("billReturnUrl")!.endsWith("/lumina-cine/checkout/payment-return"), "Return URL");
+  });
+
+  await harness.test("T9-CHK-03: gateway failure rolls the booking back and frees the slot", async () => {
+    gateway({ failCreate: true });
+    console.error = () => undefined;
+    const slot = await makeSlot();
+    const res: any = await checkout(slot.id);
+    console.error = originalError;
+    harness.assertEqual(res.error, "GATEWAY_ERROR", "Gateway error surfaced");
+    const s = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    harness.assertEqual(s?.status, "AVAILABLE", "Slot released");
+    harness.assertEqual(await db.clientBooking.count({ where: { slotId: slot.id } }), 0, "No booking left on the slot");
+    const again: any = await (gateway(), checkout(slot.id));
+    harness.assert(again.success === true, "Slot can be booked again straight away");
+  });
+
+  await harness.test("T9-SET-01: unpaid bill is not settled", async () => {
+    gateway({ txns: () => [] });
+    const res: any = await checkout((await makeSlot()).id);
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    const out = await settleToyyibpayBill(inv!.gatewayBillCode!);
+    harness.assertEqual(out.status, "NOT_PAID", "NOT_PAID");
+    const after = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    harness.assertEqual(after?.status, "PENDING", "Invoice still PENDING");
+  });
+
+  await harness.test("T9-SET-02: confirmed payment settles invoice, booking and slot exactly once", async () => {
+    let ref = "";
+    gateway({ txns: () => paidTxn(ref, "100.00") });
+    const slot = await makeSlot(100);
+    const res: any = await checkout(slot.id);
+    ref = res.invoiceNumber;
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    const out: any = await settleToyyibpayBill(inv!.gatewayBillCode!);
+    harness.assertEqual(out.status, "PAID", "PAID");
+    harness.assertEqual(out.trackingCode, res.trackingCode, "Tracking code returned for redirect");
+    const after = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    harness.assertEqual(after?.status, "PAID", "Invoice PAID");
+    harness.assertEqual(after?.paymentReference, "TOYYIBPAY-TP-1", "Gateway reference stored");
+    harness.assert(!!after?.paidAt, "paidAt set");
+    const booking = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
+    harness.assert(booking?.status === "CONFIRMED" && booking.depositPaid === true, "Booking CONFIRMED with deposit paid");
+    const s = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    harness.assertEqual(s?.status, "BOOKED", "Slot BOOKED");
+    const again: any = await settleToyyibpayBill(inv!.gatewayBillCode!);
+    harness.assert(again.status === "PAID" && again.alreadySettled === true, "Second settle is a no-op");
+  });
+
+  await harness.test("T9-SET-03: wrong amount or wrong reference is never settled", async () => {
+    console.error = () => undefined;
+    let txn: any[] = [];
+    gateway({ txns: () => txn });
+    const res: any = await checkout((await makeSlot(100)).id);
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    txn = paidTxn(res.invoiceNumber, "1.00");
+    harness.assertEqual((await settleToyyibpayBill(inv!.gatewayBillCode!)).status, "MISMATCH", "Underpayment rejected");
+    txn = paidTxn("INV-SOMEONE-ELSE", "100.00");
+    harness.assertEqual((await settleToyyibpayBill(inv!.gatewayBillCode!)).status, "MISMATCH", "Foreign reference rejected");
+    console.error = originalError;
+    const after = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    harness.assertEqual(after?.status, "PENDING", "Invoice still PENDING");
+    const b = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
+    harness.assertEqual(b?.status, "PENDING", "Booking still PENDING");
+  });
+
+  await harness.test("T9-SET-04: unknown bill codes and forged callbacks change nothing", async () => {
+    gateway({ txns: () => [] });
+    harness.assertEqual((await settleToyyibpayBill("does-not-exist")).status, "NOT_FOUND", "Unknown bill");
+    harness.assertEqual((await settleToyyibpayBill("")).status, "NOT_FOUND", "Empty bill");
+    const res: any = await checkout((await makeSlot()).id);
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    const form = new FormData();
+    form.set("billcode", inv!.gatewayBillCode!);
+    form.set("status_id", "1"); // forged "success" claim
+    form.set("order_id", res.invoiceNumber);
+    const cb = await callbackPost(new Request("http://localhost/api/payments/toyyibpay/callback", { method: "POST", body: form }));
+    const body: any = await cb.json();
+    harness.assertEqual(body.status, "NOT_PAID", "Callback claim ignored; gateway says unpaid");
+    const after = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    harness.assertEqual(after?.status, "PENDING", "Still PENDING");
+    const empty = await callbackPost(new Request("http://localhost/api/payments/toyyibpay/callback", { method: "POST", body: new FormData() }));
+    harness.assertEqual(empty.status, 400, "Callback without bill code -> 400");
+  });
+
+  await harness.test("T9-SET-05: concurrent settles confirm the booking exactly once", async () => {
+    let ref = "";
+    gateway({ txns: () => paidTxn(ref, "100.00") });
+    const slot = await makeSlot(100);
+    const res: any = await checkout(slot.id);
+    ref = res.invoiceNumber;
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    const outs: any[] = await Promise.all(Array.from({ length: 5 }, () => settleToyyibpayBill(inv!.gatewayBillCode!)));
+    harness.assert(outs.every((o) => o.status === "PAID"), "All callers see PAID");
+    harness.assertEqual(outs.filter((o) => !o.alreadySettled).length, 1, "Exactly one caller performed the settlement");
+    harness.assertEqual((await db.bookingSlot.findUnique({ where: { id: slot.id } }))?.status, "BOOKED", "Slot BOOKED");
+  });
+
+  await harness.test("T9-SET-06: an abandoned online booking never blocks the slot; its late payment is flagged for refund", async () => {
+    let ref = "";
+    gateway({ txns: () => paidTxn(ref, "100.00") });
+    const slot = await makeSlot(100);
+    const first: any = await checkout(slot.id);
+    ref = first.invoiceNumber;
+    const firstInv = await db.milestoneInvoice.findUnique({ where: { id: first.invoiceId } });
+    // The hold lapses and the grid sweeper frees the slot.
+    await db.bookingSlot.update({ where: { id: slot.id }, data: { status: "AVAILABLE", heldUntil: null, heldBySessionId: null } });
+    const second: any = await checkout(slot.id);
+    harness.assert(second.success === true, "Someone else can book the slot");
+    const cancelled = await db.clientBooking.findUnique({ where: { id: first.bookingId } });
+    harness.assert(cancelled?.status === "CANCELLED" && cancelled.slotId === null, "Abandoned booking cancelled and detached");
+    harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: first.invoiceId } }))?.status, "OVERDUE", "Abandoned invoice closed");
+
+    const late: any = await settleToyyibpayBill(firstInv!.gatewayBillCode!);
+    harness.assert(late.status === "PAID" && late.refundRequired === true, "Late payment recorded and flagged");
+    const lateInv = await db.milestoneInvoice.findUnique({ where: { id: first.invoiceId } });
+    harness.assert(lateInv?.status === "PAID" && !!lateInv.verifiedBy?.includes("REFUND REQUIRED"), "Invoice marks refund required");
+    harness.assertEqual((await db.clientBooking.findUnique({ where: { id: first.bookingId } }))?.status, "CANCELLED", "Cancelled booking stays cancelled");
+    const winner = await db.clientBooking.findUnique({ where: { id: second.bookingId } });
+    harness.assertEqual(winner?.slotId, slot.id, "The new booking still owns the slot");
+  });
+
+  await harness.test("T9-SET-07: tenants without usable credentials cannot be settled", async () => {
+    gateway({ txns: () => [] });
+    const res: any = await checkout((await makeSlot()).id);
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
+    await db.tenant.update({ where: { id: lumina.id }, data: { toyyibpaySecretEnc: "v1.garbage.garbage.garbage" } });
+    const out = await settleToyyibpayBill(inv!.gatewayBillCode!);
+    harness.assertEqual(out.status, "NOT_PAID", "Corrupt stored secret -> NOT_PAID, no throw");
+    await setGateway(true);
   });
 }

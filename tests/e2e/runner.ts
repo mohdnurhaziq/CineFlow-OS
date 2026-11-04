@@ -28,6 +28,8 @@ import { runTier9ToyyibpayTests } from "./tier9-toyyibpay-gateway.test";
 
 // Never let the suite send real email, even if a real key is present in the environment.
 process.env.RESEND_API_KEY = "";
+// Earlier tiers exercise the fake instant card flow; Tier 9 tests the real gateway path explicitly.
+process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "true";
 
 async function runMasterTestSuite() {
   const harness = new TestHarness("CineFlow OS", "Master E2E Verification Suite");
