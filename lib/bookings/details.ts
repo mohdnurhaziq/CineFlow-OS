@@ -60,20 +60,32 @@ export async function loadBookingDetails(
   });
   if (bookings.length === 0) return [];
 
+  const bookingIds = bookings.map((b) => b.id);
   const clientIds = [...new Set(bookings.map((b) => b.userId).filter((id): id is string => !!id))];
-  const invoices = clientIds.length
-    ? await db.milestoneInvoice.findMany({
-        where: { tenantId, milestoneType: "BOOKING_DEPOSIT", clientId: { in: clientIds } },
-        orderBy: { createdAt: "asc" },
-      })
-    : [];
+  const invoices = await db.milestoneInvoice.findMany({
+    where: {
+      tenantId,
+      milestoneType: "BOOKING_DEPOSIT",
+      OR: [{ bookingId: { in: bookingIds } }, { bookingId: null, clientId: { in: clientIds } }],
+    },
+    orderBy: { createdAt: "asc" },
+  });
 
-  // The schema has no booking<->invoice foreign key. Match on the tracking code when the
-  // invoice reference carries it, otherwise on the same client within the same transaction.
+  // Use the explicit invoice.bookingId link. Older invoices without one are matched on the
+  // tracking code in their reference, otherwise on the same client within the same transaction.
   const used = new Set<string>();
   const matched = new Map<string, (typeof invoices)[number]>();
   for (const b of bookings) {
-    const inv = invoices.find((i) => !used.has(i.id) && !!i.paymentReference?.includes(b.trackingCode));
+    // Latest linked invoice wins (e.g. a re-issued deposit invoice).
+    const linked = invoices.filter((i) => i.bookingId === b.id).at(-1);
+    if (linked) {
+      for (const i of invoices) if (i.bookingId === b.id) used.add(i.id);
+      matched.set(b.id, linked);
+    }
+  }
+  for (const b of bookings) {
+    if (matched.has(b.id)) continue;
+    const inv = invoices.find((i) => !used.has(i.id) && !i.bookingId && !!i.paymentReference?.includes(b.trackingCode));
     if (inv) {
       used.add(inv.id);
       matched.set(b.id, inv);
@@ -84,7 +96,7 @@ export async function loadBookingDetails(
     let best: (typeof invoices)[number] | undefined;
     let bestGap = Infinity;
     for (const i of invoices) {
-      if (used.has(i.id) || i.clientId !== b.userId) continue;
+      if (used.has(i.id) || i.bookingId || i.clientId !== b.userId) continue;
       const gap = Math.abs(i.createdAt.getTime() - b.createdAt.getTime());
       if (gap <= SAME_TRANSACTION_MS && gap < bestGap) {
         best = i;

@@ -130,6 +130,7 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
           tenantId: data.tenantId,
           invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
           clientId: customer.id,
+          bookingId: booking.id,
           milestoneType: "BOOKING_DEPOSIT",
           amount: slot.depositRequired,
           status: isPaid ? "PAID" : "PENDING_VERIFICATION",

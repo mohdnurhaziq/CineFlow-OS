@@ -1,3 +1,4 @@
+import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
@@ -64,7 +65,6 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
   }
 
   const gatewayRef = paid.invoiceNo ? `TOYYIBPAY-${paid.invoiceNo}` : `TOYYIBPAY-${billCode}`;
-  const bookingTrackingCode = invoice.milestoneType === "BOOKING_DEPOSIT" ? invoice.paymentReference : null;
 
   const result = await db.$transaction(async (tx) => {
     // Exactly one concurrent settler wins this update; the rest see count 0.
@@ -84,11 +84,12 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       unlockedDownloads = true;
     }
 
-    if (invoice.milestoneType === "BOOKING_DEPOSIT" && bookingTrackingCode) {
-      booking = await tx.clientBooking.findFirst({
-        where: { trackingCode: bookingTrackingCode, tenantId: invoice.tenantId },
-        include: { slot: true },
-      });
+    if (invoice.milestoneType === "BOOKING_DEPOSIT") {
+      // Resolved from the invoice as it was before this update overwrote paymentReference.
+      const linked = await resolveInvoiceBooking(tx, invoice);
+      booking = linked
+        ? await tx.clientBooking.findUnique({ where: { id: linked.id }, include: { slot: true } })
+        : null;
       const confirmed = booking
         ? await tx.clientBooking.updateMany({
             where: { id: booking.id, status: "PENDING", slotId: { not: null } },
@@ -154,7 +155,11 @@ export async function releaseAbandonedOnlineBooking(tx: Pick<typeof db, "clientB
   if (!stale) return false;
   await tx.clientBooking.update({ where: { id: stale.id }, data: { status: "CANCELLED", slotId: null } });
   await tx.milestoneInvoice.updateMany({
-    where: { tenantId: stale.tenantId, paymentReference: stale.trackingCode, status: "PENDING" },
+    where: {
+      tenantId: stale.tenantId,
+      status: "PENDING",
+      OR: [{ bookingId: stale.id }, { paymentReference: stale.trackingCode }],
+    },
     data: { status: "OVERDUE" },
   });
   return true;

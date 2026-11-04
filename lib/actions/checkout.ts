@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { createBill, toSen } from "@/lib/payments/toyyibpay";
 import { getGatewayCredentials, releaseAbandonedOnlineBooking, ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
 import { isSlotInPast } from "@/lib/slot-time";
+import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import {
   ProcessBookingCheckoutSchema,
   type ProcessBookingCheckoutInput,
@@ -168,6 +169,9 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
           userId: user.id,
         },
       });
+
+      // Link the deposit invoice to exactly this booking (the invoice is created first above).
+      await tx.milestoneInvoice.update({ where: { id: invoice.id }, data: { bookingId: booking.id } });
 
       // Update BookingSlot status
       await tx.bookingSlot.update({
@@ -344,13 +348,8 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
 
       // If paying booking deposit with card, confirm any linked booking & slot
       if (isCard && invoice.milestoneType === "BOOKING_DEPOSIT") {
-        const booking = await tx.clientBooking.findFirst({
-          where: {
-            tenantId,
-            userId: invoice.clientId,
-            status: "PENDING",
-          },
-        });
+        const linked = await resolveInvoiceBooking(tx, invoice);
+        const booking = linked?.status === "PENDING" ? linked : null;
 
         if (booking) {
           await tx.clientBooking.update({

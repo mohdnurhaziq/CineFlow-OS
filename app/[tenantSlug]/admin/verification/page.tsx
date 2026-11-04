@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { AdminVerificationConsole } from "@/components/checkout/admin-verification-console";
 import { Metadata } from "next";
 
@@ -47,44 +48,31 @@ export default async function AdminVerificationPage({ params }: VerificationPage
     include: {
       client: true,
       project: true,
+      booking: true,
     },
     orderBy: { createdAt: "desc" },
   });
 
-  // 3. Fetch Linked Bookings for Client Identification
-  const clientIds = pendingInvoices.map((i) => i.clientId);
-  const bookings = await db.clientBooking.findMany({
-    where: {
-      tenantId: tenant.id,
-      userId: { in: clientIds },
-    },
-    include: {
-      slot: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  // Map each invoice to its booking
-  const enrichedPending = pendingInvoices.map((inv) => {
-    const linkedBooking = bookings.find((b) => b.userId === inv.clientId);
-    return {
-      ...inv,
-      booking: linkedBooking
-        ? {
-            id: linkedBooking.id,
-            trackingCode: linkedBooking.trackingCode,
-            category: linkedBooking.category,
-            targetDate: linkedBooking.targetDate,
-            slot: linkedBooking.slot
-              ? {
-                  startTime: linkedBooking.slot.startTime,
-                  endTime: linkedBooking.slot.endTime,
-                }
-              : null,
-          }
-        : null,
-    };
-  });
+  // 3. The booking each deposit invoice pays for (explicit link; resolved for older invoices)
+  const enrichedPending = await Promise.all(
+    pendingInvoices.map(async (inv) => {
+      const linked = inv.booking ?? (inv.milestoneType === "BOOKING_DEPOSIT" ? await resolveInvoiceBooking(db, inv) : null);
+      const slot = linked?.slotId ? await db.bookingSlot.findUnique({ where: { id: linked.slotId } }) : null;
+      const { booking: _omit, ...rest } = inv;
+      return {
+        ...rest,
+        booking: linked
+          ? {
+              id: linked.id,
+              trackingCode: linked.trackingCode,
+              category: linked.category,
+              targetDate: linked.targetDate,
+              slot: slot ? { startTime: slot.startTime, endTime: slot.endTime } : null,
+            }
+          : null,
+      };
+    })
+  );
 
   // 4. Fetch Settlement History (PAID, REJECTED, VOID)
   const historyInvoices = await db.milestoneInvoice.findMany({

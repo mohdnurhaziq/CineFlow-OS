@@ -3,6 +3,7 @@
 import { requireStaff } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
+import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
@@ -63,14 +64,9 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
 
       // 2. If milestone is BOOKING_DEPOSIT, confirm booking and set slot to BOOKED
       if (invoice.milestoneType === "BOOKING_DEPOSIT") {
-        const booking = await tx.clientBooking.findFirst({
-          where: {
-            tenantId,
-            userId: invoice.clientId,
-            status: { in: ["PENDING", "PENDING_VERIFICATION"] },
-          },
-          orderBy: { createdAt: "desc" },
-        });
+        // Exactly the booking this deposit pays for, never "the client's latest pending one".
+        const linked = await resolveInvoiceBooking(tx, invoice);
+        const booking = linked && ["PENDING", "PENDING_VERIFICATION"].includes(linked.status) ? linked : null;
 
         if (booking) {
           await tx.clientBooking.update({
@@ -220,14 +216,8 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
 
       // 2. If BOOKING_DEPOSIT, cancel booking and release slot back to AVAILABLE
       if (invoice.milestoneType === "BOOKING_DEPOSIT") {
-        const booking = await tx.clientBooking.findFirst({
-          where: {
-            tenantId,
-            userId: invoice.clientId,
-            status: { in: ["PENDING", "PENDING_VERIFICATION"] },
-          },
-          orderBy: { createdAt: "desc" },
-        });
+        const linked = await resolveInvoiceBooking(tx, invoice);
+        const booking = linked && ["PENDING", "PENDING_VERIFICATION"].includes(linked.status) ? linked : null;
 
         if (booking) {
           const slotToRelease = booking.slotId;

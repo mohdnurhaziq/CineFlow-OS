@@ -1090,6 +1090,7 @@ async function main() {
       },
       {
         id: "inv_lum_3",
+        bookingId: "cb_lum_2",
         tenantId: luminaTenant.id,
         invoiceNumber: "INV-2026-003",
         clientId: luminaClient2.id,
@@ -1150,6 +1151,7 @@ async function main() {
       },
       {
         id: "inv_apx_3",
+        bookingId: "cb_apx_1",
         tenantId: apexTenant.id,
         invoiceNumber: "INV-2026-083",
         clientId: apexClient2.id,

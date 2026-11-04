@@ -139,7 +139,7 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today }: Booki
       </div>
 
       <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] overflow-hidden">
-        <div className="hidden md:grid grid-cols-[1.1fr_1.4fr_1fr_1fr_auto] gap-4 px-5 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+        <div className="hidden md:grid grid-cols-[1.1fr_1.4fr_1fr_1fr_10rem] gap-4 px-5 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
           <span>Session</span>
           <span>Client</span>
           <span>Tracking code</span>
@@ -164,7 +164,7 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today }: Booki
                 <button
                   type="button"
                   onClick={() => setSelected(b)}
-                  className="w-full text-left px-5 py-3.5 grid grid-cols-[1fr_auto] md:grid-cols-[1.1fr_1.4fr_1fr_1fr_auto] gap-x-4 gap-y-1.5 items-center hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none transition-colors"
+                  className="w-full text-left px-5 py-3.5 grid grid-cols-[1fr_auto] md:grid-cols-[1.1fr_1.4fr_1fr_1fr_10rem] gap-x-4 gap-y-1.5 items-center hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none transition-colors"
                 >
                   <span className="min-w-0">
                     <span className="block text-xs font-semibold text-white">{formatSessionDate(b.sessionDate)}</span>

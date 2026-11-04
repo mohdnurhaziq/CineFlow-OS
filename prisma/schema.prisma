@@ -237,17 +237,20 @@ model MilestoneInvoice {
   dueDate          DateTime
   paidAt           DateTime?
   gatewayBillCode  String?   @unique // Toyyibpay BillCode for online (FPX/card) payments
+  bookingId        String?   // The booking a BOOKING_DEPOSIT invoice pays for
   createdAt        DateTime  @default(now())
 
   tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   proposal         Proposal? @relation(fields: [proposalId], references: [id])
   project          Project?  @relation(fields: [projectId], references: [id])
   client           User      @relation(fields: [clientId], references: [id])
+  booking          ClientBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([proposalId])
   @@index([projectId])
   @@index([clientId])
+  @@index([bookingId])
   @@index([tenantId, status])
   @@index([tenantId, milestoneType])
 }
@@ -507,6 +510,7 @@ model ClientBooking {
   tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   slot           BookingSlot? @relation(fields: [slotId], references: [id])
   user           User?        @relation(fields: [userId], references: [id])
+  invoices       MilestoneInvoice[]
 
   @@index([tenantId])
   @@index([userId])

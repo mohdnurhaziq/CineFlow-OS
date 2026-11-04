@@ -19,7 +19,7 @@ import { registerClient } from "@/lib/actions/client-auth";
 import { createBookingForCustomer, getBookingDetails } from "@/lib/actions/admin-bookings";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { createClientBooking } from "@/lib/actions/booking";
-import { approvePaymentVerification } from "@/lib/actions/admin-verification";
+import { approvePaymentVerification, rejectPaymentVerification } from "@/lib/actions/admin-verification";
 import { loginWithCredentials, getCurrentUser, logoutAction } from "@/lib/auth/session";
 import { getSessionClient } from "@/lib/clients";
 import { withSession, withRequest, COOKIE_NAME } from "./mocks/session";
@@ -604,6 +604,114 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const clientUser = await db.user.findFirst({ where: { tenantId: lumina.id, role: "CLIENT" } });
     const asClient: any = await withSession(asUser(clientUser!, "lumina-cine"), () => getBookingDetails(input));
     harness.assert(asClient.success === false && !asClient.booking, "CLIENT accounts cannot read studio bookings");
+  });
+
+  // One client, two pending bookings: each deposit invoice must act on its own booking only.
+  const twoPendingBookings = async (tag: string) => {
+    const e = email(tag);
+    createdUserEmails.push(e);
+    const older: any = await withSession(luminaStaff, async () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: (await makeSlot(lumina.id)).id,
+        newClient: { name: "Two Bookings", email: e, phone: "0123456789" },
+        paymentMethod: "QR_CODE",
+      })
+    );
+    const customer = await db.user.findFirst({ where: { tenantId: lumina.id, email: e } });
+    const newer: any = await withSession(luminaStaff, async () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: (await makeSlot(lumina.id)).id,
+        clientId: customer!.id,
+        paymentMethod: "CASH",
+      })
+    );
+    const olderInvoice = await db.milestoneInvoice.findFirst({ where: { bookingId: older.bookingId } });
+    const newerInvoice = await db.milestoneInvoice.findFirst({ where: { bookingId: newer.bookingId } });
+    return { older, newer, olderInvoice, newerInvoice };
+  };
+
+  await harness.test("T7-BKG-07: every new deposit invoice is linked to its booking", async () => {
+    const { older, newer, olderInvoice, newerInvoice } = await twoPendingBookings("linked");
+    harness.assert(!!olderInvoice && !!newerInvoice, "Staff-created deposit invoices carry bookingId");
+    harness.assert(olderInvoice?.id !== newerInvoice?.id, "Each booking has its own invoice");
+
+    const slot = await makeSlot(lumina.id);
+    const e = email("linked-popup");
+    createdUserEmails.push(e);
+    const popup: any = await withSession(null, () =>
+      createClientBooking({
+        tenantId: lumina.id,
+        slotId: slot.id,
+        sessionId: `t7-linked-${run}`,
+        clientName: "Linked Popup",
+        clientEmail: e,
+        clientPhone: "0123456789",
+        paymentMethod: "QR_CODE",
+      })
+    );
+    const popupInvoice = await db.milestoneInvoice.findFirst({ where: { bookingId: popup.bookingId } });
+    harness.assert(!!popupInvoice, "Checkout-created deposit invoice carries bookingId");
+    harness.assert(!!older.bookingId && !!newer.bookingId, "Both staff bookings created");
+  });
+
+  await harness.test("T7-BKG-08: approving one deposit confirms only its own booking", async () => {
+    const { older, newer, olderInvoice } = await twoPendingBookings("approve-own");
+    // Approve the OLDER booking's invoice: the newer pending booking must stay untouched.
+    const res: any = await withSession(luminaStaff, () =>
+      approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "T7" })
+    );
+    harness.assert(res.success === true, `Approval succeeds (${res.message ?? "ok"})`);
+    const a = await db.clientBooking.findUnique({ where: { id: older.bookingId }, include: { slot: true } });
+    const b = await db.clientBooking.findUnique({ where: { id: newer.bookingId }, include: { slot: true } });
+    harness.assertEqual(a?.status, "CONFIRMED", "The approved booking is CONFIRMED");
+    harness.assertEqual(a?.slot?.status, "BOOKED", "Its slot is BOOKED");
+    harness.assertEqual(b?.status, "PENDING", "The other booking stays PENDING");
+    harness.assertEqual(b?.depositPaid, false, "The other booking's deposit stays unpaid");
+    harness.assertEqual(b?.slot?.status, "PENDING_VERIFICATION", "The other slot stays PENDING_VERIFICATION");
+  });
+
+  await harness.test("T7-BKG-09: rejecting one deposit cancels only its own booking", async () => {
+    const { older, newer, olderInvoice } = await twoPendingBookings("reject-own");
+    const olderSlotId = (await db.clientBooking.findUnique({ where: { id: older.bookingId } }))?.slotId;
+    const res: any = await withSession(luminaStaff, () =>
+      rejectPaymentVerification({
+        invoiceId: olderInvoice!.id,
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        staffName: "T7",
+        reason: "Slip does not match",
+      })
+    );
+    harness.assert(res.success === true, `Rejection succeeds (${res.message ?? "ok"})`);
+    const a = await db.clientBooking.findUnique({ where: { id: older.bookingId } });
+    const b = await db.clientBooking.findUnique({ where: { id: newer.bookingId }, include: { slot: true } });
+    harness.assertEqual(a?.status, "CANCELLED", "The rejected booking is CANCELLED");
+    const released = olderSlotId ? await db.bookingSlot.findUnique({ where: { id: olderSlotId } }) : null;
+    harness.assertEqual(released?.status, "AVAILABLE", "Its slot is released");
+    harness.assertEqual(b?.status, "PENDING", "The other booking stays PENDING");
+    harness.assertEqual(b?.slot?.status, "PENDING_VERIFICATION", "The other slot is untouched");
+  });
+
+  await harness.test("T7-BKG-10: an unlinked invoice with two possible bookings changes neither", async () => {
+    const { older, newer, olderInvoice } = await twoPendingBookings("ambiguous");
+    // Simulate an old invoice from before the link existed, with no tracking code to go on.
+    await db.milestoneInvoice.update({
+      where: { id: olderInvoice!.id },
+      data: { bookingId: null, paymentReference: "QR_SLIP_UPLOAD" },
+    });
+    await db.milestoneInvoice.updateMany({ where: { bookingId: newer.bookingId }, data: { bookingId: null } });
+    const res: any = await withSession(luminaStaff, () =>
+      approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "T7" })
+    );
+    harness.assert(res.success === true, "Invoice itself is marked paid");
+    const a = await db.clientBooking.findUnique({ where: { id: older.bookingId } });
+    const b = await db.clientBooking.findUnique({ where: { id: newer.bookingId } });
+    harness.assertEqual(a?.status, "PENDING", "No guess: first booking unchanged");
+    harness.assertEqual(b?.status, "PENDING", "No guess: second booking unchanged");
   });
 
   // ============================================================================
