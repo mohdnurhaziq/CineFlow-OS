@@ -418,14 +418,18 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
   await harness.test("T9-ADM-01: only the studio's own owner can change gateway credentials", async () => {
     await setGateway(false);
     const input = { tenantId: lumina.id, tenantSlug: "lumina-cine", secretKey: "owner-secret-1", categoryCode: "abc123" };
-    harness.assertEqual((await saveGatewayCredentials(input)).success, false, "Anonymous rejected");
+    harness.assertEqual((await withSession(null, () => saveGatewayCredentials(input))).success, false, "Anonymous rejected");
     if (otherOwner) {
       const res = await withSession(otherOwner, () => saveGatewayCredentials(input));
       harness.assertEqual(res.success, false, "Another studio's owner rejected");
     }
     const row = await db.tenant.findUnique({ where: { id: lumina.id } });
     harness.assert(row?.toyyibpaySecretEnc === null, "Nothing stored by rejected callers");
-    harness.assertEqual((await removeGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine" })).success, false, "Anonymous cannot disconnect either");
+    harness.assertEqual(
+      (await withSession(null, () => removeGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine" }))).success,
+      false,
+      "Anonymous cannot disconnect either"
+    );
   });
 
   await harness.test("T9-ADM-02: owner saves credentials encrypted; blank secret keeps the stored one", async () => {

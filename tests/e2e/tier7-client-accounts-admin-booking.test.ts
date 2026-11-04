@@ -212,12 +212,14 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
 
   await harness.test("T7-ADM-01: unauthenticated caller cannot book on behalf of a customer", async () => {
     const slot = await makeSlot(lumina.id);
-    const res = await createBookingForCustomer({
-      tenantId: lumina.id,
-      tenantSlug: "lumina-cine",
-      slotId: slot.id,
-      newClient: { name: "Walk In", email: email("walkin"), phone: "0123456789" },
-    });
+    const res = await withSession(null, () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: slot.id,
+        newClient: { name: "Walk In", email: email("walkin"), phone: "0123456789" },
+      })
+    );
     harness.assert(res.success === false, "Rejected without a session");
     harness.assert(String((res as any).error).includes("not allowed"), "Error is the authorization message");
     const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });

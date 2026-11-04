@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { requireStaffBySlug } from "@/lib/auth/guard";
 
 export interface StudioAnalyticsData {
   tenant: {
@@ -66,6 +67,7 @@ export interface StudioAnalyticsData {
 
 export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnalyticsData | null> {
   try {
+    await requireStaffBySlug(tenantSlug);
     const tenant = await db.tenant.findUnique({
       where: { slug: tenantSlug },
       select: {

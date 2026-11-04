@@ -12,6 +12,8 @@
  */
 
 import { TestHarness } from "./test-harness";
+import { db } from "@/lib/db";
+import { setAmbientSession } from "./mocks/session";
 import { runFrameworkStorageTests } from "./tier1/01-framework-storage.test";
 import { runSaaSShowcaseTests } from "./tier1/02-saas-showcase.test";
 import { runCheckoutVaultTests } from "./tier1/03-checkout-vault.test";
@@ -25,6 +27,7 @@ import { runTier6ProductionHardeningTests } from "./tier6-production-hardening.t
 import { runTier7ClientAccountsTests } from "./tier7-client-accounts-admin-booking.test";
 import { runTier8EmailDeliveryTests } from "./tier8-email-delivery.test";
 import { runTier9ToyyibpayTests } from "./tier9-toyyibpay-gateway.test";
+import { runTier10AuthorizationTests } from "./tier10-authorization.test";
 
 // Never let the suite send real email, even if a real key is present in the environment.
 process.env.RESEND_API_KEY = "";
@@ -39,6 +42,18 @@ async function runMasterTestSuite() {
   console.log("   CINEFLOW OS — MASTER END-TO-END INTEGRATION & VERIFICATION RUNNER");
   console.log("   Executing Tiers 1 through 6 (Comprehensive Feature Coverage & Hardening)");
   console.log("================================================================================");
+
+  // Feature tiers call staff-only actions directly; run them as the platform admin.
+  const superAdmin = await db.user.findFirst({ where: { role: "SUPER_ADMIN" } });
+  if (!superAdmin) throw new Error("Seed SUPER_ADMIN user is required for the E2E runner");
+  await setAmbientSession({
+    id: superAdmin.id,
+    email: superAdmin.email,
+    name: superAdmin.name,
+    role: superAdmin.role,
+    tenantId: superAdmin.tenantId,
+    tenantSlug: null,
+  });
 
   try {
     // --------------------------------------------------------------------------
@@ -89,6 +104,11 @@ async function runMasterTestSuite() {
     // Tier 9: Toyyibpay payment gateway (API stubbed, no real money)
     // --------------------------------------------------------------------------
     await runTier9ToyyibpayTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 10: Server-action authorization (every staff action guards itself)
+    // --------------------------------------------------------------------------
+    await runTier10AuthorizationTests(harness);
   } catch (err: any) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {

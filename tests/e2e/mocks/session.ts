@@ -7,6 +7,17 @@ import { COOKIE_NAME, createSessionToken, type SessionUser } from "../../../lib/
 interface CookieState {
   enabled: boolean;
   jar: Map<string, string>;
+  ambient: { name: string; value: string } | null;
+}
+
+/**
+ * Sets a default session used by every call NOT wrapped in withSession/withRequest.
+ * The runner uses this so the many feature tiers that drive admin actions act as a
+ * platform admin; authorization itself is tested explicitly with withSession(null|user).
+ */
+export async function setAmbientSession(user: SessionUser | null) {
+  const state = cookieState();
+  state.ambient = user ? { name: COOKIE_NAME, value: await createSessionToken(user) } : null;
 }
 
 function cookieState(): CookieState {

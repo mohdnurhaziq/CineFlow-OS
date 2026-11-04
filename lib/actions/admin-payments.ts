@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireOwner } from "@/lib/auth/guard";
 import { encryptSecret } from "@/lib/crypto/secret-box";
 
 const SaveGatewaySchema = z.object({
@@ -15,10 +15,12 @@ const SaveGatewaySchema = z.object({
 });
 
 async function assertOwner(tenantId: string) {
-  const session = await getCurrentUser();
-  return Boolean(
-    session && (session.role === "SUPER_ADMIN" || (session.role === "STUDIO_OWNER" && session.tenantId === tenantId))
-  );
+  try {
+    await requireOwner(tenantId);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Stores the studio's Toyyibpay credentials. The secret is encrypted and never sent back to the browser. */

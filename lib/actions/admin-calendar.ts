@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStaff } from "@/lib/auth/guard";
+
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
@@ -36,6 +38,7 @@ import { parseTimeToMinutes, formatMinutesToTime } from "@/lib/utils/time";
 export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
   try {
     const validated = CreateSingleSlotSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const {
       tenantId,
       tenantSlug,
@@ -88,6 +91,7 @@ export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
 export async function updateBookingSlot(input: UpdateBookingSlotInput) {
   try {
     const validated = UpdateBookingSlotSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const { id, tenantId, tenantSlug, ...updateData } = validated;
 
     const existing = await db.bookingSlot.findFirst({
@@ -134,6 +138,7 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
 export async function deleteBookingSlot(input: DeleteBookingSlotInput) {
   try {
     const validated = DeleteBookingSlotSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const { slotId, tenantId, tenantSlug } = validated;
 
     const slot = await db.bookingSlot.findFirst({
@@ -173,6 +178,7 @@ export async function deleteBookingSlot(input: DeleteBookingSlotInput) {
 export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
   try {
     const validated = BatchDeleteSlotsSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const { tenantId, tenantSlug, slotIds } = validated;
 
     // Filter out any slots that have client bookings or are BOOKED/PENDING_VERIFICATION
@@ -219,6 +225,7 @@ export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
 export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) {
   try {
     const validated = BatchGenerateSlotsSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const {
       tenantId,
       tenantSlug,
@@ -377,6 +384,7 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
 export async function forceReleaseHeldSlot(input: ForceReleaseSlotInput) {
   try {
     const validated = ForceReleaseSlotSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const { slotId, tenantId, tenantSlug } = validated;
 
     // Atomic conditional update: only updates if slot is actually HELD
@@ -417,6 +425,7 @@ export async function forceReleaseHeldSlot(input: ForceReleaseSlotInput) {
 export async function toggleBlockBookingSlot(input: ToggleBlockSlotInput) {
   try {
     const validated = ToggleBlockSlotSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const { slotId, tenantId, tenantSlug } = validated;
 
     const slot = await db.bookingSlot.findFirst({
@@ -457,6 +466,7 @@ export async function toggleBlockBookingSlot(input: ToggleBlockSlotInput) {
 
 export async function cleanupExpiredHolds(tenantId: string, tenantSlug: string) {
   try {
+    await requireStaff(tenantId);
     const now = new Date();
     const result = await db.bookingSlot.updateMany({
       where: {

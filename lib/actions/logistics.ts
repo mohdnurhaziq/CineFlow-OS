@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStaff } from "@/lib/auth/guard";
+
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
@@ -46,6 +48,9 @@ export async function toggleShotCompletion(input: ToggleShotCompletionInput) {
         message: "The specified shot item does not exist.",
       };
     }
+
+    // Only crew/staff of the studio that owns this shot may change it.
+    await requireStaff(existingShot.project.tenantId);
 
     // 2. Update status
     const updatedShot = await db.shotItem.update({

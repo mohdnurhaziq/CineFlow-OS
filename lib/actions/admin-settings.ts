@@ -1,5 +1,7 @@
 "use server";
 
+import { requireOwner } from "@/lib/auth/guard";
+
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
@@ -18,6 +20,7 @@ function safeRevalidate(path: string) {
 export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
   try {
     const validated = UpdateStudioSettingsSchema.parse(input);
+    await requireOwner(validated.tenantId);
     const {
       tenantId,
       tenantSlug,

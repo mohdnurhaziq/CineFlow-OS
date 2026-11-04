@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStaff } from "@/lib/auth/guard";
+
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -26,6 +28,7 @@ export type ApprovePaymentVerificationInput = z.infer<typeof ApprovePaymentVerif
 export async function approvePaymentVerification(input: ApprovePaymentVerificationInput) {
   try {
     const validated = ApprovePaymentVerificationSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const { invoiceId, tenantId, tenantSlug, staffName, notes } = validated;
 
     // Multi-tenant isolation check
@@ -167,6 +170,7 @@ export type RejectPaymentVerificationInput = z.infer<typeof RejectPaymentVerific
 export async function rejectPaymentVerification(input: RejectPaymentVerificationInput) {
   try {
     const validated = RejectPaymentVerificationSchema.parse(input);
+    await requireStaff(validated.tenantId);
     const { invoiceId, tenantId, tenantSlug, staffName, reason } = validated;
 
     // Multi-tenant check

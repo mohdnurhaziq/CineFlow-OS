@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { requireSuperAdmin } from "@/lib/auth/guard";
 
 export interface PlatformMetrics {
   totalStudios: number;
@@ -21,6 +22,7 @@ export interface PlatformMetrics {
 }
 
 export async function getPlatformMetrics(): Promise<PlatformMetrics> {
+  await requireSuperAdmin();
   const [
     totalStudios,
     tenants,
@@ -117,6 +119,7 @@ export async function getPlatformMetrics(): Promise<PlatformMetrics> {
 }
 
 export async function getAllTenantsSummary() {
+  await requireSuperAdmin();
   const tenants = await db.tenant.findMany({
     orderBy: { createdAt: "desc" },
     include: {
