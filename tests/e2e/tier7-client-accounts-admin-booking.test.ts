@@ -16,7 +16,8 @@ import { db } from "@/lib/db";
 import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "./test-harness";
 import { registerClient } from "@/lib/actions/client-auth";
-import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
+import { createBookingForCustomer, getBookingDetails } from "@/lib/actions/admin-bookings";
+import { loadBookingDetails } from "@/lib/bookings/details";
 import { createClientBooking } from "@/lib/actions/booking";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { loginWithCredentials, getCurrentUser, logoutAction } from "@/lib/auth/session";
@@ -530,6 +531,79 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const invoice = booking?.userId ? await pendingDepositInvoice(booking.userId) : null;
     harness.assertEqual(invoice?.status, "PAID", "Invoice is PAID");
     harness.assert(!!invoice?.paidAt && !!invoice?.verifiedBy, "Invoice records who took the payment and when");
+  });
+
+  await harness.test("T7-BKG-05: booking details link each booking to its own deposit invoice", async () => {
+    // Two bookings for the same customer: each must get its own invoice, not the other's.
+    const e = email("details");
+    createdUserEmails.push(e);
+    const first: any = await withSession(luminaStaff, async () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: (await makeSlot(lumina.id)).id,
+        newClient: { name: "Details Client", email: e, phone: "0123456789" },
+        creativeBrief: "Golden hour family portraits",
+        paymentMethod: "QR_CODE",
+      })
+    );
+    const customer = await db.user.findFirst({ where: { tenantId: lumina.id, email: e } });
+    const second: any = await withSession(luminaStaff, async () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: (await makeSlot(lumina.id)).id,
+        clientId: customer!.id,
+        paymentStatus: "PAID",
+      })
+    );
+    harness.assert(first.success === true && second.success === true, "Both bookings created");
+
+    const all = await loadBookingDetails(lumina.id);
+    const a = all.find((b) => b.id === first.bookingId);
+    const b = all.find((x) => x.id === second.bookingId);
+    harness.assertEqual(a?.invoice?.status, "PENDING_VERIFICATION", "Unpaid booking shows its pending invoice");
+    harness.assertEqual(b?.invoice?.status, "PAID", "Paid booking shows its paid invoice");
+    harness.assert(!!a?.invoice && a.invoice.id !== b?.invoice?.id, "The two bookings have different invoices");
+    harness.assertEqual(a?.creativeBrief, "Golden hour family portraits", "Creative brief included");
+    harness.assertEqual(a?.clientPhone, "0123456789", "Client phone included");
+    harness.assert(/^\d{4}-\d{2}-\d{2}$/.test(a?.sessionDate ?? ""), "Session date is YYYY-MM-DD");
+    harness.assert(!!a?.slot?.startTime, "Slot time included");
+    const apexIds = new Set((await db.clientBooking.findMany({ where: { tenantId: apex.id }, select: { id: true } })).map((r) => r.id));
+    harness.assert(apexIds.size > 0 && !all.some((x) => apexIds.has(x.id)), "No other studio's bookings are included");
+  });
+
+  await harness.test("T7-BKG-06: getBookingDetails is limited to the studio's own staff", async () => {
+    const e = email("details-auth");
+    createdUserEmails.push(e);
+    const created: any = await withSession(luminaStaff, async () =>
+      createBookingForCustomer({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId: (await makeSlot(lumina.id)).id,
+        newClient: { name: "Private Client", email: e, phone: "0123456789" },
+      })
+    );
+    const input = { tenantId: lumina.id, bookingId: created.bookingId };
+
+    const staff: any = await withSession(luminaStaff, () => getBookingDetails(input));
+    harness.assert(staff.success === true, "Studio staff can read the booking");
+    harness.assertEqual(staff.booking?.clientEmail, e, "Returns the requested booking");
+
+    const anon: any = await withSession(null, () => getBookingDetails(input));
+    harness.assert(anon.success === false && !anon.booking, "Anonymous caller gets nothing");
+    const otherStudio: any = await withSession(asUser(apexOwner, "apex-media"), () => getBookingDetails(input));
+    harness.assert(otherStudio.success === false && !otherStudio.booking, "Another studio's owner gets nothing");
+    const otherStudioOwnTenant: any = await withSession(asUser(apexOwner, "apex-media"), () =>
+      getBookingDetails({ tenantId: apex.id, bookingId: created.bookingId })
+    );
+    harness.assert(
+      otherStudioOwnTenant.success === false && !otherStudioOwnTenant.booking,
+      "Asking under their own studio id does not expose another studio's booking"
+    );
+    const clientUser = await db.user.findFirst({ where: { tenantId: lumina.id, role: "CLIENT" } });
+    const asClient: any = await withSession(asUser(clientUser!, "lumina-cine"), () => getBookingDetails(input));
+    harness.assert(asClient.success === false && !asClient.booking, "CLIENT accounts cannot read studio bookings");
   });
 
   // ============================================================================

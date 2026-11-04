@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -23,6 +23,9 @@ import { BatchGeneratorDialog } from "./batch-generator-dialog";
 import { ForceReleaseDialog } from "./force-release-dialog";
 import { SlotTable } from "./slot-table";
 import { BookForCustomerDialog, type ClientOption } from "./book-for-customer-dialog";
+import { BookingDetailsDialog } from "@/components/admin/bookings/booking-details-dialog";
+import { getBookingDetails } from "@/lib/actions/admin-bookings";
+import type { BookingDetails } from "@/lib/bookings/details";
 
 interface CalendarAdminDashboardProps {
   tenantId: string;
@@ -59,6 +62,35 @@ export function CalendarAdminDashboard({
 
   const [isBookDialogOpen, setIsBookDialogOpen] = useState(false);
   const [slotToBook, setSlotToBook] = useState<BookingSlotRow | null>(null);
+
+  const [viewBooking, setViewBooking] = useState<{
+    open: boolean;
+    loading: boolean;
+    booking: BookingDetails | null;
+    error: string | null;
+  }>({ open: false, loading: false, booking: null, error: null });
+
+  const viewRequest = useRef(0);
+
+  const closeBookingDetails = () => {
+    viewRequest.current += 1;
+    setViewBooking({ open: false, loading: false, booking: null, error: null });
+  };
+
+  const handleViewBooking = async (slot: BookingSlotRow) => {
+    const bookingId = slot.booking?.id;
+    if (!bookingId) return;
+    const request = ++viewRequest.current;
+    setViewBooking({ open: true, loading: true, booking: null, error: null });
+    const res = await getBookingDetails({ tenantId, bookingId });
+    // Ignore a late response if the dialog was closed or another booking was opened meanwhile.
+    if (request !== viewRequest.current) return;
+    setViewBooking(
+      res.success
+        ? { open: true, loading: false, booking: res.booking, error: null }
+        : { open: true, loading: false, booking: null, error: res.error }
+    );
+  };
 
   const [isCleaning, setIsCleaning] = useState(false);
 
@@ -299,7 +331,18 @@ export function CalendarAdminDashboard({
           setSlotToBook(slot);
           setIsBookDialogOpen(true);
         }}
+        onViewBooking={handleViewBooking}
         onSuccess={handleSuccess}
+      />
+
+      <BookingDetailsDialog
+        isOpen={viewBooking.open}
+        onClose={closeBookingDetails}
+        tenantSlug={tenantSlug}
+        currency={currency}
+        booking={viewBooking.booking}
+        loading={viewBooking.loading}
+        error={viewBooking.error}
       />
 
       <BookForCustomerDialog

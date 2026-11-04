@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/guard";
+import { loadBookingDetails } from "@/lib/bookings/details";
 
 const STAFF_ROLES = new Set(["SUPER_ADMIN", "STUDIO_OWNER", "PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"]);
 
@@ -159,5 +161,17 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
     };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to create booking" };
+  }
+}
+
+/** Full details of one booking, for the calendar's booking drill-down. Staff of the studio only. */
+export async function getBookingDetails(input: { tenantId: string; bookingId: string }) {
+  try {
+    await requireStaff(input.tenantId);
+    const [booking] = await loadBookingDetails(input.tenantId, { bookingId: input.bookingId });
+    if (!booking) return { success: false as const, error: "Booking not found" };
+    return { success: true as const, booking };
+  } catch (err: any) {
+    return { success: false as const, error: err.message || "Failed to load booking" };
   }
 }

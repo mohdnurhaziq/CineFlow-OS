@@ -12,6 +12,7 @@ import {
   Frame,
   Sparkles,
   Settings,
+  CalendarCheck,
 } from "lucide-react";
 
 interface AdminNavBarProps {
@@ -34,6 +35,11 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
       label: "Verification",
       icon: Shield,
       badge: pendingVerificationCount > 0 ? pendingVerificationCount : null,
+    },
+    {
+      href: `/${tenantSlug}/admin/bookings`,
+      label: "Bookings",
+      icon: CalendarCheck,
     },
     {
       href: `/${tenantSlug}/admin/services`,

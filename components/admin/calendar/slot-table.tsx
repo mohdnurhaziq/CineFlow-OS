@@ -31,6 +31,8 @@ interface SlotTableProps {
   onEdit: (slot: BookingSlotRow) => void;
   onForceRelease: (slot: BookingSlotRow) => void;
   onBookForCustomer: (slot: BookingSlotRow) => void;
+  /** Opens the full booking details for a slot that has a client booking. */
+  onViewBooking?: (slot: BookingSlotRow) => void;
   onSuccess: () => void;
 }
 
@@ -43,6 +45,7 @@ export function SlotTable({
   onEdit,
   onForceRelease,
   onBookForCustomer,
+  onViewBooking,
   onSuccess,
 }: SlotTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -300,10 +303,7 @@ export function SlotTable({
                             Verification Pending
                           </span>
                           {slot.booking && (
-                            <div className="text-[11px] text-zinc-300 flex items-center gap-1">
-                              <User className="size-3 text-zinc-500" />
-                              <span>{slot.booking.clientName}</span>
-                            </div>
+                            <BookingClientLink slot={slot} onViewBooking={onViewBooking} withIcon />
                           )}
                         </div>
                       )}
@@ -313,11 +313,7 @@ export function SlotTable({
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
                             Booked Session
                           </span>
-                          {slot.booking && (
-                            <div className="text-[11px] text-zinc-300 font-medium">
-                              {slot.booking.clientName}
-                            </div>
-                          )}
+                          {slot.booking && <BookingClientLink slot={slot} onViewBooking={onViewBooking} />}
                         </div>
                       )}
 
@@ -413,5 +409,37 @@ export function SlotTable({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Client name on a booked/pending slot; a button that opens the booking when a handler is given. */
+function BookingClientLink({
+  slot,
+  onViewBooking,
+  withIcon = false,
+}: {
+  slot: BookingSlotRow;
+  onViewBooking?: (slot: BookingSlotRow) => void;
+  withIcon?: boolean;
+}) {
+  const name = slot.booking?.clientName;
+  const content = (
+    <>
+      {withIcon && <User className="size-3 text-zinc-500" />}
+      <span>{name}</span>
+    </>
+  );
+  if (!onViewBooking) {
+    return <div className="text-[11px] text-zinc-300 font-medium flex items-center gap-1">{content}</div>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => onViewBooking(slot)}
+      title="View booking details"
+      className="text-[11px] text-zinc-200 font-medium flex items-center gap-1 underline decoration-zinc-600 underline-offset-2 hover:text-amber-400 hover:decoration-amber-400 transition-colors"
+    >
+      {content}
+    </button>
   );
 }
