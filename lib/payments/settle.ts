@@ -1,4 +1,5 @@
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
+import { onInvoicePaid } from "@/lib/bookings/billing";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
@@ -84,6 +85,11 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       unlockedDownloads = true;
     }
 
+    // Retainer paid online: issue the project's final balance invoice.
+    if (invoice.milestoneType === "RETAINER_50") {
+      await onInvoicePaid(tx, invoice);
+    }
+
     if (invoice.milestoneType === "BOOKING_DEPOSIT") {
       // Resolved from the invoice as it was before this update overwrote paymentReference.
       const linked = await resolveInvoiceBooking(tx, invoice);
@@ -103,6 +109,8 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
           where: { id: booking.slotId },
           data: { status: "BOOKED", heldUntil: null, heldBySessionId: null },
         });
+        // Deposit paid online: issue the balance invoice.
+        await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
       } else {
         // The slot hold lapsed and someone else took the slot: money received, nothing to give.
         refundRequired = true;

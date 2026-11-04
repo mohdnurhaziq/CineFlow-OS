@@ -11,6 +11,7 @@ import { SlotCountdownTimer } from "./slot-countdown-timer";
 import { BookingIntakeModal } from "./booking-intake-modal";
 import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
+import { packagesFor, type BookingPackageOption } from "./package-picker";
 
 interface TenantData {
   id: string;
@@ -36,6 +37,7 @@ interface CinemaBookingShellProps {
   initialCategory?: string;
   initialPackageId?: string;
   clientAccount?: { name: string; email: string; phone: string } | null;
+  packages?: BookingPackageOption[];
 }
 
 export function CinemaBookingShell({
@@ -45,6 +47,7 @@ export function CinemaBookingShell({
   initialCategory = "all",
   initialPackageId,
   clientAccount = null,
+  packages = [],
 }: CinemaBookingShellProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -359,10 +362,14 @@ export function CinemaBookingShell({
                   </span>
                 </div>
                 <div className="text-xs font-mono text-zinc-400 mt-0.5">
-                  Category: <span className="text-zinc-200">{heldSlot.category}</span> • 50% Retainer Required:{" "}
+                  Category: <span className="text-zinc-200">{heldSlot.category}</span> • Deposit:{" "}
                   <span className="text-amber-400 font-bold tabular-nums">
-                    {currencySymbol}
-                    {heldSlot.depositRequired}
+                    {(() => {
+                      const offered = packagesFor(packages, heldSlot.category);
+                      if (offered.length === 0) return `${currencySymbol}${heldSlot.depositRequired}`;
+                      const min = Math.min(...offered.map((p) => p.depositPrice));
+                      return `from ${currencySymbol}${min} (by package)`;
+                    })()}
                   </span>
                 </div>
               </div>
@@ -409,6 +416,8 @@ export function CinemaBookingShell({
         sessionId={sessionId}
         brandColor={tenant.brandColor}
         clientAccount={clientAccount}
+        packages={packages}
+        initialPackageId={initialPackageId}
         onBookingConfirmed={(code) => {
           setHeldSlot(null);
           setHeldUntil(null);

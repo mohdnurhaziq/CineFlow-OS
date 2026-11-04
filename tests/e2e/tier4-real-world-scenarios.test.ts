@@ -358,6 +358,7 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
       const slot = await db.bookingSlot.create({
         data: {
           tenantId: apexTenant!.id,
+          category: "convocation",
           date: slotDate,
           startTime: "10:00 AM",
           endTime: "11:00 AM",
@@ -384,6 +385,7 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         paymentMethod: "QR_CODE",
         paymentReference: "QR-SLIP-9988",
         creativeBrief: "Graduation robe & hood package",
+        packageId: "pkg_apex_convo",
       });
 
       harness.assert(checkoutRes.success === true, "S4.2-2: QR booking submitted");
@@ -408,6 +410,15 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
 
       const bookedSlot = await db.bookingSlot.findUnique({ where: { id: slot.id } });
       harness.assertEqual(bookedSlot?.status, "BOOKED", "S4.2-3: Slot marked BOOKED");
+
+      // Deposit paid -> the convocation package's balance is invoiced for after the shoot.
+      const pkg = await db.servicePackage.findUnique({ where: { id: "pkg_apex_convo" } });
+      harness.assertEqual(pendingInvoice?.amount, pkg?.depositPrice, "S4.2-3: Deposit charged is the package deposit");
+      const balanceInv = await db.milestoneInvoice.findFirst({
+        where: { bookingId: checkoutRes.bookingId!, milestoneType: "BOOKING_BALANCE" },
+      });
+      harness.assertEqual(balanceInv?.status, "PENDING", "S4.2-3: Balance invoice issued after deposit approval");
+      harness.assertEqual(balanceInv?.amount, (pkg?.price ?? 0) - (pkg?.depositPrice ?? 0), "S4.2-3: Balance = package price - deposit");
 
       // 4. Studio Project Provisioned & Cash Counter Final Balance
       const project = await db.project.create({

@@ -227,7 +227,7 @@ model MilestoneInvoice {
   proposalId       String?
   projectId        String?
   clientId         String
-  milestoneType    String    // RETAINER_50, FINAL_BALANCE_50, PRINT_FRAME_ORDER, BOOKING_DEPOSIT
+  milestoneType    String    // RETAINER_50, FINAL_BALANCE_50, PRINT_FRAME_ORDER, BOOKING_DEPOSIT, BOOKING_BALANCE
   amount           Float
   status           String    @default("PENDING") // PENDING, PENDING_VERIFICATION, PAID, OVERDUE
   paymentMethod    String?   // CARD, QR_CODE, CASH, BANK_TRANSFER
@@ -502,6 +502,9 @@ model ClientBooking {
   status         String       @default("PENDING") // PENDING, CONFIRMED, CANCELLED
   depositPaid    Boolean      @default(false)
   depositAmount  Float        @default(0.0)
+  packageId      String?      // Service package the client chose; sets deposit and balance
+  packageName    String?      // Snapshot at booking time
+  sessionPrice   Float?       // Package price at booking time; balance = sessionPrice - depositAmount
   paymentMethod  String?      // CARD, QR_CODE, CASH
   slotId         String?      @unique
   userId         String?
@@ -510,6 +513,7 @@ model ClientBooking {
   tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   slot           BookingSlot? @relation(fields: [slotId], references: [id])
   user           User?        @relation(fields: [userId], references: [id])
+  package        ServicePackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   invoices       MilestoneInvoice[]
 
   @@index([tenantId])
@@ -533,6 +537,7 @@ model ServicePackage {
 
   tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   showcases    ShowcaseItem[]
+  bookings     ClientBooking[]
 
   @@index([tenantId])
   @@index([tenantId, category])

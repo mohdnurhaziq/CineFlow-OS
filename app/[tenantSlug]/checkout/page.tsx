@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import { getSessionClient } from "@/lib/clients";
 import { getGatewayCredentials } from "@/lib/payments/settle";
 import { CheckoutAuthGate } from "@/components/checkout/checkout-auth-gate";
+import { sameCategory } from "@/lib/bookings/pricing-shared";
 
 interface CheckoutPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -18,6 +19,7 @@ interface CheckoutPageProps {
     invoiceId?: string;
     projectId?: string;
     type?: string;
+    packageId?: string;
   }>;
 }
 
@@ -99,6 +101,17 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     });
   }
 
+  // Packages offered for this slot set its price and deposit.
+  const packages = slot
+    ? (
+        await db.servicePackage.findMany({
+          where: { tenantId: tenant.id },
+          select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true },
+          orderBy: { price: "asc" },
+        })
+      ).filter((p) => sameCategory(p.category, slot!.category))
+    : [];
+
   // 4. Booking a slot requires a client account (quick sign-up or sign-in)
   const client = slot ? await getSessionClient(tenant.id) : null;
 
@@ -118,6 +131,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         invoice={invoice}
         identityLocked={Boolean(slot && client)}
         cardMode={cardMode}
+        packages={packages}
+        initialPackageId={search.packageId}
         initialData={{
           name: client?.name ?? search.name,
           email: client?.email ?? search.email,

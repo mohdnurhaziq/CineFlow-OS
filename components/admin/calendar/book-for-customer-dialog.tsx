@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X, UserPlus, Users, Search, Loader2, AlertCircle, Check, CalendarCheck } from "lucide-react";
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import type { BookingSlotRow } from "./single-slot-dialog";
+import { PackagePicker, packagesFor, type BookingPackageOption } from "@/components/booking/package-picker";
 
 export interface ClientOption {
   id: string;
@@ -19,6 +20,9 @@ interface BookForCustomerDialogProps {
   tenantSlug: string;
   slot: BookingSlotRow | null;
   clients: ClientOption[];
+  /** Studio packages; those for the slot's category are offered (optional for staff). */
+  packages?: BookingPackageOption[];
+  currency?: string;
   onSuccess: () => void;
 }
 
@@ -33,6 +37,8 @@ export function BookForCustomerDialog({
   tenantSlug,
   slot,
   clients,
+  packages = [],
+  currency = "MYR",
   onSuccess,
 }: BookForCustomerDialogProps) {
   const [mode, setMode] = useState<"EXISTING" | "NEW">("EXISTING");
@@ -47,6 +53,8 @@ export function BookForCustomerDialog({
   const [creativeBrief, setCreativeBrief] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "PAID">("PENDING");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QR_CODE" | "CARD">("CASH");
+  const [packageId, setPackageId] = useState<string | null>(null);
+  const offeredPackages = useMemo(() => (slot ? packagesFor(packages, slot.category) : []), [packages, slot]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -65,6 +73,7 @@ export function BookForCustomerDialog({
       setCreativeBrief("");
       setPaymentStatus("PENDING");
       setPaymentMethod("CASH");
+      setPackageId(null);
       setErrorMessage(null);
       setSuccessMessage(null);
     }
@@ -108,6 +117,7 @@ export function BookForCustomerDialog({
         creativeBrief: creativeBrief || undefined,
         paymentStatus,
         paymentMethod,
+        packageId: packageId ?? undefined,
       });
 
       if (!res.success) {
@@ -282,6 +292,15 @@ export function BookForCustomerDialog({
               </div>
             )}
           </div>
+
+          <PackagePicker
+            packages={offeredPackages}
+            value={packageId}
+            onChange={setPackageId}
+            currency={currency}
+            allowNone
+            label="Package"
+          />
 
           {/* Booking details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

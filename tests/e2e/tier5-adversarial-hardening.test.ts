@@ -51,6 +51,7 @@ export async function runTier5AdversarialHardeningTests(harness: TestHarness) {
       const targetSlot = await db.bookingSlot.create({
         data: {
           tenantId: luminaTenant!.id,
+          category: "editorial", // no packages: priced by the slot
           date: new Date(Date.now() + 86400000 * 10),
           startTime: "02:00 PM",
           endTime: "03:00 PM",

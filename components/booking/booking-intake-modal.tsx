@@ -8,6 +8,7 @@ import { createClientBooking, type CreateBookingInput } from "@/lib/actions/book
 import { formatSlotDate } from "@/lib/slot-time";
 import { ClientAuthPanel } from "@/components/auth/client-auth-panel";
 import { logoutAction } from "@/lib/auth/session";
+import { PackagePicker, packagesFor, type BookingPackageOption } from "./package-picker";
 
 interface BookingIntakeModalProps {
   isOpen: boolean;
@@ -28,6 +29,10 @@ interface BookingIntakeModalProps {
   brandColor?: string | null;
   /** Signed-in client for this studio, if any. Bookings are made under this account. */
   clientAccount?: { name: string; email: string; phone: string } | null;
+  /** The studio's service packages; those matching the slot's category are offered. */
+  packages?: BookingPackageOption[];
+  /** Package pre-selected from the showcase ("Book this package"). */
+  initialPackageId?: string;
   onBookingConfirmed: (trackingCode: string) => void;
 }
 
@@ -41,6 +46,8 @@ export function BookingIntakeModal({
   sessionId,
   brandColor,
   clientAccount = null,
+  packages = [],
+  initialPackageId,
   onBookingConfirmed,
 }: BookingIntakeModalProps) {
   const router = useRouter();
@@ -56,8 +63,14 @@ export function BookingIntakeModal({
 
   const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
   const [depositPaid, setDepositPaid] = useState(false);
+  const [packageId, setPackageId] = useState<string | null>(initialPackageId ?? null);
 
   if (!isOpen || !slot) return null;
+
+  const offered = packagesFor(packages, slot.category);
+  const chosen = offered.find((p) => p.id === packageId) ?? null;
+  const needsPackage = offered.length > 0;
+  const depositDue = chosen ? chosen.depositPrice : needsPackage ? null : slot.depositRequired;
 
   const currencySymbol = currency === "MYR" ? "RM " : "$";
   const slotDateStr = formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
@@ -67,6 +80,10 @@ export function BookingIntakeModal({
 
     if (!clientAccount) {
       toast.error("Please sign in or create a quick account to continue.");
+      return;
+    }
+    if (needsPackage && !chosen) {
+      toast.error("Please choose a package.");
       return;
     }
 
@@ -83,6 +100,7 @@ export function BookingIntakeModal({
         discipline: "PHOTOGRAPHY",
         category: slot.category,
         paymentMethod: formData.paymentMethod,
+        packageId: chosen?.id,
       };
 
       const result = await createClientBooking(payload);
@@ -141,7 +159,11 @@ export function BookingIntakeModal({
               <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                 {depositPaid
                   ? "Your session slot has been permanently locked. A confirmation email and calendar invite have been dispatched."
-                  : "Your slot is reserved while the studio verifies your deposit payment. You'll be notified once it's confirmed."}
+                  : `Your slot is held for 24 hours while your deposit is outstanding. ${
+                      formData.paymentMethod === "QR_CODE"
+                        ? "Upload your payment slip from My Account (Invoices) within 24 hours"
+                        : "Pay the deposit at the studio counter within 24 hours"
+                    }, or the slot is released.`}
               </p>
             </div>
 
@@ -153,9 +175,21 @@ export function BookingIntakeModal({
               </div>
             </div>
 
+            {!depositPaid && (
+              <a
+                href={`/${tenantSlug}/account`}
+                className="block w-full py-3 rounded-lg bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400 text-center"
+              >
+                {formData.paymentMethod === "QR_CODE" ? "Upload Payment Slip" : "Go to My Account"}
+              </a>
+            )}
             <button
               onClick={onClose}
-              className="w-full py-3 rounded-lg bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400"
+              className={`w-full py-3 rounded-lg font-bold text-xs uppercase tracking-wider ${
+                depositPaid
+                  ? "bg-amber-500 text-black hover:bg-amber-400"
+                  : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              }`}
             >
               Return to Calendar
             </button>
@@ -173,10 +207,11 @@ export function BookingIntakeModal({
               </div>
 
               <div className="text-right">
-                <div className="text-zinc-400 text-[10px] uppercase">50% Retainer</div>
+                <div className="text-zinc-400 text-[10px] uppercase">Deposit due now</div>
                 <div className="text-amber-400 font-bold tabular-nums">
-                  {currencySymbol}
-                  {slot.depositRequired.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {depositDue === null
+                    ? "Choose a package"
+                    : `${currencySymbol}${depositDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                 </div>
               </div>
             </div>
@@ -216,6 +251,8 @@ export function BookingIntakeModal({
                   />
                 </div>
               )}
+
+              <PackagePicker packages={offered} value={chosen?.id ?? null} onChange={setPackageId} currency={currency} />
 
               {/* Optional Field 4: Brief */}
               <div className="space-y-1">
@@ -285,7 +322,7 @@ export function BookingIntakeModal({
                 onClick={() => {
                   const url = `/${tenantSlug}/checkout?slotId=${slot.id}&sessionId=${sessionId}&brief=${encodeURIComponent(
                     formData.creativeBrief
-                  )}`;
+                  )}${chosen ? `&packageId=${chosen.id}` : ""}`;
                   router.push(url);
                 }}
                 className="w-full py-2.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-300 hover:text-white font-medium text-xs font-mono flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"

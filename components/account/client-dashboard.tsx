@@ -292,6 +292,15 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         Pay
                       </Link>
                     )}
+                    {/* QR deposit with no slip yet: upload it before the 24-hour hold runs out. */}
+                    {inv.status === "PENDING_VERIFICATION" && inv.paymentMethod === "QR_CODE" && !inv.paymentProofUrl && (
+                      <Link
+                        href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                        className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
+                      >
+                        Upload slip
+                      </Link>
+                    )}
                   </div>
                 </li>
               ))}

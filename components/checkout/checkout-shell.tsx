@@ -9,6 +9,7 @@ import { QrPaymentForm } from "./qr-payment-form";
 import { CashPaymentForm } from "./cash-payment-form";
 import { PaymentSuccessCard } from "./payment-success-card";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
+import { PackagePicker, type BookingPackageOption } from "@/components/booking/package-picker";
 
 interface CheckoutShellProps {
   tenant: {
@@ -59,6 +60,9 @@ interface CheckoutShellProps {
   identityLocked?: boolean;
   /** GATEWAY: studio has Toyyibpay; SIMULATED: dev/test fake card; OFF: no online payment available. */
   cardMode?: "GATEWAY" | "SIMULATED" | "OFF";
+  /** Packages offered for the slot; one must be chosen and it sets the price and deposit. */
+  packages?: BookingPackageOption[];
+  initialPackageId?: string;
 }
 
 export function CheckoutShell({
@@ -68,6 +72,8 @@ export function CheckoutShell({
   initialData,
   identityLocked = false,
   cardMode = "OFF",
+  packages = [],
+  initialPackageId,
 }: CheckoutShellProps) {
   const [activeTab, setActiveTab] = useState<"CARD" | "QR_CODE" | "CASH">(cardMode === "OFF" ? "QR_CODE" : "CARD");
 
@@ -89,10 +95,22 @@ export function CheckoutShell({
     projectId?: string;
   } | null>(null);
 
-  const amountToPay = slot ? slot.depositRequired : invoice ? invoice.amount : 0;
+  const [packageId, setPackageId] = useState<string | null>(
+    packages.some((p) => p.id === initialPackageId) ? (initialPackageId as string) : null
+  );
+  const chosenPackage = packages.find((p) => p.id === packageId) ?? null;
+  const needsPackage = Boolean(slot) && packages.length > 0;
+  // The chosen package sets what this session costs and what is due now.
+  const pricedSlot = slot && chosenPackage ? { ...slot, price: chosenPackage.price, depositRequired: chosenPackage.depositPrice } : slot;
+
+  const amountToPay = pricedSlot ? pricedSlot.depositRequired : invoice ? invoice.amount : 0;
   const isDirectInvoice = Boolean(invoice && !slot);
 
   const validateClientInfo = () => {
+    if (needsPackage && !chosenPackage) {
+      toast.error("Please choose a package.");
+      return false;
+    }
     if (!clientInfo.name.trim() || clientInfo.name.trim().length < 2) {
       toast.error("Please enter your full name (minimum 2 characters).");
       return false;
@@ -124,6 +142,7 @@ export function CheckoutShell({
           clientEmail: clientInfo.email.trim(),
           clientPhone: clientInfo.phone.trim(),
           creativeBrief: clientInfo.brief.trim() || undefined,
+          packageId: chosenPackage?.id,
           paymentMethod: "CARD",
         });
 
@@ -198,6 +217,7 @@ export function CheckoutShell({
           clientEmail: clientInfo.email.trim(),
           clientPhone: clientInfo.phone.trim(),
           creativeBrief: clientInfo.brief.trim() || undefined,
+          packageId: chosenPackage?.id,
           paymentMethod: "QR_CODE",
           paymentProofUrl: data.paymentProofUrl,
           paymentReference: data.paymentReference,
@@ -261,6 +281,7 @@ export function CheckoutShell({
           clientEmail: clientInfo.email.trim(),
           clientPhone: clientInfo.phone.trim(),
           creativeBrief: clientInfo.brief.trim() || undefined,
+          packageId: chosenPackage?.id,
           paymentMethod: "CASH",
           paymentReference: data.cashNotes,
         });
@@ -344,13 +365,25 @@ export function CheckoutShell({
           <OrderSummaryCard
             tenantName={tenant.name}
             currency={tenant.currency}
-            slot={slot}
+            slot={pricedSlot}
             invoice={invoice}
+            awaitingPackage={needsPackage && !chosenPackage}
           />
         </div>
 
         {/* Right Column: Intake & Payment Forms (7 cols) */}
         <div className="lg:col-span-7 order-1 lg:order-2 space-y-6">
+          {needsPackage && (
+            <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] shadow-xl">
+              <PackagePicker
+                packages={packages}
+                value={packageId}
+                onChange={setPackageId}
+                currency={tenant.currency}
+              />
+            </div>
+          )}
+
           {/* Client Information Section (Shown for slot bookings or unpopulated invoice) */}
           {!isDirectInvoice && (
             <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] space-y-4 shadow-xl">
@@ -447,6 +480,12 @@ export function CheckoutShell({
               </span>
             </div>
 
+            {needsPackage && !chosenPackage ? (
+              <p className="py-6 text-center text-xs text-zinc-400">
+                Choose a package above to see your deposit and payment options.
+              </p>
+            ) : (
+            <>
             {/* Payment Method Tabs */}
             <div className={`grid ${cardMode === "OFF" ? "grid-cols-2" : "grid-cols-3"} gap-2.5 p-1 rounded-xl bg-[#18181b] border border-zinc-800`}>
               {cardMode !== "OFF" && (
@@ -526,6 +565,8 @@ export function CheckoutShell({
                 />
               )}
             </div>
+            </>
+            )}
           </div>
         </div>
       </div>

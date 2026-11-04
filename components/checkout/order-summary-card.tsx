@@ -29,6 +29,8 @@ interface OrderSummaryCardProps {
     } | null;
   } | null;
   onHoldExpired?: () => void;
+  /** The studio prices this slot by package and none is chosen yet. */
+  awaitingPackage?: boolean;
 }
 
 export function OrderSummaryCard({
@@ -37,6 +39,7 @@ export function OrderSummaryCard({
   slot,
   invoice,
   onHoldExpired,
+  awaitingPackage = false,
 }: OrderSummaryCardProps) {
   const currencySymbol = currency === "MYR" ? "RM " : "$";
 
@@ -153,8 +156,10 @@ export function OrderSummaryCard({
 
             {/* Financial Schedule */}
             <div className="pt-2 border-t border-zinc-800 space-y-2.5 text-xs">
+              {slot.price > 0 && !awaitingPackage && (
+              <>
               <div className="flex justify-between text-zinc-400">
-                <span>Total Production Shoot Value:</span>
+                <span>Session Price:</span>
                 <span className="font-mono tabular-nums text-white">
                   {currencySymbol}
                   {slot.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -162,25 +167,33 @@ export function OrderSummaryCard({
               </div>
 
               <div className="flex justify-between text-zinc-400">
-                <span>Final Balance Due on Delivery:</span>
+                <span>Balance (invoiced once deposit is paid):</span>
                 <span className="font-mono tabular-nums text-zinc-400">
                   {currencySymbol}
-                  {(slot.price - slot.depositRequired).toLocaleString("en-US", {
+                  {Math.max(0, slot.price - slot.depositRequired).toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                   })}
                 </span>
               </div>
+              </>
+              )}
 
               <div className="pt-3 border-t border-zinc-800 flex justify-between items-baseline">
                 <div>
-                  <span className="text-sm font-bold text-white block">50% Deposit Due Now</span>
+                  <span className="text-sm font-bold text-white block">Deposit Due Now</span>
                   <span className="text-[10px] text-amber-400/80 font-mono">
                     Locks studio crew &amp; equipment calendar
                   </span>
                 </div>
                 <div className="text-xl font-bold font-mono tabular-nums text-amber-400">
-                  {currencySymbol}
-                  {slot.depositRequired.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  {awaitingPackage ? (
+                    <span className="text-sm">Choose a package</span>
+                  ) : (
+                    <>
+                      {currencySymbol}
+                      {slot.depositRequired.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -22,11 +22,26 @@ import type { BookingDetails } from "@/lib/bookings/details";
 // Shared presentation helpers (also used by the Bookings list)
 // ---------------------------------------------------------------------------
 
-export type BookingStage = "CONFIRMED" | "VERIFYING" | "AWAITING_PAYMENT" | "REJECTED" | "PENDING" | "CANCELLED";
+export type BookingStage =
+  | "FULLY_PAID"
+  | "BALANCE_VERIFYING"
+  | "BALANCE_DUE"
+  | "CONFIRMED"
+  | "VERIFYING"
+  | "AWAITING_PAYMENT"
+  | "REJECTED"
+  | "PENDING"
+  | "CANCELLED";
 
 export function bookingStage(b: BookingDetails): BookingStage {
   if (b.status === "CANCELLED") return "CANCELLED";
-  if (b.status === "CONFIRMED") return "CONFIRMED";
+  if (b.status === "CONFIRMED") {
+    const balance = b.balanceInvoice?.status;
+    if (balance === "PAID") return "FULLY_PAID";
+    if (balance === "PENDING_VERIFICATION") return "BALANCE_VERIFYING";
+    if (balance === "PENDING" || balance === "OVERDUE" || balance === "REJECTED") return "BALANCE_DUE";
+    return "CONFIRMED";
+  }
   if (b.invoice?.status === "PENDING_VERIFICATION") return "VERIFYING";
   if (b.invoice?.status === "PENDING") return "AWAITING_PAYMENT";
   if (b.invoice?.status === "REJECTED") return "REJECTED";
@@ -34,6 +49,9 @@ export function bookingStage(b: BookingDetails): BookingStage {
 }
 
 const STAGE_STYLE: Record<BookingStage, { label: string; className: string }> = {
+  FULLY_PAID: { label: "Fully paid", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" },
+  BALANCE_VERIFYING: { label: "Balance awaiting verification", className: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  BALANCE_DUE: { label: "Confirmed · balance due", className: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
   CONFIRMED: { label: "Confirmed", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" },
   VERIFYING: { label: "Awaiting verification", className: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
   AWAITING_PAYMENT: { label: "Awaiting online payment", className: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
@@ -249,14 +267,14 @@ function BookingDetailsBody({
         </div>
       </div>
 
-      {stage === "VERIFYING" && (
+      {(stage === "VERIFYING" || stage === "BALANCE_VERIFYING") && (
         <Link
           href={`/${tenantSlug}/admin/verification`}
           className="flex items-center justify-between gap-3 p-3 rounded-xl border border-blue-500/30 bg-blue-500/10 text-xs text-blue-200 hover:bg-blue-500/15 transition-colors"
         >
           <span className="flex items-center gap-2">
             <ShieldCheck className="size-4 text-blue-400" />
-            Deposit is waiting for your approval.
+            {stage === "VERIFYING" ? "Deposit" : "Balance payment"} is waiting for your approval.
           </span>
           <span className="font-semibold text-blue-300 whitespace-nowrap">Verify payment →</span>
         </Link>
@@ -283,12 +301,17 @@ function BookingDetailsBody({
       <Section title="Session" icon={Clock}>
         <Row label="Category">{titleCase(booking.category)}</Row>
         {booking.slot?.campaignTitle && <Row label="Campaign">{booking.slot.campaignTitle}</Row>}
-        <Row label="Service">
-          {titleCase(booking.discipline)} · {titleCase(booking.serviceTier)}
+        <Row label="Package">
+          {booking.packageName ?? <span className="text-zinc-500">None chosen</span>}
         </Row>
-        {booking.slot ? (
-          <Row label="Session price">{formatCurrency(booking.slot.price, currency)}</Row>
-        ) : (
+        <Row label="Session price">
+          {booking.sessionPrice != null ? (
+            formatCurrency(booking.sessionPrice, currency)
+          ) : (
+            <span className="text-zinc-500">Not set</span>
+          )}
+        </Row>
+        {!booking.slot && (
           <Row label="Slot">
             <span className="text-zinc-500">Released</span>
           </Row>
@@ -339,6 +362,41 @@ function BookingDetailsBody({
         ) : (
           <Row label="Invoice">
             <span className="text-zinc-500">No deposit invoice on record</span>
+          </Row>
+        )}
+      </Section>
+
+      <Section title="Balance" icon={Receipt}>
+        {booking.balanceInvoice ? (
+          <>
+            <Row label="Amount">
+              {formatCurrency(booking.balanceInvoice.amount, currency)}{" "}
+              <span className={booking.balanceInvoice.status === "PAID" ? "text-emerald-400" : "text-amber-400"}>
+                ({booking.balanceInvoice.status === "PAID" ? "paid" : "unpaid"})
+              </span>
+            </Row>
+            <Row label="Invoice">
+              <span className="font-mono">{booking.balanceInvoice.invoiceNumber}</span>{" "}
+              <span className="text-zinc-500">· {titleCase(booking.balanceInvoice.status)}</span>
+            </Row>
+            {booking.balanceInvoice.verifiedBy && (
+              <Row label="Verified by">
+                {booking.balanceInvoice.verifiedBy}
+                {booking.balanceInvoice.paidAt && (
+                  <span className="text-zinc-500"> · {formatDateTime(booking.balanceInvoice.paidAt)}</span>
+                )}
+              </Row>
+            )}
+          </>
+        ) : (
+          <Row label="Balance">
+            <span className="text-zinc-500">
+              {booking.sessionPrice == null
+                ? "No package price, so no balance invoice"
+                : booking.depositPaid
+                  ? "Nothing further owed"
+                  : "Issued once the deposit is paid"}
+            </span>
           </Row>
         )}
       </Section>

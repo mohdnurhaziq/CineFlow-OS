@@ -202,7 +202,7 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
 
   const makeSlot = async (deposit = 100) => {
     const s = await db.bookingSlot.create({
-      data: { tenantId: lumina.id, date: new Date(Date.now() + 86400000 * 30), startTime: "9:00 AM", endTime: "10:00 AM", status: "AVAILABLE", price: 400, depositRequired: deposit },
+      data: { tenantId: lumina.id, category: "editorial", date: new Date(Date.now() + 86400000 * 30), startTime: "9:00 AM", endTime: "10:00 AM", status: "AVAILABLE", price: 400, depositRequired: deposit },
     });
     slotIds.push(s.id);
     return s;

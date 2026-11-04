@@ -86,6 +86,13 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
     take: 1000,
   });
 
+  // 6. Service packages (set a booking's price and deposit)
+  const packages = await db.servicePackage.findMany({
+    where: { tenantId: tenant.id },
+    select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true },
+    orderBy: { price: "asc" },
+  });
+
   return (
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <CalendarAdminDashboard
@@ -95,6 +102,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         initialSlots={slots as unknown as BookingSlotRow[]}
         categories={categories as unknown as CategoryOption[]}
         clients={clients}
+        packages={packages}
       />
     </div>
   );

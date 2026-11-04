@@ -51,7 +51,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
         date: new Date("2027-09-01T00:00:00.000Z"),
         startTime: "10:00",
         endTime: "11:00",
-        category: "commercial",
+        category: "editorial", // no packages: priced by the slot
         price: 500,
         depositRequired: 200,
         status: "AVAILABLE",
@@ -89,7 +89,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
         date: new Date("2027-09-02T00:00:00.000Z"),
         startTime: "11:00",
         endTime: "12:00",
-        category: "commercial",
+        category: "editorial", // no packages: priced by the slot
         price: 500,
         depositRequired: 200,
         status: "AVAILABLE",
@@ -453,7 +453,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
         date: new Date("2027-10-01T00:00:00.000Z"),
         startTime: "09:00",
         endTime: "10:30",
-        category: "commercial",
+        category: "editorial", // no packages: priced by the slot
         campaignTitle: "Flagship Brand Production",
         price: 2500,
         depositRequired: 1000,

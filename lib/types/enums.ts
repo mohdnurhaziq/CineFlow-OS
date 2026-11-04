@@ -50,6 +50,7 @@ export const MilestoneType = {
   FINAL_BALANCE_50: "FINAL_BALANCE_50",
   PRINT_FRAME_ORDER: "PRINT_FRAME_ORDER",
   BOOKING_DEPOSIT: "BOOKING_DEPOSIT",
+  BOOKING_BALANCE: "BOOKING_BALANCE",
 } as const;
 export type MilestoneType = typeof MilestoneType[keyof typeof MilestoneType];
 

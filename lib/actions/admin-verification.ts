@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
+import { onInvoicePaid } from "@/lib/bookings/billing";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
@@ -45,6 +46,9 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
     if (invoice.status === "PAID") {
       return { success: false, error: "ALREADY_VERIFIED", message: "Invoice has already been marked as PAID." };
     }
+    if (invoice.status === "VOID") {
+      return { success: false, error: "INVOICE_VOID", message: "This invoice was cancelled and can no longer be approved." };
+    }
 
     let unlockedDownloads = false;
 
@@ -76,6 +80,8 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
               depositPaid: true,
             },
           });
+          // Deposit paid: issue the balance invoice for the rest of the session price.
+          await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
 
           if (booking.slotId) {
             await tx.bookingSlot.update({
@@ -88,6 +94,11 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
             });
           }
         }
+      }
+
+      // Retainer paid: issue the project's final balance invoice.
+      if (invoice.milestoneType === "RETAINER_50") {
+        await onInvoicePaid(tx, invoice);
       }
 
       // 3. If milestone is FINAL_BALANCE_50, unlock project paywall

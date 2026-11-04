@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ClientDashboard } from "@/components/account/client-dashboard";
 
@@ -36,6 +37,9 @@ export default async function ClientAccountPage({ params }: AccountPageProps) {
     select: { id: true, name: true, email: true, phone: true },
   });
   if (!client) redirect(`/${tenant.slug}/login`);
+
+  // Release slots whose QR/cash deposit went unpaid for 24 hours, so the client sees it.
+  await expireUnpaidDeposits(tenant.id);
 
   const startOfToday = new Date();
   startOfToday.setUTCHours(0, 0, 0, 0);

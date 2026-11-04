@@ -32,6 +32,9 @@ export interface BookingDetails {
   paymentMethod: string | null;
   depositAmount: number;
   depositPaid: boolean;
+  packageName: string | null;
+  /** Full session price (from the chosen package), or null when unknown. */
+  sessionPrice: number | null;
   createdAt: string;
   /** Session date as YYYY-MM-DD (the slot's date, or the requested date if the slot was released). */
   sessionDate: string | null;
@@ -43,7 +46,10 @@ export interface BookingDetails {
     campaignTitle: string | null;
     price: number;
   } | null;
+  /** The deposit invoice. */
   invoice: BookingInvoiceSummary | null;
+  /** The balance invoice, issued once the deposit is paid. */
+  balanceInvoice: BookingInvoiceSummary | null;
 }
 
 // A booking and its deposit invoice are written in the same transaction.
@@ -109,8 +115,25 @@ export async function loadBookingDetails(
     }
   }
 
+  const balances = await db.milestoneInvoice.findMany({
+    where: { tenantId, milestoneType: "BOOKING_BALANCE", bookingId: { in: bookingIds } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const summarize = (inv: (typeof invoices)[number]): BookingInvoiceSummary => ({
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    status: inv.status,
+    amount: inv.amount,
+    paymentMethod: inv.paymentMethod,
+    paymentProofUrl: inv.paymentProofUrl,
+    verifiedBy: inv.verifiedBy,
+    paidAt: inv.paidAt ? inv.paidAt.toISOString() : null,
+  });
+
   return bookings.map((b) => {
     const inv = matched.get(b.id);
+    const balance = balances.filter((x) => x.bookingId === b.id).at(-1);
     return {
       id: b.id,
       trackingCode: b.trackingCode,
@@ -125,6 +148,8 @@ export async function loadBookingDetails(
       paymentMethod: b.paymentMethod,
       depositAmount: b.depositAmount,
       depositPaid: b.depositPaid,
+      packageName: b.packageName,
+      sessionPrice: b.sessionPrice,
       createdAt: b.createdAt.toISOString(),
       sessionDate: b.slot ? b.slot.date.toISOString().slice(0, 10) : b.targetDate ?? null,
       slot: b.slot
@@ -137,18 +162,8 @@ export async function loadBookingDetails(
             price: b.slot.price,
           }
         : null,
-      invoice: inv
-        ? {
-            id: inv.id,
-            invoiceNumber: inv.invoiceNumber,
-            status: inv.status,
-            amount: inv.amount,
-            paymentMethod: inv.paymentMethod,
-            paymentProofUrl: inv.paymentProofUrl,
-            verifiedBy: inv.verifiedBy,
-            paidAt: inv.paidAt ? inv.paidAt.toISOString() : null,
-          }
-        : null,
+      invoice: inv ? summarize(inv) : null,
+      balanceInvoice: balance ? summarize(balance) : null,
     };
   });
 }

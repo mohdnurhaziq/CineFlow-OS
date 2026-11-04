@@ -5,6 +5,7 @@ import { Film, ArrowLeft } from "lucide-react";
 import { AdminNavBar } from "@/components/admin/admin-nav-bar";
 import { AdminUserNav } from "@/components/admin/admin-user-nav";
 import { getCurrentUser } from "@/lib/auth/session";
+import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -38,6 +39,9 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
   if (currentUser.role !== "SUPER_ADMIN" && currentUser.tenantId !== tenant.id) {
     redirect(`/${tenantSlug}/login`);
   }
+
+  // Release slots whose QR/cash deposit went unpaid for 24 hours, before counting.
+  await expireUnpaidDeposits(tenant.id);
 
   // Get live pending verification count for badge
   const pendingCount = await db.milestoneInvoice.count({

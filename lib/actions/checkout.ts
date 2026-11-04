@@ -9,6 +9,9 @@ import { createBill, toSen } from "@/lib/payments/toyyibpay";
 import { getGatewayCredentials, releaseAbandonedOnlineBooking, ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
 import { isSlotInPast } from "@/lib/slot-time";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
+import { resolveBookingPricing } from "@/lib/bookings/pricing";
+import { onInvoicePaid } from "@/lib/bookings/billing";
+import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import {
   ProcessBookingCheckoutSchema,
   type ProcessBookingCheckoutInput,
@@ -39,6 +42,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       paymentMethod,
       paymentProofUrl,
       paymentReference,
+      packageId,
     } = validated;
 
     // A signed-in client books under their own account details.
@@ -77,6 +81,14 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       };
     }
 
+    // The chosen package sets the deposit charged now and the session price for the balance.
+    const priced = await resolveBookingPricing(db, { tenantId, slot, packageId, packageRequired: true });
+    if (!priced.ok) {
+      return { success: false, error: priced.error, message: priced.message };
+    }
+    const pricing = priced.pricing;
+    const deposit = pricing.deposit;
+
     // 2. Generate Tracking Code & Invoice Number
     const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
     const trackingCode = `BK-${tenantSlug.toUpperCase().slice(0, 4)}-${Date.now().toString(36).toUpperCase()}-${randomHex}`;
@@ -95,7 +107,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
           message: "Online payment is not set up for this studio. Please choose QR or cash.",
         };
       }
-      if (creds && toSen(slot.depositRequired) < 100) {
+      if (creds && toSen(deposit) < 100) {
         return { success: false, error: "AMOUNT_TOO_LOW", message: "Online payment requires a deposit of at least RM 1.00." };
       }
     }
@@ -133,7 +145,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
           invoiceNumber,
           clientId: user.id,
           milestoneType: "BOOKING_DEPOSIT",
-          amount: slot.depositRequired,
+          amount: deposit,
           status: invoiceStatus,
           paymentMethod,
           paymentProofUrl: paymentProofUrl || null,
@@ -143,7 +155,8 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
               ? trackingCode // links the invoice to its booking until the gateway settles it
               : (paymentReference || (paymentMethod === "CASH" ? "CASH_COUNTER" : "QR_SLIP_UPLOAD")),
           verifiedBy: isCard ? "System Auto" : null,
-          dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000),
+          // QR/cash deposits must be paid within the hold window or the booking is released.
+          dueDate: new Date(Date.now() + DEPOSIT_HOLD_HOURS * 3_600_000),
           paidAt: isCard ? new Date() : null,
         },
       });
@@ -158,12 +171,15 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
           clientEmail: user.email,
           clientPhone: user.phone ?? clientPhone,
           discipline: "PHOTOGRAPHY",
-          serviceTier: slot.campaignTitle || "STANDARD",
+          serviceTier: pricing.packageName ?? (slot.campaignTitle || "STANDARD"),
           targetDate: slot.date instanceof Date ? slot.date.toISOString().split("T")[0] : String(slot.date).split("T")[0],
           creativeBrief: creativeBrief || null,
           status: bookingStatus,
           depositPaid: isCard,
-          depositAmount: slot.depositRequired,
+          depositAmount: deposit,
+          packageId: pricing.packageId,
+          packageName: pricing.packageName,
+          sessionPrice: pricing.sessionPrice,
           paymentMethod,
           slotId: slot.id,
           userId: user.id,
@@ -183,6 +199,11 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         },
       });
 
+      // A simulated card deposit is paid on the spot: issue the balance invoice now.
+      if (isCard) {
+        await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
+      }
+
       return { booking, invoice };
     });
 
@@ -194,7 +215,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         reference: result.invoice.invoiceNumber,
         name: "Booking Deposit",
         description: `Deposit ${result.booking.trackingCode}`,
-        amountMyr: slot.depositRequired,
+        amountMyr: deposit,
         payer: { name: result.booking.clientName, email: result.booking.clientEmail, phone: result.booking.clientPhone },
         returnUrl: `${env.NEXT_PUBLIC_APP_URL}/${tenantSlug}/checkout/payment-return`,
         callbackUrl: `${env.NEXT_PUBLIC_APP_URL}/api/payments/toyyibpay/callback`,
@@ -219,7 +240,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         invoiceNumber: result.invoice.invoiceNumber,
         status: invoiceStatus,
         paymentMethod,
-        amount: slot.depositRequired,
+        amount: deposit,
         paymentUrl: bill.paymentUrl,
       };
     }
@@ -238,7 +259,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         slotDate: slot.date ? new Date(slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
         startTime: slot.startTime,
         endTime: slot.endTime,
-        depositAmount: slot.depositRequired,
+        depositAmount: deposit,
         currency: "MYR",
       }).catch((e) => console.error("Notification dispatch failed:", e));
     }
@@ -251,7 +272,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       invoiceNumber: result.invoice.invoiceNumber,
       status: invoiceStatus,
       paymentMethod,
-      amount: slot.depositRequired,
+      amount: deposit,
     };
   } catch (err: any) {
     console.error("Error in processBookingCheckout:", err);
@@ -280,6 +301,9 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
     if (invoice.status === "PAID") {
       return { success: false, error: "ALREADY_PAID", message: "Invoice is already paid." };
     }
+    if (invoice.status === "VOID") {
+      return { success: false, error: "INVOICE_VOID", message: "This invoice was cancelled and can no longer be paid." };
+    }
 
     if (paymentMethod === "CARD") {
       const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
@@ -287,7 +311,12 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
       if (creds) {
         const bill = await createBill(creds, {
           reference: invoice.invoiceNumber,
-          name: invoice.milestoneType === "FINAL_BALANCE_50" ? "Final Balance" : "Invoice Payment",
+          name:
+            invoice.milestoneType === "FINAL_BALANCE_50"
+              ? "Final Balance"
+              : invoice.milestoneType === "BOOKING_BALANCE"
+                ? "Session Balance"
+                : "Invoice Payment",
           description: `Invoice ${invoice.invoiceNumber}`,
           amountMyr: invoice.amount,
           payer: { name: invoice.client.name, email: invoice.client.email, phone: invoice.client.phone ?? "" },
@@ -336,6 +365,11 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
           paidAt: isCard ? new Date() : null,
         },
       });
+
+      // A simulated card payment is confirmed on the spot: issue any follow-up invoice.
+      if (isCard) {
+        await onInvoicePaid(tx, invoice);
+      }
 
       // If paying final balance with card, immediately unlock project paywall
       if (isCard && invoice.milestoneType === "FINAL_BALANCE_50" && invoice.projectId) {

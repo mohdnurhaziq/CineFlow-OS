@@ -30,6 +30,7 @@ const CreateBookingInputSchema = z.object({
   discipline: z.string().default("PHOTOGRAPHY"),
   category: z.string().default("STUDIO_PORTRAIT"),
   paymentMethod: z.enum(["CARD", "QR_CODE", "CASH"]).default("CARD"),
+  packageId: z.string().optional(),
 });
 
 export type CreateBookingInput = z.input<typeof CreateBookingInputSchema>;
@@ -242,6 +243,7 @@ export async function createClientBooking(input: CreateBookingInput) {
       clientPhone: validated.clientPhone,
       creativeBrief: validated.creativeBrief,
       paymentMethod: validated.paymentMethod,
+      packageId: validated.packageId,
     });
 
     if (!result.success) {

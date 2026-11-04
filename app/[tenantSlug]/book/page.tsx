@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { CinemaBookingShell } from "@/components/booking/cinema-booking-shell";
 import { getSessionClient } from "@/lib/clients";
 import { isSlotInPast, studioNow } from "@/lib/slot-time";
+import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 
 interface BookingPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -75,6 +76,16 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
     },
   });
 
+  // Release slots whose QR/cash deposit went unpaid for 24 hours.
+  await expireUnpaidDeposits(tenant.id, now);
+
+  // Packages set the price and deposit of a booking.
+  const packages = await db.servicePackage.findMany({
+    where: { tenantId: tenant.id },
+    select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true },
+    orderBy: { price: "asc" },
+  });
+
   // 4. Fetch upcoming slots only: sessions that have already started can't be booked.
   const today = studioNow(now);
   const slots = (
@@ -97,6 +108,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
           initialSlots={slots}
           initialCategory={initialCategory || "all"}
           initialPackageId={initialPackageId}
+          packages={packages}
         />
       </main>
     </div>

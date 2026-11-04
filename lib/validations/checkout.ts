@@ -15,6 +15,8 @@ export const ProcessBookingCheckoutSchema = z.object({
   paymentMethod: z.enum(["CARD", "QR_CODE", "CASH"]),
   paymentProofUrl: z.string().optional(),
   paymentReference: z.string().optional(),
+  /** Service package the client chose (required when the studio offers packages for the slot). */
+  packageId: z.string().optional(),
 });
 
 export type ProcessBookingCheckoutInput = z.input<typeof ProcessBookingCheckoutSchema>;

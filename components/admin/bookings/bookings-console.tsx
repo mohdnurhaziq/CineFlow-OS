@@ -39,7 +39,7 @@ function sessionKey(b: BookingDetails): string {
 export function BookingsConsole({ tenantSlug, currency, bookings, today }: BookingsConsoleProps) {
   // Open on whatever needs the owner's attention first.
   const [filter, setFilter] = useState<FilterId>(() =>
-    bookings.some((b) => bookingStage(b) === "VERIFYING") ? "verify" : "upcoming"
+    bookings.some((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b))) ? "verify" : "upcoming"
   );
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<BookingDetails | null>(null);
@@ -49,7 +49,7 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today }: Booki
     const isUpcoming = (b: BookingDetails) => !!b.sessionDate && b.sessionDate >= today;
     return {
       upcoming: active.filter(isUpcoming),
-      verify: bookings.filter((b) => bookingStage(b) === "VERIFYING"),
+      verify: bookings.filter((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b))),
       confirmed: bookings.filter((b) => b.status === "CONFIRMED"),
       past: active.filter((b) => !isUpcoming(b)),
       cancelled: bookings.filter((b) => b.status === "CANCELLED"),

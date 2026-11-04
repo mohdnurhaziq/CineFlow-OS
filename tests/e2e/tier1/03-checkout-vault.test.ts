@@ -35,7 +35,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 20),
         startTime: "10:00 AM",
         endTime: "12:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "AVAILABLE",
@@ -73,7 +73,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 21),
         startTime: "01:00 PM",
         endTime: "03:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "AVAILABLE",
@@ -112,7 +112,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 22),
         startTime: "04:00 PM",
         endTime: "06:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "AVAILABLE",
@@ -154,7 +154,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 23),
         startTime: "09:00 AM",
         endTime: "11:00 AM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "AVAILABLE",
@@ -195,7 +195,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 24),
         startTime: "02:00 PM",
         endTime: "04:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "HELD",
@@ -232,7 +232,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 25),
         startTime: "11:00 AM",
         endTime: "01:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 600,
         depositRequired: 300,
         status: "AVAILABLE",
@@ -271,7 +271,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 26),
         startTime: "02:00 PM",
         endTime: "04:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 600,
         depositRequired: 300,
         status: "AVAILABLE",
@@ -309,7 +309,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 27),
         startTime: "09:00 AM",
         endTime: "11:00 AM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 600,
         depositRequired: 300,
         status: "AVAILABLE",
@@ -347,7 +347,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 28),
         startTime: "01:00 PM",
         endTime: "03:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 600,
         depositRequired: 300,
         status: "AVAILABLE",
@@ -385,7 +385,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 29),
         startTime: "04:00 PM",
         endTime: "06:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 600,
         depositRequired: 300,
         status: "AVAILABLE",
@@ -425,7 +425,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 30),
         startTime: "10:00 AM",
         endTime: "12:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 700,
         depositRequired: 350,
         status: "AVAILABLE",
@@ -464,7 +464,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 31),
         startTime: "01:00 PM",
         endTime: "03:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 700,
         depositRequired: 350,
         status: "AVAILABLE",
@@ -502,7 +502,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 32),
         startTime: "04:00 PM",
         endTime: "06:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 700,
         depositRequired: 350,
         status: "AVAILABLE",
@@ -541,7 +541,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 33),
         startTime: "09:00 AM",
         endTime: "11:00 AM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 700,
         depositRequired: 350,
         status: "AVAILABLE",
@@ -591,7 +591,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 34),
         startTime: "02:00 PM",
         endTime: "04:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 800,
         depositRequired: 400,
         status: "AVAILABLE",
@@ -628,7 +628,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 35),
         startTime: "05:00 PM",
         endTime: "07:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 800,
         depositRequired: 400,
         status: "AVAILABLE",
@@ -665,7 +665,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 36),
         startTime: "10:00 AM",
         endTime: "12:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 800,
         depositRequired: 400,
         status: "AVAILABLE",
@@ -703,7 +703,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 37),
         startTime: "01:00 PM",
         endTime: "03:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 800,
         depositRequired: 400,
         status: "AVAILABLE",
@@ -740,7 +740,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 38),
         startTime: "04:00 PM",
         endTime: "06:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 800,
         depositRequired: 400,
         status: "AVAILABLE",
@@ -773,7 +773,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 39),
         startTime: "10:00 AM",
         endTime: "12:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "AVAILABLE",
@@ -822,7 +822,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 40),
         startTime: "01:00 PM",
         endTime: "03:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "AVAILABLE",
@@ -915,7 +915,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
         date: new Date(Date.now() + 86400000 * 41),
         startTime: "04:00 PM",
         endTime: "06:00 PM",
-        category: "COMMERCIAL",
+        category: "EDITORIAL", // no packages: priced by the slot
         price: 500,
         depositRequired: 250,
         status: "AVAILABLE",

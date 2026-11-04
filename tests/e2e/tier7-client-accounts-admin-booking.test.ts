@@ -435,6 +435,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
         clientEmail: e,
         clientPhone: "0123456789",
         paymentMethod: "QR_CODE",
+        packageId: "pkg_lumina_exec",
       })
     );
     harness.assert(res.success === true, `Popup booking created (${res.error ?? "ok"})`);
@@ -445,7 +446,10 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const invoice = booking?.userId ? await pendingDepositInvoice(booking.userId) : null;
     harness.assert(!!invoice, "Deposit invoice exists for the booking's client");
     harness.assertEqual(invoice?.status, "PENDING_VERIFICATION", "Invoice is in the verification queue");
-    harness.assertEqual(invoice?.amount, slot.depositRequired, "Invoice amount equals the slot deposit");
+    const pkg = await db.servicePackage.findUnique({ where: { id: "pkg_lumina_exec" } });
+    harness.assertEqual(invoice?.amount, pkg?.depositPrice, "Invoice amount equals the chosen package's deposit");
+    harness.assertEqual(booking?.packageId, "pkg_lumina_exec", "Booking records the chosen package");
+    harness.assertEqual(booking?.sessionPrice, pkg?.price, "Booking records the package price");
     harness.assertEqual(invoice?.paymentMethod, "QR_CODE", "Invoice records the QR payment method");
   });
 
@@ -465,9 +469,11 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
           clientEmail: e,
           clientPhone: "0123456789",
           paymentMethod: "CARD",
+          packageId: "pkg_lumina_exec",
         })
       );
       harness.assert(res.success === false, "Card booking without a gateway is refused");
+      harness.assert(/online payment/i.test(res.error ?? ""), `Refused for the payment reason (${res.error})`);
     } finally {
       process.env.ALLOW_SIMULATED_CARD_PAYMENTS = prev;
     }
@@ -651,9 +657,13 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
         clientEmail: e,
         clientPhone: "0123456789",
         paymentMethod: "QR_CODE",
+        packageId: "pkg_lumina_exec",
       })
     );
-    const popupInvoice = await db.milestoneInvoice.findFirst({ where: { bookingId: popup.bookingId } });
+    harness.assert(popup.success === true && !!popup.bookingId, `Popup booking created (${popup.error ?? "ok"})`);
+    const popupInvoice = popup.bookingId
+      ? await db.milestoneInvoice.findFirst({ where: { bookingId: popup.bookingId } })
+      : null;
     harness.assert(!!popupInvoice, "Checkout-created deposit invoice carries bookingId");
     harness.assert(!!older.bookingId && !!newer.bookingId, "Both staff bookings created");
   });

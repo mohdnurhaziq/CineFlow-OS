@@ -24,6 +24,7 @@ import { ForceReleaseDialog } from "./force-release-dialog";
 import { SlotTable } from "./slot-table";
 import { BookForCustomerDialog, type ClientOption } from "./book-for-customer-dialog";
 import { BookingDetailsDialog } from "@/components/admin/bookings/booking-details-dialog";
+import type { BookingPackageOption } from "@/components/booking/package-picker";
 import { getBookingDetails } from "@/lib/actions/admin-bookings";
 import type { BookingDetails } from "@/lib/bookings/details";
 
@@ -34,6 +35,7 @@ interface CalendarAdminDashboardProps {
   initialSlots: BookingSlotRow[];
   categories: CategoryOption[];
   clients: ClientOption[];
+  packages?: BookingPackageOption[];
 }
 
 export function CalendarAdminDashboard({
@@ -43,6 +45,7 @@ export function CalendarAdminDashboard({
   initialSlots,
   categories,
   clients,
+  packages = [],
 }: CalendarAdminDashboardProps) {
   const router = useRouter();
 
@@ -352,6 +355,8 @@ export function CalendarAdminDashboard({
         tenantSlug={tenantSlug}
         slot={slotToBook}
         clients={clients}
+        packages={packages}
+        currency={currency}
         onSuccess={handleSuccess}
       />
 

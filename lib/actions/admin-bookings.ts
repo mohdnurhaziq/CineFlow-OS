@@ -6,6 +6,9 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
 import { requireStaff } from "@/lib/auth/guard";
 import { loadBookingDetails } from "@/lib/bookings/details";
+import { resolveBookingPricing } from "@/lib/bookings/pricing";
+import { newInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
+import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 
 const STAFF_ROLES = new Set(["SUPER_ADMIN", "STUDIO_OWNER", "PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"]);
 
@@ -29,6 +32,8 @@ const AdminCreateBookingSchema = z
     creativeBrief: z.string().optional(),
     paymentStatus: z.enum(["PENDING", "PAID"]).default("PENDING"),
     paymentMethod: z.enum(["CARD", "QR_CODE", "CASH"]).default("CASH"),
+    // Optional for staff (walk-ins may be priced by hand); sets deposit and balance when given.
+    packageId: z.string().optional(),
   })
   .refine((v) => !!v.clientId || !!v.newClient, { message: "Select or create a customer" });
 
@@ -86,6 +91,15 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
 
       const isPaid = data.paymentStatus === "PAID";
 
+      const priced = await resolveBookingPricing(tx, {
+        tenantId: data.tenantId,
+        slot,
+        packageId: data.packageId,
+        packageRequired: false,
+      });
+      if (!priced.ok) throw new Error(priced.message);
+      const pricing = priced.pricing;
+
       // Claim the slot atomically so two admins (or a customer) can't double-book it.
       const claimed = await tx.bookingSlot.updateMany({
         where: { id: slot.id, status: "AVAILABLE" },
@@ -111,12 +125,15 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
           clientEmail: customer.email,
           clientPhone: customer.phone ?? data.newClient?.phone ?? "",
           discipline: data.discipline,
-          serviceTier: data.serviceTier,
+          serviceTier: pricing.packageName ?? data.serviceTier,
           targetDate: slot.date.toISOString().split("T")[0],
           creativeBrief: data.creativeBrief || null,
           status: isPaid ? "CONFIRMED" : "PENDING",
           depositPaid: isPaid,
-          depositAmount: slot.depositRequired,
+          depositAmount: pricing.deposit,
+          packageId: pricing.packageId,
+          packageName: pricing.packageName,
+          sessionPrice: pricing.sessionPrice,
           paymentMethod: data.paymentMethod,
           slotId: slot.id,
           userId: customer.id,
@@ -125,22 +142,25 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
 
       // Every booking carries its deposit invoice: unpaid ones are what the
       // Verification console lists for approval; paid ones keep the ledger complete.
-      await tx.milestoneInvoice.create({
+      const depositInvoice = await tx.milestoneInvoice.create({
         data: {
           tenantId: data.tenantId,
-          invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+          invoiceNumber: newInvoiceNumber(),
           clientId: customer.id,
           bookingId: booking.id,
           milestoneType: "BOOKING_DEPOSIT",
-          amount: slot.depositRequired,
+          amount: pricing.deposit,
           status: isPaid ? "PAID" : "PENDING_VERIFICATION",
           paymentMethod: data.paymentMethod,
           paymentReference: `STAFF_BOOKING:${trackingCode}`,
           verifiedBy: isPaid ? session.name : null,
-          dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000),
+          dueDate: new Date(Date.now() + DEPOSIT_HOLD_HOURS * 3_600_000),
           paidAt: isPaid ? new Date() : null,
         },
       });
+
+      // Deposit recorded as paid: the balance invoice goes out now.
+      if (isPaid) await onInvoicePaid(tx, depositInvoice);
 
       return { booking, customerName: customer.name };
     });
