@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Video } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Video, Heart, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { createCallSheet, deleteCallSheet, deleteDeliverableItem, cancelEquipmentReservation, updateProjectStatus } from "@/lib/actions/admin-projects";
 import { createEquipmentReservation } from "@/lib/actions/gear";
@@ -29,7 +29,19 @@ interface ProjectWorkspaceProps {
     client: { name: string; email: string; phone: string | null };
     callSheets: Array<{ id: string; title: string; shootDate: string; generalCallTime: string; locationName: string }>;
     reservations: Array<{ id: string; itemName: string; sku: string; startDate: string; endDate: string; status: string }>;
-    galleries: Array<{ id: string; title: string; items: Array<{ id: string; title: string; itemType: string; previewUrl: string; fileSize: string | null }> }>;
+    galleries: Array<{
+      id: string;
+      title: string;
+      items: Array<{
+        id: string;
+        title: string;
+        itemType: string;
+        previewUrl: string;
+        fileSize: string | null;
+        isClientFav?: boolean;
+        clientNotes?: string | null;
+      }>;
+    }>;
     invoices: Array<{ id: string; invoiceNumber: string; milestoneType: string; amount: number; status: string }>;
     shotItems: ShotItemData[];
   };
@@ -262,7 +274,15 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
       />
 
       {/* Gear */}
-      <Section icon={Layers} title="Gear">
+      <Section
+        icon={Layers}
+        title="Gear"
+        aside={
+          <Link href={`/${tenantSlug}/admin/inventory`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+            Fleet &amp; Inspections <ExternalLink className="size-3" />
+          </Link>
+        }
+      >
         {project.reservations.length === 0 && <p className={small}>No gear reserved for this project.</p>}
         <ul className="divide-y divide-zinc-800">
           {project.reservations.map((r) => (
@@ -275,15 +295,23 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                   {day(r.startDate)} – {day(r.endDate)} · {reservationStatusLabel(r.status)}
                 </div>
               </div>
-              {r.status === "RESERVED" && (
-                <button
-                  type="button"
-                  className="text-xs text-zinc-400 hover:text-red-400"
-                  onClick={() => run(() => cancelEquipmentReservation({ tenantId, reservationId: r.id }), "Gear released.")}
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/${tenantSlug}/admin/inventory`}
+                  className="text-xs text-amber-400 hover:underline font-mono text-[11px]"
                 >
-                  Release
-                </button>
-              )}
+                  {r.status === "RESERVED" ? "Check-out →" : r.status === "CHECKED_OUT" ? "Check-in return →" : "View audit →"}
+                </Link>
+                {r.status === "RESERVED" && (
+                  <button
+                    type="button"
+                    className="text-xs text-zinc-400 hover:text-red-400"
+                    onClick={() => run(() => cancelEquipmentReservation({ tenantId, reservationId: r.id }), "Gear released.")}
+                  >
+                    Release
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -356,6 +384,18 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
               <ul className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {g.items.map((i) => (
                   <li key={i.id} className="relative rounded-lg border border-zinc-800 overflow-hidden bg-black">
+                    {/* Floating Client Badges */}
+                    {i.isClientFav && (
+                      <span className="absolute top-1.5 left-1.5 z-10 p-1 rounded-md bg-black/70 border border-red-500/30 text-red-400" title="Client Favorite Select">
+                        <Heart className="size-3 fill-red-500 text-red-500" />
+                      </span>
+                    )}
+                    {i.clientNotes && (
+                      <span className="absolute top-1.5 right-8 z-10 p-1 rounded-md bg-black/70 border border-amber-500/30 text-amber-300" title={`Client Retouch Note: ${i.clientNotes}`}>
+                        <MessageSquare className="size-3" />
+                      </span>
+                    )}
+
                     {i.itemType === "PHOTO" ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={i.previewUrl} alt={i.title} className="aspect-[4/3] w-full object-cover" />
@@ -378,6 +418,11 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                         <Trash2 className="size-3" />
                       </button>
                     </div>
+                    {i.clientNotes && (
+                      <div className="px-1.5 pb-1.5 text-[10px] text-amber-300 font-mono truncate" title={i.clientNotes}>
+                        Note: {i.clientNotes}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

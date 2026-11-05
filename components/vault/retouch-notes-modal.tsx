@@ -96,6 +96,27 @@ export function RetouchNotesModal({
                 {note.length} / 1000 chars
               </span>
             </label>
+            <div className="flex flex-wrap gap-1.5 pb-1">
+              {[
+                "Warm color grade",
+                "Cool down skin tones",
+                "Soften blemishes",
+                "Crop / Reframe",
+                "Timecode [00:30]",
+                "Remove glare",
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() =>
+                    setNote((prev) => (prev ? `${prev}\n• ${chip}: ` : `• ${chip}: `))
+                  }
+                  className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors cursor-pointer"
+                >
+                  + {chip}
+                </button>
+              ))}
+            </div>
             <textarea
               rows={4}
               maxLength={1000}

@@ -26,7 +26,14 @@ import {
   toggleShotCompletion,
 } from "@/lib/actions/logistics";
 import { acceptProposal } from "@/lib/actions/proposals";
-import { createEquipmentReservation } from "@/lib/actions/gear";
+import {
+  createEquipmentReservation,
+  quarantineGearItem,
+  releaseGearFromMaintenance,
+  logPreShootInspection,
+  logPostShootInspection,
+} from "@/lib/actions/gear";
+import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
 import { nextInvoiceNumber } from "@/lib/bookings/billing";
@@ -281,6 +288,106 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     }
   });
 
+  await harness.test("T15-GEAR-02: gear maintenance quarantine, return to fleet, and pre/post inspection logs", async () => {
+    const asset = await db.inventoryItem.create({
+      data: {
+        tenantId: lumina.id,
+        name: "Cinema Prime 50mm",
+        sku: `CP50-${run}`,
+        category: "Lenses",
+        discipline: "UNIVERSAL",
+        condition: "EXCELLENT",
+        status: "AVAILABLE",
+      },
+    });
+
+    try {
+      // 1. Quarantine asset for maintenance
+      const qRes = await withSession(crew, () =>
+        quarantineGearItem({
+          itemId: asset.id,
+          tenantId: lumina.id,
+          tenantSlug: "lumina-cine",
+          condition: "MAINTENANCE_NEEDED",
+          reason: "Focus ring stiff",
+        })
+      );
+      harness.assert(qRes.success === true, "Item quarantined");
+      harness.assertEqual(qRes.item?.status, "MAINTENANCE", "Status is MAINTENANCE");
+      harness.assertEqual(qRes.item?.condition, "MAINTENANCE_NEEDED", "Condition is MAINTENANCE_NEEDED");
+
+      // 2. Return asset to active fleet
+      const rRes = await withSession(crew, () =>
+        releaseGearFromMaintenance({
+          itemId: asset.id,
+          tenantId: lumina.id,
+          tenantSlug: "lumina-cine",
+          condition: "EXCELLENT",
+        })
+      );
+      harness.assert(rRes.success === true, "Item returned to fleet");
+      harness.assertEqual(rRes.item?.status, "AVAILABLE", "Status back to AVAILABLE");
+      harness.assertEqual(rRes.item?.condition, "EXCELLENT", "Condition EXCELLENT");
+
+      // 3. Create shoot reservation starting right now
+      const now = new Date();
+      const resData = await db.equipmentReservation.create({
+        data: {
+          projectId,
+          itemId: asset.id,
+          startDate: new Date(now.getTime() - 3600000), // 1 hour ago (within window)
+          endDate: new Date(now.getTime() + 86400000),  // tomorrow
+          status: "RESERVED",
+        },
+      });
+
+      // 4. Pre-shoot checkout inspection
+      const preRes = await withSession(crew, () =>
+        logPreShootInspection({
+          tenantId: lumina.id,
+          tenantSlug: "lumina-cine",
+          reservationId: resData.id,
+          condition: "EXCELLENT",
+          notes: "Sensor clean and batteries full",
+          sensorVerified: true,
+          mediaFormatted: true,
+          batteriesCharged: true,
+        })
+      );
+      harness.assert(preRes.success === true, "Pre-shoot inspection completed");
+
+      const checkedOutItem = await db.inventoryItem.findUnique({ where: { id: asset.id } });
+      harness.assertEqual(checkedOutItem?.status, "ON_SHOOT", "Asset marked ON_SHOOT");
+      const checkedOutRes = await db.equipmentReservation.findUnique({ where: { id: resData.id } });
+      harness.assertEqual(checkedOutRes?.status, "CHECKED_OUT", "Reservation marked CHECKED_OUT");
+
+      // 5. Post-shoot check-in with damage flag
+      const postRes = await withSession(crew, () =>
+        logPostShootInspection({
+          tenantId: lumina.id,
+          tenantSlug: "lumina-cine",
+          reservationId: resData.id,
+          condition: "DAMAGED",
+          damageFlag: true,
+          notes: "Front element scratched during outdoor shoot",
+        })
+      );
+      harness.assert(postRes.success === true, "Post-shoot inspection completed");
+      harness.assertEqual(postRes.nextItemStatus, "MAINTENANCE", "Damaged gear routed to MAINTENANCE");
+
+      const returnedItem = await db.inventoryItem.findUnique({ where: { id: asset.id } });
+      harness.assertEqual(returnedItem?.status, "MAINTENANCE", "Item in MAINTENANCE");
+      harness.assertEqual(returnedItem?.condition, "DAMAGED", "Item condition DAMAGED");
+
+      const log = await db.inspectionLog.findUnique({ where: { reservationId: resData.id } });
+      harness.assert(!!log?.checkinCondition?.includes("DAMAGED"), "Log contains damage info");
+    } finally {
+      await db.inspectionLog.deleteMany({ where: { reservation: { itemId: asset.id } } });
+      await db.equipmentReservation.deleteMany({ where: { itemId: asset.id } });
+      await db.inventoryItem.delete({ where: { id: asset.id } }).catch(() => null);
+    }
+  });
+
   await harness.test("T15-FILES-01: photos upload as private masters with public watermarked previews; downloads wait for payment", async () => {
     const png = await sharp({ create: { width: 2400, height: 1600, channels: 3, background: { r: 200, g: 120, b: 40 } } }).png().toBuffer();
     const form = new FormData();
@@ -316,6 +423,28 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     const open = await downloadHandler(new NextRequest(`http://localhost:3000/api/download?projectId=${projectId}&type=photo_master&assetId=${item!.id}`));
     harness.assertEqual(open.status, 200, "Master downloads once paid");
     harness.assertEqual(Buffer.from(await open.arrayBuffer()).length, png.length, "The original file, full size");
+
+    // Client proofing: favorite and retouch note
+    const favRes: any = await toggleClientFavorite({ itemId: item!.id, isFav: true });
+    harness.assert(favRes.success === true, "Client favorited photo");
+    harness.assertEqual(favRes.isClientFav, true, "isClientFav is true");
+
+    const noteRes: any = await submitRetouchNote({
+      itemId: item!.id,
+      note: "Please warm skin tones by +5% and soften background glare",
+    });
+    harness.assert(noteRes.success === true, "Retouch note saved");
+    harness.assert(noteRes.clientNotes?.includes("warm skin tones"), "Note content saved");
+
+    // Batch ZIP downloads (Favorites vs All)
+    const favZip = await downloadHandler(new NextRequest(`http://localhost:3000/api/download?projectId=${projectId}&type=photo_zip&favoritesOnly=true`));
+    harness.assertEqual(favZip.status, 200, "Favorites ZIP download 200 OK");
+    harness.assertEqual(favZip.headers.get("Content-Type"), "application/zip", "ZIP content type returned");
+    harness.assert(!!favZip.headers.get("Content-Disposition")?.includes("Favorites"), "Favorites in zip filename");
+
+    const allZip = await downloadHandler(new NextRequest(`http://localhost:3000/api/download?projectId=${projectId}&type=photo_zip`));
+    harness.assertEqual(allZip.status, 200, "All Masters ZIP download 200 OK");
+    harness.assert(!!allZip.headers.get("Content-Disposition")?.includes("Master_Deliverables.zip"), "Master_Deliverables in zip filename");
 
     const del: any = await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
     harness.assert(del.success === true, "File removed");

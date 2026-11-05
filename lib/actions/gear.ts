@@ -219,6 +219,91 @@ export async function updateGearConditionStatus(input: {
   }
 }
 
+/**
+ * Quarantines an inventory asset into MAINTENANCE status with damage/repair condition.
+ */
+export async function quarantineGearItem(input: {
+  itemId: string;
+  tenantId: string;
+  tenantSlug: string;
+  condition: "MAINTENANCE_NEEDED" | "DAMAGED";
+  reason?: string;
+}) {
+  try {
+    await requireStaff(input.tenantId);
+    const existing = await db.inventoryItem.findFirst({
+      where: { id: input.itemId, tenantId: input.tenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "NOT_FOUND", message: "Item not found in studio fleet." };
+    }
+
+    const updated = await db.inventoryItem.update({
+      where: { id: input.itemId },
+      data: {
+        status: "MAINTENANCE",
+        condition: input.condition,
+      },
+    });
+
+    safeRevalidate(`/${input.tenantSlug}/admin/inventory`);
+    return {
+      success: true,
+      item: updated,
+      message: `${existing.name} (${existing.sku}) quarantined for maintenance.`,
+    };
+  } catch (err: any) {
+    console.error("quarantineGearItem error:", err);
+    return {
+      success: false,
+      error: "QUARANTINE_FAILED",
+      message: err.message || "Failed to quarantine item.",
+    };
+  }
+}
+
+/**
+ * Releases an item from MAINTENANCE back into the active fleet as AVAILABLE.
+ */
+export async function releaseGearFromMaintenance(input: {
+  itemId: string;
+  tenantId: string;
+  tenantSlug: string;
+  condition?: "EXCELLENT" | "GOOD" | "FAIR";
+}) {
+  try {
+    await requireStaff(input.tenantId);
+    const existing = await db.inventoryItem.findFirst({
+      where: { id: input.itemId, tenantId: input.tenantId },
+    });
+    if (!existing) {
+      return { success: false, error: "NOT_FOUND", message: "Item not found in studio fleet." };
+    }
+
+    const updated = await db.inventoryItem.update({
+      where: { id: input.itemId },
+      data: {
+        status: "AVAILABLE",
+        condition: input.condition || "GOOD",
+      },
+    });
+
+    safeRevalidate(`/${input.tenantSlug}/admin/inventory`);
+    return {
+      success: true,
+      item: updated,
+      message: `${existing.name} (${existing.sku}) returned to active fleet.`,
+    };
+  } catch (err: any) {
+    console.error("releaseGearFromMaintenance error:", err);
+    return {
+      success: false,
+      error: "RELEASE_FAILED",
+      message: err.message || "Failed to return item to service.",
+    };
+  }
+}
+
 // ==============================================================================
 // 2. KIT BUNDLE & BOM ACTIONS (Feature 34)
 // ==============================================================================

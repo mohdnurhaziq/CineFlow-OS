@@ -103,32 +103,73 @@ export function PhotoGrid({ items, projectId, isFinalBalancePaid }: PhotoGridPro
           </h3>
         </div>
 
-        {/* Filter Switch */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setFilterFavsOnly(false)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-              !filterFavsOnly
-                ? "bg-amber-500 text-black font-bold"
-                : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white"
-            }`}
-          >
-            All Proofs ({activeItems.length})
-          </button>
+        {/* Actions & Filter Switch */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Switch */}
+          <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+            <button
+              type="button"
+              onClick={() => setFilterFavsOnly(false)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
+                !filterFavsOnly
+                  ? "bg-amber-500 text-black font-bold shadow-sm"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              All Proofs ({activeItems.length})
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setFilterFavsOnly(true)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
-              filterFavsOnly
-                ? "bg-amber-500 text-black font-bold"
-                : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white"
-            }`}
-          >
-            <Heart className="size-3 fill-red-500 text-red-500" />
-            <span>Favorites ({totalFavs})</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setFilterFavsOnly(true)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+                filterFavsOnly
+                  ? "bg-amber-500 text-black font-bold shadow-sm"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Heart className="size-3 fill-red-500 text-red-500" />
+              <span>Favorites ({totalFavs})</span>
+            </button>
+          </div>
+
+          {/* Batch ZIP Downloads */}
+          {activeItems.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              {isFinalBalancePaid ? (
+                <>
+                  {totalFavs > 0 && (
+                    <a
+                      href={`/api/download?projectId=${projectId}&type=photo_zip&favoritesOnly=true`}
+                      download
+                      className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-mono font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Download curated favorites as ZIP archive"
+                    >
+                      <Download className="size-3.5" />
+                      <span>Download Favorites ({totalFavs})</span>
+                    </a>
+                  )}
+                  <a
+                    href={`/api/download?projectId=${projectId}&type=photo_zip`}
+                    download
+                    className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 text-xs font-mono font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                    title="Download all master high-res deliverables as ZIP"
+                  >
+                    <Download className="size-3.5 text-amber-400" />
+                    <span>Download All ZIP ({activeItems.length})</span>
+                  </a>
+                </>
+              ) : (
+                <div
+                  className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-500 flex items-center gap-1.5"
+                  title="Final balance milestone unlocks full-resolution batch zip download"
+                >
+                  <Lock className="size-3 text-amber-400" />
+                  <span>Batch ZIP Locked</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

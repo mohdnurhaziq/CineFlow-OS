@@ -53,16 +53,26 @@ export async function GET(request: NextRequest) {
 
     // 3. Handle type: "photo_zip"
     if (type === "photo_zip") {
-      const photoItems = allItems.filter((i) => i.itemType === "PHOTO");
+      const favoritesOnly = searchParams.get("favoritesOnly") === "true";
+      const photoItems = allItems.filter(
+        (i) => i.itemType === "PHOTO" && (!favoritesOnly || i.isClientFav)
+      );
       if (photoItems.length === 0) {
-        return NextResponse.json({ error: "No photo assets found in project deliverables" }, { status: 404 });
+        return NextResponse.json(
+          {
+            error: favoritesOnly
+              ? "No favorite photo assets selected in project"
+              : "No photo assets found in project deliverables",
+          },
+          { status: 404 }
+        );
       }
 
       const zipEntries: ZipFileEntry[] = [];
 
       for (let idx = 0; idx < photoItems.length; idx++) {
         const item = photoItems[idx]!;
-                const filePath = masterFilePath(item.downloadUrl);
+        const filePath = masterFilePath(item.downloadUrl);
 
         try {
           const fileData = await fs.readFile(filePath);
@@ -82,7 +92,9 @@ export async function GET(request: NextRequest) {
 
       const zipBuffer = createZipArchive(zipEntries);
       const safeProjectNumber = project.projectNumber.replace(/[^a-zA-Z0-9_-]/g, "_");
-      const zipFilename = `${safeProjectNumber}_Master_Deliverables.zip`;
+      const zipFilename = favoritesOnly
+        ? `${safeProjectNumber}_Favorites_${photoItems.length}_Selects.zip`
+        : `${safeProjectNumber}_Master_Deliverables.zip`;
 
       return new Response(new Uint8Array(zipBuffer), {
         status: 200,

@@ -71,7 +71,15 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
           galleries: project.deliverables.map((d) => ({
             id: d.id,
             title: d.title,
-            items: d.items.map((i) => ({ id: i.id, title: i.title, itemType: i.itemType, previewUrl: i.previewUrl, fileSize: i.fileSize })),
+            items: d.items.map((i) => ({
+              id: i.id,
+              title: i.title,
+              itemType: i.itemType,
+              previewUrl: i.previewUrl,
+              fileSize: i.fileSize,
+              isClientFav: i.isClientFav,
+              clientNotes: i.clientNotes,
+            })),
           })),
           invoices: project.invoices,
           shotItems: project.shotItems.map((s) => ({

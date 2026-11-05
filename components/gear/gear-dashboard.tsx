@@ -17,6 +17,7 @@ import {
   Wrench,
   ShieldCheck,
   Check,
+  Scan,
 } from "lucide-react";
 import { GearKpiSummary } from "./gear-kpi-summary";
 import { GearItemDialog, type InventoryItemRow } from "./gear-item-dialog";
@@ -26,12 +27,20 @@ import {
   InspectionDialog,
   type ReservationWithDetails,
 } from "./inspection-dialog";
-import { deleteGearItem, deleteKitBundle, updateGearConditionStatus } from "@/lib/actions/gear";
+import { GearScannerConsole } from "./gear-scanner-console";
+import {
+  deleteGearItem,
+  deleteKitBundle,
+  updateGearConditionStatus,
+  quarantineGearItem,
+  releaseGearFromMaintenance,
+} from "@/lib/actions/gear";
 import { conditionLabel } from "@/lib/labels";
 import { disciplineLabel } from "@/lib/labels";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useRouter } from "next/navigation";
 import { checkoutWindow } from "@/lib/gear/checkout-window";
+import { toast } from "sonner";
 
 interface GearDashboardProps {
   tenantId: string;
@@ -84,6 +93,7 @@ export function GearDashboard({
   const [inspectionReservation, setInspectionReservation] = useState<ReservationWithDetails | null>(null);
   const [inspectionMode, setInspectionMode] = useState<"PRE_SHOOT" | "POST_SHOOT">("PRE_SHOOT");
   const [isInspectionDialogOpen, setIsInspectionDialogOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // KPI calculations
   const totalItemsCount = items.length;
@@ -129,6 +139,56 @@ export function GearDashboard({
     }
   };
 
+  const handleQuarantineItem = async (item: InventoryItemRow) => {
+    if (
+      !(await confirm({
+        title: `Quarantine "${item.name}"?`,
+        message: "This marks the asset as In Repair / Maintenance and prevents it from being reserved or checked out.",
+        confirmLabel: "Quarantine Asset",
+        destructive: true,
+      }))
+    )
+      return;
+
+    const res = await quarantineGearItem({
+      itemId: item.id,
+      tenantId,
+      tenantSlug,
+      condition: "MAINTENANCE_NEEDED",
+    });
+
+    if (res.success) {
+      toast.warning(res.message);
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id ? { ...i, status: "MAINTENANCE", condition: "MAINTENANCE_NEEDED" } : i
+        )
+      );
+      router.refresh();
+    } else {
+      toast.error(res.message || "Failed to quarantine item.");
+    }
+  };
+
+  const handleReleaseMaintenance = async (item: InventoryItemRow) => {
+    const res = await releaseGearFromMaintenance({
+      itemId: item.id,
+      tenantId,
+      tenantSlug,
+      condition: "GOOD",
+    });
+
+    if (res.success) {
+      toast.success(res.message);
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, status: "AVAILABLE", condition: "GOOD" } : i))
+      );
+      router.refresh();
+    } else {
+      toast.error(res.message || "Failed to release item.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -144,6 +204,15 @@ export function GearDashboard({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsScannerOpen(true)}
+            className="px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-amber-500 text-zinc-300 hover:text-amber-400 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+          >
+            <Scan className="size-4 text-amber-400" />
+            <span>Scan Asset / SKU</span>
+          </button>
+
           {activeTab === "ITEMS" && (
             <button
               type="button"
@@ -381,13 +450,32 @@ export function GearDashboard({
                           </td>
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {item.status === "MAINTENANCE" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReleaseMaintenance(item)}
+                                  className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-black transition-colors cursor-pointer"
+                                  title="Clear Maintenance & Return to Fleet"
+                                >
+                                  <ShieldCheck className="size-3.5" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuarantineItem(item)}
+                                  className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-amber-400 hover:border-amber-500/40 transition-colors cursor-pointer"
+                                  title="Quarantine for Maintenance / Repair"
+                                >
+                                  <Wrench className="size-3.5" />
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {
                                   setItemToEdit(item);
                                   setIsItemDialogOpen(true);
                                 }}
-                                className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                                className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
                                 title="Edit Item"
                               >
                                 <Edit2 className="size-3.5" />
@@ -704,6 +792,26 @@ export function GearDashboard({
         mode={inspectionMode}
         inspectorName={inspectorName}
         onSuccess={() => router.refresh()}
+      />
+
+      <GearScannerConsole
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        tenantId={tenantId}
+        tenantSlug={tenantSlug}
+        items={items}
+        reservations={reservations}
+        onOpenCheckOut={(res) => {
+          setInspectionReservation(res);
+          setInspectionMode("PRE_SHOOT");
+          setIsInspectionDialogOpen(true);
+        }}
+        onOpenCheckIn={(res) => {
+          setInspectionReservation(res);
+          setInspectionMode("POST_SHOOT");
+          setIsInspectionDialogOpen(true);
+        }}
+        onItemUpdated={() => router.refresh()}
       />
       {confirmDialog}
     </div>
