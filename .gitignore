@@ -60,3 +60,10 @@ graphify-out/20*/
 graphify-out/.graphify_build_state.json
 graphify-out/.graphify_labels.pending.json
 graphify-out/.graphify_labels.json.sig
+
+# Uploaded files (payment slips, receipts, signatures, studio media) are runtime
+# customer data, never source. Demo seed assets already in the repo stay tracked;
+# add a new one deliberately with `git add -f`. Folder placeholders stay tracked.
+/public/uploads/**
+!/public/uploads/**/
+!/public/uploads/**/.gitkeep
