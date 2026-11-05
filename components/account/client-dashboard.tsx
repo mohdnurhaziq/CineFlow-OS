@@ -114,7 +114,7 @@ function humanize(value: string) {
 }
 
 export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects }: ClientDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"all" | "projects" | "bookings" | "invoices" | "proposals">("all");
+  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "bookings" | "invoices" | "proposals">("overview");
   const [bookingFilter, setBookingFilter] = useState<"all" | "upcoming" | "past">("all");
   const [invoiceFilter, setInvoiceFilter] = useState<"unpaid" | "paid" | "all">("all");
   const [showVoidInvoices, setShowVoidInvoices] = useState(false);
@@ -186,6 +186,23 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   const totalDeliverablesCount = useMemo(
     () => projects.reduce((sum, p) => sum + p.deliverables.reduce((s, d) => s + d.items.length, 0), 0),
     [projects]
+  );
+
+  // Spotlight project for Overview tab
+  const spotlightProject = useMemo(() => {
+    if (projects.length === 0) return null;
+    const withUpcoming = projects.find((p) => p.callSheets.length > 0);
+    return withUpcoming || projects[0];
+  }, [projects]);
+
+  const spotlightNextShoot = useMemo(
+    () => spotlightProject?.callSheets[0] || null,
+    [spotlightProject]
+  );
+
+  const spotlightStageIndex = useMemo(
+    () => (spotlightProject ? Math.max(0, STAGES.findIndex((s) => s.id === spotlightProject.status)) : 0),
+    [spotlightProject]
   );
 
   // Invoices to show based on filter
@@ -403,10 +420,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
         {/* Section Navigation Tabs */}
         <div className="border-b border-zinc-800 flex items-center gap-1 overflow-x-auto scrollbar-none pb-px">
           {[
-            { id: "all", label: "All Overview", icon: LayoutDashboard },
-            { id: "projects", label: `Shoots & Vault (${projects.length})`, icon: FolderLock },
-            { id: "bookings", label: `Bookings (${bookings.length})`, icon: CalendarClock },
-            { id: "invoices", label: `Invoices & Receipts (${invoices.length})`, icon: Receipt },
+            { id: "overview" as const, label: "Overview", icon: LayoutDashboard },
+            { id: "projects" as const, label: `Shoots & Vault (${projects.length})`, icon: FolderLock },
+            { id: "bookings" as const, label: `Bookings (${bookings.length})`, icon: CalendarClock },
+            { id: "invoices" as const, label: `Invoices & Receipts (${invoices.length})`, icon: Receipt },
             ...(proposals.length > 0
               ? [{ id: "proposals" as const, label: `Proposals (${proposals.length})`, icon: FileText }]
               : []),
@@ -417,7 +434,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={cn(
                   "flex items-center gap-2 px-3.5 py-2.5 text-xs font-mono transition-colors border-b-2 whitespace-nowrap",
                   isActive
@@ -432,14 +449,279 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           })}
         </div>
 
-        {/* TAB 1: ALL / PROJECTS SECTION */}
-        {(activeTab === "all" || activeTab === "projects") && (
-          <section className="space-y-4">
+        {/* ======================================================== */}
+        {/* TAB 1: OVERVIEW DIGEST (EXECUTIVE SNAPSHOT)                */}
+        {/* ======================================================== */}
+        {activeTab === "overview" && (
+          <div className="space-y-5 animate-in fade-in-0 duration-200">
+            {/* Spotlight Current Production */}
+            {spotlightProject ? (
+              <div className="p-5 rounded-2xl bg-[#121215] border border-zinc-800/90 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">
+                      Current Engagement
+                    </span>
+                    <span className="text-xs text-zinc-400 font-mono">
+                      {spotlightProject.projectNumber}
+                    </span>
+                  </div>
+                  {projects.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("projects")}
+                      className="text-xs font-mono text-amber-400 hover:underline flex items-center gap-0.5"
+                    >
+                      View all {projects.length} shoots <ChevronRight className="size-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-white tracking-tight">
+                      {spotlightProject.title}
+                    </h3>
+                    {spotlightNextShoot ? (
+                      <p className="text-xs text-zinc-300 font-mono flex items-center gap-1.5 flex-wrap">
+                        <CalendarClock className="size-3.5 text-amber-400" />
+                        <span>Next shoot: {formatDate(spotlightNextShoot.shootDate)} · {spotlightNextShoot.generalCallTime}</span>
+                        <span className="text-zinc-500">· {spotlightNextShoot.locationName}</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-zinc-400 font-mono">
+                        Stage: {STAGES[spotlightStageIndex]?.label || "Planning"}
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    href={`/${tenant.slug}/vault/${spotlightProject.id}`}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs font-mono tracking-wide transition-all shadow-sm self-start sm:self-auto"
+                  >
+                    <FolderLock className="size-3.5" />
+                    <span>Open Photo Vault</span>
+                    <ChevronRight className="size-3.5" />
+                  </Link>
+                </div>
+
+                {/* Compact Stage Timeline */}
+                <div className="bg-[#18181c] p-3.5 rounded-xl border border-zinc-800/80 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-zinc-400 uppercase tracking-wider">Production Timeline</span>
+                    <span className="text-amber-400 font-semibold">
+                      Stage {spotlightStageIndex + 1} of 5: {STAGES[spotlightStageIndex]?.label}
+                    </span>
+                  </div>
+                  <ol className="grid grid-cols-5 gap-1.5" aria-label="Stage timeline">
+                    {STAGES.map((s, idx) => (
+                      <li key={s.id} className="space-y-1">
+                        <div
+                          className={cn(
+                            "h-1.5 rounded-full transition-all",
+                            idx < spotlightStageIndex
+                              ? "bg-amber-400"
+                              : idx === spotlightStageIndex
+                              ? "bg-amber-500 animate-pulse"
+                              : "bg-zinc-800"
+                          )}
+                        />
+                        <div
+                          className={cn(
+                            "text-[10px] font-mono truncate",
+                            idx === spotlightStageIndex
+                              ? "text-amber-300 font-bold"
+                              : idx < spotlightStageIndex
+                              ? "text-zinc-300"
+                              : "text-zinc-600"
+                          )}
+                        >
+                          {s.label}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Side-by-side Quick Summaries for Bookings and Invoices */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Box 1: Next Bookings Snapshot */}
+              <div className="p-5 rounded-2xl bg-[#121215] border border-zinc-800 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className="size-4 text-amber-400" />
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                        Upcoming Sessions
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("bookings")}
+                      className="text-[11px] font-mono text-amber-400 hover:underline flex items-center gap-0.5"
+                    >
+                      All ({bookings.length}) <ChevronRight className="size-3" />
+                    </button>
+                  </div>
+
+                  {upcomingBookings.length === 0 ? (
+                    <div className="py-4 text-center space-y-2">
+                      <p className="text-xs text-zinc-500">No upcoming sessions right now.</p>
+                      <Link
+                        href={`/${tenant.slug}/book`}
+                        className="inline-flex items-center gap-1 text-xs font-mono text-amber-400 hover:underline"
+                      >
+                        + Book a session
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {upcomingBookings.slice(0, 2).map((b) => {
+                        const dateInfo = b.slot ? formatShortDate(b.slot.date) : null;
+                        return (
+                          <div
+                            key={b.id}
+                            className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800/80 flex items-center justify-between text-xs font-mono"
+                          >
+                            <div className="flex items-center gap-3">
+                              {dateInfo && (
+                                <div className="size-10 rounded-lg bg-zinc-800 border border-zinc-700 flex flex-col items-center justify-center text-center flex-shrink-0">
+                                  <span className="text-[8px] uppercase text-amber-400 font-bold leading-none">
+                                    {dateInfo.month}
+                                  </span>
+                                  <span className="text-sm font-black text-white leading-tight">
+                                    {dateInfo.day}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="space-y-0.5">
+                                <div className="font-semibold text-white">
+                                  {humanize(b.category)}
+                                </div>
+                                <div className="text-[11px] text-zinc-400">
+                                  {b.slot ? `${b.slot.startTime} – ${b.slot.endTime}` : "Time confirmed"}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Confirmed
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("bookings")}
+                  className="w-full text-center py-2 text-xs font-mono text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/60 rounded-xl border border-zinc-800 transition-colors flex items-center justify-center gap-1"
+                >
+                  <span>Manage all {bookings.length} bookings</span>
+                  <ChevronRight className="size-3 text-amber-400" />
+                </button>
+              </div>
+
+              {/* Box 2: Billing & Recent Invoices Snapshot */}
+              <div className="p-5 rounded-2xl bg-[#121215] border border-zinc-800 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="size-4 text-amber-400" />
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                        Billing & Receipts
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("invoices")}
+                      className="text-[11px] font-mono text-amber-400 hover:underline flex items-center gap-0.5"
+                    >
+                      All ({invoices.length}) <ChevronRight className="size-3" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {unpaidInvoices.length > 0 ? (
+                      unpaidInvoices.slice(0, 1).map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs font-mono"
+                        >
+                          <div>
+                            <div className="font-bold text-white flex items-center gap-1.5">
+                              <span>{inv.invoiceNumber}</span>
+                              <span className="text-[10px] text-amber-300">({humanize(inv.milestoneType)})</span>
+                            </div>
+                            <div className="text-[11px] text-zinc-400">
+                              Due: {formatDate(inv.dueDate)}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-amber-400">{money(inv.amount)}</div>
+                            <Link
+                              href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                              className="text-[10px] font-bold text-amber-300 hover:underline uppercase inline-flex items-center gap-0.5"
+                            >
+                              Pay Now →
+                            </Link>
+                          </div>
+                        </div>
+                      ))
+                    ) : null}
+
+                    {paidInvoices.slice(0, unpaidInvoices.length > 0 ? 1 : 2).map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800/80 flex items-center justify-between text-xs font-mono"
+                      >
+                        <div>
+                          <div className="font-semibold text-zinc-200">
+                            {inv.invoiceNumber} · {humanize(inv.milestoneType)}
+                          </div>
+                          <div className="text-[11px] text-zinc-500">
+                            Paid {inv.paidAt ? formatDate(inv.paidAt) : ""}
+                          </div>
+                        </div>
+                        <div className="text-right flex items-center gap-2">
+                          <span className="font-bold text-white">{money(inv.amount)}</span>
+                          <Link
+                            href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                            className="px-2 py-0.5 rounded text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors"
+                          >
+                            Receipt
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("invoices")}
+                  className="w-full text-center py-2 text-xs font-mono text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/60 rounded-xl border border-zinc-800 transition-colors flex items-center justify-center gap-1"
+                >
+                  <span>View all {invoices.length} invoices & receipts</span>
+                  <ChevronRight className="size-3 text-amber-400" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 2: SHOOTS & VAULT (FULL DETAILED VIEW)                */}
+        {/* ======================================================== */}
+        {activeTab === "projects" && (
+          <section className="space-y-4 animate-in fade-in-0 duration-200">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <FolderLock className="size-4 text-amber-400" />
-                  Your Production Projects & Vault
+                  Your Production Projects & Deliverables Vault ({projects.length})
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
                   Follow production stages from planning to final retouch selects and high-resolution master downloads.
@@ -563,7 +845,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                       {/* Shoot Day Info or Deliverables Grid */}
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
                         <div className="space-y-2 flex-1">
-                          {/* Deliverables summary */}
                           {items.length > 0 ? (
                             <div className="space-y-2">
                               <div className="flex items-center gap-3 text-xs font-mono text-zinc-300">
@@ -585,10 +866,9 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 )}
                               </div>
 
-                              {/* Thumbnail preview row if available */}
                               {previewThumbnails.length > 0 && (
                                 <div className="flex items-center gap-2">
-                                  {previewThumbnails.map((item, i) => (
+                                  {previewThumbnails.map((item) => (
                                     <div
                                       key={item.id}
                                       className="size-14 rounded-lg bg-zinc-800 border border-zinc-700 overflow-hidden relative group/thumb"
@@ -629,7 +909,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             </div>
                           )}
 
-                          {/* Master Download Lock Status (Only show when deliverables exist) */}
                           {items.length > 0 && (
                             <div className="flex items-center gap-1.5 text-xs">
                               {p.isFinalBalancePaid ? (
@@ -647,7 +926,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                           )}
                         </div>
 
-                        {/* Open Vault CTA */}
                         <div className="flex-shrink-0 flex items-center gap-2">
                           <Link
                             href={`/${tenant.slug}/vault/${p.id}`}
@@ -667,9 +945,11 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           </section>
         )}
 
-        {/* TAB 2: BOOKINGS SECTION */}
-        {(activeTab === "all" || activeTab === "bookings") && (
-          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4">
+        {/* ======================================================== */}
+        {/* TAB 3: BOOKINGS (FULL DETAILED VIEW)                      */}
+        {/* ======================================================== */}
+        {activeTab === "bookings" && (
+          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4 animate-in fade-in-0 duration-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
@@ -820,9 +1100,11 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           </section>
         )}
 
-        {/* TAB 3: INVOICES & BILLING SECTION */}
-        {(activeTab === "all" || activeTab === "invoices") && (
-          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4">
+        {/* ======================================================== */}
+        {/* TAB 4: INVOICES & BILLING (FULL DETAILED VIEW)            */}
+        {/* ======================================================== */}
+        {activeTab === "invoices" && (
+          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4 animate-in fade-in-0 duration-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
@@ -975,9 +1257,11 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           </section>
         )}
 
-        {/* TAB 4: PROPOSALS SECTION (if any) */}
-        {(activeTab === "all" || activeTab === "proposals") && proposals.length > 0 && (
-          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4">
+        {/* ======================================================== */}
+        {/* TAB 5: PROPOSALS (FULL VIEW)                              */}
+        {/* ======================================================== */}
+        {activeTab === "proposals" && proposals.length > 0 && (
+          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4 animate-in fade-in-0 duration-200">
             <div>
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <FileText className="size-4 text-amber-400" />
