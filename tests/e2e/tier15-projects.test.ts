@@ -19,6 +19,12 @@ import {
   deleteDeliverableItem,
   updateProjectStatus,
 } from "@/lib/actions/admin-projects";
+import {
+  createShotItem,
+  updateShotItem,
+  deleteShotItem,
+  toggleShotCompletion,
+} from "@/lib/actions/logistics";
 import { acceptProposal } from "@/lib/actions/proposals";
 import { createEquipmentReservation } from "@/lib/actions/gear";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
@@ -134,6 +140,120 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(cross.success, false, "Another studio can't delete it");
     const del: any = await withSession(crew, () => deleteCallSheet({ tenantId: lumina.id, callSheetId: sheet.callSheetId }));
     harness.assert(del.success === true, "Deleted by its studio");
+  });
+
+  await harness.test("T15-SHOTS-01: visual shot list planning, execution, and multi-tenant isolation", async () => {
+    const outsider = await db.user.findFirst({ where: { role: "STUDIO_OWNER", tenantId: { not: lumina.id } } });
+    const outsiderUser = { ...as(outsider!), tenantSlug: "apex-media" };
+
+    // 1. Cross-tenant attempt is rejected
+    const crossCreate: any = await withSession(outsiderUser, () =>
+      createShotItem({
+        projectId,
+        tenantSlug: "apex-media",
+        sceneNumber: "1",
+        shotNumber: "1",
+        framing: "Wide (WS)",
+        cameraLens: "24-70mm f/2.8",
+        lightingSetup: "Golden Hour",
+        description: "Intruder shot",
+      })
+    );
+    harness.assertEqual(crossCreate.success, false, "Outside studio cannot create shots on Lumina project");
+
+    // 2. Lumina crew creates Shot 1
+    const s1Res: any = await withSession(crew, () =>
+      createShotItem({
+        projectId,
+        tenantSlug: "lumina-cine",
+        sceneNumber: "1",
+        shotNumber: "1",
+        framing: "Wide (WS)",
+        cameraLens: "24-70mm f/2.8",
+        lightingSetup: "Natural Golden Hour",
+        description: "Wide establishing shot of bride entering garden",
+      })
+    );
+    harness.assert(s1Res.success === true, "Crew creates Shot 1", JSON.stringify(s1Res));
+    harness.assertEqual(s1Res.shot?.framing, "Wide (WS)", "Shot 1 framing is Wide");
+    harness.assertEqual(s1Res.shot?.status, "PENDING", "Shot 1 starts as PENDING");
+
+    // 3. Crew creates Shot 2
+    const s2Res: any = await withSession(crew, () =>
+      createShotItem({
+        projectId,
+        tenantSlug: "lumina-cine",
+        sceneNumber: "1",
+        shotNumber: "2",
+        framing: "Close-Up (CU)",
+        cameraLens: "85mm f/1.4 Portrait",
+        lightingSetup: "Key Light + Softbox",
+        description: "Close-up reaction shot on groom's smile",
+      })
+    );
+    harness.assert(s2Res.success === true, "Crew creates Shot 2");
+
+    // 4. Update Shot 2 specs
+    const updateRes: any = await withSession(crew, () =>
+      updateShotItem({
+        shotId: s2Res.shot.id,
+        tenantSlug: "lumina-cine",
+        cameraLens: "50mm f/1.2 Prime",
+        lightingSetup: "Softbox + Rim light",
+      })
+    );
+    harness.assert(updateRes.success === true, "Shot 2 specs updated");
+    harness.assertEqual(updateRes.shot?.cameraLens, "50mm f/1.2 Prime", "Lens updated");
+
+    // 5. Toggle Shot status & verify progress metrics
+    // Mark Shot 1 IN_PROGRESS (Rolling)
+    const toggle1: any = await withSession(crew, () =>
+      toggleShotCompletion({
+        shotId: s1Res.shot.id,
+        status: "IN_PROGRESS",
+        tenantSlug: "lumina-cine",
+      })
+    );
+    harness.assert(toggle1.success === true, "Shot 1 rolled to IN_PROGRESS");
+    harness.assertEqual(toggle1.inProgressShots, 1, "1 shot in progress");
+    harness.assertEqual(toggle1.percentage, 0, "0% completed while in progress");
+
+    // Mark Shot 1 COMPLETED (Done)
+    const toggle2: any = await withSession(crew, () =>
+      toggleShotCompletion({
+        shotId: s1Res.shot.id,
+        status: "COMPLETED",
+        tenantSlug: "lumina-cine",
+      })
+    );
+    harness.assert(toggle2.success === true, "Shot 1 marked COMPLETED");
+    harness.assertEqual(toggle2.completedShots, 1, "1 shot completed");
+    harness.assertEqual(toggle2.percentage, 50, "50% progress calculated");
+
+    // 6. Cross-tenant delete is rejected
+    const crossDelete: any = await withSession(outsiderUser, () =>
+      deleteShotItem({
+        shotId: s2Res.shot.id,
+        tenantSlug: "apex-media",
+      })
+    );
+    harness.assertEqual(crossDelete.success, false, "Outside studio cannot delete Lumina shot");
+
+    // 7. Delete Shot 2
+    const delRes: any = await withSession(crew, () =>
+      deleteShotItem({
+        shotId: s2Res.shot.id,
+        tenantSlug: "lumina-cine",
+      })
+    );
+    harness.assert(delRes.success === true, "Shot 2 deleted");
+
+    const remainingShots = await db.shotItem.findMany({ where: { projectId } });
+    harness.assertEqual(remainingShots.length, 1, "Exactly 1 shot remains");
+    harness.assertEqual(remainingShots[0]?.id, s1Res.shot.id, "Shot 1 is the remaining shot");
+
+    // Clean up Shot 1
+    await db.shotItem.deleteMany({ where: { projectId } });
   });
 
   await harness.test("T15-GEAR-01: gear is reserved for a project and can be released before check-out", async () => {

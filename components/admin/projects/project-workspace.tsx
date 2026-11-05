@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Video } from "lucide-react";
 import { toast } from "sonner";
 import { createCallSheet, deleteCallSheet, deleteDeliverableItem, cancelEquipmentReservation, updateProjectStatus } from "@/lib/actions/admin-projects";
 import { createEquipmentReservation } from "@/lib/actions/gear";
@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/money";
 import { invoiceStatusLabel, milestoneLabel, reservationStatusLabel } from "@/lib/labels";
 import { formatSlotDate } from "@/lib/slot-time";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { ShotListHud, type ShotItemData } from "@/components/logistics/shot-list-hud";
 
 interface ProjectWorkspaceProps {
   tenantId: string;
@@ -30,6 +31,7 @@ interface ProjectWorkspaceProps {
     reservations: Array<{ id: string; itemName: string; sku: string; startDate: string; endDate: string; status: string }>;
     galleries: Array<{ id: string; title: string; items: Array<{ id: string; title: string; itemType: string; previewUrl: string; fileSize: string | null }> }>;
     invoices: Array<{ id: string; invoiceNumber: string; milestoneType: string; amount: number; status: string }>;
+    shotItems: ShotItemData[];
   };
 }
 
@@ -250,6 +252,14 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
           </form>
         )}
       </Section>
+
+      {/* Visual Shot List HUD & Planning */}
+      <ShotListHud
+        initialShots={project.shotItems}
+        projectId={project.id}
+        tenantSlug={tenantSlug}
+        allowManage={true}
+      />
 
       {/* Gear */}
       <Section icon={Layers} title="Gear">

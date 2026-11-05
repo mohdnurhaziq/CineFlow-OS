@@ -6,17 +6,23 @@ import {
   Clock,
   Loader2,
   Video,
-  Layers,
   Filter,
   Check,
+  Plus,
+  Pencil,
+  Trash2,
+  Film,
   Sparkles,
 } from "lucide-react";
-import { toggleShotCompletion } from "@/lib/actions/logistics";
+import { toggleShotCompletion, deleteShotItem } from "@/lib/actions/logistics";
+import { ShotDialog } from "./shot-dialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 export interface ShotItemData {
   id: string;
   projectId: string;
-  sceneNumber: number;
+  sceneNumber: string | number;
   shotNumber: string;
   framing: string;
   cameraLens: string;
@@ -29,15 +35,31 @@ export interface ShotItemData {
 
 interface ShotListHudProps {
   initialShots: ShotItemData[];
+  projectId?: string;
   tenantSlug?: string;
+  allowManage?: boolean;
 }
 
-export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
+export function ShotListHud({
+  initialShots,
+  projectId: propProjectId,
+  tenantSlug,
+  allowManage = true,
+}: ShotListHudProps) {
   const [shots, setShots] = useState<ShotItemData[]>(initialShots);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [sceneFilter, setSceneFilter] = useState<number | "ALL">("ALL");
+  const [sceneFilter, setSceneFilter] = useState<string>("ALL");
   const [isPending, startTransition] = useTransition();
   const [activeUpdatingId, setActiveUpdatingId] = useState<string | null>(null);
+
+  // Modal dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingShot, setEditingShot] = useState<ShotItemData | null>(null);
+
+  const { confirm, confirmDialog } = useConfirm();
+
+  // Effective project ID
+  const effectiveProjectId = propProjectId || shots[0]?.projectId || "";
 
   // Compute metrics
   const total = shots.length;
@@ -47,12 +69,17 @@ export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   // Extract unique scenes
-  const scenes = Array.from(new Set(shots.map((s) => s.sceneNumber))).sort((a, b) => a - b);
+  const scenes = Array.from(new Set(shots.map((s) => String(s.sceneNumber)))).sort((a, b) => {
+    const numA = Number(a);
+    const numB = Number(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.localeCompare(b);
+  });
 
   // Filtered shot items
   const filteredShots = shots.filter((shot) => {
     if (statusFilter !== "ALL" && shot.status !== statusFilter) return false;
-    if (sceneFilter !== "ALL" && shot.sceneNumber !== sceneFilter) return false;
+    if (sceneFilter !== "ALL" && String(shot.sceneNumber) !== sceneFilter) return false;
     return true;
   });
 
@@ -77,14 +104,65 @@ export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
         if (!res.success) {
           // Revert if error
           setShots(initialShots);
+          toast.error(res.message || "Failed to update shot status.");
         }
       } catch (err) {
         console.error("Failed to toggle shot status:", err);
         setShots(initialShots);
+        toast.error("Failed to update status.");
       } finally {
         setActiveUpdatingId(null);
       }
     });
+  };
+
+  const handleOpenAdd = () => {
+    setEditingShot(null);
+    setDialogOpen(true);
+  };
+
+  const handleOpenEdit = (shot: ShotItemData) => {
+    setEditingShot(shot);
+    setDialogOpen(true);
+  };
+
+  const handleDeleteShot = async (shot: ShotItemData) => {
+    const confirmed = await confirm({
+      title: `Delete Scene ${shot.sceneNumber} • Shot ${shot.shotNumber}?`,
+      message: `"${shot.description.slice(0, 80)}${shot.description.length > 80 ? "..." : ""}" will be removed from the shot list.`,
+      confirmLabel: "Delete Shot",
+      destructive: true,
+    });
+
+    if (!confirmed) return;
+
+    startTransition(async () => {
+      try {
+        const res = await deleteShotItem({
+          shotId: shot.id,
+          tenantSlug,
+        });
+
+        if (!res.success) {
+          toast.error(res.message || "Failed to delete shot.");
+          return;
+        }
+
+        setShots((prev) => prev.filter((s) => s.id !== shot.id));
+        toast.success(`Shot ${shot.sceneNumber}-${shot.shotNumber} deleted.`);
+      } catch (err) {
+        console.error("Failed to delete shot:", err);
+        toast.error("Error deleting shot.");
+      }
+    });
+  };
+
+  const handleShotSaved = (savedShot: ShotItemData, isEdit: boolean) => {
+    if (isEdit) {
+      setShots((prev) => prev.map((s) => (s.id === savedShot.id ? savedShot : s)));
+    } else {
+      setShots((prev) => [...prev, savedShot]);
+    }
   };
 
   return (
@@ -110,6 +188,17 @@ export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
           </div>
 
           <div className="flex items-center gap-3">
+            {allowManage && effectiveProjectId && (
+              <button
+                type="button"
+                onClick={handleOpenAdd}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 active:scale-95 transition-all shadow-md shadow-amber-500/10 cursor-pointer"
+              >
+                <Plus className="size-3.5 stroke-[2.5]" />
+                <span>Add Shot</span>
+              </button>
+            )}
+
             <div className="text-right">
               <div className="text-lg font-bold font-mono text-emerald-400 leading-none">
                 {percentage}%
@@ -187,9 +276,7 @@ export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
             <span>Scene:</span>
             <select
               value={sceneFilter}
-              onChange={(e) =>
-                setSceneFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))
-              }
+              onChange={(e) => setSceneFilter(e.target.value)}
               className="bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-amber-500"
             >
               <option value="ALL">All Scenes ({scenes.length})</option>
@@ -206,8 +293,28 @@ export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
       {/* Shot Cards Grid */}
       <div className="space-y-3">
         {filteredShots.length === 0 ? (
-          <div className="text-center py-10 rounded-xl border border-dashed border-zinc-800 text-zinc-500 text-xs font-mono">
-            No shots matching current filter.
+          <div className="text-center py-12 px-4 rounded-xl border border-dashed border-zinc-800 space-y-3">
+            <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-500">
+              <Film className="size-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-zinc-300">No shots found</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {total === 0
+                  ? "Start planning your scene framing, lens optics, and lighting."
+                  : "No shots match the selected filter."}
+              </p>
+            </div>
+            {allowManage && effectiveProjectId && total === 0 && (
+              <button
+                type="button"
+                onClick={handleOpenAdd}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 active:scale-95 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+              >
+                <Plus className="size-3.5 stroke-[2.5]" />
+                <span>Plan First Shot</span>
+              </button>
+            )}
           </div>
         ) : (
           filteredShots.map((shot) => {
@@ -255,6 +362,28 @@ export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
                           <Clock className="size-3" />
                           <span>QUEUED</span>
                         </span>
+                      )}
+
+                      {/* Edit / Delete Actions */}
+                      {allowManage && (
+                        <div className="ml-auto flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(shot)}
+                            title="Edit shot specs"
+                            className="p-1 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteShot(shot)}
+                            title="Delete shot"
+                            className="p-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -344,6 +473,22 @@ export function ShotListHud({ initialShots, tenantSlug }: ShotListHudProps) {
           })
         )}
       </div>
+
+      {/* Shot Add / Edit Dialog */}
+      {effectiveProjectId && (
+        <ShotDialog
+          isOpen={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          projectId={effectiveProjectId}
+          tenantSlug={tenantSlug}
+          initialData={editingShot}
+          defaultSceneNumber={scenes.length > 0 ? scenes[scenes.length - 1] : "1"}
+          onSaved={handleShotSaved}
+        />
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog}
     </div>
   );
 }

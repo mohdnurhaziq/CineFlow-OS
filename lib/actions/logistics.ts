@@ -6,8 +6,14 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
   ToggleShotCompletionSchema,
+  CreateShotItemSchema,
+  UpdateShotItemSchema,
+  DeleteShotItemSchema,
   SubmitDigitalReleaseSchema,
   type ToggleShotCompletionInput,
+  type CreateShotItemInput,
+  type UpdateShotItemInput,
+  type DeleteShotItemInput,
   type SubmitDigitalReleaseInput,
 } from "@/lib/validations/logistics";
 
@@ -75,6 +81,7 @@ export async function toggleShotCompletion(input: ToggleShotCompletionInput) {
       for (const cs of existingShot.project.callSheets) {
         safeRevalidate(`/${slug}/set-hud/${cs.id}`);
       }
+      safeRevalidate(`/${slug}/admin/projects/${existingShot.projectId}`);
       safeRevalidate(`/${slug}/admin`);
     }
 
@@ -93,6 +100,225 @@ export async function toggleShotCompletion(input: ToggleShotCompletionInput) {
       success: false,
       error: "UPDATE_FAILED",
       message: err.message || "Failed to update shot status.",
+    };
+  }
+}
+
+/**
+ * Creates a new ShotItem under a project.
+ */
+export async function createShotItem(input: CreateShotItemInput) {
+  try {
+    const validated = CreateShotItemSchema.parse(input);
+    const {
+      projectId,
+      tenantSlug,
+      sceneNumber,
+      shotNumber,
+      framing,
+      cameraLens,
+      lightingSetup,
+      description,
+      referenceImageUrl,
+      status,
+    } = validated;
+
+    // 1. Verify project exists & enforce staff auth
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      include: {
+        callSheets: true,
+        tenant: true,
+      },
+    });
+
+    if (!project) {
+      return {
+        success: false,
+        error: "PROJECT_NOT_FOUND",
+        message: "The specified project was not found.",
+      };
+    }
+
+    await requireStaff(project.tenantId);
+
+    // 2. Determine sortOrder if not provided
+    let sortOrder = validated.sortOrder;
+    if (sortOrder === undefined) {
+      const lastShot = await db.shotItem.findFirst({
+        where: { projectId },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      sortOrder = (lastShot?.sortOrder ?? -1) + 1;
+    }
+
+    // 3. Create the shot item
+    const shot = await db.shotItem.create({
+      data: {
+        projectId,
+        sceneNumber,
+        shotNumber,
+        framing,
+        cameraLens,
+        lightingSetup,
+        description,
+        referenceImageUrl: referenceImageUrl || null,
+        status: status || "PENDING",
+        sortOrder,
+      },
+    });
+
+    // 4. Revalidate cache
+    const slug = tenantSlug || project.tenant?.slug;
+    if (slug) {
+      for (const cs of project.callSheets) {
+        safeRevalidate(`/${slug}/set-hud/${cs.id}`);
+      }
+      safeRevalidate(`/${slug}/admin/projects/${projectId}`);
+      safeRevalidate(`/${slug}/admin`);
+    }
+
+    return {
+      success: true,
+      shot,
+    };
+  } catch (err: any) {
+    console.error("createShotItem failed:", err);
+    return {
+      success: false,
+      error: "CREATE_FAILED",
+      message: err.message || "Failed to create shot item.",
+    };
+  }
+}
+
+/**
+ * Updates an existing ShotItem.
+ */
+export async function updateShotItem(input: UpdateShotItemInput) {
+  try {
+    const validated = UpdateShotItemSchema.parse(input);
+    const { shotId, tenantSlug, ...updateData } = validated;
+
+    // 1. Verify shot exists & check permissions
+    const existingShot = await db.shotItem.findUnique({
+      where: { id: shotId },
+      include: {
+        project: {
+          include: {
+            callSheets: true,
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!existingShot) {
+      return {
+        success: false,
+        error: "SHOT_NOT_FOUND",
+        message: "The specified shot item does not exist.",
+      };
+    }
+
+    await requireStaff(existingShot.project.tenantId);
+
+    // 2. Perform update
+    const updatedShot = await db.shotItem.update({
+      where: { id: shotId },
+      data: {
+        ...(updateData.sceneNumber !== undefined ? { sceneNumber: updateData.sceneNumber } : {}),
+        ...(updateData.shotNumber !== undefined ? { shotNumber: updateData.shotNumber } : {}),
+        ...(updateData.framing !== undefined ? { framing: updateData.framing } : {}),
+        ...(updateData.cameraLens !== undefined ? { cameraLens: updateData.cameraLens } : {}),
+        ...(updateData.lightingSetup !== undefined ? { lightingSetup: updateData.lightingSetup } : {}),
+        ...(updateData.description !== undefined ? { description: updateData.description } : {}),
+        ...(updateData.referenceImageUrl !== undefined ? { referenceImageUrl: updateData.referenceImageUrl } : {}),
+        ...(updateData.status !== undefined ? { status: updateData.status } : {}),
+        ...(updateData.sortOrder !== undefined ? { sortOrder: updateData.sortOrder } : {}),
+      },
+    });
+
+    // 3. Revalidate cache
+    const slug = tenantSlug || existingShot.project.tenant?.slug;
+    if (slug) {
+      for (const cs of existingShot.project.callSheets) {
+        safeRevalidate(`/${slug}/set-hud/${cs.id}`);
+      }
+      safeRevalidate(`/${slug}/admin/projects/${existingShot.projectId}`);
+      safeRevalidate(`/${slug}/admin`);
+    }
+
+    return {
+      success: true,
+      shot: updatedShot,
+    };
+  } catch (err: any) {
+    console.error("updateShotItem failed:", err);
+    return {
+      success: false,
+      error: "UPDATE_FAILED",
+      message: err.message || "Failed to update shot item.",
+    };
+  }
+}
+
+/**
+ * Deletes a ShotItem.
+ */
+export async function deleteShotItem(input: DeleteShotItemInput) {
+  try {
+    const validated = DeleteShotItemSchema.parse(input);
+    const { shotId, tenantSlug } = validated;
+
+    // 1. Verify shot exists & check permissions
+    const existingShot = await db.shotItem.findUnique({
+      where: { id: shotId },
+      include: {
+        project: {
+          include: {
+            callSheets: true,
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!existingShot) {
+      return {
+        success: false,
+        error: "SHOT_NOT_FOUND",
+        message: "The specified shot item does not exist.",
+      };
+    }
+
+    await requireStaff(existingShot.project.tenantId);
+
+    // 2. Delete shot
+    await db.shotItem.delete({
+      where: { id: shotId },
+    });
+
+    // 3. Revalidate cache
+    const slug = tenantSlug || existingShot.project.tenant?.slug;
+    if (slug) {
+      for (const cs of existingShot.project.callSheets) {
+        safeRevalidate(`/${slug}/set-hud/${cs.id}`);
+      }
+      safeRevalidate(`/${slug}/admin/projects/${existingShot.projectId}`);
+      safeRevalidate(`/${slug}/admin`);
+    }
+
+    return {
+      success: true,
+    };
+  } catch (err: any) {
+    console.error("deleteShotItem failed:", err);
+    return {
+      success: false,
+      error: "DELETE_FAILED",
+      message: err.message || "Failed to delete shot item.",
     };
   }
 }

@@ -273,6 +273,7 @@ export function CallSheetShell({
       {/* Mobile Shot List HUD with 48px Touch Targets */}
       <ShotListHud
         initialShots={callSheet.project.shotItems}
+        projectId={projectId}
         tenantSlug={tenantSlug}
       />
 

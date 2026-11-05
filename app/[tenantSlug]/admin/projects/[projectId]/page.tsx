@@ -27,6 +27,7 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
       reservations: { include: { item: { select: { name: true, sku: true } } }, orderBy: { startDate: "asc" } },
       deliverables: { include: { items: { orderBy: { id: "asc" } } }, orderBy: { createdAt: "asc" } },
       invoices: { select: { id: true, invoiceNumber: true, milestoneType: true, amount: true, status: true }, orderBy: { createdAt: "asc" } },
+      shotItems: { orderBy: [{ sceneNumber: "asc" }, { sortOrder: "asc" }] },
     },
   });
   if (!project) notFound();
@@ -73,6 +74,19 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
             items: d.items.map((i) => ({ id: i.id, title: i.title, itemType: i.itemType, previewUrl: i.previewUrl, fileSize: i.fileSize })),
           })),
           invoices: project.invoices,
+          shotItems: project.shotItems.map((s) => ({
+            id: s.id,
+            projectId: s.projectId,
+            sceneNumber: s.sceneNumber,
+            shotNumber: s.shotNumber,
+            framing: s.framing,
+            cameraLens: s.cameraLens,
+            lightingSetup: s.lightingSetup,
+            referenceImageUrl: s.referenceImageUrl,
+            description: s.description,
+            status: s.status,
+            sortOrder: s.sortOrder,
+          })),
         }}
       />
     </div>
