@@ -507,7 +507,6 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
         invoiceId: invoice!.id,
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
-        staffName: "T7 Verifier",
       })
     );
     harness.assert(approved.success === true, `Approval succeeds (${approved.message ?? "ok"})`);
@@ -672,7 +671,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const { older, newer, olderInvoice } = await twoPendingBookings("approve-own");
     // Approve the OLDER booking's invoice: the newer pending booking must stay untouched.
     const res: any = await withSession(luminaStaff, () =>
-      approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "T7" })
+      approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
     );
     harness.assert(res.success === true, `Approval succeeds (${res.message ?? "ok"})`);
     const a = await db.clientBooking.findUnique({ where: { id: older.bookingId }, include: { slot: true } });
@@ -692,7 +691,6 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
         invoiceId: olderInvoice!.id,
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
-        staffName: "T7",
         reason: "Slip does not match",
       })
     );
@@ -715,7 +713,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     });
     await db.milestoneInvoice.updateMany({ where: { bookingId: newer.bookingId }, data: { bookingId: null } });
     const res: any = await withSession(luminaStaff, () =>
-      approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "T7" })
+      approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
     );
     harness.assert(res.success === true, "Invoice itself is marked paid");
     const a = await db.clientBooking.findUnique({ where: { id: older.bookingId } });

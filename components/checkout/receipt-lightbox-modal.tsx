@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, Calendar, User, Hash } from "lucide-react";
+import { useDialog } from "@/lib/use-dialog";
 
 interface ReceiptLightboxModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function ReceiptLightboxModal({
 }: ReceiptLightboxModalProps) {
   const [scale, setScale] = useState(1);
 
+  const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const currencySymbol = currency === "MYR" ? "RM " : "$";
@@ -40,14 +42,14 @@ export function ReceiptLightboxModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md animate-fadeIn">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 max-w-4xl w-full max-h-[90vh] bg-[#121215] border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+      <div {...dialog} aria-labelledby="receipt-lightbox-modal-title" className="relative z-10 max-w-4xl w-full max-h-[90vh] bg-[#121215] border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
         {/* Header Bar */}
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
               PAYMENT PROOF AUDIT
             </span>
-            <h3 className="text-sm font-bold text-white tracking-tight">
+            <h3 id="receipt-lightbox-modal-title" className="text-sm font-bold text-white tracking-tight">
               Receipt Slip Inspection — {invoiceNumber || "Invoice"}
             </h3>
           </div>

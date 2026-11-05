@@ -6,11 +6,11 @@ import { sendNotification } from "@/lib/notifications";
 import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
 import { env } from "@/lib/env";
 import { createBill, toSen } from "@/lib/payments/toyyibpay";
-import { getGatewayCredentials, releaseAbandonedOnlineBooking, ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
+import { getCheckoutGateway, releaseAbandonedOnlineBooking, ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
 import { isSlotInPast } from "@/lib/slot-time";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
-import { onInvoicePaid } from "@/lib/bookings/billing";
+import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import {
   ProcessBookingCheckoutSchema,
@@ -92,14 +92,13 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
     // 2. Generate Tracking Code & Invoice Number
     const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
     const trackingCode = `BK-${tenantSlug.toUpperCase().slice(0, 4)}-${Date.now().toString(36).toUpperCase()}-${randomHex}`;
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     // Card payments go through the studio's Toyyibpay account. Without one, card is
     // only available as a simulation (dev/test) and is refused in production.
-    let creds: ReturnType<typeof getGatewayCredentials> = null;
+    let creds: ReturnType<typeof getCheckoutGateway> = null;
     if (paymentMethod === "CARD") {
       const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
-      creds = tenant ? getGatewayCredentials(tenant) : null;
+      creds = tenant ? getCheckoutGateway(tenant) : null;
       if (!creds && process.env.ALLOW_SIMULATED_CARD_PAYMENTS !== "true") {
         return {
           success: false,
@@ -142,7 +141,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       const invoice = await tx.milestoneInvoice.create({
         data: {
           tenantId,
-          invoiceNumber,
+          invoiceNumber: await nextInvoiceNumber(tx, tenantId),
           clientId: user.id,
           milestoneType: "BOOKING_DEPOSIT",
           amount: deposit,
@@ -248,9 +247,10 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
     // Dispatch automated booking confirmation notification
     const notifyEmail = result.booking.clientEmail;
     if (notifyEmail) {
+      const studio = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true, currency: true } });
       sendNotification({
         event: "BOOKING_CONFIRMED",
-        studioName: tenantSlug,
+        studioName: studio?.name ?? tenantSlug,
         studioSlug: tenantSlug,
         clientName: result.booking.clientName,
         clientEmail: notifyEmail,
@@ -260,7 +260,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         startTime: slot.startTime,
         endTime: slot.endTime,
         depositAmount: deposit,
-        currency: "MYR",
+        currency: studio?.currency ?? "MYR",
       }).catch((e) => console.error("Notification dispatch failed:", e));
     }
 
@@ -307,7 +307,7 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
 
     if (paymentMethod === "CARD") {
       const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
-      const creds = tenant ? getGatewayCredentials(tenant) : null;
+      const creds = tenant ? getCheckoutGateway(tenant) : null;
       if (creds) {
         const bill = await createBill(creds, {
           reference: invoice.invoiceNumber,

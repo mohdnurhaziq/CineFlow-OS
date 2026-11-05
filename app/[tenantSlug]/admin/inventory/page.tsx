@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/session";
 import { GearDashboard } from "@/components/gear/gear-dashboard";
 import type { InventoryItemRow } from "@/components/gear/gear-item-dialog";
 import type { KitBundleRow } from "@/components/gear/kit-bundle-dialog";
@@ -68,6 +69,8 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
 
   const currencySymbol = tenant.currency === "MYR" ? "RM" : "$";
 
+  const user = await getCurrentUser();
+
   return (
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <GearDashboard
@@ -77,6 +80,7 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
         initialItems={items as InventoryItemRow[]}
         initialBundles={bundles as unknown as KitBundleRow[]}
         initialReservations={reservations as unknown as ReservationWithDetails[]}
+        inspectorName={user?.name ?? "Studio staff"}
       />
     </div>
   );

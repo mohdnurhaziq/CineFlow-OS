@@ -325,7 +325,6 @@ export async function runAdminVerificationTests(harness: TestHarness) {
       category: "commercial",
       price: 500,
       depositRequired: 200,
-      skipConflicts: true,
     });
 
     harness.assert(res.success === true, "batchGenerateBookingSlots succeeded");

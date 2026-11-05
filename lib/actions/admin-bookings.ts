@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { requireStaff } from "@/lib/auth/guard";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
-import { newInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
+import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 
 const STAFF_ROLES = new Set(["SUPER_ADMIN", "STUDIO_OWNER", "PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"]);
@@ -145,7 +145,7 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
       const depositInvoice = await tx.milestoneInvoice.create({
         data: {
           tenantId: data.tenantId,
-          invoiceNumber: newInvoiceNumber(),
+          invoiceNumber: await nextInvoiceNumber(tx, data.tenantId),
           clientId: customer.id,
           bookingId: booking.id,
           milestoneType: "BOOKING_DEPOSIT",

@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { nextInvoiceNumber } from "@/lib/bookings/billing";
 import { revalidatePath } from "next/cache";
 import {
   CreatePrintOrderSchema,
@@ -94,18 +95,6 @@ export async function createPrintOrder(input: CreatePrintOrderInput) {
         });
       }
 
-      // Generate Unique Invoice Number
-      let invoiceNumber = "";
-      let isUnique = false;
-      while (!isUnique) {
-        const rand = Math.floor(100000 + Math.random() * 900000);
-        invoiceNumber = `INV-${new Date().getFullYear()}-${rand}`;
-        const existingInv = await tx.milestoneInvoice.findUnique({
-          where: { invoiceNumber },
-        });
-        if (!existingInv) isUnique = true;
-      }
-
       // Assemble structured itemized specification payload
       const orderMetadata = {
         orderType: "PRINT_FRAME_ORDER",
@@ -151,7 +140,7 @@ export async function createPrintOrder(input: CreatePrintOrderInput) {
       return tx.milestoneInvoice.create({
         data: {
           tenantId,
-          invoiceNumber,
+          invoiceNumber: await nextInvoiceNumber(tx, tenantId),
           clientId: user.id,
           projectId: projectId || null,
           milestoneType: "PRINT_FRAME_ORDER",

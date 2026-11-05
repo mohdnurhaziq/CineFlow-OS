@@ -559,7 +559,6 @@ async function runChallengerM3Suite() {
       invoiceId: qrInvoiceId,
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Marcus Vance (Studio Manager)",
       notes: "Bank slip matched against Maybank transaction feed",
     });
 
@@ -587,7 +586,6 @@ async function runChallengerM3Suite() {
       invoiceId: qrInvoiceId,
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Another Staff",
     });
 
     assert(
@@ -605,7 +603,6 @@ async function runChallengerM3Suite() {
       invoiceId: cashInvoiceId,
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Elena Cruz (Front Desk)",
       reason: "Client failed to show up at studio front desk within 2 hours",
     });
 
@@ -656,7 +653,6 @@ async function runChallengerM3Suite() {
       invoiceId: qrInvoiceId,
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Staff Member",
       reason: "no", // Less than 3 characters
     });
 
@@ -673,7 +669,6 @@ async function runChallengerM3Suite() {
       invoiceId: qrInvoiceId,
       tenantId: apexTenant.id, // Mismatched tenant
       tenantSlug: apexTenant.slug,
-      staffName: "Apex Staff",
     });
 
     assert(
@@ -689,7 +684,6 @@ async function runChallengerM3Suite() {
       invoiceId: qrInvoiceId, // Already marked PAID in 3.1
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Staff Member",
       reason: "Attempting to reject an already paid invoice",
     });
 
@@ -709,7 +703,6 @@ async function runChallengerM3Suite() {
       invoiceId: cashInvoiceId, // Already marked REJECTED in 3.3
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Staff Member",
       reason: "Attempting duplicate rejection",
     });
 

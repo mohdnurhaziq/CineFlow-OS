@@ -24,6 +24,19 @@ export function getGatewayCredentials(tenant: {
   return { secretKey, categoryCode };
 }
 
+/**
+ * Credentials for starting a NEW online payment. Toyyibpay only charges in ringgit, so a
+ * studio priced in any other currency gets none: otherwise a $600 deposit would be billed
+ * as RM600. Settling a bill that already exists still uses getGatewayCredentials.
+ */
+export function getCheckoutGateway(tenant: {
+  currency: string;
+  toyyibpaySecretEnc: string | null;
+  toyyibpayCategoryCode: string | null;
+}): ToyyibpayCredentials | null {
+  return tenant.currency === "MYR" ? getGatewayCredentials(tenant) : null;
+}
+
 export type SettleOutcome =
   | { status: "PAID"; invoiceId: string; invoiceNumber: string; tenantSlug: string; trackingCode?: string; unlockedDownloads: boolean; refundRequired: boolean; alreadySettled: boolean }
   | { status: "NOT_PAID"; reason: string }

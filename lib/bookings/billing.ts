@@ -21,8 +21,43 @@ const DAY_MS = 86_400_000;
 const BALANCE_DUE_AFTER_SESSION_DAYS = 7;
 const FINAL_BALANCE_DUE_DAYS = 30;
 
-export function newInvoiceNumber(): string {
-  return `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+/**
+ * The studio's next invoice number: INV-<year>-<n>, counting 0001, 0002… per studio and
+ * starting again each year. Must run inside the transaction that creates the invoice.
+ */
+export async function nextInvoiceNumber(tx: Tx, tenantId: string, now: Date = new Date()): Promise<string> {
+  const year = now.getFullYear();
+  // Bumping the counter first locks the studio's row, so two invoices created at the same
+  // moment can never be given the same number.
+  const bumped = await tx.tenant.update({
+    where: { id: tenantId },
+    data: { invoiceSeq: { increment: 1 } },
+    select: { invoiceSeq: true, invoiceSeqYear: true },
+  });
+  let seq = bumped.invoiceSeq;
+  if (bumped.invoiceSeqYear !== year) {
+    // First invoice of the year (or of a studio that predates the counter): carry on after
+    // the highest number already issued this year rather than restarting at 1.
+    seq = (await highestInvoiceSeq(tx, tenantId, year)) + 1;
+    await tx.tenant.update({ where: { id: tenantId }, data: { invoiceSeq: seq, invoiceSeqYear: year } });
+  }
+  return `INV-${year}-${String(seq).padStart(4, "0")}`;
+}
+
+/** Highest sequential number among the studio's INV-<year>-<n> invoices; 0 if none. */
+async function highestInvoiceSeq(tx: Tx, tenantId: string, year: number): Promise<number> {
+  const prefix = `INV-${year}-`;
+  const rows = await tx.milestoneInvoice.findMany({
+    where: { tenantId, invoiceNumber: { startsWith: prefix } },
+    select: { invoiceNumber: true },
+  });
+  let max = 0;
+  for (const { invoiceNumber } of rows) {
+    const suffix = invoiceNumber.slice(prefix.length);
+    // Older invoices got random 6-digit numbers; they aren't part of the sequence.
+    if (/^\d{1,5}$/.test(suffix)) max = Math.max(max, Number(suffix));
+  }
+  return max;
 }
 
 /** Amount still owed; tiny float remainders count as nothing owed. */
@@ -69,7 +104,7 @@ async function issueBookingBalance(tx: Tx, deposit: PaidInvoice) {
   return tx.milestoneInvoice.create({
     data: {
       tenantId: booking.tenantId,
-      invoiceNumber: newInvoiceNumber(),
+      invoiceNumber: await nextInvoiceNumber(tx, booking.tenantId),
       clientId: deposit.clientId,
       bookingId: booking.id,
       milestoneType: "BOOKING_BALANCE",
@@ -97,7 +132,7 @@ async function issueProjectFinalBalance(tx: Tx, retainer: PaidInvoice) {
   return tx.milestoneInvoice.create({
     data: {
       tenantId: retainer.tenantId,
-      invoiceNumber: newInvoiceNumber(),
+      invoiceNumber: await nextInvoiceNumber(tx, retainer.tenantId),
       clientId: retainer.clientId,
       projectId: project.id,
       proposalId: retainer.proposalId,

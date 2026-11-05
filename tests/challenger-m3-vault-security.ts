@@ -154,7 +154,6 @@ async function runSecuritySuite() {
         invoiceId: "inv_lum_2",
         tenantId: luminaTenant.id,
         tenantSlug: luminaTenant.slug,
-        staffName: "Lead Forensic Auditor",
         notes: "Approved final milestone bank wire verification",
       });
 
@@ -171,7 +170,7 @@ async function runSecuritySuite() {
 
       const invoiceAfter = await db.milestoneInvoice.findUnique({ where: { id: "inv_lum_2" } });
       assert("Payment Settlement", "MilestoneInvoice.status is PAID in DB", invoiceAfter?.status === "PAID");
-      assert("Payment Settlement", "MilestoneInvoice.verifiedBy recorded", invoiceAfter?.verifiedBy === "Lead Forensic Auditor");
+      assert("Payment Settlement", "MilestoneInvoice.verifiedBy recorded", Boolean(invoiceAfter?.verifiedBy));
       assert("Payment Settlement", "MilestoneInvoice.paidAt timestamp is populated", invoiceAfter?.paidAt !== null);
     }
 
@@ -457,7 +456,6 @@ async function runSecuritySuite() {
         invoiceId: "inv_apx_2",
         tenantId: luminaTenant.id,
         tenantSlug: luminaTenant.slug,
-        staffName: "Malicious Lumina Staff",
       });
       assert(
         "Multi-Tenant Shield",

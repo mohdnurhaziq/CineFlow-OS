@@ -1,5 +1,7 @@
 "use server";
 
+import { actionErrorMessage } from "@/lib/action-error";
+import { sameCategory } from "@/lib/bookings/pricing-shared";
 import { requireStaff } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
@@ -85,7 +87,7 @@ export async function createServicePackage(input: CreateServicePackageInput) {
     return {
       success: false,
       error: "CREATE_PACKAGE_FAILED",
-      message: error.message || "Failed to create service package.",
+      message: actionErrorMessage(error, "Failed to create service package."),
     };
   }
 }
@@ -141,7 +143,7 @@ export async function updateServicePackage(input: UpdateServicePackageInput) {
     return {
       success: false,
       error: "UPDATE_PACKAGE_FAILED",
-      message: error.message || "Failed to update service package.",
+      message: actionErrorMessage(error, "Failed to update service package."),
     };
   }
 }
@@ -181,7 +183,7 @@ export async function deleteServicePackage(input: DeleteServicePackageInput) {
     return {
       success: false,
       error: "DELETE_PACKAGE_FAILED",
-      message: error.message || "Failed to delete service package.",
+      message: actionErrorMessage(error, "Failed to delete service package."),
     };
   }
 }
@@ -213,7 +215,7 @@ export async function togglePackageFeatured(input: TogglePackageFeaturedInput) {
     return {
       success: false,
       error: "TOGGLE_FEATURED_FAILED",
-      message: error.message || "Failed to toggle package featured status.",
+      message: actionErrorMessage(error, "Failed to toggle package featured status."),
     };
   }
 }
@@ -257,8 +259,32 @@ export async function createCampaignCategory(input: CreateCampaignCategoryInput)
     return {
       success: false,
       error: "CREATE_CATEGORY_FAILED",
-      message: error.message || "Failed to create campaign category.",
+      message: actionErrorMessage(error, "Failed to create campaign category."),
     };
+  }
+}
+
+type CategoryTx = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+
+/** Moves every record filed under `from` (matched loosely, as bookings do) to the slug `to`. */
+async function renameCategorySlug(tx: CategoryTx, tenantId: string, from: string, to: string) {
+  const models = [
+    tx.servicePackage,
+    tx.bookingSlot,
+    tx.clientBooking,
+    tx.showcaseItem,
+    tx.project,
+    tx.proposal,
+  ] as unknown as Array<{
+    findMany(args: object): Promise<Array<{ category: string }>>;
+    updateMany(args: object): Promise<unknown>;
+  }>;
+  for (const model of models) {
+    const used = await model.findMany({ where: { tenantId }, select: { category: true }, distinct: ["category"] });
+    const matching = used.map((r) => r.category).filter((c) => sameCategory(c, from));
+    if (matching.length > 0) {
+      await model.updateMany({ where: { tenantId, category: { in: matching } }, data: { category: to } });
+    }
   }
 }
 
@@ -286,16 +312,22 @@ export async function updateCampaignCategory(input: UpdateCampaignCategoryInput)
       }
     }
 
-    const category = await db.campaignCategory.update({
-      where: { id },
-      data: {
-        name,
-        slug,
-        badgeIcon: badgeIcon || null,
-        description: description || null,
-        sortOrder,
-        isActive,
-      },
+    const category = await db.$transaction(async (tx) => {
+      const updated = await tx.campaignCategory.update({
+        where: { id },
+        data: {
+          name,
+          slug,
+          badgeIcon: badgeIcon || null,
+          description: description || null,
+          sortOrder,
+          isActive,
+        },
+      });
+      // Packages, slots, bookings and the rest store the category as its slug text, so a
+      // renamed slug must move them too, or they'd point at a category that no longer exists.
+      if (slug !== existing.slug) await renameCategorySlug(tx, tenantId, existing.slug, slug);
+      return updated;
     });
 
     safeRevalidate(`/${tenantSlug}/admin/services`);
@@ -307,7 +339,7 @@ export async function updateCampaignCategory(input: UpdateCampaignCategoryInput)
     return {
       success: false,
       error: "UPDATE_CATEGORY_FAILED",
-      message: error.message || "Failed to update campaign category.",
+      message: actionErrorMessage(error, "Failed to update campaign category."),
     };
   }
 }
@@ -355,7 +387,7 @@ export async function deleteCampaignCategory(input: DeleteCampaignCategoryInput)
     return {
       success: false,
       error: "DELETE_CATEGORY_FAILED",
-      message: error.message || "Failed to delete campaign category.",
+      message: actionErrorMessage(error, "Failed to delete campaign category."),
     };
   }
 }
@@ -387,7 +419,7 @@ export async function toggleCategoryActive(input: ToggleCategoryActiveInput) {
     return {
       success: false,
       error: "TOGGLE_CATEGORY_ACTIVE_FAILED",
-      message: error.message || "Failed to toggle category active status.",
+      message: actionErrorMessage(error, "Failed to toggle category active status."),
     };
   }
 }

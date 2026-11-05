@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Sparkles, Loader2 } from "lucide-react";
 import { createServicePackage, updateServicePackage } from "@/lib/actions/admin-services";
+import { useDialog } from "@/lib/use-dialog";
 
 export interface PackageRow {
   id: string;
@@ -55,9 +56,7 @@ export function PackageDialog({
   );
   const [discipline, setDiscipline] = useState(packageToEdit?.discipline || "PHOTOGRAPHY");
   const [price, setPrice] = useState(packageToEdit?.price?.toString() || "");
-  const [depositPrice, setDepositPrice] = useState(
-    packageToEdit?.depositPrice?.toString() || "50"
-  );
+  const [depositPrice, setDepositPrice] = useState(packageToEdit?.depositPrice?.toString() ?? "");
   const [turnaround, setTurnaround] = useState(packageToEdit?.turnaround || "5-7 Business Days");
   const [description, setDescription] = useState(packageToEdit?.description || "");
   const [deliverables, setDeliverables] = useState(packageToEdit?.deliverables || "");
@@ -82,7 +81,7 @@ export function PackageDialog({
       setCategory(categories[0]?.slug || "STUDIO_PORTRAIT");
       setDiscipline("PHOTOGRAPHY");
       setPrice("");
-      setDepositPrice("50");
+      setDepositPrice("");
       setTurnaround("5-7 Business Days");
       setDescription("");
       setDeliverables("");
@@ -91,6 +90,7 @@ export function PackageDialog({
     setErrorMessage(null);
   }, [packageToEdit, categories, isOpen]);
 
+  const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,6 +106,16 @@ export function PackageDialog({
       setIsSubmitting(false);
       return;
     }
+    if (isNaN(parsedDeposit) || parsedDeposit < 0) {
+      setErrorMessage("Enter the deposit clients pay to book (0 for no deposit).");
+      setIsSubmitting(false);
+      return;
+    }
+    if (parsedDeposit > parsedPrice) {
+      setErrorMessage("The deposit can't be more than the package price.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (isEditing && packageToEdit) {
@@ -117,7 +127,7 @@ export function PackageDialog({
           category,
           discipline: discipline as "PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID",
           price: parsedPrice,
-          depositPrice: isNaN(parsedDeposit) ? 50 : parsedDeposit,
+          depositPrice: parsedDeposit,
           turnaround,
           description,
           deliverables,
@@ -137,7 +147,7 @@ export function PackageDialog({
           category,
           discipline: discipline as "PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID",
           price: parsedPrice,
-          depositPrice: isNaN(parsedDeposit) ? 50 : parsedDeposit,
+          depositPrice: parsedDeposit,
           turnaround,
           description,
           deliverables,
@@ -162,11 +172,11 @@ export function PackageDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="relative w-full max-w-xl rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div {...dialog} aria-labelledby="package-dialog-title" className="relative w-full max-w-xl rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <h3 id="package-dialog-title" className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               {isEditing ? <Edit2 className="size-4 text-amber-400" /> : <Plus className="size-4 text-amber-400" />}
               <span>{isEditing ? "Edit Service Package" : "Create New Service Package"}</span>
             </h3>
@@ -261,15 +271,19 @@ export function PackageDialog({
 
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
-                Deposit Price ({currency})
+                Deposit Price ({currency}) *
               </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
+                required
                 value={depositPrice}
                 onChange={(e) => setDepositPrice(e.target.value)}
-                placeholder="50"
+                placeholder={
+                  // Suggest half the price, the usual studio deposit, without pre-filling a number.
+                  parseFloat(price) > 0 ? `e.g. ${Math.round(parseFloat(price) / 2)}` : "e.g. 1250"
+                }
                 className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>

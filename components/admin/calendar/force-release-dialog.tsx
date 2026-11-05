@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { forceReleaseHeldSlot } from "@/lib/actions/admin-calendar";
 import type { BookingSlotRow } from "./single-slot-dialog";
+import { useDialog } from "@/lib/use-dialog";
 
 interface ForceReleaseDialogProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function ForceReleaseDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const dialog = useDialog(isOpen && !!slot, onClose);
   if (!isOpen || !slot) return null;
 
   const dateStr = new Date(slot.date).toISOString().split("T")[0];
@@ -57,13 +59,13 @@ export function ForceReleaseDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl">
+      <div {...dialog} aria-labelledby="force-release-dialog-title" className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl">
         <div className="flex items-center gap-3 pb-3 border-b border-zinc-800">
           <div className="size-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
             <AlertTriangle className="size-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight">
+            <h3 id="force-release-dialog-title" className="text-base font-bold text-white tracking-tight">
               Force Release Held Slot
             </h3>
             <p className="text-xs text-zinc-400">

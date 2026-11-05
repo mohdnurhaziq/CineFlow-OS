@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { nextInvoiceNumber } from "@/lib/bookings/billing";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
 import {
@@ -188,35 +189,10 @@ export async function acceptProposal(input: SignProposalInput) {
       });
 
       if (!invoice) {
-        const year = new Date().getFullYear();
-        let invoiceNumber = "";
-        let invAttempts = 0;
-        const maxInvAttempts = 10;
-
-        while (!invoiceNumber && invAttempts < maxInvAttempts) {
-          invAttempts++;
-          const rand = Math.floor(100000 + Math.random() * 900000);
-          const candidate = `INV-${year}-${rand}`;
-
-          const existing = await tx.milestoneInvoice.findUnique({
-            where: { invoiceNumber: candidate },
-            select: { id: true },
-          });
-
-          if (!existing) {
-            invoiceNumber = candidate;
-          }
-        }
-
-        // Defensive fallback in the virtually impossible case that 10 attempts collided
-        if (!invoiceNumber) {
-          invoiceNumber = `INV-${year}-${Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
-        }
-
         invoice = await tx.milestoneInvoice.create({
           data: {
             tenantId: proposal.tenantId,
-            invoiceNumber,
+            invoiceNumber: await nextInvoiceNumber(tx, proposal.tenantId),
             proposalId: proposal.id,
             projectId: project.id,
             clientId: proposal.clientId,

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { createPrintOrder } from "@/lib/actions/visualizer";
 import type { PrintSizeOption, FrameDesignOption, PhotoOption } from "./configurator-panel";
+import { useDialog } from "@/lib/use-dialog";
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ export function OrderModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const matPrice = matBoard === "NONE" ? 0 : 25.0;
@@ -101,7 +103,7 @@ export function OrderModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in-0">
-      <div className="relative w-full max-w-lg rounded-3xl border border-zinc-800 bg-[#0d0d10] p-6 sm:p-7 shadow-2xl max-h-[92vh] overflow-y-auto space-y-5">
+      <div {...dialog} aria-labelledby="order-modal-title" className="relative w-full max-w-lg rounded-3xl border border-zinc-800 bg-[#0d0d10] p-6 sm:p-7 shadow-2xl max-h-[92vh] overflow-y-auto space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-zinc-800">
           <div>
@@ -109,7 +111,7 @@ export function OrderModal({
               <ShoppingBag className="size-4" />
               <span>1-CLICK PRINT & FRAME WORK ORDER</span>
             </div>
-            <h3 className="text-xl font-extrabold text-white tracking-tight">
+            <h3 id="order-modal-title" className="text-xl font-extrabold text-white tracking-tight">
               Confirm Archival Wall Art Order
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">

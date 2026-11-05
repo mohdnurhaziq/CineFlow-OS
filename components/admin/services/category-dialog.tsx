@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createCampaignCategory, updateCampaignCategory } from "@/lib/actions/admin-services";
+import { useDialog } from "@/lib/use-dialog";
 
 export interface CategoryRow {
   id: string;
@@ -64,6 +65,7 @@ export function CategoryDialog({
     setErrorMessage(null);
   }, [categoryToEdit, isOpen]);
 
+  const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   // Auto-generate slug when name changes (only in create mode)
@@ -134,11 +136,11 @@ export function CategoryDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div {...dialog} aria-labelledby="category-dialog-title" className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <h3 id="category-dialog-title" className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               {isEditing ? <Edit2 className="size-4 text-amber-400" /> : <Plus className="size-4 text-amber-400" />}
               <span>{isEditing ? "Edit Campaign Category" : "New Campaign Category"}</span>
             </h3>

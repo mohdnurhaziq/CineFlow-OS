@@ -35,6 +35,8 @@ interface GearDashboardProps {
   initialItems: InventoryItemRow[];
   initialBundles: KitBundleRow[];
   initialReservations: ReservationWithDetails[];
+  /** The signed-in staff member, shown as the inspector on check-out and check-in. */
+  inspectorName: string;
 }
 
 export function GearDashboard({
@@ -44,6 +46,7 @@ export function GearDashboard({
   initialItems,
   initialBundles,
   initialReservations,
+  inspectorName,
 }: GearDashboardProps) {
   const [activeTab, setActiveTab] = useState<"ITEMS" | "BUNDLES" | "RESERVATIONS">("ITEMS");
 
@@ -688,6 +691,7 @@ export function GearDashboard({
         tenantSlug={tenantSlug}
         reservation={inspectionReservation}
         mode={inspectionMode}
+        inspectorName={inspectorName}
         onSuccess={() => {
           window.location.reload();
         }}

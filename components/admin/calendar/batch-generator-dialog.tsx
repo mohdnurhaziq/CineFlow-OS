@@ -3,10 +3,12 @@
 import { useState, useMemo } from "react";
 import { X, Calendar, Layers, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
 import { batchGenerateBookingSlots } from "@/lib/actions/admin-calendar";
+import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { parseTimeToMinutes } from "@/lib/utils/time";
 import type { CategoryOption } from "./single-slot-dialog";
+import { useDialog } from "@/lib/use-dialog";
 
 interface BatchGeneratorDialogProps {
   isOpen: boolean;
@@ -61,7 +63,6 @@ export function BatchGeneratorDialog({
   const [campaignTitle, setCampaignTitle] = useState("");
   const [price, setPrice] = useState("0");
   const [depositRequired, setDepositRequired] = useState("50");
-  const [skipConflicts, setSkipConflicts] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -100,6 +101,7 @@ export function BatchGeneratorDialog({
     }
   }, [startDate, endDate, daysOfWeek, dayStartTime, dayEndTime, slotDurationMinutes, bufferMinutes]);
 
+  const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const toggleDay = (day: number) => {
@@ -126,6 +128,17 @@ export function BatchGeneratorDialog({
     const parsedPrice = parseFloat(price);
     const parsedDeposit = parseFloat(depositRequired);
 
+    if (isNaN(parsedDeposit) || parsedDeposit < 0) {
+      setErrorMessage("Enter the deposit clients pay to book these slots (0 for no deposit).");
+      setIsSubmitting(false);
+      return;
+    }
+    if (!slotDepositWithinFee(isNaN(parsedPrice) ? 0 : parsedPrice, parsedDeposit)) {
+      setErrorMessage(SLOT_DEPOSIT_ERROR);
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const res = await batchGenerateBookingSlots({
         tenantId,
@@ -140,8 +153,7 @@ export function BatchGeneratorDialog({
         category,
         campaignTitle: campaignTitle || null,
         price: isNaN(parsedPrice) ? 0 : parsedPrice,
-        depositRequired: isNaN(parsedDeposit) ? 50 : parsedDeposit,
-        skipConflicts,
+        depositRequired: parsedDeposit,
       });
 
       if (!res.success) {
@@ -163,11 +175,11 @@ export function BatchGeneratorDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="relative w-full max-w-xl rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div {...dialog} aria-labelledby="batch-generator-dialog-title" className="relative w-full max-w-xl rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <h3 id="batch-generator-dialog-title" className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               <Sparkles className="size-4 text-amber-400" />
               <span>Algorithmic Batch Slot Generator</span>
             </h3>
@@ -397,19 +409,9 @@ export function BatchGeneratorDialog({
             </div>
           </div>
 
-          {/* Conflict Skipping Checkbox */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
-            <div>
-              <span className="text-xs font-medium text-white block">Skip Conflicting Slots</span>
-              <span className="text-[11px] text-zinc-400">Ignore times where a slot already exists in inventory</span>
-            </div>
-            <input
-              type="checkbox"
-              checked={skipConflicts}
-              onChange={(e) => setSkipConflicts(e.target.checked)}
-              className="rounded border-zinc-600 text-amber-500 focus:ring-0 size-4"
-            />
-          </div>
+          <p className="text-[11px] text-zinc-500">
+            Times that overlap an existing slot, or have already passed, are skipped automatically.
+          </p>
 
           {/* Live Estimate Badge */}
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">

@@ -26,6 +26,8 @@ model Tenant {
   bankDetails        String?             // Bank name, account number, account holder
   toyyibpaySecretEnc    String?          // AES-GCM encrypted Toyyibpay userSecretKey (never stored in plaintext)
   toyyibpayCategoryCode String?          // Toyyibpay category the studio's bills are created under
+  invoiceSeq         Int                 @default(0) // Last invoice number used in invoiceSeqYear (INV-<year>-<seq>)
+  invoiceSeqYear     Int?                // Year invoiceSeq counts in; a new year starts again from 1
   subscriptionTier  String              @default("PRO") // STARTER, PRO, STUDIO_UNLIMITED
   subscriptionStatus String              @default("ACTIVE") // ACTIVE, TRIALING, CANCELLED
   createdAt          DateTime            @default(now())
@@ -223,7 +225,7 @@ model ProposalAddOn {
 model MilestoneInvoice {
   id               String    @id @default(cuid())
   tenantId         String
-  invoiceNumber    String    @unique
+  invoiceNumber    String    // Sequential per studio and year, e.g. INV-2026-0007
   proposalId       String?
   projectId        String?
   clientId         String
@@ -246,6 +248,7 @@ model MilestoneInvoice {
   client           User      @relation(fields: [clientId], references: [id])
   booking          ClientBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
+  @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
   @@index([proposalId])
   @@index([projectId])

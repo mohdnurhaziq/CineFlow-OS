@@ -181,13 +181,15 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
   if (!lumina) throw new Error("Seed tenant lumina-cine is required");
   const run = Date.now().toString(36);
   const slotIds: string[] = [];
-  const savedGateway = { enc: lumina.toyyibpaySecretEnc, cat: lumina.toyyibpayCategoryCode };
+  const savedGateway = { enc: lumina.toyyibpaySecretEnc, cat: lumina.toyyibpayCategoryCode, currency: lumina.currency };
+  // Toyyibpay only charges in ringgit, so the gateway tests run Lumina (seeded in USD) as a MYR studio.
+  await db.tenant.update({ where: { id: lumina.id }, data: { currency: "MYR" } });
   const savedFlag = process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
 
   harness.registerTeardown(async () => {
     if (savedFlag === undefined) delete process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
     else process.env.ALLOW_SIMULATED_CARD_PAYMENTS = savedFlag;
-    await db.tenant.update({ where: { id: lumina.id }, data: { toyyibpaySecretEnc: savedGateway.enc, toyyibpayCategoryCode: savedGateway.cat } });
+    await db.tenant.update({ where: { id: lumina.id }, data: { toyyibpaySecretEnc: savedGateway.enc, toyyibpayCategoryCode: savedGateway.cat, currency: savedGateway.currency } });
     await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t9-" } } } });
     await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t9-" } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
@@ -397,6 +399,24 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
     harness.assertEqual(winner?.slotId, slot.id, "The new booking still owns the slot");
   });
 
+  await harness.test("T9-CHK-04: a studio not priced in MYR is never sent to the ringgit-only gateway", async () => {
+    const flag = process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+    delete process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+    await setGateway(true);
+    await db.tenant.update({ where: { id: lumina.id }, data: { currency: "USD" } });
+    try {
+      const slot = await makeSlot();
+      const res: any = await checkout(slot.id);
+      harness.assertEqual(res.error, "CARD_UNAVAILABLE", "USD studio with credentials: card refused, no RM bill created");
+      const untouched = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+      harness.assertEqual(untouched?.status, "AVAILABLE", "Slot untouched");
+    } finally {
+      await db.tenant.update({ where: { id: lumina.id }, data: { currency: "MYR" } });
+      if (flag === undefined) delete process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+      else process.env.ALLOW_SIMULATED_CARD_PAYMENTS = flag;
+    }
+  });
+
   await harness.test("T9-SET-07: tenants without usable credentials cannot be settled", async () => {
     gateway({ txns: () => [] });
     const res: any = await checkout((await makeSlot()).id);
@@ -445,6 +465,21 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
     const row2 = await db.tenant.findUnique({ where: { id: lumina.id } });
     harness.assertEqual(decryptSecret(row2?.toyyibpaySecretEnc), "owner-secret-1", "Blank secret keeps existing key");
     harness.assertEqual(row2?.toyyibpayCategoryCode, "newcat9", "Category updated");
+  });
+
+  await harness.test("T9-ADM-04: credentials cannot be saved while the studio is priced outside MYR", async () => {
+    await setGateway(false);
+    await db.tenant.update({ where: { id: lumina.id }, data: { currency: "USD" } });
+    try {
+      const res: any = await withSession(owner!, () =>
+        saveGatewayCredentials({ tenantId: lumina.id, tenantSlug: "lumina-cine", secretKey: "owner-secret-1", categoryCode: "abc123" })
+      );
+      harness.assertEqual(res.error, "CURRENCY_NOT_SUPPORTED", "USD studio refused");
+      const row = await db.tenant.findUnique({ where: { id: lumina.id } });
+      harness.assert(row?.toyyibpaySecretEnc === null, "Nothing stored");
+    } finally {
+      await db.tenant.update({ where: { id: lumina.id }, data: { currency: "MYR" } });
+    }
   });
 
   await harness.test("T9-ADM-03: malformed credentials are rejected and the secret never leaves the server", async () => {

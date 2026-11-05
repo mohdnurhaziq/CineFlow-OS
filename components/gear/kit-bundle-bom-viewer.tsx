@@ -2,6 +2,7 @@
 
 import { X, CheckCircle2, AlertTriangle, Package, Check, Clock } from "lucide-react";
 import type { KitBundleRow } from "./kit-bundle-dialog";
+import { useDialog } from "@/lib/use-dialog";
 
 interface KitBundleBomViewerProps {
   bundle: KitBundleRow | null;
@@ -14,6 +15,7 @@ export function KitBundleBomViewer({
   currency,
   onClose,
 }: KitBundleBomViewerProps) {
+  const dialog = useDialog(!!bundle, onClose);
   if (!bundle) return null;
 
   // Determine readiness
@@ -28,7 +30,7 @@ export function KitBundleBomViewer({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="relative w-full max-w-xl rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-5">
+      <div {...dialog} aria-labelledby="kit-bundle-bom-viewer-title" className="relative w-full max-w-xl rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-zinc-800">
           <div>
@@ -48,7 +50,7 @@ export function KitBundleBomViewer({
                 </span>
               )}
             </div>
-            <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <h3 id="kit-bundle-bom-viewer-title" className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
               <Package className="size-5 text-amber-400" />
               <span>{bundle.name}</span>
             </h3>

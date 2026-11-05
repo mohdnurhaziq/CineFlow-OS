@@ -26,12 +26,16 @@ function GatewaySettings({
   tenantSlug,
   configured,
   initialCategoryCode,
+  currency,
 }: {
   tenantId: string;
   tenantSlug: string;
   configured: boolean;
   initialCategoryCode: string;
+  /** The saved studio currency. Toyyibpay only charges in ringgit. */
+  currency: string;
 }) {
+  const supported = currency === "MYR";
   const router = useRouter();
   const [secretKey, setSecretKey] = useState("");
   const [categoryCode, setCategoryCode] = useState(initialCategoryCode);
@@ -83,46 +87,56 @@ function GatewaySettings({
             configured ? "text-emerald-400 border-emerald-500/30" : "text-zinc-400 border-zinc-700"
           }`}
         >
-          {configured ? "Connected" : "Not connected"}
+          {!supported ? "MYR only" : configured ? "Connected" : "Not connected"}
         </span>
       </div>
+      {!supported && (
+        <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3.5 py-2.5 leading-relaxed">
+          Toyyibpay only charges in Malaysian Ringgit, and your studio is priced in {currency}. Clients can pay by QR
+          or cash. To take FPX or card payments, set the studio currency to MYR and save first.
+        </p>
+      )}
       <p className="text-xs text-zinc-400 leading-relaxed">
         Let clients pay by FPX online banking or card. Payments go straight to your own Toyyibpay account. Find the
         secret key and a category code in your Toyyibpay dashboard. Without this, clients can only pay by QR or cash.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <label className="space-y-1 block">
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">User Secret Key</span>
-          <input
-            type="password"
-            autoComplete="off"
-            value={secretKey}
-            onChange={(e) => setSecretKey(e.target.value)}
-            placeholder={configured ? "Saved (leave blank to keep)" : "xxxxxxxx-xxxx-xxxx-xxxx"}
-            className={inputCls}
-          />
-        </label>
-        <label className="space-y-1 block">
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">Category Code</span>
-          <input
-            type="text"
-            autoComplete="off"
-            value={categoryCode}
-            onChange={(e) => setCategoryCode(e.target.value)}
-            placeholder="e.g. a1b2c3d4"
-            className={inputCls}
-          />
-        </label>
-      </div>
+      {supported && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="space-y-1 block">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">User Secret Key</span>
+            <input
+              type="password"
+              autoComplete="off"
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              placeholder={configured ? "Saved (leave blank to keep)" : "xxxxxxxx-xxxx-xxxx-xxxx"}
+              className={inputCls}
+            />
+          </label>
+          <label className="space-y-1 block">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">Category Code</span>
+            <input
+              type="text"
+              autoComplete="off"
+              value={categoryCode}
+              onChange={(e) => setCategoryCode(e.target.value)}
+              placeholder="e.g. a1b2c3d4"
+              className={inputCls}
+            />
+          </label>
+        </div>
+      )}
       <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={busy || !categoryCode.trim() || (!configured && !secretKey)}
-          className="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
-        >
-          {busy ? "Saving..." : "Save payment settings"}
-        </button>
+        {supported && (
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy || !categoryCode.trim() || (!configured && !secretKey)}
+            className="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+          >
+            {busy ? "Saving..." : "Save payment settings"}
+          </button>
+        )}
         {configured && (
           <button
             type="button"
@@ -484,9 +498,12 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
               type="text"
               value={customDomain}
               onChange={(e) => setCustomDomain(e.target.value)}
-              placeholder="studio.luminacine.com"
+              placeholder="studio.example.com"
               className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
             />
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Point the domain at this platform with your DNS provider. It starts working within a minute of saving.
+            </p>
           </div>
         </div>
 
@@ -643,6 +660,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
         tenantSlug={tenant.slug}
         configured={Boolean(tenant.gatewayConfigured)}
         initialCategoryCode={tenant.gatewayCategoryCode ?? ""}
+        currency={tenant.currency}
       />
 
       {/* Section 4: Workspace & License Information */}

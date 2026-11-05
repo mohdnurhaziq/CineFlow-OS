@@ -207,16 +207,15 @@ async function runM3Verification() {
       invoiceId: qrInvoiceId,
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Sarah Tan",
       notes: "Verified against Chase incoming transaction list",
     });
 
     assert(approveRes.success === true, "approvePaymentVerification returned success: true");
-    assert(approveRes.verifiedBy === "Sarah Tan", "verifiedBy is Sarah Tan");
+    assert(Boolean(approveRes.verifiedBy), "verifiedBy is the signed-in staff member");
 
     const invoiceAfter = await db.milestoneInvoice.findUnique({ where: { id: qrInvoiceId } });
     assert(invoiceAfter?.status === "PAID", "Invoice status transitioned to PAID");
-    assert(invoiceAfter?.verifiedBy === "Sarah Tan", "Invoice verifiedBy recorded in DB");
+    assert(Boolean(invoiceAfter?.verifiedBy), "Invoice verifiedBy recorded in DB");
     assert(invoiceAfter?.paidAt !== null, "Invoice paidAt timestamp set");
 
     const slotAfter = await db.bookingSlot.findUnique({ where: { id: qrSlotId } });
@@ -239,7 +238,6 @@ async function runM3Verification() {
       invoiceId: cashInvoiceId,
       tenantId: apexTenant.id,
       tenantSlug: apexTenant.slug,
-      staffName: "David Chong",
       reason: "Client canceled walk-in attendance",
     });
 
@@ -287,7 +285,6 @@ async function runM3Verification() {
       invoiceId: "inv_lum_2",
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
-      staffName: "Production Lead",
       notes: "Client wired final 50% milestone",
     });
 

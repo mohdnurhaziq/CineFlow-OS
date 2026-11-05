@@ -248,11 +248,10 @@ async function runM5Verification() {
     campaignTitle: "Batch Generation Test",
     price: 250,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(batchRes.success && (batchRes.createdCount || 0) > 0, `Batch Generate Booking Slots (Created ${batchRes.createdCount})`);
 
-  // 5. Test conflict skipping: re-run same batch with skipConflicts: true
+  // 5. Test conflict skipping: re-run same batch (overlaps are always skipped)
   const conflictBatchRes = await batchGenerateBookingSlots({
     tenantId: lumina.id,
     tenantSlug: lumina.slug,
@@ -267,7 +266,6 @@ async function runM5Verification() {
     campaignTitle: "Conflict Test",
     price: 250,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(
     conflictBatchRes.success && conflictBatchRes.createdCount === 0 && (conflictBatchRes.skippedCount || 0) > 0,

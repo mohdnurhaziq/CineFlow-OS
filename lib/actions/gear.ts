@@ -578,12 +578,12 @@ export async function createEquipmentReservation(input: CreateReservationInput) 
 export async function logPreShootInspection(input: LogPreShootInspectionInput) {
   try {
     const validated = LogPreShootInspectionSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    // The inspection is logged under the signed-in staff member, never a name sent by the browser.
+    const inspectorName = (await requireStaff(validated.tenantId)).name;
     const {
       tenantId,
       tenantSlug,
       reservationId,
-      inspectorName,
       condition,
       notes,
       sensorVerified,
@@ -675,12 +675,11 @@ export async function logPreShootInspection(input: LogPreShootInspectionInput) {
 export async function logPostShootInspection(input: LogPostShootInspectionInput) {
   try {
     const validated = LogPostShootInspectionSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    const inspectorName = (await requireStaff(validated.tenantId)).name;
     const {
       tenantId,
       tenantSlug,
       reservationId,
-      inspectorName,
       condition,
       damageFlag,
       notes,

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { X, MessageSquare, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { submitRetouchNote } from "@/lib/actions/vault";
+import { useDialog } from "@/lib/use-dialog";
 
 interface RetouchNotesModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function RetouchNotesModal({
   const [note, setNote] = useState(initialNote || "");
   const [isPending, startTransition] = useTransition();
 
+  const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleSave = (e: React.FormEvent) => {
@@ -52,12 +54,12 @@ export function RetouchNotesModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 max-w-lg w-full rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden shadow-2xl space-y-5">
+      <div {...dialog} aria-labelledby="retouch-notes-modal-title" className="relative z-10 max-w-lg w-full rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden shadow-2xl space-y-5">
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
           <div className="flex items-center gap-2">
             <MessageSquare className="size-4 text-amber-400" />
-            <h3 className="text-sm font-bold text-white tracking-tight">
+            <h3 id="retouch-notes-modal-title" className="text-sm font-bold text-white tracking-tight">
               Retouch Feedback // {itemTitle}
             </h3>
           </div>

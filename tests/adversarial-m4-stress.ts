@@ -228,7 +228,6 @@ async function runAdversarialTests() {
       tenantId: "ten_apex", // Wrong tenant
       tenantSlug: "apex-media",
       reservationId: res1.reservation.id,
-      inspectorName: "Hacker",
       condition: "GOOD",
     });
     assert(unauthPreShoot.success === false, "logPreShootInspection rejects unauthorized tenant");

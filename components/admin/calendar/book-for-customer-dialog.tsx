@@ -5,6 +5,7 @@ import { X, UserPlus, Users, Search, Loader2, AlertCircle, Check, CalendarCheck 
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import type { BookingSlotRow } from "./single-slot-dialog";
 import { PackagePicker, packagesFor, type BookingPackageOption } from "@/components/booking/package-picker";
+import { useDialog } from "@/lib/use-dialog";
 
 export interface ClientOption {
   id: string;
@@ -90,6 +91,7 @@ export function BookForCustomerDialog({
     );
   }, [clients, search]);
 
+  const dialog = useDialog(isOpen && !!slot, onClose);
   if (!isOpen || !slot) return null;
 
   const dateStr = new Date(slot.date).toISOString().split("T")[0];
@@ -140,11 +142,11 @@ export function BookForCustomerDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-[#0d0d10] shadow-2xl">
+      <div {...dialog} aria-labelledby="book-for-customer-dialog-title" className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-[#0d0d10] shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 sticky top-0 bg-[#0d0d10] z-10">
           <div className="flex items-center gap-2">
             <CalendarCheck className="size-5 text-amber-400" />
-            <h2 className="text-base font-bold text-white tracking-tight">Book for Customer</h2>
+            <h2 id="book-for-customer-dialog-title" className="text-base font-bold text-white tracking-tight">Book for Customer</h2>
           </div>
           <button
             type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { X, Film, Play, Volume2 } from "lucide-react";
+import { useDialog } from "@/lib/use-dialog";
 
 export interface VideoItem {
   id: string;
@@ -19,6 +20,7 @@ interface VideoReelModalProps {
 }
 
 export function VideoReelModal({ item, onClose, brandColor }: VideoReelModalProps) {
+  const dialog = useDialog(!!item, onClose);
   if (!item) return null;
 
   return (
@@ -26,7 +28,7 @@ export function VideoReelModal({ item, onClose, brandColor }: VideoReelModalProp
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 max-w-4xl w-full rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden shadow-2xl flex flex-col">
+      <div {...dialog} aria-labelledby="video-reel-modal-title" className="relative z-10 max-w-4xl w-full rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden shadow-2xl flex flex-col">
         {/* Modal Top Bar */}
         <div className="px-5 py-3.5 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
           <div className="flex items-center gap-2">
@@ -81,7 +83,7 @@ export function VideoReelModal({ item, onClose, brandColor }: VideoReelModalProp
         {/* Video Info Footer */}
         <div className="p-4 sm:p-5 border-t border-zinc-800 bg-[#121215] flex items-center justify-between">
           <div className="space-y-0.5">
-            <h3 className="text-sm font-bold text-white tracking-tight">{item.title}</h3>
+            <h3 id="video-reel-modal-title" className="text-sm font-bold text-white tracking-tight">{item.title}</h3>
           </div>
         </div>
       </div>

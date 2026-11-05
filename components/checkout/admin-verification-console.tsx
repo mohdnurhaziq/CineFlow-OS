@@ -24,8 +24,11 @@ import {
   approvePaymentVerification,
   rejectPaymentVerification,
 } from "@/lib/actions/admin-verification";
+import { useDialog } from "@/lib/use-dialog";
 
 interface AdminVerificationConsoleProps {
+  /** The signed-in staff member; the server records approvals and rejections under this name. */
+  verifierName: string;
   tenant: {
     id: string;
     name: string;
@@ -83,6 +86,7 @@ interface AdminVerificationConsoleProps {
 
 export function AdminVerificationConsole({
   tenant,
+  verifierName,
   pendingInvoices: initialPending,
   historyInvoices: initialHistory,
 }: AdminVerificationConsoleProps) {
@@ -100,7 +104,6 @@ export function AdminVerificationConsole({
   } | null>(null);
 
   const [isPending, startTransition] = useTransition();
-  const [staffName, setStaffName] = useState("Studio Lead");
 
   // Rejection modal state
   const [rejectModalItem, setRejectModalItem] = useState<{
@@ -109,6 +112,7 @@ export function AdminVerificationConsole({
     clientName: string;
   } | null>(null);
   const [rejectReason, setRejectReason] = useState("Illegible receipt screenshot");
+  const rejectDialog = useDialog(rejectModalItem !== null, () => setRejectModalItem(null));
 
   const qrPending = initialPending.filter((i) => i.paymentMethod === "QR_CODE");
   const cashPending = initialPending.filter((i) => i.paymentMethod === "CASH");
@@ -136,7 +140,6 @@ export function AdminVerificationConsole({
         invoiceId,
         tenantId: tenant.id,
         tenantSlug: tenant.slug,
-        staffName,
       });
 
       if (res.success) {
@@ -158,7 +161,6 @@ export function AdminVerificationConsole({
         invoiceId: rejectModalItem.id,
         tenantId: tenant.id,
         tenantSlug: tenant.slug,
-        staffName,
         reason: rejectReason,
       });
 
@@ -187,23 +189,13 @@ export function AdminVerificationConsole({
           </p>
         </div>
 
-        {/* Staff Identity Selector */}
+        {/* Who approvals are recorded under: always the signed-in user. */}
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center gap-2">
             <User className="size-4 text-amber-400" />
             <div className="text-xs">
-              <span className="text-[10px] text-zinc-500 uppercase block font-mono">Verified By</span>
-              <select
-                value={staffName}
-                onChange={(e) => setStaffName(e.target.value)}
-                className="bg-transparent text-white font-medium focus:outline-none cursor-pointer text-xs"
-              >
-                <option value="Studio Lead" className="bg-zinc-900 text-white">Studio Lead</option>
-                <option value="Front Desk Concierge" className="bg-zinc-900 text-white">Front Desk Concierge</option>
-                <option value="Production Manager" className="bg-zinc-900 text-white">Production Manager</option>
-                <option value="Sarah Tan" className="bg-zinc-900 text-white">Sarah Tan</option>
-                <option value="David Chong" className="bg-zinc-900 text-white">David Chong</option>
-              </select>
+              <span className="text-[10px] text-zinc-500 uppercase block font-mono">Verifying as</span>
+              <span className="text-white font-medium">{verifierName}</span>
             </div>
           </div>
         </div>
@@ -592,10 +584,10 @@ export function AdminVerificationConsole({
       {/* Reject Confirmation Dialog */}
       {rejectModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
-          <div className="max-w-md w-full rounded-2xl border border-red-500/30 bg-[#121215] p-6 space-y-4 shadow-2xl">
+          <div {...rejectDialog} aria-labelledby="reject-dialog-title" className="max-w-md w-full rounded-2xl border border-red-500/30 bg-[#121215] p-6 space-y-4 shadow-2xl">
             <div className="flex items-center gap-2.5 text-red-400 font-bold text-sm">
               <AlertTriangle className="size-5" />
-              <span>Reject Payment Verification</span>
+              <span id="reject-dialog-title">Reject Payment Verification</span>
             </div>
 
             <p className="text-xs text-zinc-300 leading-relaxed">

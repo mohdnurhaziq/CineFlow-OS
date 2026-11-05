@@ -90,7 +90,6 @@ async function runReviewerVerification() {
     invoiceId: booking1.invoiceId!,
     tenantId: luminaTenant.id,
     tenantSlug: luminaTenant.slug,
-    staffName: "Lead Reviewer",
     reason: "Client cancelled booking counter payment",
   });
 
@@ -155,7 +154,6 @@ async function runReviewerVerification() {
     invoiceId: cardInvoiceId,
     tenantId: luminaTenant.id,
     tenantSlug: luminaTenant.slug,
-    staffName: "Auditor",
     reason: "Illegal attempt to reject paid card invoice",
   });
 
@@ -205,7 +203,6 @@ async function runReviewerVerification() {
     invoiceId: qrBooking.invoiceId!,
     tenantId: luminaTenant.id,
     tenantSlug: luminaTenant.slug,
-    staffName: "Financial Director",
   });
   check("Admin approvePaymentVerification succeeded", approveRes.success === true);
 
@@ -217,7 +214,6 @@ async function runReviewerVerification() {
     invoiceId: qrBooking.invoiceId!,
     tenantId: luminaTenant.id,
     tenantSlug: luminaTenant.slug,
-    staffName: "Staff",
     reason: "Attempting to reverse approved payment",
   });
   check("Rejection of approved PAID invoice fails", rejectApprovedRes.success === false);
@@ -228,7 +224,6 @@ async function runReviewerVerification() {
     invoiceId: booking1.invoiceId!, // already REJECTED in Step 2
     tenantId: luminaTenant.id,
     tenantSlug: luminaTenant.slug,
-    staffName: "Staff",
     reason: "Duplicate rejection",
   });
   check("Duplicate rejection of already REJECTED invoice returns success: false", doubleRejectRes.success === false);

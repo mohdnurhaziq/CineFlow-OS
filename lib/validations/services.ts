@@ -1,24 +1,33 @@
 import { z } from "zod";
 
-export const CreateServicePackageSchema = z.object({
+const ServicePackageFields = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
   name: z.string().min(2, "Package name must be at least 2 characters"),
   category: z.string().min(1, "Category is required"),
   discipline: z.enum(["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"]),
   price: z.coerce.number().min(0, "Price must be non-negative"),
-  depositPrice: z.coerce.number().min(0, "Deposit price must be non-negative").default(50.0),
+  depositPrice: z.coerce.number().min(0, "Deposit price must be non-negative"),
   turnaround: z.string().min(1, "Turnaround duration is required"),
   description: z.string().min(5, "Description must be at least 5 characters"),
   deliverables: z.string().min(3, "Deliverables scope must be specified"),
   isFeatured: z.boolean().default(false),
 });
 
+/** A deposit is part of the price, so it can never be larger than it. */
+const depositWithinPrice = (data: { price: number; depositPrice: number }) => data.depositPrice <= data.price;
+const depositWithinPriceError = {
+  message: "The deposit can't be more than the package price.",
+  path: ["depositPrice"],
+};
+
+export const CreateServicePackageSchema = ServicePackageFields.refine(depositWithinPrice, depositWithinPriceError);
+
 export type CreateServicePackageInput = z.infer<typeof CreateServicePackageSchema>;
 
-export const UpdateServicePackageSchema = CreateServicePackageSchema.extend({
+export const UpdateServicePackageSchema = ServicePackageFields.extend({
   id: z.string().min(1, "Package ID is required"),
-});
+}).refine(depositWithinPrice, depositWithinPriceError);
 
 export type UpdateServicePackageInput = z.infer<typeof UpdateServicePackageSchema>;
 

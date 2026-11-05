@@ -126,11 +126,11 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
   await harness.test("T10-VER-01: outsiders cannot approve or reject a payment", async () => {
     for (const [label, who] of outsiders) {
       const a = await withSession(who, () =>
-        approvePaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "Mallory" })
+        approvePaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
       );
       harness.assert(denied(a), `Approve denied for ${label}`, JSON.stringify(a));
       const r = await withSession(who, () =>
-        rejectPaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "Mallory", reason: "Receipt looks forged" })
+        rejectPaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine", reason: "Receipt looks forged" })
       );
       harness.assert(denied(r), `Reject denied for ${label}`, JSON.stringify(r));
     }
@@ -140,7 +140,7 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
 
   await harness.test("T10-VER-02: another studio's owner cannot use their own tenantId to reach this invoice", async () => {
     const res = await withSession(apexOwner, () =>
-      approvePaymentVerification({ invoiceId: invoice.id, tenantId: apex.id, tenantSlug: "apex-media", staffName: "Mallory" })
+      approvePaymentVerification({ invoiceId: invoice.id, tenantId: apex.id, tenantSlug: "apex-media" })
     );
     harness.assertEqual(res.success, false, "Cross-tenant invoice rejected");
     harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: invoice.id } }))?.status, "PENDING_VERIFICATION", "Still pending");
@@ -148,7 +148,7 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
 
   await harness.test("T10-VER-03: the studio's own staff can approve", async () => {
     const res = await withSession(luminaCrew, () =>
-      approvePaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "Crew" })
+      approvePaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
     );
     harness.assertEqual(res.success, true, "Approved by own staff", JSON.stringify(res));
     harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: invoice.id } }))?.status, "PAID", "Invoice PAID");

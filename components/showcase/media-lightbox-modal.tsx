@@ -1,6 +1,7 @@
 "use client";
 
 import { X, Camera, Aperture, Sliders, Maximize2 } from "lucide-react";
+import { useDialog } from "@/lib/use-dialog";
 
 export interface LightboxItem {
   id: string;
@@ -18,6 +19,7 @@ interface MediaLightboxModalProps {
 }
 
 export function MediaLightboxModal({ item, onClose, brandColor }: MediaLightboxModalProps) {
+  const dialog = useDialog(!!item, onClose);
   if (!item) return null;
 
   return (
@@ -25,7 +27,7 @@ export function MediaLightboxModal({ item, onClose, brandColor }: MediaLightboxM
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 max-w-5xl w-full rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div {...dialog} aria-labelledby="media-lightbox-modal-title" className="relative z-10 max-w-5xl w-full rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Modal Top Bar */}
         <div className="px-5 py-3.5 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
           <div className="flex items-center gap-2">
@@ -62,7 +64,7 @@ export function MediaLightboxModal({ item, onClose, brandColor }: MediaLightboxM
         {/* Modal Footer with EXIF Technical Camera Specs */}
         <div className="p-4 sm:p-5 border-t border-zinc-800 bg-[#121215] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight">{item.title}</h3>
+            <h3 id="media-lightbox-modal-title" className="text-base font-bold text-white tracking-tight">{item.title}</h3>
             <p className="text-xs text-zinc-400">Captured on medium format camera with prime optics.</p>
           </div>
 

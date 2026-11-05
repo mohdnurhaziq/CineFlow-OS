@@ -192,7 +192,6 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         tenantId: luminaTenant!.id,
         tenantSlug: "lumina-cine",
         reservationId: reservationRes.reservation!.id,
-        inspectorName: "Marcus Vance",
         condition: "EXCELLENT",
         sensorVerified: true,
         mediaFormatted: true,
@@ -241,7 +240,6 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         tenantId: luminaTenant!.id,
         tenantSlug: "lumina-cine",
         reservationId: reservationRes.reservation!.id,
-        inspectorName: "Marcus Vance",
         condition: "EXCELLENT",
         damageFlag: false,
         notes: "Equipment returned in pristine shape, cleaned and checked.",
@@ -401,7 +399,6 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         tenantId: apexTenant!.id,
         tenantSlug: "apex-media",
         invoiceId: pendingInvoice!.id,
-        staffName: "David Apex Owner",
       });
 
       harness.assert(verifyRes.success === true, "S4.2-3: Studio owner approved QR slip verification");
@@ -462,7 +459,6 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         tenantId: apexTenant!.id,
         tenantSlug: "apex-media",
         invoiceId: cashInvoice.id,
-        staffName: "David Apex Owner",
       });
       harness.assert(approveCashRes.success === true, "S4.2-4: Counter staff verified cash payment");
 

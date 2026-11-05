@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { platformSubdomainSlug, tenantSlugForDomain } from "@/lib/tenant-domain";
 
-// Static domain map for seeded and custom tenants (Edge runtime compatible)
-const CUSTOM_DOMAIN_MAP: Record<string, string> = {
-  "studio.luminacine.com": "lumina-cine",
-  "studio.apexfilms.com": "apex-media",
-};
-
-// ─── Auth helpers (Edge-compatible, Web Crypto only) ────────────────────────
+// ─── Auth helpers (Web Crypto only) ────────────────────────
 const COOKIE_NAME = "cineflow_session";
 const ADMIN_PATTERN = /^\/([^/]+)\/admin(\/|$)/i;
 const DEV_FALLBACK_AUTH_SECRET = "cineflow_super_secure_random_session_secret_32_chars_min";
@@ -70,7 +65,7 @@ async function readSession(request: NextRequest): Promise<EdgeSession | null> {
   }
 }
 
-// Known platform hosts — cannot include DB-dependent logic (Edge runtime)
+// Hosts that are the platform itself, never a studio.
 const PLATFORM_HOSTS = new Set([
   "localhost",
   "127.0.0.1",
@@ -108,19 +103,12 @@ export async function middleware(request: NextRequest) {
 
   if (simulatedSlug) {
     resolvedTenantSlug = simulatedSlug;
-  } else if (simulatedCustomDomain && CUSTOM_DOMAIN_MAP[simulatedCustomDomain.toLowerCase()]) {
-    resolvedTenantSlug = CUSTOM_DOMAIN_MAP[simulatedCustomDomain.toLowerCase()] ?? null;
-  } else if (CUSTOM_DOMAIN_MAP[hostname]) {
-    resolvedTenantSlug = CUSTOM_DOMAIN_MAP[hostname] ?? null;
+  } else if (simulatedCustomDomain) {
+    resolvedTenantSlug = await tenantSlugForDomain(simulatedCustomDomain);
   } else if (!PLATFORM_HOSTS.has(hostname) && hostname.length > 0) {
-    // Check for subdomain pattern: e.g. <slug>.cineflow.app or <slug>.localhost
-    const parts = hostname.split(".");
-    if (parts.length >= 2) {
-      const subdomain = parts[0];
-      if (subdomain && subdomain !== "www" && subdomain !== "app") {
-        resolvedTenantSlug = subdomain;
-      }
-    }
+    // <slug>.cineflow.app (or <slug>.localhost) is a platform subdomain; any other host is a
+    // studio's own domain, looked up from the domain saved in its settings.
+    resolvedTenantSlug = platformSubdomainSlug(hostname) ?? (await tenantSlugForDomain(hostname));
   }
 
   // 4. Admin Route Guard. Runs on the effective (post-rewrite) path so custom
@@ -179,6 +167,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Node.js runtime so custom domains can be looked up in the database.
+  runtime: "nodejs",
   matcher: [
     /*
      * Match all request paths except for:

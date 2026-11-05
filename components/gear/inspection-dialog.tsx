@@ -12,6 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { logPreShootInspection, logPostShootInspection } from "@/lib/actions/gear";
+import { useDialog } from "@/lib/use-dialog";
 
 export interface ReservationWithDetails {
   id: string;
@@ -48,6 +49,8 @@ interface InspectionDialogProps {
   tenantSlug: string;
   reservation: ReservationWithDetails | null;
   mode: "PRE_SHOOT" | "POST_SHOOT";
+  /** The signed-in staff member; the server logs the inspection under this name. */
+  inspectorName: string;
   onSuccess?: () => void;
 }
 
@@ -66,9 +69,9 @@ export function InspectionDialog({
   tenantSlug,
   reservation,
   mode,
+  inspectorName,
   onSuccess,
 }: InspectionDialogProps) {
-  const [inspectorName, setInspectorName] = useState("Liam Ross (Key Tech)");
   const [condition, setCondition] = useState<string>(
     reservation?.item.condition || "EXCELLENT"
   );
@@ -83,6 +86,7 @@ export function InspectionDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const dialog = useDialog(isOpen && !!reservation, onClose);
   if (!isOpen || !reservation) return null;
 
   const isPreShoot = mode === "PRE_SHOOT";
@@ -98,7 +102,6 @@ export function InspectionDialog({
           tenantId,
           tenantSlug,
           reservationId: reservation.id,
-          inspectorName,
           condition: condition as any,
           notes: notes || undefined,
           sensorVerified,
@@ -116,7 +119,6 @@ export function InspectionDialog({
           tenantId,
           tenantSlug,
           reservationId: reservation.id,
-          inspectorName,
           condition: condition as any,
           damageFlag,
           notes: notes || undefined,
@@ -140,7 +142,7 @@ export function InspectionDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div {...dialog} aria-labelledby="inspection-dialog-title" className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between pb-3 border-b border-zinc-800">
           <div>
@@ -152,7 +154,7 @@ export function InspectionDialog({
                 {reservation.project.projectNumber}
               </span>
             </div>
-            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <h3 id="inspection-dialog-title" className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               <ClipboardCheck className="size-4 text-amber-400" />
               <span>
                 {isPreShoot
@@ -185,16 +187,11 @@ export function InspectionDialog({
           {/* Inspector Credentials */}
           <div>
             <label className="text-xs font-mono text-zinc-400 block mb-1">
-              Inspector Credentials / Staff Name *
+              Inspected by
             </label>
-            <input
-              type="text"
-              required
-              value={inspectorName}
-              onChange={(e) => setInspectorName(e.target.value)}
-              placeholder="e.g. Liam Ross (Lead Grip / Tech)"
-              className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white focus:outline-none focus:border-amber-500"
-            />
+            <p className="w-full px-3.5 py-2 rounded-xl bg-zinc-900/60 border border-zinc-800 text-sm text-white">
+              {inspectorName}
+            </p>
           </div>
 
           {/* Condition Selector */}

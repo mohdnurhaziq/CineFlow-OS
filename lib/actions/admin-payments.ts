@@ -33,6 +33,13 @@ export async function saveGatewayCredentials(input: z.input<typeof SaveGatewaySc
     const tenant = await db.tenant.findUnique({ where: { id: data.tenantId } });
     if (!tenant) return { success: false, error: "TENANT_NOT_FOUND", message: "Studio not found." };
 
+    if (tenant.currency !== "MYR") {
+      return {
+        success: false,
+        error: "CURRENCY_NOT_SUPPORTED",
+        message: "Toyyibpay only charges in Malaysian Ringgit. Set your studio currency to MYR first.",
+      };
+    }
     if (!data.secretKey && !tenant.toyyibpaySecretEnc) {
       return { success: false, error: "SECRET_REQUIRED", message: "Enter your Toyyibpay secret key." };
     }

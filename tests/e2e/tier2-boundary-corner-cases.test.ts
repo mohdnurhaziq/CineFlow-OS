@@ -14,14 +14,18 @@ import { TestHarness } from "./test-harness";
 import { holdBookingSlot } from "@/lib/actions/booking";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
+import { nextInvoiceNumber } from "@/lib/bookings/billing";
 import { GET as downloadHandler } from "@/app/api/download/route";
 import {
   createServicePackage,
   createCampaignCategory,
+  updateCampaignCategory,
 } from "@/lib/actions/admin-services";
 import {
   createSingleBookingSlot,
   deleteBookingSlot,
+  updateBookingSlot,
+  batchGenerateBookingSlots,
   forceReleaseHeldSlot,
 } from "@/lib/actions/admin-calendar";
 import {
@@ -455,7 +459,6 @@ export async function runTier2BoundaryTests(harness: TestHarness) {
       invoiceId: invoice.id,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Lead Staff Member",
     });
 
     harness.assert(approveRes.success === true, "Manual approval succeeded");
@@ -547,6 +550,55 @@ export async function runTier2BoundaryTests(harness: TestHarness) {
     harness.assertEqual(res.error, "CREATE_PACKAGE_FAILED", "Error code is CREATE_PACKAGE_FAILED");
   });
 
+  await harness.test("T2-PRICE-01b: a deposit larger than the price is refused for packages and slots", async () => {
+    const pkg = await createServicePackage({
+      tenantId: luminaTenant!.id,
+      tenantSlug: "lumina-cine",
+      name: "Deposit Over Price",
+      category: "commercial",
+      discipline: "PHOTOGRAPHY",
+      price: 100,
+      depositPrice: 500,
+      turnaround: "3 Days",
+      description: "Should fail validation",
+      deliverables: "None",
+      isFeatured: false,
+    });
+    harness.assert(pkg.success === false, "Package with deposit > price rejected");
+    harness.assertEqual(pkg.message, "The deposit can't be more than the package price.", "Readable message, not a Zod dump");
+
+    const slot = await createSingleBookingSlot({
+      tenantId: luminaTenant!.id,
+      tenantSlug: "lumina-cine",
+      date: "2027-07-02",
+      startTime: "10:00 AM",
+      endTime: "11:00 AM",
+      category: "commercial",
+      price: 100,
+      depositRequired: 500,
+      status: "AVAILABLE",
+    });
+    harness.assert(slot.success === false, "Slot with deposit > fee rejected");
+
+    const depositOnly = await createSingleBookingSlot({
+      tenantId: luminaTenant!.id,
+      tenantSlug: "lumina-cine",
+      date: "2027-07-02",
+      startTime: "02:00 PM",
+      endTime: "03:00 PM",
+      category: "commercial",
+      price: 0,
+      depositRequired: 50,
+      status: "AVAILABLE",
+    });
+    harness.assert(depositOnly.success === true, "Fee 0 (priced by package) with a deposit is still allowed");
+    if (depositOnly.success && depositOnly.slot) {
+      const raised = await updateBookingSlot({ id: depositOnly.slot.id, tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", price: 20 });
+      harness.assert(raised.success === false, "Editing the fee below the existing deposit is rejected");
+      await db.bookingSlot.delete({ where: { id: depositOnly.slot.id } });
+    }
+  });
+
   await harness.test("T2-PRICE-02: Zero-Dollar ($0.00) Package & Slot Creation", async () => {
     const pkgRes = await createServicePackage({
       tenantId: luminaTenant!.id,
@@ -631,7 +683,6 @@ export async function runTier2BoundaryTests(harness: TestHarness) {
       invoiceId: invoice.id,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Staff Member",
     });
 
     harness.assert(res.success === false, "Re-verification rejected");
@@ -962,5 +1013,99 @@ export async function runTier2BoundaryTests(harness: TestHarness) {
     const validGmaps = extractCoordinates("https://maps.google.com/?q=3.1390,101.6869");
     harness.assertEqual(validGmaps.lat, 3.139, "Valid Google Maps URL parsed latitude");
     harness.assertEqual(validGmaps.lng, 101.6869, "Valid Google Maps URL parsed longitude");
+  });
+
+  // ============================================================================
+  // Slot scheduling rules and category renames
+  // ============================================================================
+  await harness.test("T2-SLOT-01: slots must end after they start, can't be in the past, and can't overlap", async () => {
+    const base = { tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", category: "commercial", price: 0, depositRequired: 0, status: "AVAILABLE" as const };
+    const backwards = await createSingleBookingSlot({ ...base, date: "2027-08-02", startTime: "11:00 AM", endTime: "10:00 AM" });
+    harness.assertEqual(backwards.error, "INVALID_TIME_RANGE", "End before start rejected");
+
+    const past = await createSingleBookingSlot({ ...base, date: "2020-01-06", startTime: "10:00 AM", endTime: "11:00 AM" });
+    harness.assertEqual(past.error, "SLOT_IN_PAST", "Past date rejected");
+
+    const first = await createSingleBookingSlot({ ...base, date: "2027-08-02", startTime: "10:00 AM", endTime: "12:00 PM" });
+    harness.assert(first.success === true, "First slot created");
+    try {
+      const clash = await createSingleBookingSlot({ ...base, date: "2027-08-02", startTime: "11:00 AM", endTime: "11:30 AM" });
+      harness.assertEqual(clash.error, "SLOT_OVERLAP", "Overlapping slot rejected");
+
+      const touching = await createSingleBookingSlot({ ...base, date: "2027-08-02", startTime: "12:00 PM", endTime: "01:00 PM" });
+      harness.assert(touching.success === true, "A slot starting exactly when the last one ends is allowed");
+      if (touching.success && touching.slot) {
+        const moved = await updateBookingSlot({ id: touching.slot.id, tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", startTime: "11:30 AM" });
+        harness.assertEqual(moved.error, "SLOT_OVERLAP", "Editing a slot into an overlap is rejected");
+        await db.bookingSlot.delete({ where: { id: touching.slot.id } });
+      }
+
+      // Older slots were saved with a time of day on `date`; they still block the whole calendar day.
+      const legacy = await db.bookingSlot.create({
+        data: { tenantId: luminaTenant!.id, category: "commercial", date: new Date("2027-08-03T11:54:34.708Z"), startTime: "09:00 AM", endTime: "10:00 AM", price: 0, depositRequired: 0 },
+      });
+      const overLegacy = await createSingleBookingSlot({ ...base, date: "2027-08-03", startTime: "09:30 AM", endTime: "10:30 AM" });
+      harness.assertEqual(overLegacy.error, "SLOT_OVERLAP", "Overlap with a slot stored with a time of day is caught");
+      await db.bookingSlot.delete({ where: { id: legacy.id } });
+
+      const batch = await batchGenerateBookingSlots({
+        tenantId: luminaTenant!.id,
+        tenantSlug: "lumina-cine",
+        startDate: "2027-08-02",
+        endDate: "2027-08-02",
+        daysOfWeek: [1],
+        dayStartTime: "09:00 AM",
+        dayEndTime: "01:00 PM",
+        slotDurationMinutes: 60,
+        bufferMinutes: 0,
+        category: "commercial",
+        price: 0,
+        depositRequired: 0,
+      });
+      harness.assertEqual(batch.createdCount, 2, "Batch creates only 09:00 and 12:00, skipping the hours inside 10:00-12:00");
+      await db.bookingSlot.deleteMany({ where: { tenantId: luminaTenant!.id, date: new Date("2027-08-02T00:00:00.000Z") } });
+    } finally {
+      if (first.success && first.slot) await db.bookingSlot.delete({ where: { id: first.slot.id } }).catch(() => null);
+    }
+  });
+
+  await harness.test("T2-CAT-01: renaming a category slug moves its packages, slots and bookings with it", async () => {
+    const run = Date.now().toString(36);
+    const cat = await createCampaignCategory({ tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", name: `Rename ${run}`, slug: `old-${run}`, sortOrder: 9, isActive: true });
+    harness.assert(cat.success === true && !!cat.category, "Category created");
+    const pkg = await db.servicePackage.create({
+      data: { tenantId: luminaTenant!.id, category: `OLD_${run.toUpperCase()}`, name: "Rename pkg", discipline: "PHOTOGRAPHY", price: 100, depositPrice: 50, turnaround: "1 day", description: "x", deliverables: "x" },
+    });
+    const slot = await db.bookingSlot.create({
+      data: { tenantId: luminaTenant!.id, category: `old-${run}`, date: new Date("2027-09-01T00:00:00.000Z"), startTime: "10:00 AM", endTime: "11:00 AM", price: 0, depositRequired: 0 },
+    });
+    try {
+      const res = await updateCampaignCategory({
+        id: cat.category!.id, tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", name: `Rename ${run}`, slug: `new-${run}`, sortOrder: 9, isActive: true,
+      });
+      harness.assert(res.success === true, "Slug renamed");
+      harness.assertEqual((await db.servicePackage.findUnique({ where: { id: pkg.id } }))?.category, `new-${run}`, "Package (stored in another spelling) follows the rename");
+      harness.assertEqual((await db.bookingSlot.findUnique({ where: { id: slot.id } }))?.category, `new-${run}`, "Slot follows the rename");
+    } finally {
+      await db.servicePackage.delete({ where: { id: pkg.id } }).catch(() => null);
+      await db.bookingSlot.delete({ where: { id: slot.id } }).catch(() => null);
+      await db.campaignCategory.delete({ where: { id: cat.category!.id } }).catch(() => null);
+    }
+  });
+
+  await harness.test("T2-INV-01: invoice numbers count up per studio and ignore old random numbers", async () => {
+    const year = new Date().getFullYear();
+    const seqOf = (n: string) => Number(n.slice(`INV-${year}-`.length));
+    const [a1, a2] = await db.$transaction(async (tx) => [
+      await nextInvoiceNumber(tx, luminaTenant!.id),
+      await nextInvoiceNumber(tx, luminaTenant!.id),
+    ]);
+    harness.assert(/^INV-\d{4}-\d{4,}$/.test(a1), `Format INV-<year>-0001 (${a1})`);
+    harness.assertEqual(seqOf(a2), seqOf(a1) + 1, "Next number in the same studio is +1");
+    const b1 = await db.$transaction((tx) => nextInvoiceNumber(tx, apexTenant!.id));
+    harness.assert(b1.startsWith(`INV-${year}-`), "Other studio gets its own sequence");
+    const all = await db.milestoneInvoice.findMany({ where: { tenantId: luminaTenant!.id }, select: { invoiceNumber: true } });
+    harness.assert(!all.some((r) => r.invoiceNumber === a1), "Numbers are reserved, not yet used by an invoice");
+    harness.assert(seqOf(a1) < 100000, "Legacy 6-digit random numbers don't inflate the sequence");
   });
 }

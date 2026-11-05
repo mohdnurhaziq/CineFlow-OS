@@ -1,5 +1,6 @@
 "use server";
 
+import { actionErrorMessage } from "@/lib/action-error";
 import { requireOwner } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
@@ -110,7 +111,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
     return {
       success: false,
       error: "UPDATE_SETTINGS_FAILED",
-      message: error.message || "Failed to update studio settings.",
+      message: actionErrorMessage(error, "Failed to update studio settings."),
     };
   }
 }

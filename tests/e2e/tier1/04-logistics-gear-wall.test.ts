@@ -724,7 +724,6 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId,
-      inspectorName: "Sarah Gear Lead",
       condition: "EXCELLENT",
       notes: "Clean lenses and full battery",
     });
@@ -770,14 +769,13 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId,
-      inspectorName: "Captain Jack",
       condition: "GOOD",
       notes: "Tripod leg screw tight",
     });
 
     const log = await db.inspectionLog.findUnique({ where: { reservationId } });
     harness.assert(log !== null, "InspectionLog record created");
-    harness.assertEqual(log?.inspectorName, "Captain Jack", "Inspector name matches");
+    harness.assertEqual(log?.inspectorName, "CineFlow Super Admin", "Inspection is logged under the signed-in user");
     harness.assert(log?.checkoutCondition?.includes("GOOD") ?? false, "Checkout condition matches");
 
     harness.registerTeardown(async () => {
@@ -814,7 +812,6 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId,
-      inspectorName: "Sarah Lead",
       condition: "EXCELLENT",
     });
 
@@ -822,7 +819,6 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId,
-      inspectorName: "Sarah Lead",
       condition: "EXCELLENT",
       damageFlag: false,
       notes: "Returned clean and complete",
@@ -869,7 +865,6 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId,
-      inspectorName: "Sarah Lead",
       condition: "EXCELLENT",
     });
 
@@ -877,7 +872,6 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId,
-      inspectorName: "Sarah Lead",
       condition: "DAMAGED",
       damageFlag: true,
       notes: "Lens front element scratched on location",

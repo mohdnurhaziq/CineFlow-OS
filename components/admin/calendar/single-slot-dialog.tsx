@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2, Calendar } from "lucide-react";
 import { createSingleBookingSlot, updateBookingSlot } from "@/lib/actions/admin-calendar";
+import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
+import { useDialog } from "@/lib/use-dialog";
 
 export interface BookingSlotRow {
   id: string;
@@ -97,6 +99,7 @@ export function SingleSlotDialog({
     setErrorMessage(null);
   }, [slotToEdit, categories, isOpen]);
 
+  const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,6 +109,17 @@ export function SingleSlotDialog({
 
     const parsedPrice = parseFloat(price);
     const parsedDeposit = parseFloat(depositRequired);
+
+    if (isNaN(parsedDeposit) || parsedDeposit < 0) {
+      setErrorMessage("Enter the deposit clients pay to book this slot (0 for no deposit).");
+      setIsSubmitting(false);
+      return;
+    }
+    if (!slotDepositWithinFee(isNaN(parsedPrice) ? 0 : parsedPrice, parsedDeposit)) {
+      setErrorMessage(SLOT_DEPOSIT_ERROR);
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (isEditing && slotToEdit) {
@@ -119,7 +133,7 @@ export function SingleSlotDialog({
           category,
           campaignTitle: campaignTitle || null,
           price: isNaN(parsedPrice) ? 0 : parsedPrice,
-          depositRequired: isNaN(parsedDeposit) ? 50 : parsedDeposit,
+          depositRequired: parsedDeposit,
           status,
         });
 
@@ -138,7 +152,7 @@ export function SingleSlotDialog({
           category,
           campaignTitle: campaignTitle || null,
           price: isNaN(parsedPrice) ? 0 : parsedPrice,
-          depositRequired: isNaN(parsedDeposit) ? 50 : parsedDeposit,
+          depositRequired: parsedDeposit,
           status,
         });
 
@@ -160,11 +174,11 @@ export function SingleSlotDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-      <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div {...dialog} aria-labelledby="single-slot-dialog-title" className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-[#0d0d10] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <h3 id="single-slot-dialog-title" className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               {isEditing ? <Edit2 className="size-4 text-amber-400" /> : <Plus className="size-4 text-amber-400" />}
               <span>{isEditing ? "Edit Booking Slot" : "Create Single Booking Slot"}</span>
             </h3>
@@ -259,16 +273,18 @@ export function SingleSlotDialog({
                 placeholder="0"
                 className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
               />
+              <p className="text-[11px] text-zinc-500 mt-1">0 = priced by the package the client picks.</p>
             </div>
 
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
-                Deposit Required ({currency})
+                Deposit Required ({currency}) *
               </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
+                required
                 value={depositRequired}
                 onChange={(e) => setDepositRequired(e.target.value)}
                 placeholder="50"

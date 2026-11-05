@@ -102,7 +102,6 @@ export const LogPreShootInspectionSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
   reservationId: z.string().min(1, "Reservation ID is required"),
-  inspectorName: z.string().min(2, "Inspector name is required"),
   condition: z
     .enum(["EXCELLENT", "GOOD", "FAIR", "MAINTENANCE_NEEDED"])
     .default("EXCELLENT"),
@@ -118,7 +117,6 @@ export const LogPostShootInspectionSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
   reservationId: z.string().min(1, "Reservation ID is required"),
-  inspectorName: z.string().min(2, "Inspector name is required"),
   condition: z.enum(["EXCELLENT", "GOOD", "FAIR", "MAINTENANCE_NEEDED", "DAMAGED"]),
   damageFlag: z.boolean().default(false),
   notes: z.string().optional().nullable(),

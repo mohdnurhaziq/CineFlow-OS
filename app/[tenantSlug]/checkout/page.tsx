@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { CheckoutShell } from "@/components/checkout/checkout-shell";
 import { Metadata } from "next";
 import { getSessionClient } from "@/lib/clients";
-import { getGatewayCredentials } from "@/lib/payments/settle";
+import { getCheckoutGateway } from "@/lib/payments/settle";
 import { CheckoutAuthGate } from "@/components/checkout/checkout-auth-gate";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
 
@@ -56,7 +56,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     qrCodeUrl: tenantRow.qrCodeUrl,
     bankDetails: tenantRow.bankDetails,
   };
-  const cardMode: "GATEWAY" | "SIMULATED" | "OFF" = getGatewayCredentials(tenantRow)
+  const cardMode: "GATEWAY" | "SIMULATED" | "OFF" = getCheckoutGateway(tenantRow)
     ? "GATEWAY"
     : process.env.ALLOW_SIMULATED_CARD_PAYMENTS === "true"
       ? "SIMULATED"

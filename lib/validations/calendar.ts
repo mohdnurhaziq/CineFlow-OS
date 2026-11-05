@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+/**
+ * A slot fee of 0 means "priced by the package", so only the deposit is charged. When a fee
+ * is set, the deposit is part of it and can never be larger.
+ */
+export function slotDepositWithinFee(price: number, depositRequired: number): boolean {
+  return price <= 0 || depositRequired <= price;
+}
+export const SLOT_DEPOSIT_ERROR = "The deposit can't be more than the slot fee.";
+
 export const CreateSingleSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
@@ -11,6 +20,9 @@ export const CreateSingleSlotSchema = z.object({
   price: z.coerce.number().min(0, "Price must be non-negative").default(0),
   depositRequired: z.coerce.number().min(0, "Deposit must be non-negative").default(50),
   status: z.enum(["AVAILABLE", "BLOCKED"]).default("AVAILABLE"),
+}).refine((d) => slotDepositWithinFee(d.price, d.depositRequired), {
+  message: SLOT_DEPOSIT_ERROR,
+  path: ["depositRequired"],
 });
 
 export type CreateSingleSlotInput = z.infer<typeof CreateSingleSlotSchema>;
@@ -45,7 +57,9 @@ export const BatchGenerateSlotsSchema = z.object({
   campaignTitle: z.string().optional().nullable(),
   price: z.coerce.number().min(0).default(0),
   depositRequired: z.coerce.number().min(0).default(50),
-  skipConflicts: z.boolean().default(true),
+}).refine((d) => slotDepositWithinFee(d.price, d.depositRequired), {
+  message: SLOT_DEPOSIT_ERROR,
+  path: ["depositRequired"],
 });
 
 export type BatchGenerateSlotsInput = z.infer<typeof BatchGenerateSlotsSchema>;

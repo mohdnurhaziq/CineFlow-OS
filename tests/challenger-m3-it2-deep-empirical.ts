@@ -85,7 +85,6 @@ async function runEmpiricalStressSuite() {
       invoiceId: invoiceId1!,
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
-      staffName: "Quality Auditor",
       reason: "Invalid counter cash handover",
     });
 
@@ -180,7 +179,6 @@ async function runEmpiricalStressSuite() {
         invoiceId: cycleCheckout.invoiceId!,
         tenantId: tenant.id,
         tenantSlug: tenant.slug,
-        staffName: "Manager",
         reason: `Rejection cycle test #${cycle}`,
       });
 
@@ -338,7 +336,6 @@ async function runEmpiricalStressSuite() {
       invoiceId: paidInvoiceId,
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
-      staffName: "Rogue Staff",
       reason: "Attempting to reject a settled card payment",
     });
 
@@ -398,7 +395,6 @@ async function runEmpiricalStressSuite() {
       invoiceId: qrInvoiceId,
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
-      staffName: "Lead Admin",
     });
     assert(approveRes.success === true, "Admin approved payment verification");
 
@@ -410,7 +406,6 @@ async function runEmpiricalStressSuite() {
       invoiceId: qrInvoiceId,
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
-      staffName: "Confused Admin",
       reason: "Accidental late rejection attempt",
     });
 
@@ -464,7 +459,6 @@ async function runEmpiricalStressSuite() {
       invoiceId: cashInvoiceId,
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
-      staffName: "Admin",
       reason: "Initial rejection",
     });
     assert(firstRej.success === true, "Initial rejection succeeded");
@@ -474,7 +468,6 @@ async function runEmpiricalStressSuite() {
       invoiceId: cashInvoiceId,
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
-      staffName: "Admin",
       reason: "Duplicate rejection attempt",
     });
     assert(secondRej.success === false, "Duplicate rejection returned success: false");

@@ -21,7 +21,6 @@ const ApprovePaymentVerificationSchema = z.object({
   invoiceId: z.string().min(1, "Invoice ID is required"),
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
-  staffName: z.string().min(1, "Staff member name is required"),
   notes: z.string().optional(),
 });
 
@@ -30,13 +29,14 @@ export type ApprovePaymentVerificationInput = z.infer<typeof ApprovePaymentVerif
 export async function approvePaymentVerification(input: ApprovePaymentVerificationInput) {
   try {
     const validated = ApprovePaymentVerificationSchema.parse(input);
-    await requireStaff(validated.tenantId);
-    const { invoiceId, tenantId, tenantSlug, staffName, notes } = validated;
+    // The verifier is always the signed-in staff member, never a name sent by the browser.
+    const staffName = (await requireStaff(validated.tenantId)).name;
+    const { invoiceId, tenantId, tenantSlug, notes } = validated;
 
     // Multi-tenant isolation check
     const invoice = await db.milestoneInvoice.findFirst({
       where: { id: invoiceId, tenantId },
-      include: { client: true, project: true },
+      include: { client: true, project: true, tenant: { select: { name: true, currency: true } } },
     });
 
     if (!invoice) {
@@ -121,14 +121,14 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
     if (invoice.client?.email) {
       sendNotification({
         event: "PAYMENT_APPROVED",
-        studioName: tenantSlug,
+        studioName: invoice.tenant.name,
         studioSlug: tenantSlug,
         clientName: invoice.client.name,
         clientEmail: invoice.client.email,
         clientPhone: invoice.client.phone || undefined,
         invoiceNumber: invoice.invoiceNumber,
         amount: invoice.amount,
-        currency: "USD",
+        currency: invoice.tenant.currency,
         milestoneType: invoice.milestoneType,
         projectTitle: invoice.project?.title || "Production Project",
         projectId: invoice.projectId || undefined,
@@ -137,7 +137,7 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
       if (unlockedDownloads && invoice.projectId) {
         sendNotification({
           event: "VAULT_UNLOCKED",
-          studioName: tenantSlug,
+          studioName: invoice.tenant.name,
           studioSlug: tenantSlug,
           clientName: invoice.client.name,
           clientEmail: invoice.client.email,
@@ -168,7 +168,6 @@ const RejectPaymentVerificationSchema = z.object({
   invoiceId: z.string().min(1, "Invoice ID is required"),
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
-  staffName: z.string().min(1, "Staff member name is required"),
   reason: z.string().min(3, "Please provide a valid rejection reason"),
 });
 
@@ -177,13 +176,13 @@ export type RejectPaymentVerificationInput = z.infer<typeof RejectPaymentVerific
 export async function rejectPaymentVerification(input: RejectPaymentVerificationInput) {
   try {
     const validated = RejectPaymentVerificationSchema.parse(input);
-    await requireStaff(validated.tenantId);
-    const { invoiceId, tenantId, tenantSlug, staffName, reason } = validated;
+    const staffName = (await requireStaff(validated.tenantId)).name;
+    const { invoiceId, tenantId, tenantSlug, reason } = validated;
 
     // Multi-tenant check
     const invoice = await db.milestoneInvoice.findFirst({
       where: { id: invoiceId, tenantId },
-      include: { client: true },
+      include: { client: true, tenant: { select: { name: true, currency: true } } },
     });
 
     if (!invoice) {
@@ -261,14 +260,14 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
     if (invoice.client?.email) {
       sendNotification({
         event: "PAYMENT_REJECTED",
-        studioName: tenantSlug,
+        studioName: invoice.tenant.name,
         studioSlug: tenantSlug,
         clientName: invoice.client.name,
         clientEmail: invoice.client.email,
         clientPhone: invoice.client.phone || undefined,
         invoiceNumber: invoice.invoiceNumber,
         amount: invoice.amount,
-        currency: "USD",
+        currency: invoice.tenant.currency,
         reason,
         reuploadUrl: `/${tenantSlug}/checkout?invoice=${invoice.id}`,
       }).catch((e) => console.error("Notification dispatch failed:", e));

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeDomain } from "@/lib/domain-name";
 
 export const UpdateStudioSettingsSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -9,7 +10,20 @@ export const UpdateStudioSettingsSchema = z.object({
     .min(2, "Slug must be at least 2 characters")
     .max(50)
     .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
-  customDomain: z.string().optional().nullable(),
+  // Stored as a bare lowercase host ("studio.example.com") so the middleware can match it.
+  customDomain: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v, ctx) => {
+      if (!v || !v.trim()) return null;
+      const domain = normalizeDomain(v);
+      if (!domain) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a domain like studio.example.com." });
+        return z.NEVER;
+      }
+      return domain;
+    }),
   discipline: z.enum(["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"]),
   tagline: z.string().optional().nullable(),
   bio: z.string().optional().nullable(),
@@ -20,4 +34,4 @@ export const UpdateStudioSettingsSchema = z.object({
   bankDetails: z.string().optional().nullable(),
 });
 
-export type UpdateStudioSettingsInput = z.infer<typeof UpdateStudioSettingsSchema>;
+export type UpdateStudioSettingsInput = z.input<typeof UpdateStudioSettingsSchema>;

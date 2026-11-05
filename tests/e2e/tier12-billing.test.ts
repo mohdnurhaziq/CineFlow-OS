@@ -92,7 +92,7 @@ export async function runTier12BillingTests(harness: TestHarness) {
     ) as Promise<any>;
 
   const approve = (invoiceId: string, tenantId = lumina.id, slug = "lumina-cine") =>
-    withSession(staff, () => approvePaymentVerification({ invoiceId, tenantId, tenantSlug: slug, staffName: "T12" })) as Promise<any>;
+    withSession(staff, () => approvePaymentVerification({ invoiceId, tenantId, tenantSlug: slug })) as Promise<any>;
 
   const balanceFor = (bookingId: string) =>
     db.milestoneInvoice.findMany({ where: { bookingId, milestoneType: "BOOKING_BALANCE" } });

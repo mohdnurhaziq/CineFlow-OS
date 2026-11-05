@@ -553,7 +553,6 @@ async function runChallengerSuite() {
     category: "STUDIO_PORTRAIT",
     price: 150,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(
     !invertedTimeRes.success && invertedTimeRes.error === "INVALID_TIME_RANGE",
@@ -574,7 +573,6 @@ async function runChallengerSuite() {
     category: "STUDIO_PORTRAIT",
     price: 150,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(
     !invertedDateRes.success && invertedDateRes.error === "INVALID_DATE_RANGE",
@@ -595,7 +593,6 @@ async function runChallengerSuite() {
     category: "STUDIO_PORTRAIT",
     price: 150,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(!shortDurationRes.success, "Slot duration under 15 minutes rejected by Zod schema");
 
@@ -621,7 +618,6 @@ async function runChallengerSuite() {
     campaignTitle: "Boundary Stress Campaign",
     price: 200,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(
     boundaryGenRes.success && boundaryGenRes.createdCount === 2,
@@ -648,7 +644,7 @@ async function runChallengerSuite() {
   );
 
   // 2.2 Conflict Skipping Test
-  // Re-run the exact same batch generation with skipConflicts: true
+  // Re-run the exact same batch generation (overlaps are always skipped)
   const conflictSkipRes = await batchGenerateBookingSlots({
     tenantId: lumina.id,
     tenantSlug: lumina.slug,
@@ -663,7 +659,6 @@ async function runChallengerSuite() {
     campaignTitle: "Boundary Stress Campaign",
     price: 200,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(
     conflictSkipRes.success && conflictSkipRes.createdCount === 0 && conflictSkipRes.skippedCount === 2,
@@ -700,7 +695,6 @@ async function runChallengerSuite() {
     campaignTitle: "Weekend Only Campaign",
     price: 180,
     depositRequired: 50,
-    skipConflicts: true,
   });
   assert(dowGenRes.success && (dowGenRes.createdCount ?? 0) > 0, `Weekend-only slot generation created ${dowGenRes.createdCount} slots`);
 

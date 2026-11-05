@@ -101,7 +101,7 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
   );
   if (!booked.success) throw new Error(`T13 setup booking failed: ${booked.message}`);
   await withSession(as(owner, "lumina-cine"), () =>
-    approvePaymentVerification({ invoiceId: booked.invoiceId, tenantId: lumina.id, tenantSlug: "lumina-cine", staffName: "T13" })
+    approvePaymentVerification({ invoiceId: booked.invoiceId, tenantId: lumina.id, tenantSlug: "lumina-cine" })
   );
   const client = await db.user.findFirst({ where: { tenantId: lumina.id, email: clientEmail } });
   const balance = await db.milestoneInvoice.findFirst({ where: { bookingId: booked.bookingId, milestoneType: "BOOKING_BALANCE" } });

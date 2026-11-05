@@ -947,7 +947,6 @@ async function runChallengerSuite() {
     invoiceId: apexInvoice!.id,
     tenantId: lumina.id, // Hostile tenant
     tenantSlug: lumina.slug,
-    staffName: "Lumina Hacker Staff",
     notes: "Hostile cross-tenant approval attempt",
   });
   assert(
@@ -960,7 +959,6 @@ async function runChallengerSuite() {
     invoiceId: apexInvoice!.id,
     tenantId: lumina.id, // Hostile tenant
     tenantSlug: lumina.slug,
-    staffName: "Lumina Hacker Staff",
     reason: "Hostile cross-tenant rejection attempt",
   });
   assert(

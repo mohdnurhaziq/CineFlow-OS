@@ -804,14 +804,13 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       invoiceId: checkoutRes.invoiceId!,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Lead Staff",
       notes: "Receipt verified against bank account",
     });
 
     harness.assert(approveRes.success === true, "approvePaymentVerification succeeded");
     const updatedInvoice = await db.milestoneInvoice.findUnique({ where: { id: checkoutRes.invoiceId } });
     harness.assert(updatedInvoice?.status === "PAID", "Invoice transitioned to PAID");
-    harness.assert(updatedInvoice?.verifiedBy === "Lead Staff", "Invoice records verifiedBy: 'Lead Staff'");
+    harness.assert(updatedInvoice?.verifiedBy === "CineFlow Super Admin", "Invoice records the signed-in verifier");
     harness.assert(updatedInvoice?.paidAt !== null, "Invoice records paidAt timestamp");
   });
 
@@ -852,7 +851,6 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       invoiceId: checkoutRes.invoiceId!,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Lead Staff",
     });
 
     const updatedBooking = await db.clientBooking.findUnique({ where: { id: checkoutRes.bookingId } });
@@ -899,7 +897,6 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       invoiceId: finalInvoice.id,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Studio Director",
     });
 
     harness.assert(approveRes.success === true, "Approval succeeded");
@@ -946,7 +943,6 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       invoiceId: checkoutRes.invoiceId!,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Lead Staff",
       reason: "Blurry receipt slip, unable to verify wire transfer",
     });
 
@@ -970,7 +966,6 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       invoiceId: luminaInvoice!.id,
       tenantId: apexTenant!.id, // Tampered tenant ID
       tenantSlug: "apex-media",
-      staffName: "Apex Staff",
     });
 
     harness.assert(crossRes.success === false, "Cross-tenant invoice approval rejected");

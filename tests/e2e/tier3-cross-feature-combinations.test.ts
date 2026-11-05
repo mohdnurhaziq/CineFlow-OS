@@ -183,7 +183,6 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
       invoiceId: invoice.id,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Operations Lead",
     });
     harness.assert(approveRes.success === true, "Payment verification approved");
 
@@ -363,7 +362,6 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId: res.reservation!.id,
-      inspectorName: "Gear Supervisor",
       condition: "EXCELLENT",
     });
 
@@ -372,7 +370,6 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       reservationId: res.reservation!.id,
-      inspectorName: "Gear Supervisor",
       condition: "DAMAGED",
       damageFlag: true,
       notes: "Dropped on shoot",
@@ -500,7 +497,6 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
       invoiceId: checkoutRes.invoiceId!,
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
-      staffName: "Studio Admin Director",
       notes: "Verified Chase wire receipt against studio bank balance.",
     });
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { actionErrorMessage } from "@/lib/action-error";
 import { requireStaff } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
@@ -8,6 +9,8 @@ import {
   CreateSingleSlotSchema,
   UpdateBookingSlotSchema,
   BatchGenerateSlotsSchema,
+  slotDepositWithinFee,
+  SLOT_DEPOSIT_ERROR,
   ForceReleaseSlotSchema,
   ToggleBlockSlotSchema,
   DeleteBookingSlotSchema,
@@ -30,6 +33,52 @@ function safeRevalidate(path: string) {
 }
 
 import { parseTimeToMinutes, formatMinutesToTime } from "@/lib/utils/time";
+import { isSlotInPast, minutesOfDay, slotDateKey } from "@/lib/slot-time";
+
+type SlotCheck = { ok: true } | { ok: false; error: string; message: string };
+
+/** Start and end must be readable times, and the session must end after it starts. */
+function checkSlotTimes(startTime: string, endTime: string): SlotCheck & { start?: number; end?: number } {
+  const start = minutesOfDay(startTime);
+  const end = minutesOfDay(endTime);
+  if (start === null || end === null) {
+    return { ok: false, error: "INVALID_TIME", message: "Enter the start and end times as e.g. 10:00 AM." };
+  }
+  if (end <= start) {
+    return { ok: false, error: "INVALID_TIME_RANGE", message: "The end time must be after the start time." };
+  }
+  return { ok: true, start, end };
+}
+
+/**
+ * The studio is one room: no two slots may share any minute of the same day, whatever their
+ * status, or a client could book a time that is already booked or blacked out.
+ */
+async function findOverlap(
+  tenantId: string,
+  date: Date,
+  start: number,
+  end: number,
+  excludeId?: string
+): Promise<{ startTime: string; endTime: string } | null> {
+  // Match the whole calendar day: older slots were saved with a time of day on `date`.
+  const dayStart = new Date(`${slotDateKey(date)}T00:00:00.000Z`);
+  const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+  const sameDay = await db.bookingSlot.findMany({
+    where: { tenantId, date: { gte: dayStart, lt: dayEnd }, ...(excludeId ? { id: { not: excludeId } } : {}) },
+    select: { startTime: true, endTime: true },
+  });
+  return (
+    sameDay.find((s) => {
+      const a = minutesOfDay(s.startTime);
+      const b = minutesOfDay(s.endTime);
+      return a !== null && b !== null && a < end && start < b;
+    }) ?? null
+  );
+}
+
+const overlapMessage = (s: { startTime: string; endTime: string }) =>
+  `This overlaps the ${s.startTime} – ${s.endTime} slot on the same day. Edit or remove that slot first.`;
 
 // ---------------------------------------------------------------------------
 // Calendar Slot Server Actions
@@ -58,8 +107,19 @@ export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
       return { success: false, error: "TENANT_NOT_FOUND", message: "Studio tenant not found." };
     }
 
+    const times = checkSlotTimes(startTime, endTime);
+    if (!times.ok) return { success: false, error: times.error, message: times.message };
+
     // Standardize date to UTC midnight
     const slotDate = new Date(`${date}T00:00:00.000Z`);
+    if (isNaN(slotDate.getTime())) {
+      return { success: false, error: "INVALID_DATE", message: "Choose a valid date." };
+    }
+    if (isSlotInPast({ date: slotDate, startTime })) {
+      return { success: false, error: "SLOT_IN_PAST", message: "That date and time has already passed." };
+    }
+    const clash = await findOverlap(tenantId, slotDate, times.start!, times.end!);
+    if (clash) return { success: false, error: "SLOT_OVERLAP", message: overlapMessage(clash) };
 
     const slot = await db.bookingSlot.create({
       data: {
@@ -83,7 +143,7 @@ export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
     return {
       success: false,
       error: "CREATE_SLOT_FAILED",
-      message: error.message || "Failed to create booking slot.",
+      message: actionErrorMessage(error, "Failed to create booking slot."),
     };
   }
 }
@@ -112,9 +172,29 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
       };
     }
 
+    if (!slotDepositWithinFee(updateData.price ?? existing.price, updateData.depositRequired ?? existing.depositRequired)) {
+      return { success: false, error: "DEPOSIT_EXCEEDS_FEE", message: SLOT_DEPOSIT_ERROR };
+    }
+
     const payload: any = { ...updateData };
     if (updateData.date) {
       payload.date = new Date(`${updateData.date}T00:00:00.000Z`);
+    }
+
+    // Moving or resizing a slot gets the same checks as creating one.
+    if (updateData.date || updateData.startTime || updateData.endTime) {
+      const date: Date = payload.date ?? existing.date;
+      const startTime = updateData.startTime ?? existing.startTime;
+      const endTime = updateData.endTime ?? existing.endTime;
+      const times = checkSlotTimes(startTime, endTime);
+      if (!times.ok) return { success: false, error: times.error, message: times.message };
+      if (isNaN(date.getTime())) return { success: false, error: "INVALID_DATE", message: "Choose a valid date." };
+      const moved = date.getTime() !== existing.date.getTime() || startTime !== existing.startTime;
+      if (moved && isSlotInPast({ date, startTime })) {
+        return { success: false, error: "SLOT_IN_PAST", message: "That date and time has already passed." };
+      }
+      const clash = await findOverlap(tenantId, date, times.start!, times.end!, id);
+      if (clash) return { success: false, error: "SLOT_OVERLAP", message: overlapMessage(clash) };
     }
 
     const updated = await db.bookingSlot.update({
@@ -130,7 +210,7 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
     return {
       success: false,
       error: "UPDATE_SLOT_FAILED",
-      message: error.message || "Failed to update booking slot.",
+      message: actionErrorMessage(error, "Failed to update booking slot."),
     };
   }
 }
@@ -170,7 +250,7 @@ export async function deleteBookingSlot(input: DeleteBookingSlotInput) {
     return {
       success: false,
       error: "DELETE_SLOT_FAILED",
-      message: error.message || "Failed to delete booking slot.",
+      message: actionErrorMessage(error, "Failed to delete booking slot."),
     };
   }
 }
@@ -217,7 +297,7 @@ export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
     return {
       success: false,
       error: "BATCH_DELETE_FAILED",
-      message: error.message || "Failed to batch delete slots.",
+      message: actionErrorMessage(error, "Failed to batch delete slots."),
     };
   }
 }
@@ -240,7 +320,6 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
       campaignTitle,
       price,
       depositRequired,
-      skipConflicts,
     } = validated;
 
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
@@ -278,24 +357,19 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
       };
     }
 
-    // Pre-query existing slots for conflict checking if skipConflicts is on
-    let existingSlotKeys = new Set<string>();
-    if (skipConflicts) {
-      const existing = await db.bookingSlot.findMany({
-        where: {
-          tenantId,
-          date: { gte: start, lte: end },
-        },
-        select: {
-          date: true,
-          startTime: true,
-        },
-      });
-
-      for (const s of existing) {
-        const dateStr = s.date.toISOString().split("T")[0];
-        existingSlotKeys.add(`${dateStr}_${s.startTime}`);
-      }
+    // Existing slots per day, so new ones never overlap them (or each other).
+    const taken = new Map<string, Array<[number, number]>>();
+    const existing = await db.bookingSlot.findMany({
+      // `lt` the day after `end`, so slots saved with a time of day on the last date count too.
+      where: { tenantId, date: { gte: start, lt: new Date(end.getTime() + 86_400_000) } },
+      select: { date: true, startTime: true, endTime: true },
+    });
+    for (const s of existing) {
+      const a = minutesOfDay(s.startTime);
+      const b = minutesOfDay(s.endTime);
+      if (a === null || b === null) continue;
+      const key = slotDateKey(s.date);
+      taken.set(key, [...(taken.get(key) ?? []), [a, b]]);
     }
 
     const slotsToCreate: Array<{
@@ -316,16 +390,17 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
     while (current <= end) {
       const dayOfWeek = current.getUTCDay(); // 0 = Sun, 6 = Sat
       if (daysOfWeek.includes(dayOfWeek)) {
-        const dateStr = current.toISOString().split("T")[0];
+        const dateStr = current.toISOString().slice(0, 10);
         let curMin = dayStartMin;
 
         while (curMin + slotDurationMinutes <= dayEndMin) {
           const slotEndMin = curMin + slotDurationMinutes;
           const formattedStart = formatMinutesToTime(curMin);
           const formattedEnd = formatMinutesToTime(slotEndMin);
-          const key = `${dateStr}_${formattedStart}`;
+          const dayTaken = taken.get(dateStr) ?? [];
+          const overlaps = dayTaken.some(([a, b]) => a < slotEndMin && curMin < b);
 
-          if (skipConflicts && existingSlotKeys.has(key)) {
+          if (overlaps || isSlotInPast({ date: current, startTime: formattedStart })) {
             skippedCount++;
           } else {
             slotsToCreate.push({
@@ -339,7 +414,7 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
               depositRequired,
               status: "AVAILABLE",
             });
-            existingSlotKeys.add(key); // prevent duplicate in same batch
+            taken.set(dateStr, [...dayTaken, [curMin, slotEndMin]]); // and none overlap within the batch
           }
 
           curMin = slotEndMin + bufferMinutes;
@@ -355,7 +430,7 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
         success: true,
         createdCount: 0,
         skippedCount,
-        message: "No new slots generated (all potential slots conflicted with existing inventory).",
+        message: "No new slots generated: every time overlapped an existing slot or had already passed.",
       };
     }
 
@@ -370,13 +445,13 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
       success: true,
       createdCount: createResult.count,
       skippedCount,
-      message: `Successfully generated ${createResult.count} slots across selected date window (${skippedCount} conflicts skipped).`,
+      message: `Generated ${createResult.count} slots (${skippedCount} skipped: overlapping an existing slot or already past).`,
     };
   } catch (error: any) {
     return {
       success: false,
       error: "BATCH_GENERATE_FAILED",
-      message: error.message || "Failed to batch generate booking slots.",
+      message: actionErrorMessage(error, "Failed to batch generate booking slots."),
     };
   }
 }
@@ -417,7 +492,7 @@ export async function forceReleaseHeldSlot(input: ForceReleaseSlotInput) {
     return {
       success: false,
       error: "FORCE_RELEASE_FAILED",
-      message: error.message || "Failed to force release slot.",
+      message: actionErrorMessage(error, "Failed to force release slot."),
     };
   }
 }
@@ -459,7 +534,7 @@ export async function toggleBlockBookingSlot(input: ToggleBlockSlotInput) {
     return {
       success: false,
       error: "TOGGLE_BLOCK_FAILED",
-      message: error.message || "Failed to toggle block status.",
+      message: actionErrorMessage(error, "Failed to toggle block status."),
     };
   }
 }

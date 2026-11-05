@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { AdminVerificationConsole } from "@/components/checkout/admin-verification-console";
 import { Metadata } from "next";
+import { getCurrentUser } from "@/lib/auth/session";
 
 interface VerificationPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -87,9 +88,12 @@ export default async function AdminVerificationPage({ params }: VerificationPage
     take: 20,
   });
 
+  const user = await getCurrentUser();
+
   return (
     <AdminVerificationConsole
       tenant={tenant}
+      verifierName={user?.name ?? "Studio staff"}
       pendingInvoices={enrichedPending}
       historyInvoices={historyInvoices}
     />
