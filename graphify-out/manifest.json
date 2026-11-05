@@ -318,9 +318,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/page.tsx": {
-    "mtime": 1793804185.869302,
-    "seen": 1793804348.659682,
-    "ast_hash": "28fdc5163f47de0a72765d25ced0fc1e",
+    "mtime": 1793859613.3788145,
+    "seen": 1793859928.2888517,
+    "ast_hash": "4383a979c6c7e1f20bcb06b2d75f1a29",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/proposals/[proposalId]/loading.tsx": {
@@ -570,21 +570,21 @@
     "semantic_hash": ""
   },
   "components/auth/studio-login-form.tsx": {
-    "mtime": 1793707521.358012,
-    "seen": 1793793414.072278,
-    "ast_hash": "8437c6518355c1229d2eab553886aa7e",
+    "mtime": 1793859639.120086,
+    "seen": 1793859928.288957,
+    "ast_hash": "9b8b9b4164f3559e01955aef9c07cff8",
     "semantic_hash": ""
   },
   "components/booking/booking-intake-modal.tsx": {
-    "mtime": 1793857715.8999777,
-    "seen": 1793858314.494445,
-    "ast_hash": "c364814d3a2b6e80bd3b3287201a9b59",
+    "mtime": 1793859719.6021273,
+    "seen": 1793859928.288959,
+    "ast_hash": "68c6d8d91c9bff31749005b2a0e71af4",
     "semantic_hash": ""
   },
   "components/booking/cinema-booking-shell.tsx": {
-    "mtime": 1793858228.8417706,
-    "seen": 1793858314.4944465,
-    "ast_hash": "f09b283eb7e735cd7be69ecb283dec3d",
+    "mtime": 1793859719.6023872,
+    "seen": 1793859928.2889607,
+    "ast_hash": "f9c76e2af1f076aaa838a1bde73d46e6",
     "semantic_hash": ""
   },
   "components/booking/cinema-slot-grid.tsx": {
@@ -816,9 +816,9 @@
     "semantic_hash": ""
   },
   "components/showcase/package-grid.tsx": {
-    "mtime": 1793180138.120341,
-    "seen": 1793793414.0723357,
-    "ast_hash": "3ec9ae07af872f03a11d7b93799717a0",
+    "mtime": 1793859613.3797183,
+    "seen": 1793859928.2890441,
+    "ast_hash": "1e4b97df45f05fe94d4c27eefdb021b3",
     "semantic_hash": ""
   },
   "components/showcase/portfolio-grid.tsx": {
@@ -828,27 +828,27 @@
     "semantic_hash": ""
   },
   "components/showcase/showcase-footer.tsx": {
-    "mtime": 1793858290.535129,
-    "seen": 1793858314.4945338,
-    "ast_hash": "f7cf7033d42d246e9d32607e30582050",
+    "mtime": 1793859613.3798475,
+    "seen": 1793859928.2890475,
+    "ast_hash": "3fbca460d55378a8088041b755735aa3",
     "semantic_hash": ""
   },
   "components/showcase/showcase-hero.tsx": {
-    "mtime": 1793180068.3414397,
-    "seen": 1793793414.0723398,
-    "ast_hash": "2d4f7b3bc016c3625b02bc238bace0f9",
+    "mtime": 1793859619.5991912,
+    "seen": 1793859928.2890491,
+    "ast_hash": "0808afb1b8e50cd9b21f5b56ffbdcc1f",
     "semantic_hash": ""
   },
   "components/showcase/showcase-nav.tsx": {
-    "mtime": 1793858228.842197,
-    "seen": 1793858314.4945374,
-    "ast_hash": "5fca13c44253002ab68575e0bc3dc858",
+    "mtime": 1793858693.2051613,
+    "seen": 1793859928.2890508,
+    "ast_hash": "4f0a3f21ccc9ae49b2d82af491d28a73",
     "semantic_hash": ""
   },
   "components/showcase/showcase-shell.tsx": {
-    "mtime": 1793180180.8382804,
-    "seen": 1793793414.0723426,
-    "ast_hash": "ddf97a59dffdba0b39706d6361c8184c",
+    "mtime": 1793859719.6019332,
+    "seen": 1793859928.2890527,
+    "ast_hash": "55ae91ba5f0aa96c2d802a428251e87e",
     "semantic_hash": ""
   },
   "components/showcase/studio-pedigree.tsx": {
@@ -858,9 +858,9 @@
     "semantic_hash": ""
   },
   "components/showcase/video-reel-modal.tsx": {
-    "mtime": 1793180099.213396,
-    "seen": 1793793414.0723453,
-    "ast_hash": "aae67c7af0f8af59b6015a57cd0122ac",
+    "mtime": 1793859613.3795922,
+    "seen": 1793859928.2890563,
+    "ast_hash": "7c0ec94fa5efd5075ef00732ff144369",
     "semantic_hash": ""
   },
   "components/super-admin/super-admin-view.tsx": {
@@ -1518,21 +1518,21 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/my-booking/page.tsx": {
-    "mtime": 1793706459.8731797,
-    "seen": 1793793414.0722098,
-    "ast_hash": "e36d30a72d17b3bdd93fee6619ae5a8c",
+    "mtime": 1793859701.690498,
+    "seen": 1793859928.2888489,
+    "ast_hash": "5576b36dc3d8c6d0ad943053859ed34e",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/register/page.tsx": {
-    "mtime": 1793707484.8385973,
-    "seen": 1793793414.0722153,
-    "ast_hash": "c1243c40aaba4ece9450c32e595063a4",
+    "mtime": 1793859856.2961407,
+    "seen": 1793859928.288857,
+    "ast_hash": "5423fb4c6988bbfd13fb14984c1a990f",
     "semantic_hash": ""
   },
   "components/account/client-dashboard.tsx": {
-    "mtime": 1793802148.1618674,
-    "seen": 1793802426.3328125,
-    "ast_hash": "3b7eee8f0781388a80dfb5f34b45b6eb",
+    "mtime": 1793859682.1294937,
+    "seen": 1793859928.288896,
+    "ast_hash": "2d9fed7c45ddc7e433092fd36b6c4fb5",
     "semantic_hash": ""
   },
   "components/account/logout-button.tsx": {
@@ -1548,15 +1548,15 @@
     "semantic_hash": ""
   },
   "components/auth/client-register-card.tsx": {
-    "mtime": 1793707484.8355973,
-    "seen": 1793793414.0722768,
-    "ast_hash": "85b3684607ae8c8516e7b6602ef962a3",
+    "mtime": 1793859654.6662662,
+    "seen": 1793859928.2889519,
+    "ast_hash": "5fd2b9fc7eafc741bfea225bd3769602",
     "semantic_hash": ""
   },
   "components/booking/my-booking-lookup.tsx": {
-    "mtime": 1793706459.8751798,
-    "seen": 1793793414.0722847,
-    "ast_hash": "599d563fb92c18a8c3b131a6085111bd",
+    "mtime": 1793859678.1442988,
+    "seen": 1793859928.2889662,
+    "ast_hash": "b5bfb1e88b72e3d96d93751ed53a8b20",
     "semantic_hash": ""
   },
   "components/checkout/checkout-auth-gate.tsx": {
@@ -2664,9 +2664,9 @@
     "semantic_hash": ""
   },
   "components/booking/package-picker.tsx": {
-    "mtime": 1793857650.3683026,
-    "seen": 1793858314.4944544,
-    "ast_hash": "177f33312aa05a840702fb90cdf26e3b",
+    "mtime": 1793859678.1418056,
+    "seen": 1793859928.2889688,
+    "ast_hash": "af9faf35c4e76ac9cc1cbccb7f300606",
     "semantic_hash": ""
   },
   "lib/bookings/billing.ts": {
@@ -2748,9 +2748,21 @@
     "semantic_hash": ""
   },
   "components/account/client-account-menu.tsx": {
-    "mtime": 1793858228.8424325,
-    "seen": 1793858314.4943836,
-    "ast_hash": "9f80c3673b5e3a473bdef8934b1f13b6",
+    "mtime": 1793858681.053741,
+    "seen": 1793859928.288894,
+    "ast_hash": "a4b993a79df13f9c758c5d2f329dc470",
+    "semantic_hash": ""
+  },
+  "components/auth/signed-in-redirect.tsx": {
+    "mtime": 1793859856.282471,
+    "seen": 1793859928.2889543,
+    "ast_hash": "5c985e12bc8516b67085df893ca6c91c",
+    "semantic_hash": ""
+  },
+  "lib/money.ts": {
+    "mtime": 1793859678.1303163,
+    "seen": 1793859928.2891896,
+    "ast_hash": "7000de890701906f1d797ef1af895719",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {
