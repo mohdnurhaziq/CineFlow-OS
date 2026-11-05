@@ -43,18 +43,18 @@ export default async function ClientInvoicePage({ params }: ClientInvoicePagePro
     status === "REJECTED";
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa] print:bg-white print:min-h-0">
+    <div className="w-full">
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 print:p-0 print:max-w-none">
         <InvoiceDocumentView
           doc={doc}
           actions={
             <>
               <Link
-                href={`/${tenant.slug}/account`}
-                className="mr-auto inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white"
+                href={`/${tenant.slug}/account?tab=invoices`}
+                className="mr-auto inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
               >
                 <ArrowLeft className="size-3.5" />
-                My account
+                Back to Invoices
               </Link>
               {(canPay || needsSlip) && (
                 <Link

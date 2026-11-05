@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarClock,
   CalendarPlus,
@@ -32,7 +33,6 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import type { ClientBooking, BookingSlot, MilestoneInvoice, Proposal } from "@prisma/client";
-import { LogoutButton } from "./logout-button";
 import { formatMoney } from "@/lib/money";
 import { milestoneLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -114,7 +114,30 @@ function humanize(value: string) {
 }
 
 export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects }: ClientDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "bookings" | "invoices" | "proposals">("overview");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryTab = searchParams.get("tab");
+
+  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "bookings" | "invoices" | "proposals">(
+    queryTab === "projects" || queryTab === "bookings" || queryTab === "invoices" || queryTab === "proposals"
+      ? queryTab
+      : "overview"
+  );
+
+  useEffect(() => {
+    if (queryTab === "projects" || queryTab === "bookings" || queryTab === "invoices" || queryTab === "proposals") {
+      setActiveTab(queryTab);
+    } else if (!queryTab) {
+      setActiveTab("overview");
+    }
+  }, [queryTab]);
+
+  const switchTab = (tab: "overview" | "projects" | "bookings" | "invoices" | "proposals") => {
+    setActiveTab(tab);
+    const url = tab === "overview" ? `/${tenant.slug}/account` : `/${tenant.slug}/account?tab=${tab}`;
+    router.push(url, { scroll: false });
+  };
+
   const [bookingFilter, setBookingFilter] = useState<"all" | "upcoming" | "past">("all");
   const [invoiceFilter, setInvoiceFilter] = useState<"unpaid" | "paid" | "all">("all");
   const [showVoidInvoices, setShowVoidInvoices] = useState(false);
@@ -219,58 +242,23 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   }, [invoiceFilter, unpaidInvoices, paidInvoices, invoices, showVoidInvoices]);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
-      {/* Top Header */}
-      <header className="border-b border-zinc-800 bg-[#121215]/95 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/${tenant.slug}`}
-              className="size-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 hover:bg-amber-500/20 transition-colors"
-              title="Return to Studio Showcase"
-            >
-              <Camera className="size-4.5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/${tenant.slug}`}
-                  className="text-[11px] font-mono uppercase tracking-widest text-amber-400 hover:underline"
-                >
-                  {tenant.name}
-                </Link>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
-                  Client Hub
-                </span>
-              </div>
-              <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
-                <span>Welcome back, {client.name.split(" ")[0]}</span>
-              </h1>
-            </div>
+    <div className="w-full">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {/* Client Welcome Heading */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-800/60">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              <span>Welcome back, {client.name.split(" ")[0]}</span>
+            </h1>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Track shoot milestones, review call sheets, access deliverables in your vault, and manage invoices.
+            </p>
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <Link
-              href={`/${tenant.slug}/book`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono tracking-wide transition-all shadow-sm shadow-amber-500/10"
-            >
-              <CalendarPlus className="size-3.5" />
-              <span>Book Session</span>
-            </Link>
-            <Link
-              href={`/${tenant.slug}`}
-              className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-mono transition-colors"
-            >
-              <span>Showcase</span>
-              <ArrowUpRight className="size-3 text-zinc-500" />
-            </Link>
-            <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
-            <LogoutButton redirectTo={`/${tenant.slug}`} />
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs font-mono text-zinc-400">
+            <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-zinc-300">Client Portal Active</span>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* Priority 1: High-Visibility Action Notification Banner */}
         {outstanding > 0 && unpaidInvoices[0] ? (
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-amber-500/5 animate-in fade-in-0 duration-300">
@@ -350,7 +338,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           {/* Card 1: Upcoming Sessions */}
           <button
             type="button"
-            onClick={() => setActiveTab("bookings")}
+            onClick={() => switchTab("bookings")}
             className="p-4 rounded-xl bg-[#121215] border border-zinc-800/80 hover:border-zinc-700 transition-all text-left group"
           >
             <div className="flex items-center justify-between text-zinc-400">
@@ -372,7 +360,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           {/* Card 2: Account Balance */}
           <button
             type="button"
-            onClick={() => setActiveTab("invoices")}
+            onClick={() => switchTab("invoices")}
             className="p-4 rounded-xl bg-[#121215] border border-zinc-800/80 hover:border-zinc-700 transition-all text-left group"
           >
             <div className="flex items-center justify-between text-zinc-400">
@@ -397,7 +385,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           {/* Card 3: Photos & Videos */}
           <button
             type="button"
-            onClick={() => setActiveTab("projects")}
+            onClick={() => switchTab("projects")}
             className="p-4 rounded-xl bg-[#121215] border border-zinc-800/80 hover:border-zinc-700 transition-all text-left group"
           >
             <div className="flex items-center justify-between text-zinc-400">
@@ -434,7 +422,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => switchTab(tab.id)}
                 className={cn(
                   "flex items-center gap-2 px-3.5 py-2.5 text-xs font-mono transition-colors border-b-2 whitespace-nowrap",
                   isActive
@@ -469,7 +457,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   {projects.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => setActiveTab("projects")}
+                      onClick={() => switchTab("projects")}
                       className="text-xs font-mono text-amber-400 hover:underline flex items-center gap-0.5"
                     >
                       View all {projects.length} shoots <ChevronRight className="size-3" />
@@ -558,7 +546,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     </div>
                     <button
                       type="button"
-                      onClick={() => setActiveTab("bookings")}
+                      onClick={() => switchTab("bookings")}
                       className="text-[11px] font-mono text-amber-400 hover:underline flex items-center gap-0.5"
                     >
                       All ({bookings.length}) <ChevronRight className="size-3" />
@@ -616,7 +604,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab("bookings")}
+                  onClick={() => switchTab("bookings")}
                   className="w-full text-center py-2 text-xs font-mono text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/60 rounded-xl border border-zinc-800 transition-colors flex items-center justify-center gap-1"
                 >
                   <span>Manage all {bookings.length} bookings</span>
@@ -636,7 +624,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     </div>
                     <button
                       type="button"
-                      onClick={() => setActiveTab("invoices")}
+                      onClick={() => switchTab("invoices")}
                       className="text-[11px] font-mono text-amber-400 hover:underline flex items-center gap-0.5"
                     >
                       All ({invoices.length}) <ChevronRight className="size-3" />
@@ -701,7 +689,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab("invoices")}
+                  onClick={() => switchTab("invoices")}
                   className="w-full text-center py-2 text-xs font-mono text-zinc-400 hover:text-white bg-zinc-900/50 hover:bg-zinc-800/60 rounded-xl border border-zinc-800 transition-colors flex items-center justify-center gap-1"
                 >
                   <span>View all {invoices.length} invoices & receipts</span>
