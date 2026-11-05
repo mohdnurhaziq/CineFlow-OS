@@ -1,21 +1,55 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CalendarClock,
   CalendarPlus,
   Camera,
   Check,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  ExternalLink,
+  Eye,
   FileText,
   FolderLock,
+  Heart,
+  HelpCircle,
+  Image as ImageIcon,
+  Layers,
+  LayoutDashboard,
   Lock,
   LockOpen,
+  MapPin,
   Receipt,
+  Sparkles,
+  User,
+  Video,
   Wallet,
+  AlertCircle,
+  ArrowUpRight,
 } from "lucide-react";
 import type { ClientBooking, BookingSlot, MilestoneInvoice, Proposal } from "@prisma/client";
 import { LogoutButton } from "./logout-button";
 import { formatMoney } from "@/lib/money";
+import { milestoneLabel } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 
-type BookingRow = ClientBooking & { slot: BookingSlot | null };
+type BookingRow = ClientBooking & {
+  slot: BookingSlot | null;
+  project?: { id: string; title: string; projectNumber: string; status: string } | null;
+};
+
+interface DeliverableItemRow {
+  id: string;
+  title: string;
+  itemType: string;
+  previewUrl: string;
+  thumbnailUrl: string | null;
+  isClientFav: boolean;
+}
 
 interface ProjectRow {
   id: string;
@@ -23,359 +57,985 @@ interface ProjectRow {
   projectNumber: string;
   status: string;
   isFinalBalancePaid: boolean;
-  deliverables: { status: string; items: { itemType: string; isClientFav: boolean }[] }[];
-  callSheets: { title: string; shootDate: Date; generalCallTime: string; locationName: string }[];
+  booking?: {
+    id: string;
+    trackingCode: string;
+    category: string;
+    sessionPrice: number | null;
+    depositAmount: number;
+    slot: { date: Date; startTime: string; endTime: string } | null;
+  } | null;
+  deliverables: {
+    status: string;
+    items: DeliverableItemRow[];
+  }[];
+  callSheets: {
+    title: string;
+    shootDate: Date;
+    generalCallTime: string;
+    locationName: string;
+    locationAddress?: string | null;
+  }[];
+}
+
+interface InvoiceRow extends MilestoneInvoice {
+  project?: { id: string; title: string; projectNumber?: string } | null;
+  booking?: { id: string; trackingCode: string; category?: string } | null;
 }
 
 interface ClientDashboardProps {
   tenant: { name: string; slug: string; currency: string };
   client: { name: string; email: string; phone: string | null };
   bookings: BookingRow[];
-  invoices: MilestoneInvoice[];
+  invoices: InvoiceRow[];
   proposals: Proposal[];
   projects: ProjectRow[];
 }
 
 const STAGES = [
-  { id: "PRE_PRODUCTION", label: "Planning" },
-  { id: "PRODUCTION", label: "Shooting" },
-  { id: "POST_PRODUCTION", label: "Editing" },
-  { id: "IN_REVIEW", label: "In review" },
-  { id: "DELIVERED", label: "Delivered" },
+  { id: "PRE_PRODUCTION", label: "Planning", icon: CalendarClock },
+  { id: "PRODUCTION", label: "Shoot Day", icon: Camera },
+  { id: "POST_PRODUCTION", label: "Color & Edit", icon: Sparkles },
+  { id: "IN_REVIEW", label: "Client Proofing", icon: Eye },
+  { id: "DELIVERED", label: "Delivered", icon: CheckCircle2 },
 ];
 
-const BOOKING_STATUS_TEXT: Record<string, string> = {
-  CONFIRMED: "Confirmed",
-  PENDING: "Awaiting payment verification",
-  COMPLETED: "Session done",
-  DELIVERED: "Delivered",
-  NO_SHOW: "Missed",
-  CANCELLED: "Cancelled",
-};
-
-const BADGE: Record<string, string> = {
-  CONFIRMED: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-  PAID: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-  DELIVERED: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-  ACCEPTED: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-  PENDING: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-  PENDING_VERIFICATION: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-  SENT: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-  OVERDUE: "bg-rose-500/10 text-rose-300 border-rose-500/20",
-  CANCELLED: "bg-rose-500/10 text-rose-300 border-rose-500/20",
-  DECLINED: "bg-rose-500/10 text-rose-300 border-rose-500/20",
+const BOOKING_STATUS_TEXT: Record<string, { label: string; className: string }> = {
+  CONFIRMED: { label: "Confirmed", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+  PENDING: { label: "Awaiting Verification", className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+  COMPLETED: { label: "Session Done", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+  DELIVERED: { label: "Delivered", className: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+  NO_SHOW: { label: "Missed", className: "bg-zinc-800 text-zinc-400 border-zinc-700" },
+  CANCELLED: { label: "Cancelled", className: "bg-zinc-800 text-zinc-400 border-zinc-700" },
 };
 
 function humanize(value: string) {
   return value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function Badge({ status, label }: { status: string; label?: string }) {
-  const style = BADGE[status] ?? "bg-zinc-800 text-zinc-300 border-zinc-700";
-  return (
-    <span className={`px-2 py-0.5 rounded-md border text-[10px] font-mono uppercase tracking-wide ${style}`}>
-      {label ?? humanize(status)}
-    </span>
-  );
-}
-
-function Section({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="p-5 rounded-2xl bg-[#121215] border border-zinc-800 space-y-3">
-      <h2 className="text-sm font-bold text-white flex items-center gap-2">
-        <Icon className="size-4 text-amber-400" /> {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
 export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects }: ClientDashboardProps) {
-  const money = (amount: number) => formatMoney(tenant.currency, amount);
-  const date = (d: Date) =>
-    d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const [activeTab, setActiveTab] = useState<"all" | "projects" | "bookings" | "invoices" | "proposals">("all");
+  const [bookingFilter, setBookingFilter] = useState<"all" | "upcoming" | "past">("all");
+  const [invoiceFilter, setInvoiceFilter] = useState<"unpaid" | "paid" | "all">("all");
+  const [showVoidInvoices, setShowVoidInvoices] = useState(false);
 
-  const outstanding = invoices
-    .filter((i) => i.status === "PENDING" || i.status === "OVERDUE")
-    .reduce((sum, i) => sum + i.amount, 0);
-  const upcoming = bookings.filter((b) => b.status !== "CANCELLED" && b.slot && b.slot.date >= new Date(Date.now() - 86400000));
-  const readyMedia = projects.reduce(
-    (sum, p) => sum + p.deliverables.reduce((s, d) => s + d.items.length, 0),
-    0
+  const money = (amount: number) => formatMoney(tenant.currency, amount);
+  const formatDate = (d: Date | string) => {
+    const dateObj = typeof d === "string" ? new Date(d) : d;
+    return dateObj.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const formatShortDate = (d: Date | string) => {
+    const dateObj = typeof d === "string" ? new Date(d) : d;
+    return {
+      month: dateObj.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
+      day: dateObj.getDate(),
+      weekday: dateObj.toLocaleDateString("en-US", { weekday: "short" }),
+    };
+  };
+
+  // Financial calculations
+  const unpaidInvoices = useMemo(
+    () => invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE"),
+    [invoices]
   );
+  const paidInvoices = useMemo(() => invoices.filter((i) => i.status === "PAID"), [invoices]);
+  const voidInvoices = useMemo(
+    () => invoices.filter((i) => i.status === "VOID" || i.status === "CANCELLED" || i.status === "REJECTED"),
+    [invoices]
+  );
+  const outstanding = useMemo(() => unpaidInvoices.reduce((sum, i) => sum + i.amount, 0), [unpaidInvoices]);
+
+  // Bookings filtering
+  const nowTime = Date.now() - 86400000;
+  const upcomingBookings = useMemo(
+    () => bookings.filter((b) => b.status !== "CANCELLED" && b.slot && new Date(b.slot.date).getTime() >= nowTime),
+    [bookings, nowTime]
+  );
+  const pastBookings = useMemo(
+    () => bookings.filter((b) => b.status === "CANCELLED" || (b.slot && new Date(b.slot.date).getTime() < nowTime)),
+    [bookings, nowTime]
+  );
+
+  const visibleBookings = useMemo(() => {
+    if (bookingFilter === "upcoming") return upcomingBookings;
+    if (bookingFilter === "past") return pastBookings;
+    return bookings;
+  }, [bookingFilter, bookings, upcomingBookings, pastBookings]);
+
+  // Next shoot determination
+  const nextShoot = useMemo(() => {
+    const allCallSheets = projects
+      .flatMap((p) => p.callSheets.map((cs) => ({ ...cs, projectId: p.id, projectTitle: p.title })))
+      .sort((a, b) => new Date(a.shootDate).getTime() - new Date(b.shootDate).getTime());
+    return allCallSheets[0] || null;
+  }, [projects]);
+
+  const shootDaysRemaining = useMemo(() => {
+    if (!nextShoot) return null;
+    const diff = Math.ceil((new Date(nextShoot.shootDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return diff;
+  }, [nextShoot]);
+
+  // Media calculations
+  const totalDeliverablesCount = useMemo(
+    () => projects.reduce((sum, p) => sum + p.deliverables.reduce((s, d) => s + d.items.length, 0), 0),
+    [projects]
+  );
+
+  // Invoices to show based on filter
+  const visibleInvoices = useMemo(() => {
+    let list: InvoiceRow[] = [];
+    if (invoiceFilter === "unpaid") {
+      list = unpaidInvoices;
+    } else if (invoiceFilter === "paid") {
+      list = paidInvoices;
+    } else {
+      list = showVoidInvoices ? invoices : invoices.filter((i) => i.status !== "VOID" && i.status !== "CANCELLED");
+    }
+    return list;
+  }, [invoiceFilter, unpaidInvoices, paidInvoices, invoices, showVoidInvoices]);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
-      <header className="border-b border-zinc-800 bg-[#121215]/95">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Link href={`/${tenant.slug}`} className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
-              {tenant.name}
+      {/* Top Header */}
+      <header className="border-b border-zinc-800 bg-[#121215]/95 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/${tenant.slug}`}
+              className="size-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 hover:bg-amber-500/20 transition-colors"
+              title="Return to Studio Showcase"
+            >
+              <Camera className="size-4.5" />
             </Link>
-            <h1 className="text-lg font-black tracking-tight text-white">Hi, {client.name.split(" ")[0]}</h1>
+            <div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/${tenant.slug}`}
+                  className="text-[11px] font-mono uppercase tracking-widest text-amber-400 hover:underline"
+                >
+                  {tenant.name}
+                </Link>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
+                  Client Hub
+                </span>
+              </div>
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+                <span>Welcome back, {client.name.split(" ")[0]}</span>
+              </h1>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2.5">
             <Link
               href={`/${tenant.slug}/book`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono tracking-wide transition-all shadow-sm shadow-amber-500/10"
             >
-              <CalendarPlus className="size-3.5" /> Book a session
+              <CalendarPlus className="size-3.5" />
+              <span>Book Session</span>
             </Link>
+            <Link
+              href={`/${tenant.slug}`}
+              className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-mono transition-colors"
+            >
+              <span>Showcase</span>
+              <ArrowUpRight className="size-3 text-zinc-500" />
+            </Link>
+            <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
             <LogoutButton redirectTo={`/${tenant.slug}`} />
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-5">
-        {/* Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { icon: CalendarClock, label: "Upcoming sessions", value: String(upcoming.length) },
-            { icon: Wallet, label: "Outstanding balance", value: money(outstanding) },
-            { icon: Camera, label: "Photos & videos", value: String(readyMedia) },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="p-4 rounded-2xl bg-[#121215] border border-zinc-800">
-              <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wide text-zinc-500">
-                <Icon className="size-3.5 text-amber-400" /> {label}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {/* Priority 1: High-Visibility Action Notification Banner */}
+        {outstanding > 0 && unpaidInvoices[0] ? (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-amber-500/5 animate-in fade-in-0 duration-300">
+            <div className="flex items-start gap-3.5">
+              <div className="size-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0 mt-0.5">
+                <CreditCard className="size-4.5" />
               </div>
-              <div className="mt-1 text-xl font-black text-white tabular-nums">{value}</div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-white text-sm">
+                    Outstanding Balance: {money(outstanding)}
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold uppercase">
+                    Action Required
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-300 max-w-xl">
+                  {unpaidInvoices[0].project?.title
+                    ? `Balance for ${unpaidInvoices[0].project.title} (${milestoneLabel(unpaidInvoices[0].milestoneType)}). Clearing this unlocks full-resolution downloads when your deliverables are ready.`
+                    : `You have ${unpaidInvoices.length} pending ${unpaidInvoices.length === 1 ? "invoice" : "invoices"} due. Settle now via online gateway or QR transfer.`}
+                </p>
+              </div>
             </div>
-          ))}
+            <Link
+              href={`/${tenant.slug}/checkout?invoiceId=${unpaidInvoices[0].id}`}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs font-mono tracking-wider transition-all shadow-md shadow-amber-500/20 whitespace-nowrap self-start sm:self-auto"
+            >
+              <span>Pay Now ({money(outstanding)})</span>
+              <ChevronRight className="size-4" />
+            </Link>
+          </div>
+        ) : nextShoot ? (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in-0 duration-300">
+            <div className="flex items-start gap-3.5">
+              <div className="size-9 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 flex-shrink-0 mt-0.5">
+                <CalendarClock className="size-4.5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-white text-sm">
+                    Next Shoot: {nextShoot.projectTitle}
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold">
+                    {shootDaysRemaining === 0
+                      ? "Today!"
+                      : shootDaysRemaining === 1
+                      ? "Tomorrow"
+                      : shootDaysRemaining !== null && shootDaysRemaining > 1
+                      ? `In ${shootDaysRemaining} days`
+                      : "Upcoming"}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300 font-mono">
+                  <span>📅 {formatDate(nextShoot.shootDate)}</span>
+                  <span>⏰ Call time {nextShoot.generalCallTime}</span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="size-3 text-zinc-400" />
+                    {nextShoot.locationName}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {nextShoot.projectId && (
+              <Link
+                href={`/${tenant.slug}/vault/${nextShoot.projectId}`}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono transition-colors whitespace-nowrap self-start sm:self-auto"
+              >
+                <span>View Vault</span>
+                <ChevronRight className="size-3 text-zinc-400" />
+              </Link>
+            )}
+          </div>
+        ) : null}
+
+        {/* Top 3 Quick Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Card 1: Upcoming Sessions */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("bookings")}
+            className="p-4 rounded-xl bg-[#121215] border border-zinc-800/80 hover:border-zinc-700 transition-all text-left group"
+          >
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[11px] font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">
+                Upcoming Sessions
+              </span>
+              <CalendarClock className="size-4 text-amber-400" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-white tabular-nums">
+              {upcomingBookings.length}
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">
+              {upcomingBookings.length > 0
+                ? `${upcomingBookings.length} active shoot${upcomingBookings.length === 1 ? "" : "s"} scheduled`
+                : "No upcoming shoots"}
+            </p>
+          </button>
+
+          {/* Card 2: Account Balance */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("invoices")}
+            className="p-4 rounded-xl bg-[#121215] border border-zinc-800/80 hover:border-zinc-700 transition-all text-left group"
+          >
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[11px] font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">
+                Balance Due
+              </span>
+              <Wallet className="size-4 text-amber-400" />
+            </div>
+            <div
+              className={cn(
+                "mt-2 text-2xl font-black tabular-nums",
+                outstanding > 0 ? "text-amber-400" : "text-emerald-400"
+              )}
+            >
+              {money(outstanding)}
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">
+              {outstanding > 0 ? `${unpaidInvoices.length} invoice awaiting payment` : "All invoices settled & clear"}
+            </p>
+          </button>
+
+          {/* Card 3: Photos & Videos */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("projects")}
+            className="p-4 rounded-xl bg-[#121215] border border-zinc-800/80 hover:border-zinc-700 transition-all text-left group"
+          >
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-[11px] font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">
+                Gallery Deliverables
+              </span>
+              <Camera className="size-4 text-amber-400" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-white tabular-nums">
+              {totalDeliverablesCount}
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-1">
+              {totalDeliverablesCount > 0
+                ? `${totalDeliverablesCount} photos & videos in vault`
+                : "Delivered after shoot day"}
+            </p>
+          </button>
         </div>
 
-        {/* Projects: photo / service status */}
-        <Section icon={Camera} title="Your projects">
-          {projects.length === 0 ? (
-            <p className="text-xs text-zinc-500">
-              Once your session is confirmed and the studio starts your project, its progress and your
-              photos will appear here.
-            </p>
-          ) : (
-            <ul className="space-y-4">
-              {projects.map((p) => {
-                const stageIndex = Math.max(0, STAGES.findIndex((s) => s.id === p.status));
-                const items = p.deliverables.flatMap((d) => d.items);
-                const photos = items.filter((i) => i.itemType === "PHOTO").length;
-                const videos = items.filter((i) => i.itemType === "VIDEO").length;
-                const favs = items.filter((i) => i.isClientFav).length;
-                const next = p.callSheets[0];
-                return (
-                  <li key={p.id} className="p-4 rounded-xl bg-[#16161b] border border-zinc-800 space-y-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <div className="text-sm font-semibold text-white">{p.title}</div>
-                        <div className="text-[11px] font-mono text-zinc-500">{p.projectNumber}</div>
-                      </div>
-                      <Badge status={p.status} />
-                    </div>
+        {/* Section Navigation Tabs */}
+        <div className="border-b border-zinc-800 flex items-center gap-1 overflow-x-auto scrollbar-none pb-px">
+          {[
+            { id: "all", label: "All Overview", icon: LayoutDashboard },
+            { id: "projects", label: `Shoots & Vault (${projects.length})`, icon: FolderLock },
+            { id: "bookings", label: `Bookings (${bookings.length})`, icon: CalendarClock },
+            { id: "invoices", label: `Invoices & Receipts (${invoices.length})`, icon: Receipt },
+            ...(proposals.length > 0
+              ? [{ id: "proposals" as const, label: `Proposals (${proposals.length})`, icon: FileText }]
+              : []),
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 py-2.5 text-xs font-mono transition-colors border-b-2 whitespace-nowrap",
+                  isActive
+                    ? "border-amber-400 text-amber-400 font-bold"
+                    : "border-transparent text-zinc-400 hover:text-white hover:border-zinc-700"
+                )}
+              >
+                <Icon className="size-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-                    <ol className="grid grid-cols-5 gap-1" aria-label="Project progress">
-                      {STAGES.map((s, i) => (
-                        <li key={s.id} className="space-y-1">
-                          <div className={`h-1.5 rounded-full ${i <= stageIndex ? "bg-amber-500" : "bg-zinc-800"}`} />
-                          <div
-                            className={`text-[10px] font-mono flex items-center gap-1 ${
-                              i <= stageIndex ? "text-zinc-200" : "text-zinc-600"
-                            }`}
-                          >
-                            {i < stageIndex && <Check className="size-2.5 text-amber-400" />}
-                            {s.label}
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
+        {/* TAB 1: ALL / PROJECTS SECTION */}
+        {(activeTab === "all" || activeTab === "projects") && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <FolderLock className="size-4 text-amber-400" />
+                  Your Production Projects & Vault
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Follow production stages from planning to final retouch selects and high-resolution master downloads.
+                </p>
+              </div>
+            </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                      <div className="space-y-1 text-zinc-400">
+            {projects.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-[#121215] border border-zinc-800 text-center space-y-2">
+                <Camera className="size-8 text-zinc-600 mx-auto" />
+                <h3 className="text-sm font-bold text-zinc-300">No active projects yet</h3>
+                <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                  When you book a production session (like a Wedding, Commercial, or Brand film), your project cockpit and deliverables vault activate here.
+                </p>
+                <Link
+                  href={`/${tenant.slug}/book`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-black text-xs font-bold font-mono mt-2"
+                >
+                  <CalendarPlus className="size-3.5" /> Book a session
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {projects.map((p) => {
+                  const stageIndex = Math.max(0, STAGES.findIndex((s) => s.id === p.status));
+                  const items = p.deliverables.flatMap((d) => d.items);
+                  const photos = items.filter((i) => i.itemType === "PHOTO").length;
+                  const videos = items.filter((i) => i.itemType === "VIDEO").length;
+                  const favs = items.filter((i) => i.isClientFav).length;
+                  const nextShootDay = p.callSheets[0];
+                  const previewThumbnails = items.filter((i) => i.previewUrl || i.thumbnailUrl).slice(0, 4);
+
+                  return (
+                    <div
+                      key={p.id}
+                      className="p-5 rounded-2xl bg-[#121215] border border-zinc-800/90 hover:border-zinc-700/80 transition-all space-y-4 shadow-sm"
+                    >
+                      {/* Project Header */}
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          {items.length > 0
-                            ? `${photos} photo${photos === 1 ? "" : "s"} · ${videos} video${videos === 1 ? "" : "s"} ready to review${
-                                favs ? ` · ${favs} favourite${favs === 1 ? "" : "s"}` : ""
-                              }`
-                            : "No photos or videos uploaded yet"}
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {p.isFinalBalancePaid ? (
-                            <>
-                              <LockOpen className="size-3.5 text-emerald-400" />
-                              <span className="text-emerald-300">High-res masters unlocked</span>
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="size-3.5 text-amber-400" />
-                              <span>Masters unlock once the final balance is paid</span>
-                            </>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-white tracking-tight">{p.title}</h3>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700">
+                              {p.projectNumber}
+                            </span>
+                          </div>
+                          {p.booking && (
+                            <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                              Booking {p.booking.trackingCode} · {humanize(p.booking.category)}
+                            </p>
                           )}
                         </div>
-                        {next && (
-                          <div className="flex items-center gap-1.5 text-zinc-300">
-                            <CalendarClock className="size-3.5 text-amber-400" />
-                            Next shoot: {date(next.shootDate)} · {next.generalCallTime} · {next.locationName}
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide uppercase border",
+                              p.status === "DELIVERED"
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            )}
+                          >
+                            {humanize(p.status)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 5-Stage Interactive Progress Bar */}
+                      <div className="bg-[#18181c] p-4 rounded-xl border border-zinc-800/80 space-y-2.5">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-zinc-400 text-[11px] uppercase tracking-wider">
+                            Production Stage
+                          </span>
+                          <span className="text-amber-400 font-semibold">
+                            Stage {stageIndex + 1} of 5: {STAGES[stageIndex]?.label || "Planning"}
+                          </span>
+                        </div>
+
+                        <ol className="grid grid-cols-5 gap-1.5 sm:gap-2" aria-label="Project stage progress">
+                          {STAGES.map((s, idx) => {
+                            const isCompleted = idx < stageIndex;
+                            const isCurrent = idx === stageIndex;
+                            const isFuture = idx > stageIndex;
+                            const StageIcon = s.icon;
+
+                            return (
+                              <li key={s.id} className="space-y-1.5">
+                                <div
+                                  className={cn(
+                                    "h-1.5 rounded-full transition-all",
+                                    isCompleted
+                                      ? "bg-amber-400"
+                                      : isCurrent
+                                      ? "bg-amber-500 animate-pulse"
+                                      : "bg-zinc-800"
+                                  )}
+                                />
+                                <div
+                                  className={cn(
+                                    "text-[10px] font-mono flex items-center gap-1 truncate",
+                                    isCurrent
+                                      ? "text-amber-300 font-bold"
+                                      : isCompleted
+                                      ? "text-zinc-300"
+                                      : "text-zinc-600"
+                                  )}
+                                >
+                                  {isCompleted ? (
+                                    <Check className="size-2.5 text-amber-400 flex-shrink-0" />
+                                  ) : (
+                                    <StageIcon className="size-2.5 flex-shrink-0" />
+                                  )}
+                                  <span className="truncate">{s.label}</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      </div>
+
+                      {/* Shoot Day Info or Deliverables Grid */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+                        <div className="space-y-2 flex-1">
+                          {/* Deliverables summary */}
+                          {items.length > 0 ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-3 text-xs font-mono text-zinc-300">
+                                <span className="flex items-center gap-1.5">
+                                  <ImageIcon className="size-3.5 text-amber-400" />
+                                  {photos} photo{photos === 1 ? "" : "s"}
+                                </span>
+                                {videos > 0 && (
+                                  <span className="flex items-center gap-1.5">
+                                    <Video className="size-3.5 text-blue-400" />
+                                    {videos} video{videos === 1 ? "" : "s"}
+                                  </span>
+                                )}
+                                {favs > 0 && (
+                                  <span className="flex items-center gap-1 text-rose-400">
+                                    <Heart className="size-3 fill-rose-500" />
+                                    {favs} favorited
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Thumbnail preview row if available */}
+                              {previewThumbnails.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  {previewThumbnails.map((item, i) => (
+                                    <div
+                                      key={item.id}
+                                      className="size-14 rounded-lg bg-zinc-800 border border-zinc-700 overflow-hidden relative group/thumb"
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={item.thumbnailUrl || item.previewUrl}
+                                        alt={item.title}
+                                        className="size-full object-cover group-hover/thumb:scale-110 transition-transform"
+                                      />
+                                    </div>
+                                  ))}
+                                  {items.length > 4 && (
+                                    <div className="size-14 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-[11px] font-mono text-zinc-400">
+                                      +{items.length - 4}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : nextShootDay ? (
+                            <div className="flex items-start gap-2.5 text-xs text-zinc-300 bg-zinc-900/60 p-3 rounded-xl border border-zinc-800">
+                              <CalendarClock className="size-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                              <div className="space-y-0.5">
+                                <div className="font-semibold text-white">
+                                  Upcoming Shoot: {formatDate(nextShootDay.shootDate)} · {nextShootDay.generalCallTime}
+                                </div>
+                                <div className="text-[11px] text-zinc-400 font-mono">
+                                  📍 {nextShootDay.locationName}
+                                  {nextShootDay.locationAddress ? ` · ${nextShootDay.locationAddress}` : ""}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-zinc-400 flex items-center gap-1.5">
+                              <Clock className="size-3.5 text-zinc-500" />
+                              <span>Production in progress. Vault gallery will populate upon first upload.</span>
+                            </div>
+                          )}
+
+                          {/* Master Download Lock Status (Only show when deliverables exist) */}
+                          {items.length > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs">
+                              {p.isFinalBalancePaid ? (
+                                <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                                  <LockOpen className="size-3.5" />
+                                  High-Res Masters Unlocked (Ready for Download)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 text-amber-400/90 font-medium">
+                                  <Lock className="size-3.5" />
+                                  Watermarked Proofing Previews (Masters unlock upon balance payment)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Open Vault CTA */}
+                        <div className="flex-shrink-0 flex items-center gap-2">
+                          <Link
+                            href={`/${tenant.slug}/vault/${p.id}`}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs font-mono tracking-wide transition-all shadow-md shadow-amber-500/10"
+                          >
+                            <FolderLock className="size-4" />
+                            <span>Open Photo Vault</span>
+                            <ChevronRight className="size-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* TAB 2: BOOKINGS SECTION */}
+        {(activeTab === "all" || activeTab === "bookings") && (
+          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <CalendarClock className="size-4 text-amber-400" />
+                  Your Session Bookings ({bookings.length})
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Scheduled time slots, venue locations, and booking confirmations.
+                </p>
+              </div>
+
+              {/* Sub-filter pills */}
+              <div className="flex items-center gap-1 bg-zinc-900/80 p-1 rounded-lg border border-zinc-800 self-start sm:self-auto text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => setBookingFilter("all")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-colors",
+                    bookingFilter === "all" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
+                  )}
+                >
+                  All ({bookings.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingFilter("upcoming")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-colors",
+                    bookingFilter === "upcoming" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
+                  )}
+                >
+                  Upcoming ({upcomingBookings.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingFilter("past")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-colors",
+                    bookingFilter === "past" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
+                  )}
+                >
+                  Past ({pastBookings.length})
+                </button>
+              </div>
+            </div>
+
+            {visibleBookings.length === 0 ? (
+              <p className="text-xs text-zinc-500 py-6 text-center">
+                No bookings match this filter.
+              </p>
+            ) : (
+              <div className="divide-y divide-zinc-800/60">
+                {visibleBookings.map((b) => {
+                  const statusInfo = BOOKING_STATUS_TEXT[b.status] || {
+                    label: b.status,
+                    className: "bg-zinc-800 text-zinc-400 border-zinc-700",
+                  };
+                  const dateInfo = b.slot ? formatShortDate(b.slot.date) : null;
+
+                  return (
+                    <div
+                      key={b.id}
+                      className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:bg-zinc-900/20 -mx-2 px-2 rounded-xl transition-colors"
+                    >
+                      {/* Left: Date badge + category */}
+                      <div className="flex items-start gap-3.5">
+                        {dateInfo ? (
+                          <div className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex flex-col items-center justify-center text-center flex-shrink-0 group-hover:border-zinc-700 transition-colors">
+                            <span className="text-[9px] font-mono uppercase text-amber-400 font-bold leading-none">
+                              {dateInfo.month}
+                            </span>
+                            <span className="text-base font-black text-white leading-tight font-mono">
+                              {dateInfo.day}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 flex-shrink-0">
+                            <CalendarClock className="size-5" />
                           </div>
                         )}
-                      </div>
-                      <Link
-                        href={`/${tenant.slug}/vault/${p.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-semibold transition-colors"
-                      >
-                        <FolderLock className="size-3.5 text-amber-400" /> Open vault
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Section>
 
-        {/* Bookings */}
-        <Section icon={CalendarClock} title="Bookings">
-          {bookings.length === 0 ? (
-            <p className="text-xs text-zinc-500">
-              You haven&apos;t booked a session yet.{" "}
-              <Link href={`/${tenant.slug}/book`} className="text-amber-400 hover:text-amber-300">
-                Pick a date
-              </Link>
-              .
-            </p>
-          ) : (
-            <ul className="divide-y divide-zinc-800/80">
-              {bookings.map((b) => (
-                <li key={b.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="space-y-0.5">
-                    <div className="font-mono text-zinc-200">{b.trackingCode}</div>
-                    <div className="text-zinc-500">
-                      {humanize(b.category)}
-                      {b.slot ? ` · ${date(b.slot.date)} · ${b.slot.startTime} – ${b.slot.endTime}` : ""}
-                    </div>
-                    <div className="text-zinc-500">
-                      Deposit {money(b.depositAmount)} · {b.depositPaid ? "paid" : "not yet paid / verified"}
-                    </div>
-                    {b.status === "CANCELLED" && b.cancelReason && (
-                      <div className="text-zinc-500">Cancelled: {b.cancelReason}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {b.status === "DELIVERED" && b.deliveryUrl && (
-                      <a
-                        href={b.deliveryUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
-                      >
-                        View my photos
-                      </a>
-                    )}
-                    <Badge status={b.status} label={BOOKING_STATUS_TEXT[b.status]} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-sm">
+                              {humanize(b.category)} Session
+                            </span>
+                            <span className="text-[11px] font-mono text-zinc-400">
+                              {b.trackingCode}
+                            </span>
+                          </div>
 
-        {/* Invoices */}
-        {invoices.length > 0 && (
-          <Section icon={Receipt} title="Invoices">
-            <ul className="divide-y divide-zinc-800/80">
-              {invoices.map((inv) => (
-                <li key={inv.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="space-y-0.5">
-                    <Link
-                      href={`/${tenant.slug}/account/invoices/${inv.id}`}
-                      className="font-mono text-zinc-200 underline decoration-zinc-600 underline-offset-2 hover:text-amber-400 hover:decoration-amber-400"
-                    >
-                      {inv.invoiceNumber}
-                    </Link>
-                    <div className="text-zinc-500">
-                      {humanize(inv.milestoneType)} · due {date(inv.dueDate)}
-                    </div>
-                    {inv.status === "REJECTED" && (
-                      <div className="text-red-400">
-                        Slip not accepted{inv.rejectionReason ? `: ${inv.rejectionReason}` : ""}. Please send a new one
-                        within 24 hours to keep your booking.
+                          <div className="text-xs text-zinc-400 font-mono flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            {b.slot && (
+                              <span>
+                                ⏰ {b.slot.startTime} – {b.slot.endTime}
+                              </span>
+                            )}
+                            <span>
+                              Deposit: {money(b.depositAmount)} ({b.depositPaid ? "Paid" : "Unpaid"})
+                            </span>
+                          </div>
+
+                          {b.status === "CANCELLED" && b.cancelReason && (
+                            <p className="text-[11px] text-rose-400/90 font-mono">
+                              Reason: {b.cancelReason}
+                            </p>
+                          )}
+
+                          {b.project && (
+                            <Link
+                              href={`/${tenant.slug}/vault/${b.project.id}`}
+                              className="text-[11px] text-amber-400 hover:underline inline-flex items-center gap-1 font-mono mt-0.5"
+                            >
+                              <span>View Linked Project & Vault</span>
+                              <ChevronRight className="size-3" />
+                            </Link>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-zinc-200">{money(inv.amount)}</span>
-                    <Badge status={inv.status} />
-                    <Link
-                      href={`/${tenant.slug}/account/invoices/${inv.id}`}
-                      className="px-2.5 py-1 rounded-md border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors"
-                    >
-                      {inv.status === "PAID" ? "Receipt" : "View"}
-                    </Link>
-                    {(inv.status === "PENDING" || inv.status === "OVERDUE") && (
-                      <Link
-                        href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
-                        className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
-                      >
-                        Pay
-                      </Link>
-                    )}
-                    {inv.status === "REJECTED" && (
-                      <Link
-                        href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
-                        className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
-                      >
-                        Send new slip
-                      </Link>
-                    )}
-                    {/* QR deposit with no slip yet: upload it before the 24-hour hold runs out. */}
-                    {inv.status === "PENDING_VERIFICATION" && inv.paymentMethod === "QR_CODE" && !inv.paymentProofUrl && (
-                      <Link
-                        href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
-                        className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
-                      >
-                        Upload slip
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Section>
+
+                      {/* Right: Status badge & delivery CTA */}
+                      <div className="flex items-center gap-3 self-end sm:self-center">
+                        {b.status === "DELIVERED" && b.deliveryUrl && (
+                          <a
+                            href={b.deliveryUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 text-black text-xs font-bold font-mono hover:bg-amber-400 transition-colors"
+                          >
+                            <span>View Photos</span>
+                            <ExternalLink className="size-3" />
+                          </a>
+                        )}
+                        <span
+                          className={cn(
+                            "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide border uppercase",
+                            statusInfo.className
+                          )}
+                        >
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         )}
 
-        {/* Proposals */}
-        {proposals.length > 0 && (
-          <Section icon={FileText} title="Proposals">
-            <ul className="divide-y divide-zinc-800/80">
+        {/* TAB 3: INVOICES & BILLING SECTION */}
+        {(activeTab === "all" || activeTab === "invoices") && (
+          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Receipt className="size-4 text-amber-400" />
+                  Invoices & Payment Receipts ({invoices.length})
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Milestone deposits, final balances, and official tax receipts for your sessions.
+                </p>
+              </div>
+
+              {/* Filter pills */}
+              <div className="flex items-center gap-1 bg-zinc-900/80 p-1 rounded-lg border border-zinc-800 self-start sm:self-auto text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => setInvoiceFilter("all")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-colors",
+                    invoiceFilter === "all" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
+                  )}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInvoiceFilter("unpaid")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-colors",
+                    invoiceFilter === "unpaid" ? "bg-amber-500/20 text-amber-300 font-bold" : "text-zinc-400 hover:text-white"
+                  )}
+                >
+                  Unpaid ({unpaidInvoices.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInvoiceFilter("paid")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-colors",
+                    invoiceFilter === "paid" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
+                  )}
+                >
+                  Paid ({paidInvoices.length})
+                </button>
+              </div>
+            </div>
+
+            {visibleInvoices.length === 0 ? (
+              <p className="text-xs text-zinc-500 py-6 text-center">
+                {invoiceFilter === "unpaid" ? "Great news! You have zero unpaid invoices." : "No invoices recorded."}
+              </p>
+            ) : (
+              <div className="divide-y divide-zinc-800/60">
+                {visibleInvoices.map((inv) => {
+                  const isUnpaid = inv.status === "PENDING" || inv.status === "OVERDUE";
+                  const isPaid = inv.status === "PAID";
+                  const isVoid = inv.status === "VOID" || inv.status === "CANCELLED";
+
+                  return (
+                    <div
+                      key={inv.id}
+                      className={cn(
+                        "py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 -mx-2 px-2 rounded-xl transition-colors",
+                        isUnpaid ? "bg-amber-500/5 border border-amber-500/20 my-1" : "hover:bg-zinc-900/20"
+                      )}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link
+                            href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                            className="font-mono text-xs font-bold text-white hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-1"
+                          >
+                            <span>{inv.invoiceNumber}</span>
+                            <ArrowUpRight className="size-3 text-zinc-500" />
+                          </Link>
+                          <span className="text-xs text-zinc-300 font-medium">
+                            · {humanize(inv.milestoneType)}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-zinc-400 font-mono flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                          <span>
+                            {isPaid && inv.paidAt
+                              ? `Paid ${formatDate(inv.paidAt)}`
+                              : `Due ${formatDate(inv.dueDate)}`}
+                          </span>
+                          {inv.project && <span>Project: {inv.project.title}</span>}
+                        </div>
+
+                        {inv.status === "REJECTED" && (
+                          <p className="text-[11px] text-rose-400 font-mono">
+                            Payment proof not accepted{inv.rejectionReason ? `: ${inv.rejectionReason}` : ""}. Please upload a new slip within 24 hours.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 self-end sm:self-center">
+                        <span className="font-mono font-bold text-white text-sm tabular-nums">
+                          {money(inv.amount)}
+                        </span>
+
+                        <span
+                          className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border",
+                            isPaid
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              : isUnpaid
+                              ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                              : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                          )}
+                        >
+                          {inv.status}
+                        </span>
+
+                        {isPaid && (
+                          <Link
+                            href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                            className="px-2.5 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
+                          >
+                            Receipt
+                          </Link>
+                        )}
+
+                        {isUnpaid && (
+                          <Link
+                            href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono transition-colors shadow-sm"
+                          >
+                            Pay Now
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Voided attempts toggle */}
+            {voidInvoices.length > 0 && !showVoidInvoices && invoiceFilter === "all" && (
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowVoidInvoices(true)}
+                  className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  Show {voidInvoices.length} cancelled / void payment attempts
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* TAB 4: PROPOSALS SECTION (if any) */}
+        {(activeTab === "all" || activeTab === "proposals") && proposals.length > 0 && (
+          <section className="p-5 sm:p-6 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <FileText className="size-4 text-amber-400" />
+                Custom Project Proposals ({proposals.length})
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Official studio quotes, scope agreements, and digital signing contracts.
+              </p>
+            </div>
+
+            <div className="divide-y divide-zinc-800/60">
               {proposals.map((p) => (
-                <li key={p.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div
+                  key={p.id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 -mx-2 px-2 rounded-xl hover:bg-zinc-900/20 transition-colors"
+                >
                   <div className="space-y-0.5">
-                    <div className="text-zinc-200">{p.title}</div>
-                    <div className="font-mono text-zinc-500">
-                      {p.proposalNumber} · {money(p.totalPrice)}
+                    <div className="font-bold text-white text-sm">{p.title}</div>
+                    <div className="font-mono text-xs text-zinc-400">
+                      {p.proposalNumber} · Total Price: {money(p.totalPrice)}
                     </div>
                   </div>
+
                   <div className="flex items-center gap-3">
-                    <Badge status={p.status} />
+                    <span
+                      className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-mono font-bold border uppercase",
+                        p.status === "ACCEPTED"
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                      )}
+                    >
+                      {p.status}
+                    </span>
                     <Link
                       href={`/${tenant.slug}/proposals/${p.id}`}
-                      className="text-amber-400 hover:text-amber-300 font-semibold"
+                      target="_blank"
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
                     >
-                      View
+                      <span>Review & Sign</span>
+                      <ExternalLink className="size-3 text-amber-400" />
                     </Link>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
-          </Section>
+            </div>
+          </section>
         )}
 
-        <p className="text-center text-[11px] font-mono text-zinc-600">
-          Signed in as {client.email}
-        </p>
+        {/* Footer */}
+        <footer className="pt-6 border-t border-zinc-900 text-center space-y-1">
+          <p className="text-xs font-mono text-zinc-500">
+            Signed in as {client.email} · {tenant.name} Client Portal
+          </p>
+          <p className="text-[11px] text-zinc-600">
+            Need changes to your shoot or deliverables? Contact studio support directly.
+          </p>
+        </footer>
       </main>
     </div>
   );

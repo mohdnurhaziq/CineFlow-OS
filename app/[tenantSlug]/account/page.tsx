@@ -48,11 +48,25 @@ export default async function ClientAccountPage({ params }: AccountPageProps) {
     db.clientBooking.findMany({
       where: { tenantId: tenant.id, userId: client.id },
       orderBy: { createdAt: "desc" },
-      include: { slot: true },
+      include: {
+        slot: true,
+        project: {
+          select: {
+            id: true,
+            title: true,
+            projectNumber: true,
+            status: true,
+          },
+        },
+      },
     }),
     db.milestoneInvoice.findMany({
       where: { tenantId: tenant.id, clientId: client.id },
       orderBy: { createdAt: "desc" },
+      include: {
+        project: { select: { id: true, title: true, projectNumber: true } },
+        booking: { select: { id: true, trackingCode: true, category: true } },
+      },
     }),
     db.proposal.findMany({
       where: { tenantId: tenant.id, clientId: client.id },
@@ -62,12 +76,41 @@ export default async function ClientAccountPage({ params }: AccountPageProps) {
       where: { tenantId: tenant.id, clientId: client.id },
       orderBy: { createdAt: "desc" },
       include: {
-        deliverables: { include: { items: { select: { itemType: true, isClientFav: true } } } },
+        deliverables: {
+          include: {
+            items: {
+              select: {
+                id: true,
+                title: true,
+                itemType: true,
+                previewUrl: true,
+                thumbnailUrl: true,
+                isClientFav: true,
+              },
+            },
+          },
+        },
+        booking: {
+          select: {
+            id: true,
+            trackingCode: true,
+            category: true,
+            sessionPrice: true,
+            depositAmount: true,
+            slot: { select: { date: true, startTime: true, endTime: true } },
+          },
+        },
         callSheets: {
           where: { shootDate: { gte: startOfToday } },
           orderBy: { shootDate: "asc" },
           take: 1,
-          select: { title: true, shootDate: true, generalCallTime: true, locationName: true },
+          select: {
+            title: true,
+            shootDate: true,
+            generalCallTime: true,
+            locationName: true,
+            locationAddress: true,
+          },
         },
       },
     }),
