@@ -40,35 +40,35 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
     switch (status) {
       case "PAID":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="size-3" />
             PAID
           </span>
         );
       case "PENDING_VERIFICATION":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">
             <Clock className="size-3" />
             PENDING VERIFY
           </span>
         );
       case "PENDING":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
             <Clock className="size-3" />
             PENDING
           </span>
         );
       case "OVERDUE":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <AlertTriangle className="size-3" />
             OVERDUE
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
             {status}
           </span>
         );
@@ -104,7 +104,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500 text-black font-semibold text-xs tracking-wide hover:bg-amber-400 transition-colors shadow-sm shadow-amber-500/20"
             >
               <ShieldAlert className="size-4" />
-              <span>Verify {kpis.pendingVerificationCount} Payments</span>
+              <span>Verify {kpis.pendingVerificationCount} {kpis.pendingVerificationCount === 1 ? "Payment" : "Payments"}</span>
             </Link>
           )}
           <Link
@@ -119,7 +119,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-mono transition-colors"
           >
             <Layers className="size-3.5 text-amber-400" />
-            <span>Fleet Fleet</span>
+            <span>Gear Fleet</span>
           </Link>
         </div>
       </div>
@@ -159,7 +159,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               {formatCurrency(kpis.pendingVerificationAmount)}
             </div>
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
-              <span>{kpis.pendingVerificationCount} proofs queued</span>
+              <span>{kpis.pendingVerificationCount} {kpis.pendingVerificationCount === 1 ? "proof" : "proofs"} queued</span>
               <Link
                 href={`/${tenant.slug}/admin/verification`}
                 className="text-amber-400 hover:underline flex items-center gap-0.5 text-[11px]"
@@ -183,7 +183,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               {kpis.activeProjectsCount}
             </div>
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
-              <span>{kpis.confirmedBookingsCount} confirmed bookings</span>
+              <span>{kpis.confirmedBookingsCount} confirmed {kpis.confirmedBookingsCount === 1 ? "booking" : "bookings"}</span>
               <span className="text-zinc-500">{kpis.completedProjectsCount} delivered</span>
             </div>
           </div>
@@ -192,7 +192,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
         {/* Metric 4: Fleet Readiness & Quarantine */}
         <div className="p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-zinc-700/80 transition-all shadow-sm">
           <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Fleet Operational</span>
+            <span className="text-xs font-mono uppercase tracking-wider">Gear Available</span>
             <div className="size-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
               <Layers className="size-4" />
             </div>
@@ -202,14 +202,14 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               <span className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums">
                 {kpis.gearAvailableCount}/{kpis.gearTotalCount}
               </span>
-              <span className="text-xs font-mono text-zinc-400">Ready</span>
+              <span className="text-xs font-mono text-zinc-400">ready to book</span>
             </div>
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
-              <span className="text-amber-400/90 font-mono">{kpis.gearUtilizationRate}% in use/held</span>
+              <span className="text-zinc-400 font-mono whitespace-nowrap">{kpis.gearUtilizationRate}% in use</span>
               {kpis.gearMaintenanceCount > 0 ? (
-                <span className="text-rose-400 font-mono">{kpis.gearMaintenanceCount} in repair</span>
+                <span className="text-rose-400 font-mono whitespace-nowrap">{kpis.gearMaintenanceCount} in repair</span>
               ) : (
-                <span className="text-emerald-400 font-mono">0 maintenance</span>
+                <span className="text-emerald-400 font-mono whitespace-nowrap">none in repair</span>
               )}
             </div>
           </div>
@@ -228,8 +228,8 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               </h2>
             </div>
             <Link
-              href={`/${tenant.slug}/admin/verification`}
-              className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1"
+              href={`/${tenant.slug}/admin/invoices`}
+              className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 whitespace-nowrap"
             >
               All Invoices <ArrowUpRight className="size-3" />
             </Link>
@@ -239,12 +239,12 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
             <table className="w-full text-left text-xs font-mono">
               <thead className="bg-zinc-900/60 text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-800/80">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">Invoice #</th>
-                  <th className="px-5 py-3 font-semibold">Client / Project</th>
-                  <th className="px-5 py-3 font-semibold">Milestone</th>
-                  <th className="px-5 py-3 font-semibold text-right">Amount</th>
-                  <th className="px-5 py-3 font-semibold text-center">Status</th>
-                  <th className="px-5 py-3 font-semibold text-right">Action</th>
+                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Invoice #</th>
+                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Client / Project</th>
+                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Milestone</th>
+                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold text-right">Amount</th>
+                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold text-center">Status</th>
+                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
@@ -257,33 +257,33 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                 ) : (
                   recentInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-5 py-3 font-bold text-zinc-200">
+                      <td className="px-3 py-3 first:pl-5 last:pr-5 font-bold text-zinc-200 whitespace-nowrap">
                         {inv.invoiceNumber}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-3 py-3 first:pl-5 last:pr-5">
                         <div className="font-sans font-medium text-white">{inv.clientName}</div>
                         {inv.projectTitle && (
-                          <div className="text-[11px] text-zinc-400 font-sans truncate max-w-[180px]">
+                          <div className="text-[11px] text-zinc-400 font-sans truncate max-w-[160px]">
                             {inv.projectTitle}
                           </div>
                         )}
                       </td>
-                      <td className="px-5 py-3">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300">
+                      <td className="px-3 py-3 first:pl-5 last:pr-5">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 whitespace-nowrap">
                           {inv.milestoneType.replace(/_/g, " ")}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-right font-bold text-white tabular-nums">
+                      <td className="px-3 py-3 first:pl-5 last:pr-5 text-right font-bold text-white tabular-nums whitespace-nowrap">
                         {formatCurrency(inv.amount)}
                       </td>
-                      <td className="px-5 py-3 text-center">
+                      <td className="px-3 py-3 first:pl-5 last:pr-5 text-center whitespace-nowrap">
                         {getStatusBadge(inv.status)}
                       </td>
-                      <td className="px-5 py-3 text-right">
+                      <td className="px-3 py-3 first:pl-5 last:pr-5 text-right">
                         {inv.status === "PENDING_VERIFICATION" ? (
                           <Link
                             href={`/${tenant.slug}/admin/verification`}
-                            className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-semibold text-[10px] uppercase tracking-wider transition-colors inline-block"
+                            className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-semibold text-[10px] uppercase tracking-wider transition-colors inline-block whitespace-nowrap"
                           >
                             Review Proof
                           </Link>

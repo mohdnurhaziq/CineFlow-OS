@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Play, Eye, Camera, Film } from "lucide-react";
 import type { LightboxItem } from "./media-lightbox-modal";
 import type { VideoItem } from "./video-reel-modal";
@@ -25,6 +26,52 @@ interface PortfolioGridProps {
   onOpenLightbox: (item: LightboxItem) => void;
   onOpenVideo: (item: VideoItem) => void;
   brandColor?: string | null;
+}
+
+/**
+ * Cover image that falls back to a branded panel when the file is missing, fails to load,
+ * or is a 1px placeholder, so a card never shows as an empty black box.
+ */
+function CoverImage({ src, alt, isVideo, brandColor }: { src: string; alt: string; isVideo: boolean; brandColor: string }) {
+  const ref = useRef<HTMLImageElement>(null);
+  const [broken, setBroken] = useState(!src);
+
+  const check = (img: HTMLImageElement) => {
+    if (img.complete && img.naturalWidth <= 1) setBroken(true);
+  };
+
+  // The image may finish loading before hydration, when onLoad has already fired.
+  useEffect(() => {
+    if (ref.current) check(ref.current);
+  }, [src]);
+
+  if (broken) {
+    const Icon = isVideo ? Film : Camera;
+    return (
+      <div
+        role="img"
+        aria-label={alt}
+        className="w-full h-full flex items-center justify-center"
+        style={{
+          background: `radial-gradient(120% 90% at 30% 20%, ${brandColor}33 0%, transparent 60%), linear-gradient(160deg, #1c1c22 0%, #0c0c0f 100%)`,
+        }}
+      >
+        <Icon className="size-10 opacity-40" style={{ color: brandColor }} aria-hidden="true" />
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={ref}
+      src={src}
+      alt={alt}
+      onLoad={(e) => check(e.currentTarget)}
+      onError={() => setBroken(true)}
+      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
 }
 
 export function PortfolioGrid({
@@ -64,11 +111,11 @@ export function PortfolioGrid({
           >
             {/* Image Thumbnail Container */}
             <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <CoverImage
                 src={item.coverImageUrl}
                 alt={item.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                isVideo={isVideo}
+                brandColor={brandColor || "#f59e0b"}
               />
 
               {/* Gradient Vignette Overlay */}

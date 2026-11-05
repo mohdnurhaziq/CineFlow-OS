@@ -11,7 +11,7 @@ import { SlotCountdownTimer } from "./slot-countdown-timer";
 import { BookingIntakeModal } from "./booking-intake-modal";
 import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
-import { packagesFor, type BookingPackageOption } from "./package-picker";
+import { formatMoney, packagesFor, type BookingPackageOption } from "./package-picker";
 
 interface TenantData {
   id: string;
@@ -59,6 +59,7 @@ export function CinemaBookingShell({
   const [heldUntil, setHeldUntil] = useState<string | null>(null);
   const [intakeOpen, setIntakeOpen] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
 
   // Initialize or read client sessionId
   useEffect(() => {
@@ -90,51 +91,61 @@ export function CinemaBookingShell({
       return;
     }
 
+    setPendingSlotId(slot.id);
     startTransition(async () => {
-      const res = await holdBookingSlot({
-        tenantId: tenant.id,
-        slotId: slot.id,
-        sessionId,
-        previousSlotId: heldSlot?.id,
-      });
-
-      if (res.success && res.slot && res.heldUntil) {
-        toast.success(`Slot locked for 10 minutes! (${slot.startTime})`);
-        setHeldSlot(res.slot as any);
-        setHeldUntil(res.heldUntil);
-
-        // Update local slots list
-        setSlots((prev) =>
-          prev.map((s) => {
-            if (s.id === slot.id) {
-              return {
-                ...s,
-                status: "HELD",
-                heldBySessionId: sessionId,
-                heldUntil: res.heldUntil,
-              };
-            }
-            if (heldSlot && s.id === heldSlot.id) {
-              return {
-                ...s,
-                status: "AVAILABLE",
-                heldBySessionId: null,
-                heldUntil: null,
-              };
-            }
-            return s;
-          })
-        );
-      } else {
-        toast.error(res.message || "Failed to hold slot. It may have just been claimed.");
-        // If conflict occurred, reload slots state
-        if (res.error === "SLOT_ALREADY_HELD" || res.error === "SLOT_ALREADY_BOOKED") {
-          setSlots((prev) =>
-            prev.map((s) => (s.id === slot.id ? { ...s, status: res.error === "SLOT_ALREADY_BOOKED" ? "BOOKED" : "HELD" } : s))
-          );
-        }
+      try {
+        await holdSlot(slot);
+      } finally {
+        setPendingSlotId(null);
       }
     });
+  };
+
+  // Request the atomic 10-minute hold for a slot (releasing any previous hold).
+  const holdSlot = async (slot: BookingSlotItem) => {
+    const res = await holdBookingSlot({
+      tenantId: tenant.id,
+      slotId: slot.id,
+      sessionId,
+      previousSlotId: heldSlot?.id,
+    });
+
+    if (res.success && res.slot && res.heldUntil) {
+      toast.success(`Slot locked for 10 minutes! (${slot.startTime})`);
+      setHeldSlot(res.slot as any);
+      setHeldUntil(res.heldUntil);
+
+      // Update local slots list
+      setSlots((prev) =>
+        prev.map((s) => {
+          if (s.id === slot.id) {
+            return {
+              ...s,
+              status: "HELD",
+              heldBySessionId: sessionId,
+              heldUntil: res.heldUntil,
+            };
+          }
+          if (heldSlot && s.id === heldSlot.id) {
+            return {
+              ...s,
+              status: "AVAILABLE",
+              heldBySessionId: null,
+              heldUntil: null,
+            };
+          }
+          return s;
+        })
+      );
+    } else {
+      toast.error(res.message || "Failed to hold slot. It may have just been claimed.");
+      // If conflict occurred, reload slots state
+      if (res.error === "SLOT_ALREADY_HELD" || res.error === "SLOT_ALREADY_BOOKED") {
+        setSlots((prev) =>
+          prev.map((s) => (s.id === slot.id ? { ...s, status: res.error === "SLOT_ALREADY_BOOKED" ? "BOOKED" : "HELD" } : s))
+        );
+      }
+    }
   };
 
   // Early voluntary release
@@ -201,10 +212,22 @@ export function CinemaBookingShell({
     null;
   const daySlots = activeDate ? filteredSlots.filter((slot) => slotDateKey(slot.date) === activeDate) : [];
 
-  const currencySymbol = tenant.currency === "MYR" ? "RM " : "$";
+  // The deposit a slot will actually charge: the cheapest package for its category, or the slot's own deposit.
+  const depositFor = (slot: BookingSlotItem) => {
+    const offered = packagesFor(packages, slot.category);
+    if (offered.length === 0) return { amount: slot.depositRequired, from: false };
+    return { amount: Math.min(...offered.map((p) => p.depositPrice)), from: offered.length > 1 };
+  };
+  const depositLabel = (slot: BookingSlotItem) => {
+    const { amount, from } = depositFor(slot);
+    const money = formatMoney(tenant.currency, amount).replace(/\.00$/, "");
+    return from ? `from ${money}` : money;
+  };
+  const categoryLabel = (slug: string) =>
+    categories.find((c) => c.slug.toLowerCase() === slug.toLowerCase())?.name ?? slug;
 
   return (
-    <div className="space-y-10 pb-32">
+    <div className={`space-y-10 ${heldSlot ? "pb-64 sm:pb-40" : "pb-16"}`}>
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
         <div className="space-y-1">
@@ -336,6 +359,9 @@ export function CinemaBookingShell({
         onSlotClick={handleSlotClick}
         currency={tenant.currency}
         brandColor={tenant.brandColor}
+        categoryLabel={categoryLabel}
+        depositLabel={depositLabel}
+        pendingSlotId={pendingSlotId}
       />
 
       {/* Sticky Bottom Action Bar (Visible when slot is held) */}
@@ -362,15 +388,8 @@ export function CinemaBookingShell({
                   </span>
                 </div>
                 <div className="text-xs font-mono text-zinc-400 mt-0.5">
-                  Category: <span className="text-zinc-200">{heldSlot.category}</span> • Deposit:{" "}
-                  <span className="text-amber-400 font-bold tabular-nums">
-                    {(() => {
-                      const offered = packagesFor(packages, heldSlot.category);
-                      if (offered.length === 0) return `${currencySymbol}${heldSlot.depositRequired}`;
-                      const min = Math.min(...offered.map((p) => p.depositPrice));
-                      return `from ${currencySymbol}${min} (by package)`;
-                    })()}
-                  </span>
+                  Category: <span className="text-zinc-200">{categoryLabel(heldSlot.category)}</span> • Deposit:{" "}
+                  <span className="text-amber-400 font-bold tabular-nums">{depositLabel(heldSlot)}</span>
                 </div>
               </div>
             </div>
@@ -417,6 +436,7 @@ export function CinemaBookingShell({
         brandColor={tenant.brandColor}
         clientAccount={clientAccount}
         packages={packages}
+        categoryName={heldSlot ? categoryLabel(heldSlot.category) : undefined}
         initialPackageId={initialPackageId}
         onBookingConfirmed={(code) => {
           setHeldSlot(null);

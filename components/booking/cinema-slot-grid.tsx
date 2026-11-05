@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock } from "lucide-react";
+import { Clock, Loader2 } from "lucide-react";
 import { minutesOfDay, sessionBlock } from "@/lib/slot-time";
 
 export interface BookingSlotItem {
@@ -25,6 +25,12 @@ interface CinemaSlotGridProps {
   onSlotClick: (slot: BookingSlotItem) => void;
   currency: string;
   brandColor?: string | null;
+  /** Display name for a slot's category slug. */
+  categoryLabel?: (slug: string) => string;
+  /** Deposit shown on the card; matches what the booking will actually charge. */
+  depositLabel?: (slot: BookingSlotItem) => string;
+  /** Slot whose hold request is in flight. */
+  pendingSlotId?: string | null;
 }
 
 export function CinemaSlotGrid({
@@ -34,6 +40,9 @@ export function CinemaSlotGrid({
   onSlotClick,
   currency,
   brandColor,
+  categoryLabel = (slug) => slug,
+  depositLabel,
+  pendingSlotId = null,
 }: CinemaSlotGridProps) {
   const currencySymbol = currency === "MYR" ? "RM " : "$";
   const activeColor = brandColor || "#f59e0b";
@@ -87,15 +96,19 @@ export function CinemaSlotGrid({
 
             const isBlocked = slot.status === "BLOCKED";
             const isAvailable = slot.status === "AVAILABLE" && !isHeldByOther;
+            const isPending = slot.id === pendingSlotId;
 
             return (
               <button
                 key={slot.id}
                 type="button"
-                disabled={isHeldByOther || isBooked || isBlocked}
+                disabled={isHeldByOther || isBooked || isBlocked || pendingSlotId !== null}
+                aria-busy={isPending || undefined}
                 onClick={() => onSlotClick(slot)}
                 className={`relative p-3.5 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between select-none ${
-                  isHeldByMe
+                  isPending
+                    ? "bg-amber-500/5 border-amber-500/60 cursor-wait"
+                    : isHeldByMe
                     ? "bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/20 active:scale-[0.98]"
                     : isHeldByOther
                     ? "bg-zinc-900/60 border-zinc-800 opacity-60 cursor-not-allowed"
@@ -114,10 +127,17 @@ export function CinemaSlotGrid({
                 {/* Top Badge */}
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-mono font-bold tracking-tight text-zinc-400">
-                    {slot.category}
+                    {categoryLabel(slot.category)}
                   </span>
 
-                  {isHeldByMe && (
+                  {isPending && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
+                      <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
+                      HOLDING
+                    </span>
+                  )}
+
+                  {isHeldByMe && !isPending && (
                     <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500 text-black animate-pulse">
                       YOUR HOLD
                     </span>
@@ -137,7 +157,7 @@ export function CinemaSlotGrid({
                       BLOCKED
                     </span>
                   )}
-                  {isAvailable && (
+                  {isAvailable && !isHeldByMe && !isPending && (
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">
                       AVAILABLE
                     </span>
@@ -160,8 +180,7 @@ export function CinemaSlotGrid({
                       isHeldByMe ? "text-amber-400" : isAvailable ? "text-zinc-200" : "text-zinc-400"
                     }`}
                   >
-                    {currencySymbol}
-                    {slot.depositRequired}
+                    {depositLabel ? depositLabel(slot) : `${currencySymbol}${slot.depositRequired.toLocaleString("en-US")}`}
                   </span>
                 </div>
               </button>

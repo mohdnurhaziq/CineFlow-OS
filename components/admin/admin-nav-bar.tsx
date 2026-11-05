@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -23,6 +24,39 @@ interface AdminNavBarProps {
 
 export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBarProps) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+  // Which edges have more tabs scrolled out of view; those edges fade out as a hint.
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const update = () =>
+      setOverflow({
+        left: nav.scrollLeft > 1,
+        right: nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1,
+      });
+    update();
+    nav.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(nav);
+    return () => {
+      nav.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, []);
+
+  // Keep the current section's tab visible when it sits past the fold (e.g. Settings).
+  useEffect(() => {
+    navRef.current
+      ?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [pathname]);
+
+  const fade = 32;
+  const mask = `linear-gradient(to right, ${overflow.left ? "transparent" : "#000"} 0, #000 ${
+    overflow.left ? fade : 0
+  }px, #000 calc(100% - ${overflow.right ? fade : 0}px), ${overflow.right ? "transparent" : "#000"} 100%)`;
 
   const navItems = [
     {
@@ -85,7 +119,12 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
   ];
 
   return (
-    <nav className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-1 scrollbar-none">
+    <nav
+      ref={navRef}
+      aria-label="Studio admin sections"
+      className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-none"
+      style={{ maskImage: mask, WebkitMaskImage: mask }}
+    >
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
@@ -95,7 +134,7 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
             key={item.href}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all border whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all border whitespace-nowrap ${
               isActive
                 ? "bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold shadow-sm shadow-amber-500/10"
                 : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-transparent"

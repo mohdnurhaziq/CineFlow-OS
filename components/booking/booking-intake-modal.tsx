@@ -32,6 +32,8 @@ interface BookingIntakeModalProps {
   clientAccount?: { name: string; email: string; phone: string } | null;
   /** The studio's service packages; those matching the slot's category are offered. */
   packages?: BookingPackageOption[];
+  /** Display name of the slot's category (the slot only carries its slug). */
+  categoryName?: string;
   /** Package pre-selected from the showcase ("Book this package"). */
   initialPackageId?: string;
   onBookingConfirmed: (trackingCode: string) => void;
@@ -48,6 +50,7 @@ export function BookingIntakeModal({
   brandColor,
   clientAccount = null,
   packages = [],
+  categoryName,
   initialPackageId,
   onBookingConfirmed,
 }: BookingIntakeModalProps) {
@@ -69,7 +72,8 @@ export function BookingIntakeModal({
   if (!isOpen || !slot) return null;
 
   const offered = packagesFor(packages, slot.category);
-  const chosen = offered.find((p) => p.id === packageId) ?? null;
+  // With a single package on offer there is nothing to choose; select it.
+  const chosen = offered.find((p) => p.id === packageId) ?? (offered.length === 1 ? offered[0] : null);
   const needsPackage = offered.length > 0;
   const depositDue = chosen ? chosen.depositPrice : needsPackage ? null : slot.depositRequired;
 
@@ -208,7 +212,7 @@ export function BookingIntakeModal({
                 {/* Slot Summary Pill */}
                 <div className="p-3 rounded-xl border border-zinc-800 bg-[#16161b] flex items-center justify-between text-xs font-mono">
                   <div className="space-y-0.5">
-                    <div className="text-zinc-400 text-[10px] uppercase">{slot.category}</div>
+                    <div className="text-zinc-400 text-[10px] uppercase">{categoryName ?? slot.category}</div>
                     <div className="text-white font-bold">
                       {slotDateStr} • {slot.startTime}
                     </div>
@@ -264,12 +268,13 @@ export function BookingIntakeModal({
 
                   {/* Optional Field 4: Brief */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    <label htmlFor="booking-brief" className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                       Shoot Concept / Creative Notes (Optional)
                     </label>
                     <textarea
+                      id="booking-brief"
                       rows={2}
-                      placeholder="Convocation cap and gown with family, 4 members..."
+                      placeholder="Concept, wardrobe, number of people, references…"
                       value={formData.creativeBrief}
                       onChange={(e) => setFormData((prev) => ({ ...prev, creativeBrief: e.target.value }))}
                       className="w-full px-3 py-2 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 resize-none"
@@ -278,10 +283,10 @@ export function BookingIntakeModal({
 
                   {/* Payment Method Selector */}
                   <div className="space-y-1.5 pt-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                    <span id="booking-payment-label" className="block text-xs font-semibold uppercase tracking-wider text-zinc-300">
                       Payment Method
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    </span>
+                    <div role="group" aria-labelledby="booking-payment-label" className="grid grid-cols-3 gap-2">
                       {[
                         { id: "CARD", label: "Card (Instant)" },
                         { id: "QR_CODE", label: "Studio QR Slip" },
@@ -290,6 +295,7 @@ export function BookingIntakeModal({
                         <button
                           type="button"
                           key={p.id}
+                          aria-pressed={formData.paymentMethod === p.id}
                           onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: p.id as any }))}
                           className={`py-2 px-2 rounded-lg border text-[11px] font-mono font-bold transition-all ${
                             formData.paymentMethod === p.id

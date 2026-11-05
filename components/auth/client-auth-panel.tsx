@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState, type ComponentType, type InputHTMLAttributes } from "react";
 import { User, Mail, Phone, Lock, Hash, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
@@ -14,6 +14,27 @@ interface ClientAuthPanelProps {
 
 const inputClass =
   "w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 placeholder-zinc-500";
+
+/** Text input with a visible label (placeholders disappear while typing, so they can't be the label). */
+function Field({
+  label,
+  icon: Icon,
+  className = "",
+  ...input
+}: { label: string; icon: ComponentType<{ className?: string }> } & InputHTMLAttributes<HTMLInputElement>) {
+  const id = useId();
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-[11px] font-semibold text-zinc-300">
+        {label}
+      </label>
+      <div className="relative">
+        <Icon className="absolute left-3 top-2.5 size-4 text-zinc-500 pointer-events-none" aria-hidden="true" />
+        <input id={id} className={`${inputClass} ${className}`} {...input} />
+      </div>
+    </div>
+  );
+}
 
 export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register" }: ClientAuthPanelProps) {
   const [mode, setMode] = useState<"register" | "login">(defaultMode);
@@ -142,80 +163,68 @@ export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register
         )}
 
         {mode === "register" && (
-          <div className="relative">
-            <User className="absolute left-3 top-2.5 size-4 text-zinc-500" />
-            <input
-              type="text"
-              autoComplete="name"
-              placeholder="Full name"
-              aria-label="Full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputClass}
-              required
-            />
-          </div>
-        )}
-
-        <div className="relative">
-          <Mail className="absolute left-3 top-2.5 size-4 text-zinc-500" />
-          <input
-            type="email"
-            autoComplete="email"
-            placeholder="Email address"
-            aria-label="Email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
+          <Field
+            label="Full name"
+            icon={User}
+            type="text"
+            autoComplete="name"
+            placeholder="As it should appear on invoices"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             required
           />
-        </div>
+        )}
+
+        <Field
+          label="Email address"
+          icon={Mail}
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
         {mode === "register" && (
-          <div className="relative">
-            <Phone className="absolute left-3 top-2.5 size-4 text-zinc-500" />
-            <input
-              type="tel"
-              autoComplete="tel"
-              placeholder="Mobile number (WhatsApp)"
-              aria-label="Mobile number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={`${inputClass} font-mono`}
-              required
-            />
-          </div>
-        )}
-
-        <div className="relative">
-          <Lock className="absolute left-3 top-2.5 size-4 text-zinc-500" />
-          <input
-            type="password"
-            autoComplete={mode === "register" ? "new-password" : "current-password"}
-            placeholder={mode === "register" ? "Password (min. 8 characters)" : "Password"}
-            aria-label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={`${inputClass} font-mono`}
-            minLength={mode === "register" ? 8 : undefined}
+          <Field
+            label="Mobile number (WhatsApp)"
+            icon={Phone}
+            type="tel"
+            autoComplete="tel"
+            placeholder="Include country code"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="font-mono"
             required
           />
-        </div>
+        )}
+
+        <Field
+          label="Password"
+          icon={Lock}
+          type="password"
+          autoComplete={mode === "register" ? "new-password" : "current-password"}
+          placeholder={mode === "register" ? "At least 8 characters" : undefined}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="font-mono"
+          minLength={mode === "register" ? 8 : undefined}
+          required
+        />
 
         {mode === "register" && needsClaim && (
-          <div className="relative">
-            <Hash className="absolute left-3 top-2.5 size-4 text-zinc-500" />
-            <input
-              type="text"
-              autoComplete="off"
-              placeholder="Tracking code from your earlier booking"
-              aria-label="Tracking code"
-              value={claimCode}
-              onChange={(e) => setClaimCode(e.target.value)}
-              className={`${inputClass} font-mono uppercase`}
-              required
-            />
-          </div>
+          <Field
+            label="Tracking code"
+            icon={Hash}
+            type="text"
+            autoComplete="off"
+            placeholder="From your earlier booking"
+            value={claimCode}
+            onChange={(e) => setClaimCode(e.target.value)}
+            className="font-mono uppercase"
+            required
+          />
         )}
 
         <button

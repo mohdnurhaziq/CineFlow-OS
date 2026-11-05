@@ -18,7 +18,8 @@ export function packagesFor(packages: BookingPackageOption[], category: string):
   return packages.filter((p) => sameCategory(p.category, category)).sort((a, b) => a.price - b.price);
 }
 
-function money(currency: string, amount: number): string {
+/** "$1,900.00" / "RM 1,900.00". */
+export function formatMoney(currency: string, amount: number): string {
   const symbol = currency === "MYR" ? "RM " : currency === "USD" ? "$" : `${currency} `;
   return `${symbol}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -72,13 +73,13 @@ export function PackagePicker({ packages, value, onChange, currency, allowNone =
               <span className="min-w-0 flex-1 space-y-1">
                 <span className="flex items-baseline justify-between gap-3">
                   <span className="text-sm font-bold text-white">{p.name}</span>
-                  <span className="text-sm font-bold font-mono tabular-nums text-white">{money(currency, p.price)}</span>
+                  <span className="text-sm font-bold font-mono tabular-nums text-white">{formatMoney(currency, p.price)}</span>
                 </span>
                 {p.description && <span className="block text-[11px] text-zinc-400">{p.description}</span>}
                 {p.deliverables && <span className="block text-[11px] text-zinc-500">{p.deliverables}</span>}
                 <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-mono">
-                  <span className="text-amber-400">Deposit now {money(currency, p.depositPrice)}</span>
-                  {balance > 0 && <span className="text-zinc-400">Balance after shoot {money(currency, balance)}</span>}
+                  <span className="text-amber-400">Deposit now {formatMoney(currency, p.depositPrice)}</span>
+                  {balance > 0 && <span className="text-zinc-400">Balance after shoot {formatMoney(currency, balance)}</span>}
                 </span>
               </span>
             </label>
