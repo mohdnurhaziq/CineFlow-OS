@@ -35,7 +35,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - New booking statuses: `COMPLETED`, `NO_SHOW`, `DELIVERED`. New fields: `cancelledAt`, `cancelReason`, `completedAt`, `deliveredAt`, `deliveryUrl`.
 - **Files:** `lib/actions/admin-booking-lifecycle.ts`, `components/admin/bookings/booking-actions.tsx`, `components/admin/bookings/booking-details-dialog.tsx`, `components/admin/bookings/bookings-console.tsx`, `components/admin/calendar/calendar-admin-dashboard.tsx`, `components/account/client-dashboard.tsx`, `lib/bookings/details.ts`, `lib/notifications.ts`, `lib/actions/admin-analytics.ts`, `prisma/schema.prisma`
 - **Tests:** T14-MOVE-01, T14-CANCEL-01/02, T14-DONE-01/02, T14-AUTH-01
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-10: Invoices were view-only
 
@@ -49,7 +49,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - **New invoice** (owner): a `CUSTOM` invoice for a client, with a description, amount and due date, numbered in the studio's sequence. The invoice document shows the description.
 - **Files:** `lib/actions/admin-invoices.ts`, `components/admin/invoices/invoice-admin-actions.tsx`, `components/admin/invoices/new-invoice-dialog.tsx`, `components/admin/invoices/invoices-console.tsx`, `app/[tenantSlug]/admin/invoices/page.tsx`, `app/[tenantSlug]/admin/invoices/[invoiceId]/page.tsx`, `lib/invoices/document.ts`, `prisma/schema.prisma` (`description`)
 - **Tests:** T14-INV-01/02/03
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-11: Proposals, projects, gear reservations, call sheets and photo delivery had no screens
 
@@ -72,7 +72,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
     - Deleting a file removes both copies.
 - **Files:** `lib/actions/admin-projects.ts`, `lib/projects/constants.ts`, `lib/deliverables/storage.ts`, `app/api/deliverables/route.ts`, `app/api/download/route.ts`, `app/[tenantSlug]/admin/projects/page.tsx`, `app/[tenantSlug]/admin/projects/[projectId]/page.tsx`, `components/admin/projects/project-workspace.tsx`, `components/admin/proposals/new-proposal-dialog.tsx`, `components/admin/proposals/proposal-admin-dashboard.tsx`, `app/[tenantSlug]/admin/proposals/page.tsx`, `components/admin/admin-nav-bar.tsx`, `package.json`, `.gitignore`
 - **Tests:** T15-PROP-01/02, T15-PROJ-01, T15-GEAR-01, T15-FILES-01. Upload, privacy, preview size, the paywall before and after payment, and deletion were also checked in the browser.
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-12: Book for Customer was confusing
 
@@ -87,7 +87,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - Booked slots show the booking's package price, deposit and package name. Open slots with no fee show "By package".
   - Track Booking shows the package name, or "None chosen".
 - **Files:** `components/admin/calendar/book-for-customer-dialog.tsx`, `components/admin/calendar/slot-table.tsx`, `components/admin/calendar/single-slot-dialog.tsx`, `app/[tenantSlug]/admin/calendar/page.tsx`, `components/booking/package-picker.tsx`, `lib/actions/admin-bookings.ts`, `lib/actions/my-booking.ts`, `components/booking/my-booking-lookup.tsx`
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-13: Rejecting a slip cancelled the whole booking
 
@@ -100,7 +100,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - The dialog, toast and email wording now say so, and the email link is fixed.
 - **Files:** `lib/actions/admin-verification.ts`, `lib/bookings/expiry.ts`, `components/checkout/admin-verification-console.tsx`, `components/account/client-dashboard.tsx`, `app/[tenantSlug]/account/invoices/[invoiceId]/page.tsx`, `components/invoices/invoice-document.tsx`, `lib/invoices/document.ts`, `lib/notifications.ts`, `prisma/schema.prisma`
 - **Tests:** T1-F19-04 (reject, resend, reject again, expire after 24 h), T7-BKG-09
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-14: Raw codes showed in the UI
 
@@ -111,7 +111,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - Category slugs show their category name.
   - The Verification card shows the session date.
 - **Files:** `lib/labels.ts`, `lib/invoices/document.ts`, `components/checkout/admin-verification-console.tsx`, `app/[tenantSlug]/admin/verification/page.tsx`, `components/gear/*`, `components/admin/studio-dashboard.tsx`, `components/showcase/*`, `components/booking/cinema-booking-shell.tsx`, the discipline selects in the admin forms, `app/[tenantSlug]/admin/layout.tsx`, `components/checkout/order-summary-card.tsx`
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-15: Inconsistent naming and jargon
 
@@ -124,7 +124,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - Subtitles and KPI labels are plain sentences ("Waiting to be confirmed", "On a shoot", "Checked out right now").
   - The Overview's section titles were renamed ("Recent invoices", "Upcoming shoot days"), and its shoot-day link goes to Projects.
 - **Files:** `components/admin/admin-nav-bar.tsx`, `app/[tenantSlug]/admin/layout.tsx`, `components/admin/studio-dashboard.tsx`, `components/checkout/admin-verification-console.tsx`, `components/admin/calendar/calendar-admin-dashboard.tsx`, `components/admin/services/services-dashboard.tsx`, `components/admin/proposals/proposal-admin-dashboard.tsx`, `components/admin/frames/frames-manager.tsx`, `components/admin/cms/cms-manager.tsx`, `components/admin/settings/studio-settings-form.tsx`, `components/gear/gear-dashboard.tsx`, `components/gear/gear-kpi-summary.tsx`
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-16: Deletes used the browser's confirm() popup
 
@@ -132,7 +132,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
 - **Problem:** Deleting showed the browser's plain `confirm()` box, unlike the app's other dialogs.
 - **Fix:** A styled `useConfirm()` dialog (`components/ui/confirm-dialog.tsx`, built on `useDialog`) with clearer wording, such as "Delete 'Print order'? Clients will no longer be able to order this print size." Focus starts on Cancel.
 - **Files:** `components/ui/confirm-dialog.tsx` and the seven list components that delete
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-17: Settings had two confusing save buttons
 
@@ -143,7 +143,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - The main form has a sticky "Save settings" bar at the bottom that says what it saves.
   - "Workspace & License Meta" is now "Plan".
 - **Files:** `components/admin/settings/studio-settings-form.tsx`
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-18: Past slots showed as "Available"; slot actions were off-screen on phones
 
@@ -154,7 +154,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - The Available count ignores them.
   - The Actions column stays pinned on the right when the table scrolls sideways.
 - **Files:** `components/admin/calendar/calendar-admin-dashboard.tsx`, `components/admin/calendar/slot-table.tsx`
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-19: Gear check-in reloaded the page; check-out was allowed at any time
 
@@ -170,7 +170,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - Outside the window, the button is replaced with the reason ("Too early: this gear can be checked out from …").
 - **Files:** `lib/actions/gear.ts`, `lib/gear/checkout-window.ts`, `components/gear/gear-dashboard.tsx`
 - **Tests:** T1-F35-03b. Tier 4 and Tier 5 scenarios now move the reservation to the shoot day before checking out.
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ### BUG-20261105-20: Staff could approve payments and change prices
 
@@ -190,7 +190,7 @@ The second half of the owner walkthrough. Decisions taken with the owner: money 
   - Staff keep the calendar, bookings (unpaid cancel, move, done, deliver), gear, showcase, frames and reminders.
 - **Files:** `lib/auth/owner.ts`, `lib/actions/admin-verification.ts`, `lib/actions/admin-services.ts`, `lib/actions/admin-calendar.ts`, `lib/actions/admin-bookings.ts`, the matching admin pages and dialogs
 - **Tests:** T10-VER-03, T10-OWN-01/02/03
-- **Commit:** pending
+- **Commit:** `378d89e`
 
 ## 2026-11-05: Studio owner walkthrough (admin suite)
 
