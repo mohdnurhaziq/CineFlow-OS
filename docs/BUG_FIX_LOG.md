@@ -29,7 +29,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
 - **Fix:** The server records the signed-in user's name from the session. The name fields were removed from the action inputs. The UI shows "Verifying as / Inspected by `<you>`" as read-only text.
 - **Files:** `lib/actions/admin-verification.ts`, `lib/actions/gear.ts`, `lib/validations/gear.ts`, `components/checkout/admin-verification-console.tsx`, `components/gear/inspection-dialog.tsx`, `components/gear/gear-dashboard.tsx`, `app/[tenantSlug]/admin/verification/page.tsx`, `app/[tenantSlug]/admin/inventory/page.tsx`
 - **Tests:** T1 "Invoice records the signed-in verifier" and "Inspection is logged under the signed-in user". Every test now calls these actions without a name.
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ### BUG-20261105-02: Online payments charged ringgit for every currency
 
@@ -44,7 +44,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
   - Settling an existing bill is unchanged.
 - **Files:** `lib/payments/settle.ts`, `lib/actions/checkout.ts`, `lib/actions/admin-payments.ts`, `lib/actions/admin-verification.ts`, `app/[tenantSlug]/checkout/page.tsx`, `components/admin/settings/studio-settings-form.tsx`
 - **Tests:** T9-CHK-04, T9-ADM-04. The rest of Tier 9 runs Lumina as an MYR studio and restores USD afterwards.
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ### BUG-20261105-03: A deposit could be larger than the price
 
@@ -64,7 +64,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
   - Errors come back as one readable sentence via `lib/action-error.ts`.
 - **Files:** `lib/validations/services.ts`, `lib/validations/calendar.ts`, `lib/actions/admin-services.ts`, `lib/actions/admin-calendar.ts`, `lib/action-error.ts`, `components/admin/services/package-dialog.tsx`, `components/admin/calendar/single-slot-dialog.tsx`, `components/admin/calendar/batch-generator-dialog.tsx`
 - **Tests:** T2-PRICE-01b
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ### BUG-20261105-04: Slots could double-book the studio
 
@@ -82,7 +82,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
   - Matching covers the whole calendar day, because older slots were saved with a time of day on `date`.
 - **Files:** `lib/actions/admin-calendar.ts`, `lib/validations/calendar.ts`, `components/admin/calendar/batch-generator-dialog.tsx`
 - **Tests:** T2-SLOT-01, which includes a slot stored with a time of day.
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ### BUG-20261105-05: Renaming a category's slug orphaned its records
 
@@ -92,7 +92,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
 - **Fix:** The rename runs in a transaction that moves every record filed under the old slug to the new one. Matching is loose, as for bookings, so `STUDIO_PORTRAIT` matches `studio-portrait`.
 - **Files:** `lib/actions/admin-services.ts`
 - **Tests:** T2-CAT-01
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ### BUG-20261105-06: The Custom Domain setting did nothing
 
@@ -106,7 +106,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
   - Settings explains that a new domain starts working within a minute.
 - **Files:** `middleware.ts`, `lib/tenant-domain.ts`, `lib/domain-name.ts`, `lib/validations/admin-settings.ts`, `lib/actions/admin-settings.ts`, `components/admin/settings/studio-settings-form.tsx`
 - **Tests:** T1-F06 middleware tests, now served from the database. Checked by hand with `Host:` headers for both demo domains, an unknown domain and `lumina-cine.localhost`.
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ### BUG-20261105-07: Invoice numbers were random and inconsistent
 
@@ -121,7 +121,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
   - Schema applied to the dev database with `prisma db push`.
 - **Files:** `prisma/schema.prisma`, `lib/bookings/billing.ts`, `lib/actions/checkout.ts`, `lib/actions/admin-bookings.ts`, `lib/actions/proposals.ts`, `lib/actions/visualizer.ts`
 - **Tests:** T2-INV-01
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ### BUG-20261105-08: Modals ignored Escape and weren't announced as dialogs
 
@@ -135,7 +135,7 @@ The bugs below were found by signing in as the Lumina demo owner and using every
 - **Files:** `lib/use-dialog.ts` and the 21 modal components above
 - **Tests:** Checked by hand: the package dialog opens labelled "Create New Service Package", focus moves in, Escape closes it and focus returns to "New Package".
 - **Not done yet:** Several admin forms still have labels that aren't linked to their inputs (`htmlFor`/`id`).
-- **Commit:** pending
+- **Commit:** `5fb4e61`
 
 ---
 
