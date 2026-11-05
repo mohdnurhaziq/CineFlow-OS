@@ -21,6 +21,9 @@ import {
 } from "@/lib/actions/admin-projects";
 import { acceptProposal } from "@/lib/actions/proposals";
 import { createEquipmentReservation } from "@/lib/actions/gear";
+import { approvePaymentVerification } from "@/lib/actions/admin-verification";
+import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
+import { nextInvoiceNumber } from "@/lib/bookings/billing";
 import { POST as uploadDeliverables } from "@/app/api/deliverables/route";
 import { GET as downloadHandler } from "@/app/api/download/route";
 import { masterFilePath } from "@/lib/deliverables/storage";
@@ -197,5 +200,177 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     const del: any = await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
     harness.assert(del.success === true, "File removed");
     harness.assert(!(await fs.stat(masterPath).catch(() => null)), "Master file deleted from storage");
+  });
+
+  await harness.test("T15-BOOKING-PROJ-01: Category-based auto-provisioning of Projects from Bookings", async () => {
+    // 1. Wedding booking: Category with autoCreateProject = true (or wedding keyword)
+    const weddingSlot = await db.bookingSlot.create({
+      data: {
+        tenantId: lumina.id,
+        category: "weddings",
+        date: new Date("2026-12-15T00:00:00.000Z"),
+        startTime: "07:00 AM",
+        endTime: "03:00 PM",
+        status: "HELD",
+      },
+    });
+
+    const weddingClient = await db.user.create({
+      data: {
+        tenantId: lumina.id,
+        name: "Wedding Client Test",
+        email: `t15-wed-${run}@example.test`,
+        phone: "01122334455",
+        role: "CLIENT",
+      },
+    });
+
+    const weddingBooking = await db.clientBooking.create({
+      data: {
+        tenantId: lumina.id,
+        trackingCode: `BK-WED-${run.toUpperCase()}`,
+        category: "weddings",
+        clientName: weddingClient.name,
+        clientEmail: weddingClient.email,
+        clientPhone: "01122334455",
+        discipline: "HYBRID",
+        serviceTier: "Cinematic Wedding",
+        targetDate: "2026-12-15",
+        status: "PENDING",
+        slotId: weddingSlot.id,
+        userId: weddingClient.id,
+        depositAmount: 500,
+        sessionPrice: 2500,
+      },
+    });
+
+    const weddingDepositInvoice = await db.milestoneInvoice.create({
+      data: {
+        tenantId: lumina.id,
+        invoiceNumber: await db.$transaction((tx) => nextInvoiceNumber(tx, lumina.id)),
+        clientId: weddingClient.id,
+        bookingId: weddingBooking.id,
+        milestoneType: "BOOKING_DEPOSIT",
+        amount: 500,
+        status: "PENDING_VERIFICATION",
+        paymentMethod: "QR_CODE",
+        dueDate: new Date(Date.now() + 86400000),
+      },
+    });
+
+    // Approve the wedding deposit invoice
+    const approveRes = await withSession(owner, () =>
+      approvePaymentVerification({
+        invoiceId: weddingDepositInvoice.id,
+        tenantId: lumina.id,
+        tenantSlug: lumina.slug,
+      })
+    );
+    harness.assert(approveRes.success === true, "Wedding deposit approved");
+
+    // Verify auto-provisioned Project exists
+    const weddingProject = await db.project.findFirst({
+      where: { bookingId: weddingBooking.id },
+      include: { callSheets: true, invoices: true },
+    });
+    harness.assert(weddingProject !== null, "Wedding booking automatically provisioned a Project");
+    harness.assertEqual(weddingProject?.status, "PRE_PRODUCTION", "Project status is PRE_PRODUCTION");
+    harness.assertEqual(weddingProject?.budget, 2500, "Project budget matches sessionPrice");
+    harness.assert((weddingProject?.callSheets.length ?? 0) > 0, "Initial call sheet generated for shoot day");
+    harness.assertEqual(weddingProject?.callSheets[0]?.generalCallTime, "07:00 AM", "Call time matches slot start time");
+
+    // 2. Convocation booking: Category without autoCreateProject (remains Booking only)
+    const convoSlot = await db.bookingSlot.create({
+      data: {
+        tenantId: lumina.id,
+        category: "convocation",
+        date: new Date("2026-12-20T00:00:00.000Z"),
+        startTime: "10:00 AM",
+        endTime: "10:30 AM",
+        status: "HELD",
+      },
+    });
+
+    const convoClient = await db.user.create({
+      data: {
+        tenantId: lumina.id,
+        name: "Convo Student Test",
+        email: `t15-convo-${run}@example.test`,
+        phone: "01988776655",
+        role: "CLIENT",
+      },
+    });
+
+    const convoBooking = await db.clientBooking.create({
+      data: {
+        tenantId: lumina.id,
+        trackingCode: `BK-CNV-${run.toUpperCase()}`,
+        category: "convocation",
+        clientName: convoClient.name,
+        clientEmail: convoClient.email,
+        clientPhone: "01988776655",
+        discipline: "PHOTOGRAPHY",
+        serviceTier: "Bronze Convo",
+        targetDate: "2026-12-20",
+        status: "PENDING",
+        slotId: convoSlot.id,
+        userId: convoClient.id,
+        depositAmount: 50,
+        sessionPrice: 150,
+      },
+    });
+
+    const convoDepositInvoice = await db.milestoneInvoice.create({
+      data: {
+        tenantId: lumina.id,
+        invoiceNumber: await db.$transaction((tx) => nextInvoiceNumber(tx, lumina.id)),
+        clientId: convoClient.id,
+        bookingId: convoBooking.id,
+        milestoneType: "BOOKING_DEPOSIT",
+        amount: 50,
+        status: "PENDING_VERIFICATION",
+        paymentMethod: "QR_CODE",
+        dueDate: new Date(Date.now() + 86400000),
+      },
+    });
+
+    const approveConvoRes = await withSession(owner, () =>
+      approvePaymentVerification({
+        invoiceId: convoDepositInvoice.id,
+        tenantId: lumina.id,
+        tenantSlug: lumina.slug,
+      })
+    );
+    harness.assert(approveConvoRes.success === true, "Convo deposit approved");
+
+    // Convo should NOT auto-create a project
+    const convoProject = await db.project.findFirst({
+      where: { bookingId: convoBooking.id },
+    });
+    harness.assert(convoProject === null, "Convocation booking stays clean in Bookings without creating a Project");
+
+    // 3. Manual promotion: promote convo booking to Project
+    const promoteRes = await withSession(owner, () =>
+      promoteBookingToProjectAction({
+        tenantId: lumina.id,
+        tenantSlug: lumina.slug,
+        bookingId: convoBooking.id,
+      })
+    );
+    harness.assert(promoteRes.success === true, "Owner manually promoted convo booking to Project");
+
+    const manuallyPromotedProject = await db.project.findFirst({
+      where: { bookingId: convoBooking.id },
+    });
+    harness.assert(manuallyPromotedProject !== null, "Manually promoted project exists");
+
+    // Cleanup
+    await db.callSheet.deleteMany({ where: { projectId: weddingProject!.id } });
+    await db.project.delete({ where: { id: weddingProject!.id } });
+    await db.project.delete({ where: { id: manuallyPromotedProject!.id } });
+    await db.milestoneInvoice.deleteMany({ where: { bookingId: { in: [weddingBooking.id, convoBooking.id] } } });
+    await db.clientBooking.deleteMany({ where: { id: { in: [weddingBooking.id, convoBooking.id] } } });
+    await db.bookingSlot.deleteMany({ where: { id: { in: [weddingSlot.id, convoSlot.id] } } });
+    await db.user.deleteMany({ where: { id: { in: [weddingClient.id, convoClient.id] } } });
   });
 }

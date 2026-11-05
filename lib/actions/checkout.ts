@@ -11,6 +11,7 @@ import { isSlotInPast } from "@/lib/slot-time";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
+import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import {
   ProcessBookingCheckoutSchema,
@@ -201,6 +202,9 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       // A simulated card deposit is paid on the spot: issue the balance invoice now.
       if (isCard) {
         await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
+        if (await shouldAutoProvisionProject(tx, booking)) {
+          await provisionProjectForBooking(tx, booking.id);
+        }
       }
 
       return { booking, invoice };
@@ -208,6 +212,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
 
     safeRevalidate(`/${tenantSlug}/book`);
     safeRevalidate(`/${tenantSlug}/admin/verification`);
+    safeRevalidate(`/${tenantSlug}/admin/projects`);
 
     if (online && creds) {
       const bill = await createBill(creds, {
@@ -401,11 +406,16 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
               },
             });
           }
+
+          if (await shouldAutoProvisionProject(tx, booking)) {
+            await provisionProjectForBooking(tx, booking.id);
+          }
         }
       }
     });
 
     safeRevalidate(`/${tenantSlug}/admin/verification`);
+    safeRevalidate(`/${tenantSlug}/admin/projects`);
     if (invoice.projectId) {
       safeRevalidate(`/${tenantSlug}/vault/${invoice.projectId}`);
     }

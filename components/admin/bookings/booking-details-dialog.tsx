@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
+  Clapperboard,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
@@ -293,6 +294,19 @@ function BookingDetailsBody({
           )}
         </div>
       </div>
+
+      {booking.project && (
+        <Link
+          href={`/${tenantSlug}/admin/projects/${booking.project.id}`}
+          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-200 hover:bg-amber-500/15 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Clapperboard className="size-4 text-amber-400" />
+            Production Project: <strong className="font-mono text-white">{booking.project.projectNumber}</strong>
+          </span>
+          <span className="font-semibold text-amber-300 whitespace-nowrap">Open Project →</span>
+        </Link>
+      )}
 
       {(stage === "VERIFYING" || stage === "BALANCE_VERIFYING") && (
         <Link

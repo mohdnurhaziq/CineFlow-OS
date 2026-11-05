@@ -55,6 +55,12 @@ export interface BookingDetails {
   deliveredAt: string | null;
   /** Link to the client's gallery or files, once delivered. */
   deliveryUrl: string | null;
+  /** Linked production project, if provisioned. */
+  project?: {
+    id: string;
+    projectNumber: string;
+    status: string;
+  } | null;
 }
 
 // A booking and its deposit invoice are written in the same transaction.
@@ -66,7 +72,10 @@ export async function loadBookingDetails(
 ): Promise<BookingDetails[]> {
   const bookings = await db.clientBooking.findMany({
     where: { tenantId, ...(opts.bookingId ? { id: opts.bookingId } : {}) },
-    include: { slot: true },
+    include: {
+      slot: true,
+      project: { select: { id: true, projectNumber: true, status: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
   if (bookings.length === 0) return [];
@@ -173,6 +182,7 @@ export async function loadBookingDetails(
       completedAt: b.completedAt ? b.completedAt.toISOString() : null,
       deliveredAt: b.deliveredAt ? b.deliveredAt.toISOString() : null,
       deliveryUrl: b.deliveryUrl,
+      project: b.project ?? null,
     };
   });
 }

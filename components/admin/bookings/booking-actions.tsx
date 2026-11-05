@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CalendarClock, CheckCircle2, Loader2, PackageCheck, UserX, XCircle } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, CalendarClock, CheckCircle2, Clapperboard, Loader2, PackageCheck, UserX, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { BookingDetails } from "@/lib/bookings/details";
+import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
 import {
   cancelBooking,
   listRescheduleOptions,
@@ -108,6 +110,31 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
             <button type="button" className={`${btn} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`} onClick={() => setMode("deliver")}>
               <PackageCheck className="size-3.5" /> {booking.status === "DELIVERED" ? "Update gallery link" : "Mark delivered"}
             </button>
+          )}
+          {booking.project ? (
+            <Link
+              href={`/${tenantSlug}/admin/projects/${booking.project.id}`}
+              className={`${btn} border-amber-500/40 text-amber-300 hover:bg-amber-500/10`}
+            >
+              <Clapperboard className="size-3.5" /> Project {booking.project.projectNumber}
+              <ArrowUpRight className="size-3 ml-0.5" />
+            </Link>
+          ) : (
+            (booking.status === "CONFIRMED" || booking.status === "COMPLETED") && (
+              <button
+                type="button"
+                className={`${btn} border-amber-500/40 text-amber-300 hover:bg-amber-500/10`}
+                disabled={pending}
+                onClick={() =>
+                  run(
+                    () => promoteBookingToProjectAction({ tenantId, tenantSlug, bookingId: booking.id }),
+                    "Booking promoted to Project."
+                  )
+                }
+              >
+                <Clapperboard className="size-3.5" /> Promote to Project
+              </button>
+            )
           )}
           {upcoming &&
             (canCancel ? (

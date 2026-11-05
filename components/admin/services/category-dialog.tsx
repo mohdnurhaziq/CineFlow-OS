@@ -13,6 +13,7 @@ export interface CategoryRow {
   description?: string | null;
   sortOrder: number;
   isActive: boolean;
+  autoCreateProject?: boolean;
 }
 
 interface CategoryDialogProps {
@@ -42,6 +43,7 @@ export function CategoryDialog({
   const [description, setDescription] = useState(categoryToEdit?.description || "");
   const [sortOrder, setSortOrder] = useState(categoryToEdit?.sortOrder?.toString() || "0");
   const [isActive, setIsActive] = useState(categoryToEdit?.isActive ?? true);
+  const [autoCreateProject, setAutoCreateProject] = useState(categoryToEdit?.autoCreateProject ?? false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -54,6 +56,7 @@ export function CategoryDialog({
       setDescription(categoryToEdit.description || "");
       setSortOrder(categoryToEdit.sortOrder.toString());
       setIsActive(categoryToEdit.isActive);
+      setAutoCreateProject(categoryToEdit.autoCreateProject ?? false);
     } else {
       setName("");
       setSlug("");
@@ -61,6 +64,7 @@ export function CategoryDialog({
       setDescription("");
       setSortOrder("0");
       setIsActive(true);
+      setAutoCreateProject(false);
     }
     setErrorMessage(null);
   }, [categoryToEdit, isOpen]);
@@ -77,6 +81,14 @@ export function CategoryDialog({
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
       setSlug(generated);
+      if (
+        generated.includes("wedding") ||
+        generated.includes("commercial") ||
+        generated.includes("event") ||
+        generated.includes("film")
+      ) {
+        setAutoCreateProject(true);
+      }
     }
   };
 
@@ -99,6 +111,7 @@ export function CategoryDialog({
           description: description || null,
           sortOrder: isNaN(parsedOrder) ? 0 : parsedOrder,
           isActive,
+          autoCreateProject,
         });
 
         if (!res.success) {
@@ -116,6 +129,7 @@ export function CategoryDialog({
           description: description || null,
           sortOrder: isNaN(parsedOrder) ? 0 : parsedOrder,
           isActive,
+          autoCreateProject,
         });
 
         if (!res.success) {
@@ -249,6 +263,23 @@ export function CategoryDialog({
                 <span className="text-xs font-medium text-white">Active Status</span>
               </label>
             </div>
+          </div>
+
+          <div>
+            <label className="flex items-start gap-2.5 p-3 rounded-lg bg-zinc-900 border border-zinc-700 cursor-pointer hover:border-zinc-600 transition-colors">
+              <input
+                type="checkbox"
+                checked={autoCreateProject}
+                onChange={(e) => setAutoCreateProject(e.target.checked)}
+                className="mt-0.5 rounded border-zinc-600 text-amber-500 focus:ring-0"
+              />
+              <div className="text-xs">
+                <span className="font-semibold text-white block">Auto-Provision Production Project</span>
+                <span className="text-zinc-400 text-[11px] block mt-0.5">
+                  When a booking in this category is approved, automatically create a linked Project with Call Sheets, Gear BOM, and Deliverables Vault (recommended for Weddings, Events, and Commercial shoots).
+                </span>
+              </div>
+            </label>
           </div>
 
           <div>

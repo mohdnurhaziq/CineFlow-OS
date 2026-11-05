@@ -60,15 +60,16 @@ export const CreateCampaignCategorySchema = z.object({
   description: z.string().optional().nullable(),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.boolean().default(true),
+  autoCreateProject: z.boolean().optional().default(false),
 });
 
-export type CreateCampaignCategoryInput = z.infer<typeof CreateCampaignCategorySchema>;
+export type CreateCampaignCategoryInput = z.input<typeof CreateCampaignCategorySchema>;
 
 export const UpdateCampaignCategorySchema = CreateCampaignCategorySchema.extend({
   id: z.string().min(1, "Category ID is required"),
 });
 
-export type UpdateCampaignCategoryInput = z.infer<typeof UpdateCampaignCategorySchema>;
+export type UpdateCampaignCategoryInput = z.input<typeof UpdateCampaignCategorySchema>;
 
 export const DeleteCampaignCategorySchema = z.object({
   id: z.string().min(1, "Category ID is required"),

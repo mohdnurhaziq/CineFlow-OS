@@ -8,6 +8,7 @@ import { requireStaff, STAFF_ROLES, OWNER_ROLES } from "@/lib/auth/guard";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
+import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 
 
@@ -166,7 +167,12 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
       });
 
       // Deposit recorded as paid: the balance invoice goes out now.
-      if (isPaid) await onInvoicePaid(tx, depositInvoice);
+      if (isPaid) {
+        await onInvoicePaid(tx, depositInvoice);
+        if (await shouldAutoProvisionProject(tx, booking)) {
+          await provisionProjectForBooking(tx, booking.id, { studioLeadId: session.id });
+        }
+      }
 
       return { booking, customerName: customer.name };
     });
@@ -174,6 +180,8 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
     try {
       revalidatePath(`/${data.tenantSlug}/admin/calendar`);
       revalidatePath(`/${data.tenantSlug}/admin/verification`);
+      revalidatePath(`/${data.tenantSlug}/admin/projects`);
+      revalidatePath(`/${data.tenantSlug}/admin/bookings`);
       revalidatePath(`/${data.tenantSlug}/book`);
       revalidatePath(`/${data.tenantSlug}/account`);
     } catch {
@@ -200,5 +208,43 @@ export async function getBookingDetails(input: { tenantId: string; bookingId: st
     return { success: true as const, booking };
   } catch (err: any) {
     return { success: false as const, error: err.message || "Failed to load booking" };
+  }
+}
+
+/** Escalate or promote any confirmed/completed booking into a full production project. */
+export async function promoteBookingToProjectAction(input: {
+  tenantId: string;
+  tenantSlug: string;
+  bookingId: string;
+}) {
+  try {
+    await requireStaff(input.tenantId);
+    const session = await getCurrentUser();
+
+    const result = await db.$transaction(async (tx) => {
+      return provisionProjectForBooking(tx, input.bookingId, { studioLeadId: session?.id });
+    });
+
+    if (!result) {
+      return { success: false, message: "Could not provision project for booking." };
+    }
+
+    try {
+      revalidatePath(`/${input.tenantSlug}/admin/bookings`);
+      revalidatePath(`/${input.tenantSlug}/admin/projects`);
+    } catch {
+      // Non-request context fallback
+    }
+
+    return {
+      success: true,
+      projectId: result.project.id,
+      projectNumber: result.project.projectNumber,
+      message: result.alreadyExists
+        ? `Linked project ${result.project.projectNumber} is already active.`
+        : `Created Project ${result.project.projectNumber} successfully.`,
+    };
+  } catch (err: any) {
+    return { success: false, message: err.message || "Failed to promote booking to project" };
   }
 }

@@ -49,6 +49,7 @@ export async function runTier12BillingTests(harness: TestHarness) {
   harness.registerTeardown(async () => {
     await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t12-" } } } });
     await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t12-" } } });
+    await db.project.deleteMany({ where: { client: { email: { startsWith: "t12-" } } } });
     await db.project.deleteMany({ where: { id: { in: projectIds } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
     await db.user.deleteMany({ where: { email: { startsWith: "t12-" } } });

@@ -56,8 +56,9 @@ model CampaignCategory {
   slug        String   // e.g. "convocation", "hari-raya"
   badgeIcon   String?  // emoji or icon symbol e.g. "🎓", "🌙", "💍", "🎬"
   description String?
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
+  isActive          Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  autoCreateProject Boolean  @default(false)
 
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -275,6 +276,7 @@ model Project {
   studioLeadId       String
   discipline         String              // PHOTOGRAPHY, VIDEOGRAPHY, HYBRID
   proposalId         String?             @unique
+  bookingId          String?             @unique
   status             String              @default("PRE_PRODUCTION") // PRE_PRODUCTION, PRODUCTION, POST_PRODUCTION, IN_REVIEW, DELIVERED
   shootDates         String?
   budget             Float
@@ -286,6 +288,7 @@ model Project {
   client             User                @relation("ClientProjects", fields: [clientId], references: [id])
   studioLead         User                @relation("StudioProjects", fields: [studioLeadId], references: [id])
   proposal           Proposal?           @relation(fields: [proposalId], references: [id])
+  booking            ClientBooking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   callSheets         CallSheet[]
   shotItems          ShotItem[]
   digitalReleases    DigitalRelease[]
@@ -296,6 +299,7 @@ model Project {
   @@index([tenantId])
   @@index([clientId])
   @@index([studioLeadId])
+  @@index([bookingId])
   @@index([tenantId, status])
 }
 
@@ -526,6 +530,7 @@ model ClientBooking {
   user           User?        @relation(fields: [userId], references: [id])
   package        ServicePackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   invoices       MilestoneInvoice[]
+  project        Project?
 
   @@index([tenantId])
   @@index([userId])

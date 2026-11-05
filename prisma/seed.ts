@@ -237,14 +237,14 @@ async function main() {
   await prisma.campaignCategory.createMany({
     data: [
       // Lumina
-      { id: "cat_lumina_comm", tenantId: luminaTenant.id, name: "Commercial Campaigns", slug: "commercial", badgeIcon: "🎬", sortOrder: 1, isActive: true },
-      { id: "cat_lumina_wed", tenantId: luminaTenant.id, name: "Weddings & Features", slug: "weddings", badgeIcon: "💍", sortOrder: 2, isActive: true },
-      { id: "cat_lumina_port", tenantId: luminaTenant.id, name: "Studio Portraits", slug: "studio-portrait", badgeIcon: "📸", sortOrder: 3, isActive: true },
+      { id: "cat_lumina_comm", tenantId: luminaTenant.id, name: "Commercial Campaigns", slug: "commercial", badgeIcon: "🎬", sortOrder: 1, isActive: true, autoCreateProject: true },
+      { id: "cat_lumina_wed", tenantId: luminaTenant.id, name: "Weddings & Features", slug: "weddings", badgeIcon: "💍", sortOrder: 2, isActive: true, autoCreateProject: true },
+      { id: "cat_lumina_port", tenantId: luminaTenant.id, name: "Studio Portraits", slug: "studio-portrait", badgeIcon: "📸", sortOrder: 3, isActive: true, autoCreateProject: false },
       // Apex
-      { id: "cat_apex_convo", tenantId: apexTenant.id, name: "Convocation Specials", slug: "convocation", badgeIcon: "🎓", sortOrder: 1, isActive: true },
-      { id: "cat_apex_raya", tenantId: apexTenant.id, name: "Hari Raya Festive Specials", slug: "hari-raya", badgeIcon: "🌙", sortOrder: 2, isActive: true },
-      { id: "cat_apex_port", tenantId: apexTenant.id, name: "Studio Portraiture", slug: "studio-portrait", badgeIcon: "📸", sortOrder: 3, isActive: true },
-      { id: "cat_apex_comm", tenantId: apexTenant.id, name: "Commercial Branding", slug: "commercial", badgeIcon: "🎬", sortOrder: 4, isActive: true },
+      { id: "cat_apex_convo", tenantId: apexTenant.id, name: "Convocation Specials", slug: "convocation", badgeIcon: "🎓", sortOrder: 1, isActive: true, autoCreateProject: false },
+      { id: "cat_apex_raya", tenantId: apexTenant.id, name: "Hari Raya Festive Specials", slug: "hari-raya", badgeIcon: "🌙", sortOrder: 2, isActive: true, autoCreateProject: false },
+      { id: "cat_apex_port", tenantId: apexTenant.id, name: "Studio Portraiture", slug: "studio-portrait", badgeIcon: "📸", sortOrder: 3, isActive: true, autoCreateProject: false },
+      { id: "cat_apex_comm", tenantId: apexTenant.id, name: "Commercial Branding", slug: "commercial", badgeIcon: "🎬", sortOrder: 4, isActive: true, autoCreateProject: true },
     ],
   });
 

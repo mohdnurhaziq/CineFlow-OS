@@ -1,5 +1,6 @@
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { onInvoicePaid } from "@/lib/bookings/billing";
+import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
@@ -98,6 +99,18 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       unlockedDownloads = true;
     }
 
+    if (invoice.milestoneType === "BOOKING_BALANCE") {
+      const projectId =
+        invoice.projectId ??
+        (invoice.bookingId
+          ? (await tx.project.findFirst({ where: { bookingId: invoice.bookingId }, select: { id: true } }))?.id
+          : null);
+      if (projectId) {
+        await tx.project.update({ where: { id: projectId }, data: { isFinalBalancePaid: true } });
+        unlockedDownloads = true;
+      }
+    }
+
     // Retainer paid online: issue the project's final balance invoice.
     if (invoice.milestoneType === "RETAINER_50") {
       await onInvoicePaid(tx, invoice);
@@ -124,6 +137,11 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
         });
         // Deposit paid online: issue the balance invoice.
         await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
+
+        // Auto-provision project if category qualifies
+        if (await shouldAutoProvisionProject(tx, booking)) {
+          await provisionProjectForBooking(tx, booking.id);
+        }
       } else {
         // The slot hold lapsed and someone else took the slot: money received, nothing to give.
         refundRequired = true;

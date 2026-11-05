@@ -29,6 +29,8 @@ export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
       client: { select: { name: true } },
       callSheets: { select: { shootDate: true }, orderBy: { shootDate: "asc" } },
       deliverables: { select: { _count: { select: { items: true } } } },
+      booking: { select: { id: true, trackingCode: true, category: true, serviceTier: true } },
+      proposal: { select: { id: true, proposalNumber: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -41,7 +43,7 @@ export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
           Projects
         </h1>
         <p className="text-xs text-zinc-400">
-          Each signed proposal becomes a project: plan the shoot days, reserve gear, and deliver the files to the client.
+          Production engagements from confirmed bookings and signed proposals: plan shoot days, reserve gear, and deliver files via the Vault.
         </p>
       </div>
 
@@ -50,11 +52,11 @@ export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
           <Inbox className="size-8 text-zinc-600 mx-auto" />
           <p className="text-sm text-zinc-300">No projects yet.</p>
           <p className="text-xs text-zinc-500">
-            Send a proposal from{" "}
+            Projects appear automatically when production bookings (Weddings, Commercial, Events) are approved, or when a client signs a{" "}
             <Link href={`/${tenant.slug}/admin/proposals`} className="text-amber-400 hover:underline">
-              Proposals
+              Proposal
             </Link>
-            . When the client signs it, the project appears here.
+            .
           </p>
         </div>
       ) : (
@@ -81,7 +83,19 @@ export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
                       <Link href={`/${tenant.slug}/admin/projects/${p.id}`} className="font-semibold text-white hover:text-amber-400">
                         {p.title}
                       </Link>
-                      <div className="text-[11px] font-mono text-zinc-500">{p.projectNumber}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="text-[11px] font-mono text-zinc-500">{p.projectNumber}</span>
+                        {p.booking && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            Booking {p.booking.trackingCode}
+                          </span>
+                        )}
+                        {p.proposal && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                            Proposal {p.proposal.proposalNumber}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-zinc-300">{p.client.name}</td>
                     <td className="px-4 py-3 text-zinc-300">{PROJECT_STAGE_LABELS[p.status as keyof typeof PROJECT_STAGE_LABELS] ?? p.status}</td>

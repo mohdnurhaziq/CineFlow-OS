@@ -5,6 +5,7 @@ import { requireOwner } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { onInvoicePaid } from "@/lib/bookings/billing";
+import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
@@ -94,6 +95,11 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
               },
             });
           }
+
+          // If this booking qualifies as a project (e.g. Wedding, Commercial, Event), auto-provision a Project
+          if (await shouldAutoProvisionProject(tx, booking)) {
+            await provisionProjectForBooking(tx, booking.id);
+          }
         }
       }
 
@@ -110,9 +116,27 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
         });
         unlockedDownloads = true;
       }
+
+      // 4. If milestone is BOOKING_BALANCE and the project is linked, unlock project paywall
+      if (invoice.milestoneType === "BOOKING_BALANCE") {
+        const projectId =
+          invoice.projectId ??
+          (invoice.bookingId
+            ? (await tx.project.findFirst({ where: { bookingId: invoice.bookingId }, select: { id: true } }))?.id
+            : null);
+        if (projectId) {
+          await tx.project.update({
+            where: { id: projectId },
+            data: { isFinalBalancePaid: true },
+          });
+          unlockedDownloads = true;
+        }
+      }
     });
 
     safeRevalidate(`/${tenantSlug}/admin/verification`);
+    safeRevalidate(`/${tenantSlug}/admin/projects`);
+    safeRevalidate(`/${tenantSlug}/admin/bookings`);
     safeRevalidate(`/${tenantSlug}/book`);
     if (invoice.projectId) {
       safeRevalidate(`/${tenantSlug}/vault/${invoice.projectId}`);
