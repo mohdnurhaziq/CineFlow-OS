@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
+import { BookingActions } from "@/components/admin/bookings/booking-actions";
 
 // ---------------------------------------------------------------------------
 // Shared presentation helpers (also used by the Bookings list)
@@ -31,10 +32,20 @@ export type BookingStage =
   | "AWAITING_PAYMENT"
   | "REJECTED"
   | "PENDING"
+  | "DONE_BALANCE_DUE"
+  | "DONE"
+  | "DELIVERED"
+  | "NO_SHOW"
   | "CANCELLED";
 
 export function bookingStage(b: BookingDetails): BookingStage {
   if (b.status === "CANCELLED") return "CANCELLED";
+  if (b.status === "NO_SHOW") return "NO_SHOW";
+  if (b.status === "DELIVERED") return "DELIVERED";
+  if (b.status === "COMPLETED") {
+    const balance = b.balanceInvoice?.status;
+    return balance && balance !== "PAID" && balance !== "VOID" ? "DONE_BALANCE_DUE" : "DONE";
+  }
   if (b.status === "CONFIRMED") {
     const balance = b.balanceInvoice?.status;
     if (balance === "PAID") return "FULLY_PAID";
@@ -57,6 +68,10 @@ const STAGE_STYLE: Record<BookingStage, { label: string; className: string }> = 
   AWAITING_PAYMENT: { label: "Awaiting online payment", className: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
   REJECTED: { label: "Payment rejected", className: "bg-red-500/10 text-red-400 border-red-500/25" },
   PENDING: { label: "Pending", className: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+  DONE_BALANCE_DUE: { label: "Session done · balance due", className: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
+  DONE: { label: "Session done", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" },
+  DELIVERED: { label: "Delivered", className: "bg-violet-500/10 text-violet-300 border-violet-500/25" },
+  NO_SHOW: { label: "No-show", className: "bg-red-500/10 text-red-400 border-red-500/25" },
   CANCELLED: { label: "Cancelled", className: "bg-zinc-800 text-zinc-400 border-zinc-700" },
 };
 
@@ -129,6 +144,10 @@ interface BookingDetailsDialogProps {
   booking: BookingDetails | null;
   loading?: boolean;
   error?: string | null;
+  /** With these, the dialog offers move / cancel / done / deliver actions. */
+  tenantId?: string;
+  isOwner?: boolean;
+  onChanged?: () => void;
 }
 
 export function BookingDetailsDialog({
@@ -139,6 +158,9 @@ export function BookingDetailsDialog({
   booking,
   loading = false,
   error = null,
+  tenantId,
+  isOwner = false,
+  onChanged,
 }: BookingDetailsDialogProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
@@ -202,7 +224,12 @@ export function BookingDetailsDialog({
             </div>
           </div>
         ) : (
-          <BookingDetailsBody booking={booking} tenantSlug={tenantSlug} currency={currency} />
+          <>
+            <BookingDetailsBody booking={booking} tenantSlug={tenantSlug} currency={currency} />
+            {tenantId && onChanged && (
+              <BookingActions booking={booking} tenantId={tenantId} tenantSlug={tenantSlug} isOwner={isOwner} onChanged={onChanged} />
+            )}
+          </>
         )}
       </div>
     </div>
@@ -408,6 +435,19 @@ function BookingDetailsBody({
         )}
       </Section>
 
+      {booking.cancelReason && (
+        <p className="text-xs text-zinc-400">
+          <span className="text-zinc-500">Cancelled:</span> {booking.cancelReason}
+        </p>
+      )}
+      {booking.deliveryUrl && (
+        <p className="text-xs">
+          <span className="text-zinc-500">Delivered: </span>
+          <a href={booking.deliveryUrl} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline break-all">
+            {booking.deliveryUrl}
+          </a>
+        </p>
+      )}
       <p className="text-[11px] font-mono text-zinc-500">Booked on {formatDateTime(booking.createdAt)}</p>
     </div>
   );

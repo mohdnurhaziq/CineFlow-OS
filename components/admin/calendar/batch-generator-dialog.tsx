@@ -18,6 +18,8 @@ interface BatchGeneratorDialogProps {
   currency: string;
   categories: CategoryOption[];
   onSuccess?: () => void;
+  /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
+  isOwner?: boolean;
 }
 
 const DAYS = [
@@ -33,6 +35,7 @@ const DAYS = [
 export function BatchGeneratorDialog({
   isOpen,
   onClose,
+  isOwner = true,
   tenantId,
   tenantSlug,
   currency,
@@ -379,35 +382,41 @@ export function BatchGeneratorDialog({
           </div>
 
           {/* Pricing */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-mono text-zinc-400 block mb-1">
-                Session Fee ({currency})
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
-            </div>
+          {isOwner ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-mono text-zinc-400 block mb-1">
+                  Session Fee ({currency})
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+              </div>
 
-            <div>
-              <label className="text-xs font-mono text-zinc-400 block mb-1">
-                Deposit Required ({currency})
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={depositRequired}
-                onChange={(e) => setDepositRequired(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <div>
+                <label className="text-xs font-mono text-zinc-400 block mb-1">
+                  Deposit Required ({currency})
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={depositRequired}
+                  onChange={(e) => setDepositRequired(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="text-[11px] text-zinc-400 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
+              Priced by this category&apos;s packages. Only the studio owner can set a slot fee or deposit.
+            </p>
+          )}
 
           <p className="text-[11px] text-zinc-500">
             Times that overlap an existing slot, or have already passed, are skipped automatically.

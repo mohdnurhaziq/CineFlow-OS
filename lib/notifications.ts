@@ -10,7 +10,8 @@ export type NotificationEvent =
   | "PAYMENT_APPROVED"
   | "PAYMENT_REJECTED"
   | "PROPOSAL_SIGNED"
-  | "VAULT_UNLOCKED";
+  | "VAULT_UNLOCKED"
+  | "STUDIO_UPDATE";
 
 export interface BookingConfirmedPayload {
   event: "BOOKING_CONFIRMED";
@@ -81,12 +82,30 @@ export interface VaultUnlockedPayload {
   vaultUrl: string;
 }
 
+/** A plain message from the studio: a booking moved, cancelled or delivered, an invoice reminder. */
+export interface StudioUpdatePayload {
+  event: "STUDIO_UPDATE";
+  studioName: string;
+  studioSlug: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: string;
+  /** Short headline, e.g. "Your booking was moved". */
+  headline: string;
+  /** One or two plain sentences with the details. */
+  message: string;
+  /** Optional button: where to go next (account page, gallery). */
+  linkUrl?: string;
+  linkLabel?: string;
+}
+
 export type NotificationPayload =
   | BookingConfirmedPayload
   | PaymentApprovedPayload
   | PaymentRejectedPayload
   | ProposalSignedPayload
-  | VaultUnlockedPayload;
+  | VaultUnlockedPayload
+  | StudioUpdatePayload;
 
 export interface NotificationResult {
   id: string;
@@ -286,10 +305,10 @@ export async function sendNotification(
         <div style="background-color: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 8px; padding: 16px; margin: 20px 0; color: #fb7185;">
           <strong>Reviewer Note:</strong> ${esc(payload.reason)}
         </div>
-        <p>Please submit an updated transaction receipt or payment slip to finalize verification.</p>
+        <p>Please send a new payment slip within 24 hours. Your booking is held until then; after that the time slot is released.</p>
       `;
       emailText = `Payment verification issue for ${payload.invoiceNumber}. Reason: ${payload.reason}`;
-      whatsappText = `*${payload.studioName} — Payment Verification Notice*\n\nHi ${payload.clientName}, we could not verify your receipt for #${payload.invoiceNumber}. Note: ${payload.reason}. Please re-submit proof.`;
+      whatsappText = `*${payload.studioName} — Payment Verification Notice*\n\nHi ${payload.clientName}, we could not verify your receipt for #${payload.invoiceNumber}. Note: ${payload.reason}. Please send a new slip within 24 hours to keep your booking.`;
       break;
     }
 
@@ -326,6 +345,26 @@ export async function sendNotification(
       `;
       emailText = `Your master media for ${payload.projectTitle} is unlocked! Access your vault: ${payload.vaultUrl}`;
       whatsappText = `*${payload.studioName} — Masters Unlocked!*\n\nHi ${payload.clientName}, your deliverables for *${payload.projectTitle}* are ready for full PKZIP download: ${payload.vaultUrl}`;
+      break;
+    }
+
+    case "STUDIO_UPDATE": {
+      emailSubject = `${payload.studioName}: ${payload.headline}`;
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>${esc(payload.message)}</p>
+        ${
+          payload.linkUrl
+            ? `<div style="text-align: center; margin: 30px 0;">
+          <a href="${esc(payload.linkUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            ${esc(payload.linkLabel ?? "Open")}
+          </a>
+        </div>`
+            : ""
+        }
+      `;
+      emailText = `${payload.headline}. ${payload.message}${payload.linkUrl ? ` ${payload.linkUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — ${payload.headline}*\n\nHi ${payload.clientName}, ${payload.message}${payload.linkUrl ? ` ${payload.linkUrl}` : ""}`;
       break;
     }
   }

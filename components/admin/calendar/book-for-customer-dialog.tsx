@@ -25,6 +25,8 @@ interface BookForCustomerDialogProps {
   packages?: BookingPackageOption[];
   currency?: string;
   onSuccess: () => void;
+  /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
+  isOwner?: boolean;
 }
 
 const inputClass =
@@ -34,6 +36,7 @@ const labelClass = "text-xs font-mono text-zinc-400 block mb-1";
 export function BookForCustomerDialog({
   isOpen,
   onClose,
+  isOwner = true,
   tenantId,
   tenantSlug,
   slot,
@@ -50,12 +53,12 @@ export function BookForCustomerDialog({
   const [newPhone, setNewPhone] = useState("");
 
   const [discipline, setDiscipline] = useState("PHOTOGRAPHY");
-  const [serviceTier, setServiceTier] = useState("STANDARD");
   const [creativeBrief, setCreativeBrief] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "PAID">("PENDING");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QR_CODE" | "CARD">("CASH");
   const [packageId, setPackageId] = useState<string | null>(null);
   const offeredPackages = useMemo(() => (slot ? packagesFor(packages, slot.category) : []), [packages, slot]);
+  const chosenPackage = offeredPackages.find((p) => p.id === packageId) ?? null;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -70,7 +73,6 @@ export function BookForCustomerDialog({
       setNewEmail("");
       setNewPhone("");
       setDiscipline("PHOTOGRAPHY");
-      setServiceTier("STANDARD");
       setCreativeBrief("");
       setPaymentStatus("PENDING");
       setPaymentMethod("CASH");
@@ -114,8 +116,7 @@ export function BookForCustomerDialog({
         ...(mode === "EXISTING"
           ? { clientId: selectedClientId }
           : { newClient: { name: newName, email: newEmail, phone: newPhone } }),
-        discipline,
-        serviceTier,
+        discipline: chosenPackage?.discipline ?? discipline,
         creativeBrief: creativeBrief || undefined,
         paymentStatus,
         paymentMethod,
@@ -304,24 +305,20 @@ export function BookForCustomerDialog({
             label="Package"
           />
 
-          {/* Booking details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Discipline</label>
-              <select value={discipline} onChange={(e) => setDiscipline(e.target.value)} className={inputClass}>
-                <option value="PHOTOGRAPHY">Photography</option>
-                <option value="VIDEOGRAPHY">Videography</option>
-                <option value="HYBRID">Hybrid</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Service Tier</label>
-              <select value={serviceTier} onChange={(e) => setServiceTier(e.target.value)} className={inputClass}>
-                <option value="STANDARD">Standard</option>
-                <option value="PREMIUM">Premium</option>
-                <option value="CINEMATIC">Cinematic</option>
-              </select>
-            </div>
+          {/* Booking details: a chosen package sets the discipline. */}
+          <div>
+            <label className={labelClass}>Discipline</label>
+            <select
+              value={chosenPackage?.discipline ?? discipline}
+              onChange={(e) => setDiscipline(e.target.value)}
+              disabled={!!chosenPackage?.discipline}
+              className={`${inputClass} disabled:opacity-60`}
+            >
+              <option value="PHOTOGRAPHY">Photography</option>
+              <option value="VIDEOGRAPHY">Videography</option>
+              <option value="HYBRID">Photo &amp; video</option>
+            </select>
+            {chosenPackage?.discipline && <p className="text-[11px] text-zinc-500 mt-1">Set by the package.</p>}
           </div>
 
           <div>
@@ -345,7 +342,8 @@ export function BookForCustomerDialog({
                 className={inputClass}
               >
                 <option value="PENDING">Pending (needs verification)</option>
-                <option value="PAID">Paid (confirm booking)</option>
+                {/* Recording money as received is the owner's call. */}
+                {isOwner && <option value="PAID">Paid (confirm booking)</option>}
               </select>
             </div>
             <div>

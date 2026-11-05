@@ -187,6 +187,8 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         endDate: resEnd.toISOString(),
       });
       harness.assert(reservationRes.success === true, "S4.1-4: Gear reservation confirmed");
+      // Shoot day arrives: check-out only opens shortly before the reservation starts.
+      await db.equipmentReservation.update({ where: { id: reservationRes.reservation!.id }, data: { startDate: new Date(), endDate: new Date(Date.now() + 86_400_000) } });
 
       const preInspection = await logPreShootInspection({
         tenantId: luminaTenant!.id,

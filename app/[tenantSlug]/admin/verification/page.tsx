@@ -4,6 +4,7 @@ import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { AdminVerificationConsole } from "@/components/checkout/admin-verification-console";
 import { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/session";
+import { OWNER_ROLES } from "@/lib/auth/guard";
 
 interface VerificationPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -68,7 +69,7 @@ export default async function AdminVerificationPage({ params }: VerificationPage
               trackingCode: linked.trackingCode,
               category: linked.category,
               targetDate: linked.targetDate,
-              slot: slot ? { startTime: slot.startTime, endTime: slot.endTime } : null,
+              slot: slot ? { date: slot.date.toISOString(), startTime: slot.startTime, endTime: slot.endTime } : null,
             }
           : null,
       };
@@ -89,11 +90,14 @@ export default async function AdminVerificationPage({ params }: VerificationPage
   });
 
   const user = await getCurrentUser();
+  const categories = await db.campaignCategory.findMany({ where: { tenantId: tenant.id }, select: { slug: true, name: true } });
 
   return (
     <AdminVerificationConsole
       tenant={tenant}
       verifierName={user?.name ?? "Studio staff"}
+      isOwner={!!user && OWNER_ROLES.has(user.role)}
+      categoryNames={Object.fromEntries(categories.map((c) => [c.slug, c.name]))}
       pendingInvoices={enrichedPending}
       historyInvoices={historyInvoices}
     />

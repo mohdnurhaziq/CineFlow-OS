@@ -54,7 +54,8 @@ export interface MyBookingView {
   trackingCode: string;
   status: string;
   clientName: string;
-  serviceTier: string;
+  /** The service package booked, if any. */
+  packageName: string | null;
   category: string;
   discipline: string;
   depositPaid: boolean;
@@ -198,7 +199,7 @@ export async function lookupMyBooking(input: {
         trackingCode: booking.trackingCode,
         status: booking.status,
         clientName: booking.clientName,
-        serviceTier: booking.serviceTier,
+        packageName: booking.packageName,
         category: booking.category,
         discipline: booking.discipline,
         depositPaid: booking.depositPaid,

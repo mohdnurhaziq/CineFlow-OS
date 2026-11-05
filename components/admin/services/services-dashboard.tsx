@@ -23,6 +23,8 @@ import { deleteServicePackage, togglePackageFeatured } from "@/lib/actions/admin
 import { PackageDialog, type PackageRow, type CategoryOption } from "./package-dialog";
 import { CategoryDialog, type CategoryRow } from "./category-dialog";
 import { CategoryList } from "./category-list";
+import { disciplineLabel } from "@/lib/labels";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface ServicesDashboardProps {
   tenantId: string;
@@ -30,6 +32,8 @@ interface ServicesDashboardProps {
   currency: string;
   initialPackages: PackageRow[];
   initialCategories: CategoryRow[];
+  /** Studio owner: may create, edit and delete packages (prices) and delete categories. */
+  isOwner?: boolean;
 }
 
 export function ServicesDashboard({
@@ -38,7 +42,9 @@ export function ServicesDashboard({
   currency,
   initialPackages,
   initialCategories,
+  isOwner = true,
 }: ServicesDashboardProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"packages" | "categories">("packages");
@@ -80,7 +86,7 @@ export function ServicesDashboard({
   const activeCategories = initialCategories.filter((c) => c.isActive).length;
 
   const handleDeletePackage = async (pkg: PackageRow) => {
-    if (!confirm(`Are you sure you want to delete package "${pkg.name}"?`)) return;
+    if (!(await confirm({ title: `Delete "${pkg.name}"?`, message: "Clients will no longer be able to book this package.", confirmLabel: "Delete" }))) return;
 
     setDeletingPackageId(pkg.id);
     try {
@@ -123,15 +129,19 @@ export function ServicesDashboard({
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <Package className="size-6 text-amber-400" />
-            <span>Service Packages & Campaign Categories</span>
+            <span>Services</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Configure studio pricing tiers, turnaround expectations, deliverables scope, and public booking classifications.
+            Your packages and prices, and the categories clients book under.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          {!isOwner && activeTab === "packages" && (
+            <span className="text-[11px] text-zinc-500">Only the studio owner can change packages and prices.</span>
+          )}
           {activeTab === "packages" ? (
+            isOwner && (
             <button
               type="button"
               onClick={() => {
@@ -143,6 +153,7 @@ export function ServicesDashboard({
               <Plus className="size-4" />
               <span>New Package</span>
             </button>
+            )
           ) : (
             <button
               type="button"
@@ -314,7 +325,7 @@ export function ServicesDashboard({
                             ) : (
                               <LayersIcon className="size-3 text-amber-400" />
                             )}
-                            {pkg.discipline}
+                            {disciplineLabel(pkg.discipline)}
                           </span>
 
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -336,6 +347,8 @@ export function ServicesDashboard({
                           >
                             <Star className={`size-3.5 ${pkg.isFeatured ? "fill-amber-400" : ""}`} />
                           </button>
+                          {isOwner && (
+                          <>
                           <button
                             type="button"
                             onClick={() => {
@@ -360,6 +373,8 @@ export function ServicesDashboard({
                               <Trash2 className="size-3.5" />
                             )}
                           </button>
+                          </>
+                          )}
                         </div>
                       </div>
 
@@ -415,6 +430,7 @@ export function ServicesDashboard({
       {/* Tab 2: Campaign Categories View */}
       {activeTab === "categories" && (
         <CategoryList
+          canDelete={isOwner}
           categories={initialCategories}
           tenantId={tenantId}
           tenantSlug={tenantSlug}
@@ -451,6 +467,7 @@ export function ServicesDashboard({
         categoryToEdit={categoryToEdit}
         onSuccess={handleSuccess}
       />
+      {confirmDialog}
     </div>
   );
 }

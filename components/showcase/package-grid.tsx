@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Check, Calendar, Clock, Sparkles } from "lucide-react";
+import { disciplineLabel, humanize } from "@/lib/labels";
 
 export interface ServicePackageItem {
   id: string;
@@ -76,7 +77,7 @@ export function PackageGrid({
                 {/* Header */}
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                    {pkg.discipline} // {pkg.category}
+                    {disciplineLabel(pkg.discipline)} · {humanize(pkg.category)}
                   </span>
                   <h3 className="text-lg font-bold text-white tracking-tight">{pkg.name}</h3>
                   <p className="text-xs text-zinc-400 leading-relaxed">{pkg.description}</p>

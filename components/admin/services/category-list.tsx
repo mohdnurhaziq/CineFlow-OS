@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Edit2, Trash2, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
 import { deleteCampaignCategory, toggleCategoryActive } from "@/lib/actions/admin-services";
 import type { CategoryRow } from "./category-dialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface CategoryListProps {
   categories: CategoryRow[];
@@ -11,6 +12,8 @@ interface CategoryListProps {
   tenantSlug: string;
   onEdit: (category: CategoryRow) => void;
   onSuccess: () => void;
+  /** Deleting a category is owner-only. */
+  canDelete?: boolean;
 }
 
 export function CategoryList({
@@ -19,12 +22,14 @@ export function CategoryList({
   tenantSlug,
   onEdit,
   onSuccess,
+  canDelete = true,
 }: CategoryListProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleDelete = async (cat: CategoryRow) => {
-    if (!confirm(`Are you sure you want to delete category "${cat.name}"?`)) return;
+    if (!(await confirm({ title: `Delete "${cat.name}"?`, message: "Clients will no longer see this category.", confirmLabel: "Delete" }))) return;
 
     setDeletingId(cat.id);
     setErrorMessage(null);
@@ -136,6 +141,7 @@ export function CategoryList({
                       >
                         <Edit2 className="size-3.5" />
                       </button>
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => handleDelete(cat)}
@@ -149,6 +155,7 @@ export function CategoryList({
                           <Trash2 className="size-3.5" />
                         )}
                       </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -157,6 +164,7 @@ export function CategoryList({
           </table>
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Clock, Calendar, ShieldCheck, AlertCircle, FileText, Sparkles } from "lucide-react";
+import { milestoneLabel } from "@/lib/labels";
 
 interface OrderSummaryCardProps {
   tenantName: string;
@@ -206,7 +207,7 @@ export function OrderSummaryCard({
             <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-mono text-[10px] uppercase text-amber-400">
-                  {invoice.milestoneType.replace(/_/g, " ")}
+                  {milestoneLabel(invoice.milestoneType)}
                 </span>
                 <span className="text-zinc-400 font-mono text-[10px]">
                   {invoice.invoiceNumber}

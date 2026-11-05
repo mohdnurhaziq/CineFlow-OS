@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Sparkles, Loader2 } from "lucide-react";
 import { createServicePackage, updateServicePackage } from "@/lib/actions/admin-services";
 import { useDialog } from "@/lib/use-dialog";
+import { disciplineLabel } from "@/lib/labels";
 
 export interface PackageRow {
   id: string;
@@ -228,7 +229,7 @@ export function PackageDialog({
               >
                 {DISCIPLINES.map((d) => (
                   <option key={d} value={d}>
-                    {d}
+                    {disciplineLabel(d)}
                   </option>
                 ))}
               </select>

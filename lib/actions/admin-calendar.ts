@@ -1,7 +1,8 @@
 "use server";
 
 import { actionErrorMessage } from "@/lib/action-error";
-import { requireStaff } from "@/lib/auth/guard";
+import { OWNER_ROLES, requireStaff } from "@/lib/auth/guard";
+import { packagesForCategory } from "@/lib/bookings/pricing";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -77,6 +78,26 @@ async function findOverlap(
   );
 }
 
+/**
+ * Setting prices is the owner's call. Slots a staff member opens are priced by the
+ * category's packages (fee 0; the deposit is the package deposit the client picks), so a
+ * category needs at least one package before staff can open slots in it.
+ */
+async function staffSlotPricing(
+  tenantId: string,
+  category: string
+): Promise<{ ok: true; price: number; depositRequired: number } | { ok: false; error: string; message: string }> {
+  const packages = await packagesForCategory(db, tenantId, category);
+  if (packages.length === 0) {
+    return {
+      ok: false,
+      error: "OWNER_PRICING_REQUIRED",
+      message: "Only the studio owner can set slot prices. Ask them to add a package for this category in Services first.",
+    };
+  }
+  return { ok: true, price: 0, depositRequired: Math.min(...packages.map((p) => p.depositPrice)) };
+}
+
 const overlapMessage = (s: { startTime: string; endTime: string }) =>
   `This overlaps the ${s.startTime} – ${s.endTime} slot on the same day. Edit or remove that slot first.`;
 
@@ -87,19 +108,19 @@ const overlapMessage = (s: { startTime: string; endTime: string }) =>
 export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
   try {
     const validated = CreateSingleSlotSchema.parse(input);
-    await requireStaff(validated.tenantId);
-    const {
-      tenantId,
-      tenantSlug,
-      date,
-      startTime,
-      endTime,
-      category,
-      campaignTitle,
-      price,
-      depositRequired,
-      status,
-    } = validated;
+    const session = await requireStaff(validated.tenantId);
+    const { tenantId, tenantSlug, date, startTime, endTime, category, campaignTitle, status } = validated;
+    let { price, depositRequired } = validated;
+    if (!OWNER_ROLES.has(session.role)) {
+      if (status === "BLOCKED") {
+        price = 0;
+        depositRequired = 0;
+      } else {
+        const pricing = await staffSlotPricing(tenantId, category);
+        if (!pricing.ok) return { success: false, error: pricing.error, message: pricing.message };
+        ({ price, depositRequired } = pricing);
+      }
+    }
 
     // Verify tenant
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
@@ -151,7 +172,7 @@ export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
 export async function updateBookingSlot(input: UpdateBookingSlotInput) {
   try {
     const validated = UpdateBookingSlotSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    const session = await requireStaff(validated.tenantId);
     const { id, tenantId, tenantSlug, ...updateData } = validated;
 
     const existing = await db.bookingSlot.findFirst({
@@ -170,6 +191,13 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
         error: "SLOT_HAS_BOOKING",
         message: "Cannot change status of a slot that is already booked by a client.",
       };
+    }
+
+    const changesPrice =
+      (updateData.price !== undefined && updateData.price !== existing.price) ||
+      (updateData.depositRequired !== undefined && updateData.depositRequired !== existing.depositRequired);
+    if (changesPrice && !OWNER_ROLES.has(session.role)) {
+      return { success: false, error: "OWNER_ONLY", message: "Only the studio owner can change a slot's fee or deposit." };
     }
 
     if (!slotDepositWithinFee(updateData.price ?? existing.price, updateData.depositRequired ?? existing.depositRequired)) {
@@ -305,7 +333,7 @@ export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
 export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) {
   try {
     const validated = BatchGenerateSlotsSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    const session = await requireStaff(validated.tenantId);
     const {
       tenantId,
       tenantSlug,
@@ -318,9 +346,13 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
       bufferMinutes,
       category,
       campaignTitle,
-      price,
-      depositRequired,
     } = validated;
+    let { price, depositRequired } = validated;
+    if (!OWNER_ROLES.has(session.role)) {
+      const pricing = await staffSlotPricing(tenantId, category);
+      if (!pricing.ok) return { success: false, error: pricing.error, message: pricing.message };
+      ({ price, depositRequired } = pricing);
+    }
 
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) {

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { currentUserIsOwner } from "@/lib/auth/owner";
 import { CalendarAdminDashboard } from "@/components/admin/calendar/calendar-admin-dashboard";
 import type { BookingSlotRow, CategoryOption } from "@/components/admin/calendar/single-slot-dialog";
 
@@ -66,6 +67,9 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
           clientPhone: true,
           trackingCode: true,
           status: true,
+          packageName: true,
+          sessionPrice: true,
+          depositAmount: true,
         },
       },
     },
@@ -89,7 +93,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
   // 6. Service packages (set a booking's price and deposit)
   const packages = await db.servicePackage.findMany({
     where: { tenantId: tenant.id },
-    select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true },
+    select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true, discipline: true },
     orderBy: { price: "asc" },
   });
 
@@ -103,6 +107,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         categories={categories as unknown as CategoryOption[]}
         clients={clients}
         packages={packages}
+        isOwner={await currentUserIsOwner()}
       />
     </div>
   );

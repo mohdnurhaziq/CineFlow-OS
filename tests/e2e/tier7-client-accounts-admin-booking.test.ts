@@ -18,6 +18,7 @@ import { TestHarness } from "./test-harness";
 import { registerClient } from "@/lib/actions/client-auth";
 import { createBookingForCustomer, getBookingDetails } from "@/lib/actions/admin-bookings";
 import { loadBookingDetails } from "@/lib/bookings/details";
+import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { createClientBooking } from "@/lib/actions/booking";
 import { approvePaymentVerification, rejectPaymentVerification } from "@/lib/actions/admin-verification";
 import { loginWithCredentials, getCurrentUser, logoutAction } from "@/lib/auth/session";
@@ -683,7 +684,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assertEqual(b?.slot?.status, "PENDING_VERIFICATION", "The other slot stays PENDING_VERIFICATION");
   });
 
-  await harness.test("T7-BKG-09: rejecting one deposit cancels only its own booking", async () => {
+  await harness.test("T7-BKG-09: a rejected deposit that expires releases only its own booking", async () => {
     const { older, newer, olderInvoice } = await twoPendingBookings("reject-own");
     const olderSlotId = (await db.clientBooking.findUnique({ where: { id: older.bookingId } }))?.slotId;
     const res: any = await withSession(luminaStaff, () =>
@@ -695,6 +696,10 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       })
     );
     harness.assert(res.success === true, `Rejection succeeds (${res.message ?? "ok"})`);
+    harness.assertEqual((await db.clientBooking.findUnique({ where: { id: older.bookingId } }))?.status, "PENDING", "Rejection alone keeps the booking");
+    // No new slip within 24 hours of the rejection.
+    await db.milestoneInvoice.update({ where: { id: olderInvoice!.id }, data: { rejectedAt: new Date(Date.now() - 25 * 3_600_000) } });
+    await expireUnpaidDeposits(lumina.id);
     const a = await db.clientBooking.findUnique({ where: { id: older.bookingId } });
     const b = await db.clientBooking.findUnique({ where: { id: newer.bookingId }, include: { slot: true } });
     harness.assertEqual(a?.status, "CANCELLED", "The rejected booking is CANCELLED");

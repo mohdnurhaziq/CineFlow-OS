@@ -12,6 +12,8 @@ export interface BookingPackageOption {
   depositPrice: number;
   description?: string | null;
   deliverables?: string | null;
+  /** PHOTOGRAPHY, VIDEOGRAPHY or HYBRID; a booking made with the package takes it on. */
+  discipline?: string;
 }
 
 /** Packages offered for a slot's category, cheapest first. */

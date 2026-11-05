@@ -30,6 +30,8 @@ import {
   type CategoryOption,
   type PackageOption,
 } from "./showcase-item-dialog";
+import { disciplineLabel } from "@/lib/labels";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface CmsManagerProps {
   tenantId: string;
@@ -46,6 +48,7 @@ export function CmsManager({
   categories,
   packages,
 }: CmsManagerProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,7 +66,7 @@ export function CmsManager({
   };
 
   const handleDelete = async (item: ShowcaseItemRow) => {
-    if (!confirm(`Delete showcase item "${item.title}"?`)) return;
+    if (!(await confirm({ title: `Delete "${item.title}"?`, message: "It will be removed from your public studio page.", confirmLabel: "Delete" }))) return;
 
     setDeletingId(item.id);
     setErrorMessage(null);
@@ -127,10 +130,10 @@ export function CmsManager({
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <Sparkles className="size-6 text-amber-400" />
-            <span>Showcase Portfolio CMS</span>
+            <span>Showcase</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Curate brand campaign stories, cinematic reels, client spotlights, and public gallery placements.
+            The work shown on your public studio page.
           </p>
         </div>
 
@@ -302,7 +305,7 @@ export function CmsManager({
                       ) : (
                         <Layers className="size-3 text-amber-400" />
                       )}
-                      {item.discipline}
+                      {disciplineLabel(item.discipline)}
                     </span>
 
                     {item.videoEmbedUrl && (
@@ -403,6 +406,7 @@ export function CmsManager({
         itemToEdit={itemToEdit}
         onSuccess={handleSuccess}
       />
+      {confirmDialog}
     </div>
   );
 }

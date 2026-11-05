@@ -27,6 +27,10 @@ export interface BookingSlotRow {
     clientPhone: string;
     trackingCode: string;
     status: string;
+    /** What the client actually booked; overrides the slot's own fee and deposit. */
+    packageName?: string | null;
+    sessionPrice?: number | null;
+    depositAmount?: number | null;
   } | null;
 }
 
@@ -46,11 +50,14 @@ interface SingleSlotDialogProps {
   categories: CategoryOption[];
   slotToEdit?: BookingSlotRow | null;
   onSuccess?: () => void;
+  /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
+  isOwner?: boolean;
 }
 
 export function SingleSlotDialog({
   isOpen,
   onClose,
+  isOwner = true,
   tenantId,
   tenantSlug,
   currency,
@@ -259,39 +266,45 @@ export function SingleSlotDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-mono text-zinc-400 block mb-1">
-                Slot Fee ({currency})
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
-              <p className="text-[11px] text-zinc-500 mt-1">0 = priced by the package the client picks.</p>
-            </div>
+          {isOwner ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-mono text-zinc-400 block mb-1">
+                  Slot Fee ({currency})
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+                <p className="text-[11px] text-zinc-500 mt-1">0 = priced by the package the client picks.</p>
+              </div>
 
-            <div>
-              <label className="text-xs font-mono text-zinc-400 block mb-1">
-                Deposit Required ({currency}) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={depositRequired}
-                onChange={(e) => setDepositRequired(e.target.value)}
-                placeholder="50"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
-              />
+              <div>
+                <label className="text-xs font-mono text-zinc-400 block mb-1">
+                  Deposit Required ({currency}) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={depositRequired}
+                  onChange={(e) => setDepositRequired(e.target.value)}
+                  placeholder="50"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="text-[11px] text-zinc-400 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
+              Priced by this category&apos;s packages. Only the studio owner can set a slot fee or deposit.
+            </p>
+          )}
 
           <div>
             <label className="text-xs font-mono text-zinc-400 block mb-1">

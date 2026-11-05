@@ -20,6 +20,7 @@ import {
   type LogPreShootInspectionInput,
   type LogPostShootInspectionInput,
 } from "@/lib/validations/gear";
+import { checkoutWindow } from "@/lib/gear/checkout-window";
 
 function safeRevalidate(path: string) {
   try {
@@ -609,6 +610,11 @@ export async function logPreShootInspection(input: LogPreShootInspectionInput) {
         message: "Equipment reservation not found.",
       };
     }
+    if (reservation.status !== "RESERVED") {
+      return { success: false, error: "NOT_RESERVED", message: "This gear has already been checked out for this reservation." };
+    }
+    const window = checkoutWindow(reservation);
+    if (!window.open) return { success: false, error: window.error, message: window.message };
 
     const checklistDetails = [
       sensorVerified ? "Sensor Verified Clean" : "Sensor Not Clean",
@@ -703,6 +709,9 @@ export async function logPostShootInspection(input: LogPostShootInspectionInput)
         error: "RESERVATION_NOT_FOUND",
         message: "Equipment reservation not found.",
       };
+    }
+    if (reservation.status !== "CHECKED_OUT") {
+      return { success: false, error: "NOT_CHECKED_OUT", message: "This gear isn't checked out, so there is nothing to check in." };
     }
 
     const checkinConditionText = `Condition: ${condition} | Damage Flag: ${

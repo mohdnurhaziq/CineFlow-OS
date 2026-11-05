@@ -229,13 +229,16 @@ model MilestoneInvoice {
   proposalId       String?
   projectId        String?
   clientId         String
-  milestoneType    String    // RETAINER_50, FINAL_BALANCE_50, PRINT_FRAME_ORDER, BOOKING_DEPOSIT, BOOKING_BALANCE
+  milestoneType    String    // RETAINER_50, FINAL_BALANCE_50, PRINT_FRAME_ORDER, BOOKING_DEPOSIT, BOOKING_BALANCE, CUSTOM
+  description      String?   // What a CUSTOM invoice is for (shown as its line item)
   amount           Float
   status           String    @default("PENDING") // PENDING, PENDING_VERIFICATION, PAID, OVERDUE
   paymentMethod    String?   // CARD, QR_CODE, CASH, BANK_TRANSFER
   paymentProofUrl  String?
   paymentReference String?
   verifiedBy       String?
+  rejectedAt       DateTime? // When the studio last rejected a payment slip; the client has 24h to send a new one
+  rejectionReason  String?   // Why, shown to the client
   dueDate          DateTime
   paidAt           DateTime?
   gatewayBillCode  String?   @unique // Toyyibpay BillCode for online (FPX/card) payments
@@ -502,7 +505,12 @@ model ClientBooking {
   serviceTier    String
   targetDate     String?
   creativeBrief  String?
-  status         String       @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  status         String       @default("PENDING") // PENDING, CONFIRMED, COMPLETED (shoot done), DELIVERED, NO_SHOW, CANCELLED
+  cancelledAt    DateTime?
+  cancelReason   String?
+  completedAt    DateTime?    // Shoot marked done (or no-show)
+  deliveredAt    DateTime?
+  deliveryUrl    String?      // Link to the client's gallery or files, shown in their account
   depositPaid    Boolean      @default(false)
   depositAmount  Float        @default(0.0)
   packageId      String?      // Service package the client chose; sets deposit and balance

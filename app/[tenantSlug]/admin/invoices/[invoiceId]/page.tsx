@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { loadInvoiceDocument } from "@/lib/invoices/document";
 import { InvoiceDocumentView } from "@/components/invoices/invoice-document";
 import { PrintButton } from "@/components/invoices/print-button";
+import { InvoiceAdminActions } from "@/components/admin/invoices/invoice-admin-actions";
+import { currentUserIsOwner } from "@/lib/auth/owner";
 
 interface AdminInvoicePageProps {
   params: Promise<{ tenantSlug: string; invoiceId: string }>;
@@ -27,7 +29,15 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
   if (!doc) notFound();
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 max-w-3xl mx-auto print:p-0 print:max-w-none">
+    <div className="py-6 sm:py-8 px-4 sm:px-6 max-w-3xl mx-auto print:p-0 print:max-w-none space-y-4">
+      <InvoiceAdminActions
+        tenantId={tenant.id}
+        tenantSlug={tenant.slug}
+        invoiceId={doc.id}
+        status={doc.status}
+        milestoneType={doc.milestoneType}
+        isOwner={await currentUserIsOwner()}
+      />
       <InvoiceDocumentView
         doc={doc}
         actions={

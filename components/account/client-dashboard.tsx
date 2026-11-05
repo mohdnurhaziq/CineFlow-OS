@@ -47,6 +47,9 @@ const STAGES = [
 const BOOKING_STATUS_TEXT: Record<string, string> = {
   CONFIRMED: "Confirmed",
   PENDING: "Awaiting payment verification",
+  COMPLETED: "Session done",
+  DELIVERED: "Delivered",
+  NO_SHOW: "Missed",
   CANCELLED: "Cancelled",
 };
 
@@ -256,8 +259,23 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     <div className="text-zinc-500">
                       Deposit {money(b.depositAmount)} · {b.depositPaid ? "paid" : "not yet paid / verified"}
                     </div>
+                    {b.status === "CANCELLED" && b.cancelReason && (
+                      <div className="text-zinc-500">Cancelled: {b.cancelReason}</div>
+                    )}
                   </div>
-                  <Badge status={b.status} label={BOOKING_STATUS_TEXT[b.status]} />
+                  <div className="flex items-center gap-3">
+                    {b.status === "DELIVERED" && b.deliveryUrl && (
+                      <a
+                        href={b.deliveryUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
+                      >
+                        View my photos
+                      </a>
+                    )}
+                    <Badge status={b.status} label={BOOKING_STATUS_TEXT[b.status]} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -280,6 +298,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     <div className="text-zinc-500">
                       {humanize(inv.milestoneType)} · due {date(inv.dueDate)}
                     </div>
+                    {inv.status === "REJECTED" && (
+                      <div className="text-red-400">
+                        Slip not accepted{inv.rejectionReason ? `: ${inv.rejectionReason}` : ""}. Please send a new one
+                        within 24 hours to keep your booking.
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-zinc-200">{money(inv.amount)}</span>
@@ -296,6 +320,14 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
                       >
                         Pay
+                      </Link>
+                    )}
+                    {inv.status === "REJECTED" && (
+                      <Link
+                        href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                        className="px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
+                      >
+                        Send new slip
                       </Link>
                     )}
                     {/* QR deposit with no slip yet: upload it before the 24-hour hold runs out. */}

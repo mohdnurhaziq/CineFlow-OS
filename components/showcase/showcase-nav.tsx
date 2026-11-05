@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { MessageSquare, Calendar, Aperture, ArrowLeft } from "lucide-react";
 import { ClientAccountMenu } from "@/components/account/client-account-menu";
+import { disciplineLabel } from "@/lib/labels";
 
 interface ShowcaseNavProps {
   tenant: {
@@ -61,7 +62,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null }: ShowcaseNavPr
                     color: brandColor,
                   }}
                 >
-                  {tenant.discipline}
+                  {disciplineLabel(tenant.discipline)}
                 </span>
               </div>
             </div>

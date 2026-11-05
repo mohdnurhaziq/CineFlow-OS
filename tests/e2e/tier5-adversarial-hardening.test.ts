@@ -482,7 +482,8 @@ export async function runTier5AdversarialHardeningTests(harness: TestHarness) {
       harness.assert(conflictRes2.success === false, "Contained reservation Dec 2-4 rejected");
       harness.assertEqual(conflictRes2.error, "DATE_CONFLICT", "Error code is DATE_CONFLICT");
 
-      // 4. Pre-Shoot Checkout Inspection
+      // 4. Pre-Shoot Checkout Inspection, on the shoot day (check-out only opens shortly before the start)
+      await db.equipmentReservation.update({ where: { id: activeResId }, data: { startDate: new Date(), endDate: new Date(Date.now() + 86_400_000) } });
       const preInspection = await logPreShootInspection({
         tenantId: luminaTenant!.id,
         tenantSlug: "lumina-cine",

@@ -13,6 +13,7 @@ import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
 import { formatMoney, packagesFor, type BookingPackageOption } from "./package-picker";
 import { ClientAccountMenu } from "@/components/account/client-account-menu";
+import { disciplineLabel } from "@/lib/labels";
 
 interface TenantData {
   id: string;
@@ -264,7 +265,7 @@ export function CinemaBookingShell({
           <div>
             <div className="text-sm font-bold text-white">{tenant.name}</div>
             <div className="text-[10px] font-mono text-zinc-400">
-              {tenant.discipline} // {tenant.currency}
+              {disciplineLabel(tenant.discipline)} · {tenant.currency}
             </div>
           </div>
         </div>

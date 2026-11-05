@@ -4,6 +4,8 @@ import { useState } from "react";
 import { X, Plus, Edit2, AlertCircle } from "lucide-react";
 import { createGearItem, updateGearItem } from "@/lib/actions/gear";
 import { useDialog } from "@/lib/use-dialog";
+import { conditionLabel } from "@/lib/labels";
+import { disciplineLabel } from "@/lib/labels";
 
 export interface InventoryItemRow {
   id: string;
@@ -233,7 +235,7 @@ export function GearItemDialog({
               >
                 {DISCIPLINES.map((d) => (
                   <option key={d} value={d}>
-                    {d}
+                    {disciplineLabel(d)}
                   </option>
                 ))}
               </select>
@@ -252,7 +254,7 @@ export function GearItemDialog({
               >
                 {CONDITIONS.map((cond) => (
                   <option key={cond} value={cond}>
-                    {cond}
+                    {conditionLabel(cond)}
                   </option>
                 ))}
               </select>

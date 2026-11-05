@@ -15,6 +15,7 @@ import {
   Settings,
   CalendarCheck,
   Receipt,
+  Clapperboard,
 } from "lucide-react";
 
 interface AdminNavBarProps {
@@ -97,8 +98,13 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
       icon: FileText,
     },
     {
+      href: `/${tenantSlug}/admin/projects`,
+      label: "Projects",
+      icon: Clapperboard,
+    },
+    {
       href: `/${tenantSlug}/admin/inventory`,
-      label: "Inventory",
+      label: "Gear",
       icon: Layers,
     },
     {
@@ -108,7 +114,7 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
     },
     {
       href: `/${tenantSlug}/admin/cms`,
-      label: "Showcase CMS",
+      label: "Showcase",
       icon: Sparkles,
     },
     {

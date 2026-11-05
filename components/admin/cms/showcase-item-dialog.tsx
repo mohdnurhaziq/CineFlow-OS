@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2, Sparkles, Upload, Image as ImageIcon, Video } from "lucide-react";
 import { createShowcaseItem, updateShowcaseItem } from "@/lib/actions/admin-cms";
 import { useDialog } from "@/lib/use-dialog";
+import { disciplineLabel } from "@/lib/labels";
 
 export interface ShowcaseItemRow {
   id: string;
@@ -238,7 +239,7 @@ export function ShowcaseItemDialog({
               >
                 {DISCIPLINES.map((d) => (
                   <option key={d} value={d}>
-                    {d}
+                    {disciplineLabel(d)}
                   </option>
                 ))}
               </select>

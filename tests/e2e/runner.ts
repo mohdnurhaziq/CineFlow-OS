@@ -31,6 +31,8 @@ import { runTier10AuthorizationTests } from "./tier10-authorization.test";
 import { runTier11BookingCalendarTests } from "./tier11-booking-calendar.test";
 import { runTier12BillingTests } from "./tier12-billing.test";
 import { runTier13InvoiceTests } from "./tier13-invoices.test";
+import { runTier14BookingLifecycleTests } from "./tier14-booking-lifecycle.test";
+import { runTier15ProjectTests } from "./tier15-projects.test";
 
 // The suite creates and mutates lots of records; refuse to run against anything but the
 // throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
@@ -135,6 +137,16 @@ async function runMasterTestSuite() {
     // Tier 13: Invoice documents (content and who may open them)
     // --------------------------------------------------------------------------
     await runTier13InvoiceTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 14: Booking lifecycle (move, cancel, done / no-show, deliver)
+    // --------------------------------------------------------------------------
+    await runTier14BookingLifecycleTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 15: Proposals, projects, call sheets, gear and deliverables
+    // --------------------------------------------------------------------------
+    await runTier15ProjectTests(harness);
   } catch (err: any) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { currentUserIsOwner } from "@/lib/auth/owner";
+import { NewProposalButton } from "@/components/admin/proposals/new-proposal-dialog";
 import { ProposalAdminDashboard } from "@/components/admin/proposals/proposal-admin-dashboard";
 import type { ProposalAddOnTemplateRow } from "@/components/admin/proposals/addon-template-dialog";
 import type { ProposalRow } from "@/components/admin/proposals/proposals-list";
@@ -66,9 +68,30 @@ export default async function AdminProposalsPage({ params }: ProposalsPageProps)
     take: 50,
   });
 
+  // Creating a proposal sets prices: owner only.
+  const isOwner = await currentUserIsOwner();
+  const [clients, categories] = isOwner
+    ? await Promise.all([
+        db.user.findMany({ where: { tenantId: tenant.id, role: "CLIENT" }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" }, take: 1000 }),
+        db.campaignCategory.findMany({ where: { tenantId: tenant.id, isActive: true }, select: { slug: true, name: true }, orderBy: { sortOrder: "asc" } }),
+      ])
+    : [[], []];
+
   return (
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <ProposalAdminDashboard
+        newProposal={
+          isOwner ? (
+            <NewProposalButton
+              tenantId={tenant.id}
+              tenantSlug={tenant.slug}
+              currency={tenant.currency}
+              clients={clients}
+              categories={categories}
+              templates={templates}
+            />
+          ) : null
+        }
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         currency={tenant.currency}

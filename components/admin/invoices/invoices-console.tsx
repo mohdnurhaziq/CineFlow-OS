@@ -47,7 +47,18 @@ function day(iso: string): string {
 
 const COLS = "md:grid-cols-[1.1fr_1.4fr_1.6fr_0.9fr_0.9fr_9rem]";
 
-export function InvoicesConsole({ tenantSlug, currency, invoices }: { tenantSlug: string; currency: string; invoices: InvoiceRow[] }) {
+export function InvoicesConsole({
+  tenantSlug,
+  currency,
+  invoices,
+  actions,
+}: {
+  tenantSlug: string;
+  currency: string;
+  invoices: InvoiceRow[];
+  /** Header buttons, e.g. "New invoice" for the owner. */
+  actions?: React.ReactNode;
+}) {
   const [filter, setFilter] = useState<FilterId>("all");
   const [type, setType] = useState<string>("all");
   const [query, setQuery] = useState("");
@@ -85,12 +96,17 @@ export function InvoicesConsole({ tenantSlug, currency, invoices }: { tenantSlug
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-          <Receipt className="size-6 text-amber-400" />
-          Invoices
-        </h1>
-        <p className="text-xs text-zinc-400">Every invoice the studio has issued. Open one to view, print or save it as a PDF.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <Receipt className="size-6 text-amber-400" />
+            Invoices
+          </h1>
+          <p className="text-xs text-zinc-400">
+            Every invoice the studio has issued. Open one to record a payment, send a reminder, or print it.
+          </p>
+        </div>
+        {actions}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -3,6 +3,8 @@
 import { X, CheckCircle2, AlertTriangle, Package, Check, Clock } from "lucide-react";
 import type { KitBundleRow } from "./kit-bundle-dialog";
 import { useDialog } from "@/lib/use-dialog";
+import { conditionLabel, gearStatusLabel } from "@/lib/labels";
+import { disciplineLabel } from "@/lib/labels";
 
 interface KitBundleBomViewerProps {
   bundle: KitBundleRow | null;
@@ -36,7 +38,7 @@ export function KitBundleBomViewer({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {bundle.discipline}
+                {disciplineLabel(bundle.discipline)}
               </span>
               {isReady ? (
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
@@ -106,7 +108,7 @@ export function KitBundleBomViewer({
                       </span>
                     </div>
                     <div className="text-[11px] font-mono text-zinc-400 mt-0.5">
-                      SKU: {item.sku} • {item.category} • Condition: {item.condition}
+                      SKU: {item.sku} • {item.category} • Condition: {conditionLabel(item.condition)}
                     </div>
                   </div>
 
@@ -121,12 +123,12 @@ export function KitBundleBomViewer({
                       {isItemAvail ? (
                         <>
                           <Check className="size-3" />
-                          <span>AVAILABLE</span>
+                          <span>Available</span>
                         </>
                       ) : (
                         <>
                           <Clock className="size-3" />
-                          <span>{item.status}</span>
+                          <span>{gearStatusLabel(item.status)}</span>
                         </>
                       )}
                     </span>

@@ -196,7 +196,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
               </div>
               <div>
                 <dt className="text-zinc-500">Package</dt>
-                <dd className="text-zinc-200">{booking.serviceTier}</dd>
+                <dd className="text-zinc-200">{booking.packageName ?? "None chosen"}</dd>
               </div>
               <div>
                 <dt className="text-zinc-500">Deposit</dt>

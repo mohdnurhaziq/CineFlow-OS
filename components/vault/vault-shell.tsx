@@ -16,6 +16,7 @@ import {
 import { PaywallBanner } from "./paywall-banner";
 import { PhotoGrid, type PhotoItem } from "./photo-grid";
 import { VideoPlayerCard, type VideoItem } from "./video-player-card";
+import { disciplineLabel } from "@/lib/labels";
 
 interface VaultShellProps {
   tenant: {
@@ -94,7 +95,7 @@ export function VaultShell({
               </span>
               <span className="text-zinc-600">•</span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {project.discipline}
+                {disciplineLabel(project.discipline)}
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
                 {project.category}

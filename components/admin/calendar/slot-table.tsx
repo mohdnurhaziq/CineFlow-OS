@@ -21,6 +21,8 @@ import {
   batchDeleteBookingSlots,
 } from "@/lib/actions/admin-calendar";
 import type { BookingSlotRow, CategoryOption } from "./single-slot-dialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { isSlotInPast } from "@/lib/slot-time";
 
 interface SlotTableProps {
   slots: BookingSlotRow[];
@@ -48,6 +50,7 @@ export function SlotTable({
   onViewBooking,
   onSuccess,
 }: SlotTableProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
@@ -71,7 +74,7 @@ export function SlotTable({
   };
 
   const handleDelete = async (slot: BookingSlotRow) => {
-    if (!confirm(`Delete slot on ${new Date(slot.date).toISOString().split("T")[0]} at ${slot.startTime}?`)) return;
+    if (!(await confirm({ title: `Delete the ${slot.startTime} slot on ${new Date(slot.date).toISOString().slice(0, 10)}?`, confirmLabel: "Delete" }))) return;
 
     setDeletingId(slot.id);
     setErrorMessage(null);
@@ -98,7 +101,7 @@ export function SlotTable({
 
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected slot(s)? (Booked slots will be skipped)`)) return;
+    if (!(await confirm({ title: `Delete ${selectedIds.length} slot${selectedIds.length === 1 ? "" : "s"}?`, message: "Booked slots are skipped.", confirmLabel: "Delete" }))) return;
 
     setIsBatchDeleting(true);
     setErrorMessage(null);
@@ -219,7 +222,8 @@ export function SlotTable({
                 <th scope="col" className="px-4 py-3">Category</th>
                 <th scope="col" className="px-4 py-3">Pricing</th>
                 <th scope="col" className="px-4 py-3">Status / Booking Info</th>
-                <th scope="col" className="px-4 py-3 text-right">Actions</th>
+                {/* Actions stay pinned on the right when the table scrolls sideways on phones. */}
+                <th scope="col" className="px-4 py-3 text-right sticky right-0 bg-[#141417]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60 font-mono text-xs">
@@ -227,13 +231,15 @@ export function SlotTable({
                 const dateStr = new Date(slot.date).toISOString().split("T")[0];
                 const categoryObj = categories.find((c) => c.slug === slot.category);
                 const isSelected = selectedIds.includes(slot.id);
+                // An open slot whose time has passed can't be booked any more.
+                const pastOpen = slot.status === "AVAILABLE" && isSlotInPast(slot);
 
                 return (
                   <tr
                     key={slot.id}
                     className={`hover:bg-zinc-900/30 transition-colors ${
                       isSelected ? "bg-amber-500/5" : ""
-                    }`}
+                    } ${pastOpen ? "opacity-60" : ""}`}
                   >
                     <td className="px-4 py-3">
                       <input
@@ -268,15 +274,38 @@ export function SlotTable({
 
                     {/* Pricing */}
                     <td className="px-4 py-3">
-                      <div className="text-white font-medium">{formatPrice(slot.price)}</div>
-                      <div className="text-[10px] text-zinc-500">
-                        Dep: {formatPrice(slot.depositRequired)}
-                      </div>
+                      {slot.booking && (slot.booking.packageName || slot.booking.sessionPrice != null) ? (
+                        // Booked: show what the client is actually paying, not the slot's default rate.
+                        <>
+                          <div className="text-white font-medium">
+                            {slot.booking.sessionPrice != null ? formatPrice(slot.booking.sessionPrice) : "Price not set"}
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            Dep: {formatPrice(slot.booking.depositAmount ?? 0)}
+                            {slot.booking.packageName ? ` · ${slot.booking.packageName}` : ""}
+                          </div>
+                        </>
+                      ) : slot.price > 0 ? (
+                        <>
+                          <div className="text-white font-medium">{formatPrice(slot.price)}</div>
+                          <div className="text-[10px] text-zinc-500">Dep: {formatPrice(slot.depositRequired)}</div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-zinc-300 text-xs">By package</div>
+                          <div className="text-[10px] text-zinc-500">Dep: {formatPrice(slot.depositRequired)} if none</div>
+                        </>
+                      )}
                     </td>
 
                     {/* Status Pill & Details */}
                     <td className="px-4 py-3 font-sans">
-                      {slot.status === "AVAILABLE" && (
+                      {slot.status === "AVAILABLE" && pastOpen && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
+                          <Clock className="size-3" /> Passed · not booked
+                        </span>
+                      )}
+                      {slot.status === "AVAILABLE" && !pastOpen && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                           <CheckCircle className="size-3" /> Available
                         </span>
@@ -325,10 +354,10 @@ export function SlotTable({
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right sticky right-0 bg-[#0f0f12]">
                       <div className="flex items-center justify-end gap-1">
                         {/* Book on behalf of a customer */}
-                        {slot.status === "AVAILABLE" && (
+                        {slot.status === "AVAILABLE" && !pastOpen && (
                           <button
                             type="button"
                             onClick={() => onBookForCustomer(slot)}
@@ -408,6 +437,7 @@ export function SlotTable({
           </table>
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }

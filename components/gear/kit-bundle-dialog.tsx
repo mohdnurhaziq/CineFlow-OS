@@ -5,6 +5,7 @@ import { X, Plus, Trash2, PackagePlus, AlertCircle } from "lucide-react";
 import { createKitBundle, updateKitBundle } from "@/lib/actions/gear";
 import type { InventoryItemRow } from "./gear-item-dialog";
 import { useDialog } from "@/lib/use-dialog";
+import { gearStatusLabel } from "@/lib/labels";
 
 export interface KitBundleRow {
   id: string;
@@ -215,9 +216,9 @@ export function KitBundleDialog({
                 onChange={(e) => setDiscipline(e.target.value as any)}
                 className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-amber-500"
               >
-                <option value="VIDEOGRAPHY">VIDEOGRAPHY</option>
-                <option value="PHOTOGRAPHY">PHOTOGRAPHY</option>
-                <option value="HYBRID">HYBRID</option>
+                <option value="VIDEOGRAPHY">Videography</option>
+                <option value="PHOTOGRAPHY">Photography</option>
+                <option value="HYBRID">Photo &amp; video</option>
               </select>
             </div>
             <div>
@@ -265,7 +266,7 @@ export function KitBundleDialog({
                   >
                     {availableItems.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name} ({item.sku}) [{item.status}]
+                        {item.name} ({item.sku}) · {gearStatusLabel(item.status)}
                       </option>
                     ))}
                   </select>

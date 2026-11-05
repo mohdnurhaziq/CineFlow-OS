@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
 import type { OnboardStudioInput } from "@/lib/validations/onboarding";
+import { disciplineLabel } from "@/lib/labels";
 
 const COLOR_PRESETS = [
   { name: "Warm Amber", hex: "#f59e0b" },
@@ -746,7 +747,7 @@ export default function CreateStudioPage() {
                       color: formData.brandColor,
                     }}
                   >
-                    {formData.discipline}
+                    {disciplineLabel(formData.discipline)}
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
                     Currency: {formData.currency}

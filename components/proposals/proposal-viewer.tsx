@@ -19,6 +19,7 @@ import { PricingBreakdown } from "./pricing-breakdown";
 import { SignaturePad } from "./signature-pad";
 import { SignedAcceptanceView } from "./signed-acceptance-view";
 import { acceptProposal } from "@/lib/actions/proposals";
+import { disciplineLabel } from "@/lib/labels";
 
 interface ProposalViewerProps {
   tenant: {
@@ -214,7 +215,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
 
         <div className="flex items-center gap-3">
           <span className="px-3 py-1 rounded-lg border border-zinc-700 bg-zinc-900 text-xs font-mono text-zinc-300 uppercase">
-            {proposal.discipline}
+            {disciplineLabel(proposal.discipline)}
           </span>
           <span className="px-3 py-1 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs font-mono font-bold text-amber-400 uppercase">
             {proposal.category}

@@ -18,7 +18,7 @@ import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 type Tx = Prisma.TransactionClient;
 
 const DAY_MS = 86_400_000;
-const BALANCE_DUE_AFTER_SESSION_DAYS = 7;
+export const BALANCE_DUE_AFTER_SESSION_DAYS = 7;
 const FINAL_BALANCE_DUE_DAYS = 30;
 
 /**

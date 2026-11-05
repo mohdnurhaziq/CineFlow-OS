@@ -22,37 +22,37 @@ export function GearKpiSummary({
       {/* Total Fleet Assets */}
       <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-4 sm:p-5 shadow-xl">
         <div className="flex items-center justify-between text-zinc-400 text-xs font-mono mb-2">
-          <span>Fleet Registry</span>
+          <span>Items</span>
           <Layers className="size-4 text-amber-400" />
         </div>
         <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
           {totalItems}
         </div>
-        <div className="text-[11px] text-zinc-500 mt-1">Serialized equipment assets</div>
+        <div className="text-[11px] text-zinc-500 mt-1">Pieces of equipment</div>
       </div>
 
       {/* Daily Fleet Valuation */}
       <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-4 sm:p-5 shadow-xl">
         <div className="flex items-center justify-between text-zinc-400 text-xs font-mono mb-2">
-          <span>Daily Rental Valuation</span>
+          <span>Daily rental value</span>
           <DollarSign className="size-4 text-emerald-400" />
         </div>
         <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono tracking-tight">
           {currency} {totalDailyValue.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </div>
-        <div className="text-[11px] text-zinc-500 mt-1">Aggregate daily rate pool</div>
+        <div className="text-[11px] text-zinc-500 mt-1">All items at their day rate</div>
       </div>
 
       {/* On Shoot Active */}
       <div className="rounded-2xl border border-indigo-500/20 bg-indigo-950/10 p-4 sm:p-5 shadow-xl">
         <div className="flex items-center justify-between text-indigo-300 text-xs font-mono mb-2">
-          <span>Dispatched On Shoot</span>
+          <span>On a shoot</span>
           <Camera className="size-4 text-indigo-400" />
         </div>
         <div className="text-2xl sm:text-3xl font-extrabold text-indigo-400 font-mono tracking-tight">
           {onShootCount}
         </div>
-        <div className="text-[11px] text-indigo-300/70 mt-1">Active on-location checkouts</div>
+        <div className="text-[11px] text-indigo-300/70 mt-1">Checked out right now</div>
       </div>
 
       {/* Maintenance Needed */}
@@ -70,7 +70,7 @@ export function GearKpiSummary({
         }`}>
           {maintenanceCount}
         </div>
-        <div className="text-[11px] text-zinc-500 mt-1">Flagged / Bench servicing</div>
+        <div className="text-[11px] text-zinc-500 mt-1">Flagged or being repaired</div>
       </div>
     </div>
   );

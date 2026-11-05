@@ -4,13 +4,12 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/session";
-import { requireStaff } from "@/lib/auth/guard";
+import { requireStaff, STAFF_ROLES, OWNER_ROLES } from "@/lib/auth/guard";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 
-const STAFF_ROLES = new Set(["SUPER_ADMIN", "STUDIO_OWNER", "PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"]);
 
 const AdminCreateBookingSchema = z
   .object({
@@ -27,7 +26,6 @@ const AdminCreateBookingSchema = z
       })
       .optional(),
     discipline: z.string().default("PHOTOGRAPHY"),
-    serviceTier: z.string().default("STANDARD"),
     category: z.string().optional(),
     creativeBrief: z.string().optional(),
     paymentStatus: z.enum(["PENDING", "PAID"]).default("PENDING"),
@@ -55,6 +53,10 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
       (session.role !== "SUPER_ADMIN" && session.tenantId !== data.tenantId)
     ) {
       return { success: false, error: "You are not allowed to create bookings for this studio" };
+    }
+    // Recording a deposit as received is the owner's call; staff book it as awaiting payment.
+    if (data.paymentStatus === "PAID" && !OWNER_ROLES.has(session.role)) {
+      return { success: false, error: "Only the studio owner can record a payment as received." };
     }
 
     const result = await db.$transaction(async (tx) => {
@@ -99,6 +101,10 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
       });
       if (!priced.ok) throw new Error(priced.message);
       const pricing = priced.pricing;
+      // A booking made with a package takes on the package's discipline.
+      const pkg = pricing.packageId
+        ? await tx.servicePackage.findUnique({ where: { id: pricing.packageId }, select: { discipline: true } })
+        : null;
 
       // Claim the slot atomically so two admins (or a customer) can't double-book it.
       const claimed = await tx.bookingSlot.updateMany({
@@ -124,8 +130,8 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
           clientName: customer.name,
           clientEmail: customer.email,
           clientPhone: customer.phone ?? data.newClient?.phone ?? "",
-          discipline: data.discipline,
-          serviceTier: pricing.packageName ?? data.serviceTier,
+          discipline: pkg?.discipline ?? data.discipline,
+          serviceTier: pricing.packageName ?? "STANDARD",
           targetDate: slot.date.toISOString().split("T")[0],
           creativeBrief: data.creativeBrief || null,
           status: isPaid ? "CONFIRMED" : "PENDING",

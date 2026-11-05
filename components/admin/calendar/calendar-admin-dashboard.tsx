@@ -27,6 +27,7 @@ import { BookingDetailsDialog } from "@/components/admin/bookings/booking-detail
 import type { BookingPackageOption } from "@/components/booking/package-picker";
 import { getBookingDetails } from "@/lib/actions/admin-bookings";
 import type { BookingDetails } from "@/lib/bookings/details";
+import { isSlotInPast } from "@/lib/slot-time";
 
 interface CalendarAdminDashboardProps {
   tenantId: string;
@@ -36,6 +37,8 @@ interface CalendarAdminDashboardProps {
   categories: CategoryOption[];
   clients: ClientOption[];
   packages?: BookingPackageOption[];
+  /** Studio owner: may set prices and record payments. */
+  isOwner?: boolean;
 }
 
 export function CalendarAdminDashboard({
@@ -46,12 +49,15 @@ export function CalendarAdminDashboard({
   categories,
   clients,
   packages = [],
+  isOwner = true,
 }: CalendarAdminDashboardProps) {
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  // Slots whose start time has passed are hidden unless asked for (or a date is picked).
+  const [showPast, setShowPast] = useState(false);
   const [dateFilter, setDateFilter] = useState<string>("");
 
   // Dialogs
@@ -95,6 +101,15 @@ export function CalendarAdminDashboard({
     );
   };
 
+  // After a booking action: reload the open booking (it may have moved off this slot) and the calendar.
+  const reloadViewedBooking = async () => {
+    const bookingId = viewBooking.booking?.id;
+    router.refresh();
+    if (!bookingId) return;
+    const res = await getBookingDetails({ tenantId, bookingId });
+    if (res.success) setViewBooking({ open: true, loading: false, booking: res.booking, error: null });
+  };
+
   const [isCleaning, setIsCleaning] = useState(false);
 
   const handleSuccess = () => {
@@ -116,7 +131,7 @@ export function CalendarAdminDashboard({
 
   // KPI Calculations
   const totalSlots = initialSlots.length;
-  const availableSlots = initialSlots.filter((s) => s.status === "AVAILABLE").length;
+  const availableSlots = initialSlots.filter((s) => s.status === "AVAILABLE" && !isSlotInPast(s)).length;
   const heldSlots = initialSlots.filter((s) => s.status === "HELD").length;
   const pendingSlots = initialSlots.filter((s) => s.status === "PENDING_VERIFICATION").length;
   const bookedSlots = initialSlots.filter((s) => s.status === "BOOKED").length;
@@ -134,8 +149,9 @@ export function CalendarAdminDashboard({
     const matchesStatus = selectedStatus === "ALL" || slot.status === selectedStatus;
     const matchesCategory = selectedCategory === "ALL" || slot.category === selectedCategory;
     const matchesDate = !dateFilter || dateStr === dateFilter;
+    const matchesTime = showPast || !!dateFilter || !isSlotInPast(slot);
 
-    return matchesSearch && matchesStatus && matchesCategory && matchesDate;
+    return matchesSearch && matchesStatus && matchesCategory && matchesDate && matchesTime;
   });
 
   return (
@@ -145,10 +161,10 @@ export function CalendarAdminDashboard({
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <Calendar className="size-6 text-amber-400" />
-            <span>Calendar Slots & Holding Engine</span>
+            <span>Calendar</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Dynamic calendar inventory, algorithmic batch scheduling, 10-minute slot holding leases, and blackout maintenance.
+            Open time slots for clients to book, block out days, and see who has booked. A slot is held for 10 minutes while a client checks out.
           </p>
         </div>
 
@@ -298,6 +314,16 @@ export function CalendarAdminDashboard({
             ))}
           </select>
 
+          <label className="flex items-center gap-2 text-xs text-zinc-400 px-1 min-h-11 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showPast}
+              onChange={(e) => setShowPast(e.target.checked)}
+              className="rounded border-zinc-600 text-amber-500 focus:ring-0 size-4"
+            />
+            Show past slots
+          </label>
+
           {(searchQuery || selectedStatus !== "ALL" || selectedCategory !== "ALL" || dateFilter) && (
             <button
               type="button"
@@ -346,9 +372,13 @@ export function CalendarAdminDashboard({
         booking={viewBooking.booking}
         loading={viewBooking.loading}
         error={viewBooking.error}
+        tenantId={tenantId}
+        isOwner={isOwner}
+        onChanged={reloadViewedBooking}
       />
 
       <BookForCustomerDialog
+        isOwner={isOwner}
         isOpen={isBookDialogOpen}
         onClose={() => setIsBookDialogOpen(false)}
         tenantId={tenantId}
@@ -362,6 +392,7 @@ export function CalendarAdminDashboard({
 
       {/* Dialog Modals */}
       <SingleSlotDialog
+        isOwner={isOwner}
         isOpen={isSingleDialogOpen}
         onClose={() => setIsSingleDialogOpen(false)}
         tenantId={tenantId}
@@ -373,6 +404,7 @@ export function CalendarAdminDashboard({
       />
 
       <BatchGeneratorDialog
+        isOwner={isOwner}
         isOpen={isBatchDialogOpen}
         onClose={() => setIsBatchDialogOpen(false)}
         tenantId={tenantId}

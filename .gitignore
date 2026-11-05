@@ -67,3 +67,6 @@ graphify-out/.graphify_labels.json.sig
 /public/uploads/**
 !/public/uploads/**/
 !/public/uploads/**/.gitkeep
+
+# Private client deliverables (masters), served only through /api/download
+/storage/

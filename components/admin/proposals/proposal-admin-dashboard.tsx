@@ -25,6 +25,8 @@ interface ProposalAdminDashboardProps {
   currency: string;
   initialTemplates: ProposalAddOnTemplateRow[];
   initialProposals: ProposalRow[];
+  /** "New proposal" button, for the owner. */
+  newProposal?: React.ReactNode;
 }
 
 export function ProposalAdminDashboard({
@@ -33,6 +35,7 @@ export function ProposalAdminDashboard({
   currency,
   initialTemplates,
   initialProposals,
+  newProposal,
 }: ProposalAdminDashboardProps) {
   const router = useRouter();
 
@@ -87,14 +90,15 @@ export function ProposalAdminDashboard({
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <FileText className="size-6 text-amber-400" />
-            <span>Proposal Templates & Add-On Catalog</span>
+            <span>Proposals</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Configure custom add-on menu items, automated defaults, pricing units, and monitor client proposal pipelines.
+            Quotes for clients, and the optional extras they can add to them.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          {newProposal}
           {activeTab === "templates" && (
             <button
               type="button"

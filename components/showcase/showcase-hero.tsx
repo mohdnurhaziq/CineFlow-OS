@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react";
+import { disciplineLabel } from "@/lib/labels";
 
 interface ShowcaseHeroProps {
   tenant: {
@@ -26,7 +27,7 @@ export function ShowcaseHero({ tenant }: ShowcaseHeroProps) {
         {/* Status pill */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/80 text-xs font-mono text-zinc-300">
           <span className="size-2 rounded-full" style={{ backgroundColor: brandColor }} />
-          <span>{tenant.discipline} CREATIVE STUDIO // {tenant.currency}</span>
+          <span>{disciplineLabel(tenant.discipline)} studio · {tenant.currency}</span>
         </div>
 
         {/* Studio Name & Tagline */}

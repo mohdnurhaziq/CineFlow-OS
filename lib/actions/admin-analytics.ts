@@ -162,13 +162,13 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
     const activeProjectsCount = projects.filter(
       (p) => p.status !== "DELIVERED" && p.status !== "ARCHIVED"
     ).length;
-    const completedProjectsCount = projects.filter(
-      (p) => p.status === "DELIVERED"
-    ).length;
+    // "Delivered" covers finished projects and bookings whose files have gone to the client.
+    const completedProjectsCount =
+      projects.filter((p) => p.status === "DELIVERED").length + bookings.filter((b) => b.status === "DELIVERED").length;
 
     // Booking KPIs
     const confirmedBookingsCount = bookings.filter(
-      (b) => b.status === "CONFIRMED" || b.status === "COMPLETED"
+      (b) => b.status === "CONFIRMED"
     ).length;
     const heldSlotsCount = slots.filter((s) => s.status === "HELD").length;
 

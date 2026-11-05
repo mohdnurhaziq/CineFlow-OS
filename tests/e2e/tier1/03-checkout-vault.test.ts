@@ -6,6 +6,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { holdBookingSlot } from "@/lib/actions/booking";
+import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import {
   approvePaymentVerification,
@@ -905,7 +906,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
     harness.assert(updatedProject?.isFinalBalancePaid === true, "Project.isFinalBalancePaid flipped to true");
   });
 
-  await harness.test("T1-F19-04: rejectPaymentVerification transitions invoice to REJECTED, frees slot to AVAILABLE, and cancels booking", async () => {
+  await harness.test("T1-F19-04: a rejected slip keeps the booking for a new slip, and releases it 24h after rejection", async () => {
     const slot = await db.bookingSlot.create({
       data: {
         tenantId: luminaTenant!.id,
@@ -952,8 +953,34 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
     const updatedSlot = await db.bookingSlot.findUnique({ where: { id: slot.id } });
 
     harness.assert(updatedInvoice?.status === "REJECTED", "Invoice status is REJECTED");
-    harness.assert(updatedBooking?.status === "CANCELLED", "Booking status is CANCELLED");
-    harness.assert(updatedSlot?.status === "AVAILABLE", "Slot reverted back to AVAILABLE for public booking");
+    harness.assertEqual(updatedInvoice?.rejectionReason, "Blurry receipt slip, unable to verify wire transfer", "Reason kept for the client");
+    harness.assert(updatedInvoice?.rejectedAt instanceof Date, "Rejection time recorded");
+    harness.assertEqual(updatedBooking?.status, "PENDING", "Booking is kept while the client sends a new slip");
+    harness.assertEqual(updatedSlot?.status, "PENDING_VERIFICATION", "Slot stays reserved");
+
+    // The client sends a new slip: back in the studio's review queue.
+    const resend: any = await processInvoicePayment({
+      tenantId: luminaTenant!.id,
+      tenantSlug: "lumina-cine",
+      invoiceId: checkoutRes.invoiceId!,
+      paymentMethod: "QR_CODE",
+      paymentProofUrl: "/uploads/receipts/proof-2.jpg",
+    });
+    harness.assert(resend.success === true, "New slip accepted");
+    const resent = await db.milestoneInvoice.findUnique({ where: { id: checkoutRes.invoiceId } });
+    harness.assertEqual(resent?.status, "PENDING_VERIFICATION", "Invoice is awaiting verification again");
+    harness.assertEqual(resent?.paymentProofUrl, "/uploads/receipts/proof-2.jpg", "New slip stored");
+
+    // Rejected again and left alone for more than 24 hours: the slot is released.
+    await rejectPaymentVerification({ invoiceId: checkoutRes.invoiceId!, tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", reason: "Still blurry" });
+    await db.milestoneInvoice.update({ where: { id: checkoutRes.invoiceId }, data: { rejectedAt: new Date(Date.now() - 25 * 3_600_000) } });
+    await expireUnpaidDeposits(luminaTenant!.id);
+    const expiredBooking = await db.clientBooking.findUnique({ where: { id: checkoutRes.bookingId } });
+    const expiredSlot = await db.bookingSlot.findUnique({ where: { id: slot.id } });
+    const expiredInvoice = await db.milestoneInvoice.findUnique({ where: { id: checkoutRes.invoiceId } });
+    harness.assertEqual(expiredBooking?.status, "CANCELLED", "Booking cancelled after 24h without a new slip");
+    harness.assertEqual(expiredSlot?.status, "AVAILABLE", "Slot released for public booking");
+    harness.assertEqual(expiredInvoice?.status, "VOID", "Deposit invoice voided");
   });
 
   await harness.test("T1-F19-05: Cross-tenant isolation: Studio B staff cannot approve Studio A invoice", async () => {

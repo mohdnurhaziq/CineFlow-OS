@@ -2,7 +2,8 @@
 
 import { actionErrorMessage } from "@/lib/action-error";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
-import { requireStaff } from "@/lib/auth/guard";
+// Prices, and removing what clients book, are the owner's call; staff keep the rest.
+import { requireOwner, requireStaff } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -40,7 +41,7 @@ function safeRevalidate(path: string) {
 export async function createServicePackage(input: CreateServicePackageInput) {
   try {
     const validated = CreateServicePackageSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireOwner(validated.tenantId);
     const {
       tenantId,
       tenantSlug,
@@ -95,7 +96,7 @@ export async function createServicePackage(input: CreateServicePackageInput) {
 export async function updateServicePackage(input: UpdateServicePackageInput) {
   try {
     const validated = UpdateServicePackageSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireOwner(validated.tenantId);
     const {
       id,
       tenantId,
@@ -151,7 +152,7 @@ export async function updateServicePackage(input: UpdateServicePackageInput) {
 export async function deleteServicePackage(input: DeleteServicePackageInput) {
   try {
     const validated = DeleteServicePackageSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireOwner(validated.tenantId);
     const { id, tenantId, tenantSlug } = validated;
 
     // Check ownership
@@ -347,7 +348,7 @@ export async function updateCampaignCategory(input: UpdateCampaignCategoryInput)
 export async function deleteCampaignCategory(input: DeleteCampaignCategoryInput) {
   try {
     const validated = DeleteCampaignCategorySchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireOwner(validated.tenantId);
     const { id, tenantId, tenantSlug } = validated;
 
     // Check category ownership

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { milestoneLabel } from "@/lib/labels";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 
 /**
@@ -23,6 +24,8 @@ export interface InvoiceDocument {
   paymentReference: string | null;
   paymentProofUrl: string | null;
   verifiedBy: string | null;
+  /** Why the studio rejected the last payment slip, while the invoice is REJECTED. */
+  rejectionReason: string | null;
   studio: {
     name: string;
     slug: string;
@@ -46,16 +49,10 @@ export interface InvoiceDocument {
   project: { title: string; projectNumber: string; budget: number } | null;
 }
 
-export const MILESTONE_TITLES: Record<string, string> = {
-  BOOKING_DEPOSIT: "Booking deposit",
-  BOOKING_BALANCE: "Session balance",
-  RETAINER_50: "Project retainer (50%)",
-  FINAL_BALANCE_50: "Project final balance (50%)",
-  PRINT_FRAME_ORDER: "Print & frame order",
-};
+export { MILESTONE_TITLES } from "@/lib/labels";
 
 export function milestoneTitle(type: string): string {
-  return MILESTONE_TITLES[type] ?? type.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+  return milestoneLabel(type);
 }
 
 export async function loadInvoiceDocument(tenantId: string, invoiceId: string): Promise<InvoiceDocument | null> {
@@ -112,6 +109,7 @@ export async function loadInvoiceDocument(tenantId: string, invoiceId: string): 
     paymentReference: invoice.paymentReference,
     paymentProofUrl: invoice.paymentProofUrl,
     verifiedBy: invoice.verifiedBy,
+    rejectionReason: invoice.status === "REJECTED" ? invoice.rejectionReason : null,
     studio: {
       name: invoice.tenant.name,
       slug: invoice.tenant.slug,
@@ -121,7 +119,14 @@ export async function loadInvoiceDocument(tenantId: string, invoiceId: string): 
       bankDetails: invoice.tenant.bankDetails,
     },
     client: { id: invoice.client.id, name: invoice.client.name, email: invoice.client.email, phone: invoice.client.phone },
-    lines: [{ description: what ? `${title}: ${what}` : title, detail, amount: invoice.amount }],
+    lines: [
+      {
+        // A custom invoice is described by the studio; the others by what they pay for.
+        description: invoice.description ?? (what ? `${title}: ${what}` : title),
+        detail,
+        amount: invoice.amount,
+      },
+    ],
     booking,
     project: invoice.project
       ? { title: invoice.project.title, projectNumber: invoice.project.projectNumber, budget: invoice.project.budget }

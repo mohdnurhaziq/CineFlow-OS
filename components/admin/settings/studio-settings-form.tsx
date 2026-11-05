@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { saveGatewayCredentials, removeGatewayCredentials } from "@/lib/actions/admin-payments";
+import { disciplineLabel } from "@/lib/labels";
 
 function GatewaySettings({
   tenantId,
@@ -134,7 +135,7 @@ function GatewaySettings({
             disabled={busy || !categoryCode.trim() || (!configured && !secretKey)}
             className="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
           >
-            {busy ? "Saving..." : "Save payment settings"}
+            {busy ? "Connecting..." : configured ? "Update connection" : "Connect Toyyibpay"}
           </button>
         )}
         {configured && (
@@ -369,16 +370,17 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <Settings className="size-6 text-amber-400" />
-            <span>Studio Settings & Bank Details</span>
+            <span>Settings</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Manage studio identity, branding colors, custom domains, and payment collection credentials.
+            Your studio name and look, web address, and how clients pay you.
           </p>
         </div>
 
@@ -395,7 +397,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
           ) : (
             <>
               <Check className="size-4" />
-              <span>Save Settings</span>
+              <span>Save settings</span>
             </>
           )}
         </button>
@@ -467,7 +469,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
             >
               {DISCIPLINES.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {disciplineLabel(d)}
                 </option>
               ))}
             </select>
@@ -654,20 +656,11 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
         )}
       </div>
 
-      {/* Section 3b: Online payments (Toyyibpay) */}
-      <GatewaySettings
-        tenantId={tenant.id}
-        tenantSlug={tenant.slug}
-        configured={Boolean(tenant.gatewayConfigured)}
-        initialCategoryCode={tenant.gatewayCategoryCode ?? ""}
-        currency={tenant.currency}
-      />
-
       {/* Section 4: Workspace & License Information */}
       <div className="p-6 rounded-2xl border border-zinc-800 bg-[#0d0d10] space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
           <ShieldCheck className="size-5 text-amber-400" />
-          <h2 className="text-base font-bold text-white tracking-tight">Workspace & License Meta</h2>
+          <h2 className="text-base font-bold text-white tracking-tight">Plan</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -691,7 +684,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
 
           <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
             <span className="text-[10px] font-mono text-zinc-500 uppercase block">
-              Internal Tenant ID
+              Studio ID
             </span>
             <div className="flex items-center justify-between gap-1 mt-0.5">
               <span className="text-xs font-mono text-zinc-400 truncate">{tenant.id}</span>
@@ -707,6 +700,31 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
           </div>
         </div>
       </div>
+
+      {/* Bottom save bar, so the button is in reach after editing any section above. */}
+      <div className="sticky bottom-0 -mx-1 px-1 py-3 bg-[#09090b]/95 backdrop-blur flex items-center justify-end gap-3 border-t border-zinc-800">
+        <span className="text-[11px] text-zinc-500 mr-auto">Saves everything above. Online payments are set up separately below.</span>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors disabled:opacity-50"
+        >
+          {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+          <span>{isSubmitting ? "Saving..." : "Save settings"}</span>
+        </button>
+      </div>
     </form>
+
+    {/* Online payments live outside the settings form: they save on their own (the secret
+        key never travels with the rest of the settings) and Enter in them must not submit it. */}
+      <GatewaySettings
+        tenantId={tenant.id}
+        tenantSlug={tenant.slug}
+        configured={Boolean(tenant.gatewayConfigured)}
+        initialCategoryCode={tenant.gatewayCategoryCode ?? ""}
+        currency={tenant.currency}
+      />
+
+    </div>
   );
 }

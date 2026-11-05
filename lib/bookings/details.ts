@@ -50,6 +50,11 @@ export interface BookingDetails {
   invoice: BookingInvoiceSummary | null;
   /** The balance invoice, issued once the deposit is paid. */
   balanceInvoice: BookingInvoiceSummary | null;
+  cancelReason: string | null;
+  completedAt: string | null;
+  deliveredAt: string | null;
+  /** Link to the client's gallery or files, once delivered. */
+  deliveryUrl: string | null;
 }
 
 // A booking and its deposit invoice are written in the same transaction.
@@ -164,6 +169,10 @@ export async function loadBookingDetails(
         : null,
       invoice: inv ? summarize(inv) : null,
       balanceInvoice: balance ? summarize(balance) : null,
+      cancelReason: b.cancelReason,
+      completedAt: b.completedAt ? b.completedAt.toISOString() : null,
+      deliveredAt: b.deliveredAt ? b.deliveredAt.toISOString() : null,
+      deliveryUrl: b.deliveryUrl,
     };
   });
 }

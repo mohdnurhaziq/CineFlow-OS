@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { logPreShootInspection, logPostShootInspection } from "@/lib/actions/gear";
 import { useDialog } from "@/lib/use-dialog";
+import { conditionLabel } from "@/lib/labels";
 
 export interface ReservationWithDetails {
   id: string;
@@ -206,7 +207,7 @@ export function InspectionDialog({
             >
               {CONDITIONS.map((cond) => (
                 <option key={cond} value={cond}>
-                  {cond}
+                  {conditionLabel(cond)}
                 </option>
               ))}
             </select>
@@ -277,7 +278,7 @@ export function InspectionDialog({
                 <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
                   <AlertTriangle className="size-4 shrink-0" />
                   <span>
-                    Item will automatically transition to <strong>MAINTENANCE</strong> status and be locked from immediate dispatch.
+                    The item will be marked <strong>In repair</strong> and be locked from immediate dispatch.
                   </span>
                 </div>
               )}

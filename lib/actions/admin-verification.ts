@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/auth/guard";
+import { requireOwner } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
@@ -30,7 +30,8 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
   try {
     const validated = ApprovePaymentVerificationSchema.parse(input);
     // The verifier is always the signed-in staff member, never a name sent by the browser.
-    const staffName = (await requireStaff(validated.tenantId)).name;
+    // Taking or refusing money is the owner's call.
+    const staffName = (await requireOwner(validated.tenantId)).name;
     const { invoiceId, tenantId, tenantSlug, notes } = validated;
 
     // Multi-tenant isolation check
@@ -176,7 +177,8 @@ export type RejectPaymentVerificationInput = z.infer<typeof RejectPaymentVerific
 export async function rejectPaymentVerification(input: RejectPaymentVerificationInput) {
   try {
     const validated = RejectPaymentVerificationSchema.parse(input);
-    const staffName = (await requireStaff(validated.tenantId)).name;
+    // Taking or refusing money is the owner's call.
+    const staffName = (await requireOwner(validated.tenantId)).name;
     const { invoiceId, tenantId, tenantSlug, reason } = validated;
 
     // Multi-tenant check
@@ -213,44 +215,18 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
       };
     }
 
-    await db.$transaction(async (tx) => {
-      // 1. Mark Invoice as REJECTED
-      await tx.milestoneInvoice.update({
-        where: { id: invoiceId },
-        data: {
-          status: "REJECTED",
-          verifiedBy: staffName,
-          paymentReference: `${invoice.paymentReference || "REJECTED"} [Reason: ${reason}]`,
-        },
-      });
-
-      // 2. If BOOKING_DEPOSIT, cancel booking and release slot back to AVAILABLE
-      if (invoice.milestoneType === "BOOKING_DEPOSIT") {
-        const linked = await resolveInvoiceBooking(tx, invoice);
-        const booking = linked && ["PENDING", "PENDING_VERIFICATION"].includes(linked.status) ? linked : null;
-
-        if (booking) {
-          const slotToRelease = booking.slotId;
-          await tx.clientBooking.update({
-            where: { id: booking.id },
-            data: {
-              status: "CANCELLED",
-              slotId: null, // Defect CF-M3-01: Disassociate slotId so released slot can be re-booked without @unique collision
-            },
-          });
-
-          if (slotToRelease) {
-            await tx.bookingSlot.update({
-              where: { id: slotToRelease },
-              data: {
-                status: "AVAILABLE",
-                heldUntil: null,
-                heldBySessionId: null,
-              },
-            });
-          }
-        }
-      }
+    // The booking and its slot are kept: the client is asked for a new slip. If none
+    // arrives within DEPOSIT_HOLD_HOURS of this rejection, expireUnpaidDeposits releases
+    // the slot (see lib/bookings/expiry.ts).
+    await db.milestoneInvoice.update({
+      where: { id: invoiceId },
+      data: {
+        status: "REJECTED",
+        verifiedBy: staffName,
+        rejectedAt: new Date(),
+        rejectionReason: reason,
+        paymentReference: `${invoice.paymentReference || "REJECTED"} [Reason: ${reason}]`,
+      },
     });
 
     safeRevalidate(`/${tenantSlug}/admin/verification`);
@@ -269,7 +245,7 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
         amount: invoice.amount,
         currency: invoice.tenant.currency,
         reason,
-        reuploadUrl: `/${tenantSlug}/checkout?invoice=${invoice.id}`,
+        reuploadUrl: `/${tenantSlug}/checkout?invoiceId=${invoice.id}`,
       }).catch((e) => console.error("Notification dispatch failed:", e));
     }
 

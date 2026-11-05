@@ -785,6 +785,39 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
     });
   });
 
+  await harness.test("T1-F35-03b: check-out opens 48h before the reservation, once only; check-in needs a check-out", async () => {
+    const project = await db.project.findFirst({ where: { tenantId: luminaTenant!.id } });
+    const item = await db.inventoryItem.create({
+      data: { tenantId: luminaTenant!.id, name: "Window Test", sku: `WIN-${Date.now()}`, category: "Support", discipline: "UNIVERSAL", status: "AVAILABLE" },
+    });
+    const later = await createEquipmentReservation({
+      tenantId: luminaTenant!.id,
+      tenantSlug: "lumina-cine",
+      projectId: project!.id,
+      itemId: item.id,
+      startDate: new Date(Date.now() + 86400000 * 10).toISOString(),
+      endDate: new Date(Date.now() + 86400000 * 11).toISOString(),
+    });
+    const reservationId = later.reservation!.id;
+    harness.registerTeardown(async () => {
+      await db.inspectionLog.deleteMany({ where: { reservationId } });
+      await db.equipmentReservation.deleteMany({ where: { id: reservationId } });
+      await db.inventoryItem.delete({ where: { id: item.id } }).catch(() => null);
+    });
+    const base = { tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", reservationId };
+
+    const early: any = await logPreShootInspection({ ...base, condition: "GOOD" });
+    harness.assertEqual(early.error, "TOO_EARLY", "Ten days out: too early to check out");
+    const checkinFirst: any = await logPostShootInspection({ ...base, condition: "GOOD", damageFlag: false });
+    harness.assertEqual(checkinFirst.error, "NOT_CHECKED_OUT", "Can't check in gear that was never checked out");
+
+    await db.equipmentReservation.update({ where: { id: reservationId }, data: { startDate: new Date(Date.now() + 86400000), endDate: new Date(Date.now() + 86400000 * 2) } });
+    const prep: any = await logPreShootInspection({ ...base, condition: "GOOD" });
+    harness.assert(prep.success === true, "A day before the shoot: check-out allowed (prep)");
+    const again: any = await logPreShootInspection({ ...base, condition: "GOOD" });
+    harness.assertEqual(again.error, "NOT_RESERVED", "Can't check the same reservation out twice");
+  });
+
   await harness.test("T1-F35-04: logPostShootInspection with no damages transitions reservation to RETURNED and item back to AVAILABLE", async () => {
     const project = await db.project.findFirst({ where: { tenantId: luminaTenant!.id } });
     const item = await db.inventoryItem.create({

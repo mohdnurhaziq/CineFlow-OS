@@ -19,6 +19,7 @@ import {
   PlusCircle,
 } from "lucide-react";
 import type { StudioAnalyticsData } from "@/lib/actions/admin-analytics";
+import { conditionLabel, milestoneLabel, paymentMethodLabel } from "@/lib/labels";
 
 interface StudioDashboardProps {
   data: StudioAnalyticsData;
@@ -82,17 +83,17 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Live Studio Operations
+              Overview
             </span>
             <span className="text-xs text-zinc-500 font-mono">
-              Workspace ID: {tenant.slug}
+              /{tenant.slug}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
-            {tenant.name} Command Center
+            {tenant.name}
           </h1>
           <p className="text-sm text-zinc-400 mt-1 max-w-2xl">
-            Real-time cash flow milestones, equipment fleet readiness, live call sheets, and client proposal pipeline.
+            Money in and waiting, gear on hand, upcoming shoots and open proposals at a glance.
           </p>
         </div>
 
@@ -119,7 +120,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-mono transition-colors"
           >
             <Layers className="size-3.5 text-amber-400" />
-            <span>Gear Fleet</span>
+            <span>Gear</span>
           </Link>
         </div>
       </div>
@@ -224,7 +225,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
             <div className="flex items-center gap-2">
               <DollarSign className="size-4 text-amber-400" />
               <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-                Recent Milestone Invoices & Verifications
+                Recent invoices
               </h2>
             </div>
             <Link
@@ -270,7 +271,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5">
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 whitespace-nowrap">
-                          {inv.milestoneType.replace(/_/g, " ")}
+                          {milestoneLabel(inv.milestoneType)}
                         </span>
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5 text-right font-bold text-white tabular-nums whitespace-nowrap">
@@ -289,7 +290,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                           </Link>
                         ) : (
                           <span className="text-[11px] text-zinc-500 font-sans">
-                            {inv.paymentMethod ? inv.paymentMethod.replace(/_/g, " ") : "Pending"}
+                            {inv.paymentMethod ? paymentMethodLabel(inv.paymentMethod) : "Pending"}
                           </span>
                         )}
                       </td>
@@ -309,7 +310,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               <div className="flex items-center gap-2">
                 <FileText className="size-4 text-amber-400" />
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                  Proposal Funnel
+                  Proposals
                 </h3>
               </div>
               <Link
@@ -355,14 +356,14 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               <div className="flex items-center gap-2">
                 <AlertTriangle className="size-4 text-amber-400" />
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                  Equipment Status Watch
+                  Gear status
                 </h3>
               </div>
               <Link
                 href={`/${tenant.slug}/admin/inventory`}
                 className="text-[11px] font-mono text-zinc-400 hover:text-amber-400"
               >
-                Fleet
+                Gear
               </Link>
             </div>
 
@@ -390,7 +391,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                           : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
                       }`}
                     >
-                      {item.condition}
+                      {conditionLabel(item.condition)}
                     </span>
                   </div>
                 ))}
@@ -406,14 +407,14 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
           <div className="flex items-center gap-2">
             <Calendar className="size-4 text-amber-400" />
             <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-              Live Production Call Sheets & Upcoming Shoots
+              Upcoming shoot days
             </h2>
           </div>
           <Link
-            href={`/${tenant.slug}/admin/calendar`}
+            href={`/${tenant.slug}/admin/projects`}
             className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1"
           >
-            Manage Time Slots <ChevronRight className="size-3" />
+            Projects <ChevronRight className="size-3" />
           </Link>
         </div>
 

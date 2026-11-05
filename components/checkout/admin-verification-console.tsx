@@ -25,10 +25,17 @@ import {
   rejectPaymentVerification,
 } from "@/lib/actions/admin-verification";
 import { useDialog } from "@/lib/use-dialog";
+import { humanize, invoiceStatusLabel, milestoneLabel, paymentMethodLabel } from "@/lib/labels";
+import { sameCategory } from "@/lib/bookings/pricing-shared";
+import { formatSlotDate } from "@/lib/slot-time";
 
 interface AdminVerificationConsoleProps {
   /** The signed-in staff member; the server records approvals and rejections under this name. */
   verifierName: string;
+  /** Approving and rejecting payments is owner-only; staff can review the queue. */
+  isOwner?: boolean;
+  /** Category slug -> display name, so bookings show "Studio Portraits", not "studio-portrait". */
+  categoryNames?: Record<string, string>;
   tenant: {
     id: string;
     name: string;
@@ -62,6 +69,7 @@ interface AdminVerificationConsoleProps {
       category: string;
       targetDate: string | null;
       slot?: {
+        date?: string;
         startTime: string;
         endTime: string;
       } | null;
@@ -87,6 +95,8 @@ interface AdminVerificationConsoleProps {
 export function AdminVerificationConsole({
   tenant,
   verifierName,
+  isOwner = true,
+  categoryNames = {},
   pendingInvoices: initialPending,
   historyInvoices: initialHistory,
 }: AdminVerificationConsoleProps) {
@@ -104,6 +114,8 @@ export function AdminVerificationConsole({
   } | null>(null);
 
   const [isPending, startTransition] = useTransition();
+  const categoryName = (slug: string) =>
+    Object.entries(categoryNames).find(([s]) => sameCategory(s, slug))?.[1] ?? humanize(slug);
 
   // Rejection modal state
   const [rejectModalItem, setRejectModalItem] = useState<{
@@ -165,7 +177,7 @@ export function AdminVerificationConsole({
       });
 
       if (res.success) {
-        toast.success(`Invoice ${rejectModalItem.invoiceNumber} rejected and slot released.`);
+        toast.success(`Slip for ${rejectModalItem.invoiceNumber} rejected. The client has been asked for a new one.`);
         setRejectModalItem(null);
       } else {
         toast.error(res.message || "Failed to reject payment.");
@@ -179,13 +191,13 @@ export function AdminVerificationConsole({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 block mb-1">
-            STUDIO VERIFICATION CONSOLE // {tenant.name.toUpperCase()}
+            {tenant.name}
           </span>
           <h1 className="text-3xl font-bold tracking-tight text-white">
-            Manual Payment Authorization
+            Payment verification
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
-            Review offline QR payment slips and cash counter deposits to lock studio slots and release master vaults.
+            Check QR transfer slips and cash payments against your bank or till, then approve them to confirm the booking.
           </p>
         </div>
 
@@ -214,7 +226,7 @@ export function AdminVerificationConsole({
           <div className="text-3xl font-bold font-mono text-white tracking-tight">
             {initialPending.length}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">Pending studio audit</p>
+          <p className="text-[11px] text-zinc-400 mt-1">Payments to check</p>
         </div>
 
         {/* Metric 2: QR Slip Uploads */}
@@ -242,7 +254,7 @@ export function AdminVerificationConsole({
           <div className="text-3xl font-bold font-mono text-white tracking-tight">
             {cashPending.length}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">Front desk settlements</p>
+          <p className="text-[11px] text-zinc-400 mt-1">Paid at the studio</p>
         </div>
 
         {/* Metric 4: Total Volume Awaiting */}
@@ -257,7 +269,7 @@ export function AdminVerificationConsole({
             {currencySymbol}
             {totalPendingVolume.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-[11px] text-zinc-400 mt-1">Gross escrow pending</p>
+          <p className="text-[11px] text-zinc-400 mt-1">Waiting to be confirmed</p>
         </div>
       </div>
 
@@ -356,7 +368,7 @@ export function AdminVerificationConsole({
                       <span className="font-bold text-white">{item.invoiceNumber}</span>
                       <span className="text-zinc-600">•</span>
                       <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        {item.milestoneType.replace(/_/g, " ")}
+                        {milestoneLabel(item.milestoneType)}
                       </span>
                       <span className="text-zinc-600">•</span>
                       <span
@@ -368,7 +380,7 @@ export function AdminVerificationConsole({
                             : "bg-zinc-800 text-zinc-300 border-zinc-700"
                         }`}
                       >
-                        {item.paymentMethod || "UNKNOWN"}
+                        {item.paymentMethod ? paymentMethodLabel(item.paymentMethod) : "Not chosen"}
                       </span>
                       <span className="text-zinc-500 text-[11px] ml-auto">
                         {new Date(item.createdAt).toLocaleString("en-US", {
@@ -396,13 +408,17 @@ export function AdminVerificationConsole({
                         {item.booking ? (
                           <>
                             <div className="font-semibold text-amber-400 font-mono text-xs">
-                              {item.booking.trackingCode} ({item.booking.category})
+                              {item.booking.trackingCode} · {categoryName(item.booking.category)}
                             </div>
                             <div className="text-zinc-400 text-[11px] font-mono">
-                              {item.booking.targetDate}{" "}
-                              {item.booking.slot
-                                ? `• ${item.booking.slot.startTime} – ${item.booking.slot.endTime}`
-                                : ""}
+                              {[
+                                item.booking.slot?.date
+                                  ? formatSlotDate(item.booking.slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+                                  : item.booking.targetDate,
+                                item.booking.slot ? `${item.booking.slot.startTime} – ${item.booking.slot.endTime}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
                             </div>
                           </>
                         ) : item.project ? (
@@ -476,6 +492,11 @@ export function AdminVerificationConsole({
                       </div>
                     </div>
 
+                    {!isOwner ? (
+                      <p className="text-[11px] text-zinc-500 max-w-[12rem] text-right">
+                        Only the studio owner can approve or reject payments.
+                      </p>
+                    ) : (
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -507,6 +528,7 @@ export function AdminVerificationConsole({
                         <span>1-Click Approve</span>
                       </button>
                     </div>
+                    )}
                   </div>
                 </div>
               );
@@ -533,7 +555,7 @@ export function AdminVerificationConsole({
                 <tr key={item.id} className="hover:bg-zinc-900/40">
                   <td className="py-3 font-bold text-white">{item.invoiceNumber}</td>
                   <td className="py-3 text-zinc-300 font-sans">{item.client.name}</td>
-                  <td className="py-3 text-zinc-400">{item.milestoneType}</td>
+                  <td className="py-3 text-zinc-400">{milestoneLabel(item.milestoneType)}</td>
                   <td className="py-3">
                     <span
                       className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -544,7 +566,7 @@ export function AdminVerificationConsole({
                           : "bg-zinc-800 text-zinc-400"
                       }`}
                     >
-                      {item.status}
+                      {invoiceStatusLabel(item.status)}
                     </span>
                   </td>
                   <td className="py-3 text-white font-bold tabular-nums">
@@ -592,7 +614,7 @@ export function AdminVerificationConsole({
 
             <p className="text-xs text-zinc-300 leading-relaxed">
               Rejecting invoice <strong className="text-white">{rejectModalItem.invoiceNumber}</strong> for{" "}
-              <strong className="text-white">{rejectModalItem.clientName}</strong> will mark the invoice as REJECTED, cancel any pending booking, and release the held slot back to AVAILABLE on the public calendar.
+              <strong className="text-white">{rejectModalItem.clientName}</strong> asks them to send a new slip. Their booking and slot are kept for 24 hours; if no new slip arrives by then, the slot is released.
             </p>
 
             <div className="space-y-1.5">
@@ -627,7 +649,7 @@ export function AdminVerificationConsole({
                 className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
               >
                 {isPending && <Loader2 className="size-3.5 animate-spin" />}
-                Confirm Rejection &amp; Release Slot
+                Reject slip &amp; ask for a new one
               </button>
             </div>
           </div>

@@ -97,7 +97,7 @@ export function ForceReleaseDialog({
           </div>
 
           <p className="text-[11px] text-amber-400/90 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl">
-            Releasing will immediately return this slot to <strong>AVAILABLE</strong>, allowing other clients to book it. Any in-flight checkout for this lease will fail to finalize.
+            Releasing will immediately make this slot <strong>available</strong> again, allowing other clients to book it. Any in-flight checkout for this lease will fail to finalize.
           </p>
 
           {errorMessage && (

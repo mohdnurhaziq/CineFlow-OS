@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
  * DEPOSIT_HOLD_HOURS. After that, if no payment proof was submitted (no QR slip, or
  * cash never recorded) the booking is cancelled, its slot reopens and the deposit
  * invoice is voided. A booking whose slip is waiting for the studio's review is kept.
+ * When the studio rejects a slip, the client gets DEPOSIT_HOLD_HOURS from the rejection
+ * to send a new one; after that the booking is released the same way.
  * Online (card/FPX) bookings have their own short gateway hold and are not touched.
  *
  * There is no background scheduler, so this runs lazily wherever slots or bookings
@@ -36,6 +38,19 @@ export async function expireUnpaidDeposits(tenantId: string, now: Date = new Dat
     select: { id: true, slotId: true },
   });
 
+  // Slips the studio rejected that the client hasn't replaced in time.
+  const rejected = await db.clientBooking.findMany({
+    where: {
+      tenantId,
+      status: "PENDING",
+      depositPaid: false,
+      invoices: { some: { milestoneType: "BOOKING_DEPOSIT", status: "REJECTED", rejectedAt: { lt: cutoff } } },
+    },
+    select: { id: true, slotId: true },
+  });
+  const seen = new Set(stale.map((b) => b.id));
+  for (const b of rejected) if (!seen.has(b.id)) stale.push(b);
+
   let cancelled = 0;
   for (const booking of stale) {
     await db.$transaction(async (tx) => {
@@ -47,7 +62,11 @@ export async function expireUnpaidDeposits(tenantId: string, now: Date = new Dat
       if (claimed.count !== 1) return;
 
       await tx.milestoneInvoice.updateMany({
-        where: { bookingId: booking.id, milestoneType: "BOOKING_DEPOSIT", status: "PENDING_VERIFICATION", paymentProofUrl: null },
+        where: {
+          bookingId: booking.id,
+          milestoneType: "BOOKING_DEPOSIT",
+          OR: [{ status: "PENDING_VERIFICATION", paymentProofUrl: null }, { status: "REJECTED" }],
+        },
         data: { status: "VOID", verifiedBy: `System: deposit not paid within ${DEPOSIT_HOLD_HOURS} hours` },
       });
       if (booking.slotId) {

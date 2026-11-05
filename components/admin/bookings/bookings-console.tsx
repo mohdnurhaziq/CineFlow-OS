@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, CalendarCheck, Inbox } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
@@ -20,6 +21,9 @@ interface BookingsConsoleProps {
   bookings: BookingDetails[];
   /** Today's date (YYYY-MM-DD), computed on the server so the first render matches. */
   today: string;
+  tenantId: string;
+  /** Studio owner: may cancel paid bookings. */
+  isOwner: boolean;
 }
 
 /** "09:00 AM" -> minutes since midnight, for ordering sessions within a day. */
@@ -36,13 +40,16 @@ function sessionKey(b: BookingDetails): string {
   return `${b.sessionDate ?? "0000-00-00"} ${String(minutesOf(b.slot?.startTime)).padStart(4, "0")}`;
 }
 
-export function BookingsConsole({ tenantSlug, currency, bookings, today }: BookingsConsoleProps) {
+export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantId, isOwner }: BookingsConsoleProps) {
   // Open on whatever needs the owner's attention first.
   const [filter, setFilter] = useState<FilterId>(() =>
     bookings.some((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b))) ? "verify" : "upcoming"
   );
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<BookingDetails | null>(null);
+  // Track the open booking by id so it shows fresh data after an action refreshes the list.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = selectedId ? bookings.find((b) => b.id === selectedId) ?? null : null;
+  const router = useRouter();
 
   const groups = useMemo(() => {
     const active = bookings.filter((b) => b.status !== "CANCELLED");
@@ -163,7 +170,7 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today }: Booki
               <li key={b.id}>
                 <button
                   type="button"
-                  onClick={() => setSelected(b)}
+                  onClick={() => setSelectedId(b.id)}
                   className="w-full text-left px-5 py-3.5 grid grid-cols-[1fr_auto] md:grid-cols-[1.1fr_1.4fr_1fr_1fr_10rem] gap-x-4 gap-y-1.5 items-center hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none transition-colors"
                 >
                   <span className="min-w-0">
@@ -201,10 +208,13 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today }: Booki
 
       <BookingDetailsDialog
         isOpen={selected !== null}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(null)}
         tenantSlug={tenantSlug}
         currency={currency}
         booking={selected}
+        tenantId={tenantId}
+        isOwner={isOwner}
+        onChanged={() => router.refresh()}
       />
     </div>
   );

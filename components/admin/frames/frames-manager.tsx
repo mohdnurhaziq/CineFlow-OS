@@ -30,6 +30,7 @@ import {
   PrintSizeDialog,
   type PrintSizeRow,
 } from "./print-size-dialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface FramesManagerProps {
   tenantId: string;
@@ -46,6 +47,7 @@ export function FramesManager({
   initialFrames,
   initialSizes,
 }: FramesManagerProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"frames" | "sizes">("frames");
@@ -65,7 +67,7 @@ export function FramesManager({
   };
 
   const handleDeleteFrame = async (frame: FrameDesignRow) => {
-    if (!confirm(`Delete frame molding "${frame.name}"?`)) return;
+    if (!(await confirm({ title: `Delete "${frame.name}"?`, message: "Clients will no longer be able to order this frame.", confirmLabel: "Delete" }))) return;
 
     setDeletingId(frame.id);
     setErrorMessage(null);
@@ -104,7 +106,7 @@ export function FramesManager({
   };
 
   const handleDeleteSize = async (size: PrintSizeRow) => {
-    if (!confirm(`Delete print dimension "${size.name}" (${size.code})?`)) return;
+    if (!(await confirm({ title: `Delete ${size.name} (${size.code})?`, message: "Clients will no longer be able to order this print size.", confirmLabel: "Delete" }))) return;
 
     setDeletingId(size.id);
     setErrorMessage(null);
@@ -151,10 +153,10 @@ export function FramesManager({
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <Frame className="size-6 text-amber-400" />
-            <span>Frame Moldings & Print Dimensions</span>
+            <span>Frames & prints</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Configure physical print sizes, molding finishes, and real-scale rendering dimensions for the Wall Art Visualizer.
+            The print sizes and frame finishes clients can order, and preview on their wall.
           </p>
         </div>
 
@@ -488,6 +490,7 @@ export function FramesManager({
         sizeToEdit={sizeToEdit}
         onSuccess={handleSuccess}
       />
+      {confirmDialog}
     </div>
   );
 }

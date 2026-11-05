@@ -37,7 +37,10 @@ export default async function ClientInvoicePage({ params }: ClientInvoicePagePro
 
   const status = invoiceStatus(doc);
   const canPay = status === "PENDING" || status === "OVERDUE";
-  const needsSlip = status === "PENDING_VERIFICATION" && doc.paymentMethod === "QR_CODE" && !doc.paymentProofUrl;
+  const needsSlip =
+    (status === "PENDING_VERIFICATION" && doc.paymentMethod === "QR_CODE" && !doc.paymentProofUrl) ||
+    // The studio rejected the slip: send a new one.
+    status === "REJECTED";
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] print:bg-white print:min-h-0">
@@ -59,7 +62,7 @@ export default async function ClientInvoicePage({ params }: ClientInvoicePagePro
                   className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition-colors"
                 >
                   {needsSlip ? <Upload className="size-4" /> : <CreditCard className="size-4" />}
-                  {needsSlip ? "Upload payment slip" : "Pay this invoice"}
+                  {status === "REJECTED" ? "Send a new payment slip" : needsSlip ? "Upload payment slip" : "Pay this invoice"}
                 </Link>
               )}
               <PrintButton />

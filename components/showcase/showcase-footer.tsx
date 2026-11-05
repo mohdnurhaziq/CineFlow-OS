@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MessageSquare, ShieldCheck, CreditCard, QrCode } from "lucide-react";
+import { disciplineLabel } from "@/lib/labels";
 
 interface ShowcaseFooterProps {
   tenant: {
@@ -29,7 +30,7 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
           <div className="space-y-1">
             <h4 className="text-base font-bold text-white tracking-tight">{tenant.name}</h4>
             <p className="text-xs text-zinc-400">
-              Creative {tenant.discipline} Studio • Every booking is secured with a deposit.
+              {disciplineLabel(tenant.discipline)} studio • Every booking is secured with a deposit.
             </p>
           </div>
 

@@ -13,7 +13,9 @@ import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
 import { approvePaymentVerification, rejectPaymentVerification } from "@/lib/actions/admin-verification";
-import { deleteBookingSlot, cleanupExpiredHolds } from "@/lib/actions/admin-calendar";
+import { deleteBookingSlot, cleanupExpiredHolds, createSingleBookingSlot, updateBookingSlot } from "@/lib/actions/admin-calendar";
+import { createServicePackage, deleteCampaignCategory } from "@/lib/actions/admin-services";
+import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { getStudioAnalytics } from "@/lib/actions/admin-analytics";
 import { getPlatformMetrics, getAllTenantsSummary } from "@/lib/actions/super-admin";
@@ -146,12 +148,65 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: invoice.id } }))?.status, "PENDING_VERIFICATION", "Still pending");
   });
 
-  await harness.test("T10-VER-03: the studio's own staff can approve", async () => {
-    const res = await withSession(luminaCrew, () =>
+  await harness.test("T10-VER-03: only the studio owner can approve; crew are refused", async () => {
+    const crew = await withSession(luminaCrew, () =>
       approvePaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
     );
-    harness.assertEqual(res.success, true, "Approved by own staff", JSON.stringify(res));
+    harness.assert(denied(crew), "Crew cannot approve a payment", JSON.stringify(crew));
+    harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: invoice.id } }))?.status, "PENDING_VERIFICATION", "Still pending after crew attempt");
+    const res = await withSession(luminaOwner, () =>
+      approvePaymentVerification({ invoiceId: invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
+    );
+    harness.assertEqual(res.success, true, "Approved by the owner", JSON.stringify(res));
     harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: invoice.id } }))?.status, "PAID", "Invoice PAID");
+  });
+
+  // ---- Owner-only money: prices and recorded payments -----------------------------------
+  await harness.test("T10-OWN-01: crew can't change package prices or delete categories", async () => {
+    const pkg = await withSession(luminaCrew, () =>
+      createServicePackage({
+        tenantId: lumina.id, tenantSlug: "lumina-cine", name: "Crew price", category: "commercial", discipline: "PHOTOGRAPHY",
+        price: 10, depositPrice: 5, turnaround: "1 day", description: "Should be refused", deliverables: "None", isFeatured: false,
+      })
+    );
+    harness.assert(denied(pkg), "Crew cannot create a package", JSON.stringify(pkg));
+    const cat = await db.campaignCategory.findFirst({ where: { tenantId: lumina.id } });
+    const del = await withSession(luminaCrew, () => deleteCampaignCategory({ id: cat!.id, tenantId: lumina.id, tenantSlug: "lumina-cine" }));
+    harness.assert(denied(del), "Crew cannot delete a category", JSON.stringify(del));
+  });
+
+  await harness.test("T10-OWN-02: crew slots are priced by packages; crew can't set or change a slot fee", async () => {
+    const day = new Date(Date.now() + 86400000 * 200).toISOString().slice(0, 10);
+    const priced = await withSession(luminaCrew, () =>
+      createSingleBookingSlot({ tenantId: lumina.id, tenantSlug: "lumina-cine", date: day, startTime: "09:00 AM", endTime: "10:00 AM", category: "commercial", price: 999, depositRequired: 1, status: "AVAILABLE" })
+    );
+    harness.assert(priced.success === true, "Crew can open a slot in a category with packages", JSON.stringify(priced));
+    if (priced.success && priced.slot) {
+      harness.assertEqual(priced.slot.price, 0, "Fee sent by crew is ignored: priced by the package");
+      const raise = await withSession(luminaCrew, () => updateBookingSlot({ id: priced.slot!.id, tenantId: lumina.id, tenantSlug: "lumina-cine", price: 500 }));
+      harness.assertEqual(raise.error, "OWNER_ONLY", "Crew cannot change the fee");
+      const move = await withSession(luminaCrew, () => updateBookingSlot({ id: priced.slot!.id, tenantId: lumina.id, tenantSlug: "lumina-cine", startTime: "09:30 AM", endTime: "10:30 AM" }));
+      harness.assert(move.success === true, "Crew can still move the slot", JSON.stringify(move));
+      await db.bookingSlot.delete({ where: { id: priced.slot.id } });
+    }
+    const unpriced = await withSession(luminaCrew, () =>
+      createSingleBookingSlot({ tenantId: lumina.id, tenantSlug: "lumina-cine", date: day, startTime: "01:00 PM", endTime: "02:00 PM", category: "no-packages-here", price: 100, depositRequired: 50, status: "AVAILABLE" })
+    );
+    harness.assertEqual(unpriced.error, "OWNER_PRICING_REQUIRED", "No packages for the category: crew must ask the owner");
+  });
+
+  await harness.test("T10-OWN-03: crew can book a customer as awaiting payment, not as paid", async () => {
+    const slot = await db.bookingSlot.create({
+      data: { tenantId: lumina.id, date: new Date(Date.now() + 86400000 * 201), startTime: "09:00 AM", endTime: "10:00 AM", category: "EDITORIAL", price: 100, depositRequired: 50, status: "AVAILABLE" },
+    });
+    try {
+      const base = { tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, newClient: { name: "T10 Walk-in", email: `t10-walkin-${run}@example.test`, phone: "0123456789" }, discipline: "PHOTOGRAPHY", serviceTier: "STANDARD", paymentMethod: "CASH" } as any;
+      const paid: any = await withSession(luminaCrew, () => createBookingForCustomer({ ...base, paymentStatus: "PAID" }));
+      harness.assertEqual(paid.success, false, "Crew cannot record a payment as received");
+      harness.assertEqual((await db.bookingSlot.findUnique({ where: { id: slot.id } }))?.status, "AVAILABLE", "Slot untouched");
+    } finally {
+      await db.bookingSlot.delete({ where: { id: slot.id } }).catch(() => null);
+    }
   });
 
   // ---- Calendar CRUD -------------------------------------------------------------------

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Layers,
   Package,
@@ -27,6 +27,11 @@ import {
   type ReservationWithDetails,
 } from "./inspection-dialog";
 import { deleteGearItem, deleteKitBundle, updateGearConditionStatus } from "@/lib/actions/gear";
+import { conditionLabel } from "@/lib/labels";
+import { disciplineLabel } from "@/lib/labels";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useRouter } from "next/navigation";
+import { checkoutWindow } from "@/lib/gear/checkout-window";
 
 interface GearDashboardProps {
   tenantId: string;
@@ -48,12 +53,19 @@ export function GearDashboard({
   initialReservations,
   inspectorName,
 }: GearDashboardProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const [activeTab, setActiveTab] = useState<"ITEMS" | "BUNDLES" | "RESERVATIONS">("ITEMS");
 
   // State
   const [items, setItems] = useState<InventoryItemRow[]>(initialItems);
   const [bundles, setBundles] = useState<KitBundleRow[]>(initialBundles);
   const [reservations, setReservations] = useState<ReservationWithDetails[]>(initialReservations);
+  // After a save, router.refresh() brings new props; keep the lists in step without a full
+  // page reload (which also lost the open tab).
+  const router = useRouter();
+  useEffect(() => setItems(initialItems), [initialItems]);
+  useEffect(() => setBundles(initialBundles), [initialBundles]);
+  useEffect(() => setReservations(initialReservations), [initialReservations]);
 
   // Filters for Items
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,7 +110,7 @@ export function GearDashboard({
   const categories = Array.from(new Set(items.map((i) => i.category))).sort();
 
   const handleDeleteItem = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this equipment item?")) return;
+    if (!(await confirm({ title: "Delete this item?", message: "It will be removed from your gear list.", confirmLabel: "Delete" }))) return;
     const res = await deleteGearItem({ id, tenantId, tenantSlug });
     if (res.success) {
       setItems((prev) => prev.filter((i) => i.id !== id));
@@ -108,7 +120,7 @@ export function GearDashboard({
   };
 
   const handleDeleteBundle = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this kit bundle?")) return;
+    if (!(await confirm({ title: "Delete this kit?", message: "The items in it stay in your gear list.", confirmLabel: "Delete" }))) return;
     const res = await deleteKitBundle({ id, tenantId, tenantSlug });
     if (res.success) {
       setBundles((prev) => prev.filter((b) => b.id !== id));
@@ -124,10 +136,10 @@ export function GearDashboard({
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
             <Layers className="size-6 text-amber-400" />
-            <span>Gear Fleet & Kit BOM Studio Command</span>
+            <span>Gear</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Enterprise hardware fleet registry, modular bill of materials, and pre/post-shoot inspection logs
+            Your equipment, kits, and the checks before and after each shoot.
           </p>
         </div>
 
@@ -183,7 +195,7 @@ export function GearDashboard({
           }`}
         >
           <Layers className="size-4" />
-          <span>Equipment Fleet Registry ({items.length})</span>
+          <span>Equipment ({items.length})</span>
         </button>
 
         <button
@@ -196,7 +208,7 @@ export function GearDashboard({
           }`}
         >
           <Package className="size-4" />
-          <span>Kit Bundles & BOM ({bundles.length})</span>
+          <span>Kits ({bundles.length})</span>
         </button>
 
         <button
@@ -209,7 +221,7 @@ export function GearDashboard({
           }`}
         >
           <ClipboardCheck className="size-4" />
-          <span>Shoot Reservations & Inspections ({reservations.length})</span>
+          <span>Reservations &amp; checks ({reservations.length})</span>
         </button>
       </div>
 
@@ -251,10 +263,10 @@ export function GearDashboard({
                 className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 focus:outline-none focus:border-amber-500"
               >
                 <option value="ALL">All Statuses</option>
-                <option value="AVAILABLE">AVAILABLE</option>
-                <option value="ON_SHOOT">ON_SHOOT</option>
-                <option value="RESERVED">RESERVED</option>
-                <option value="MAINTENANCE">MAINTENANCE</option>
+                <option value="AVAILABLE">Available</option>
+                <option value="ON_SHOOT">On a shoot</option>
+                <option value="RESERVED">Reserved</option>
+                <option value="MAINTENANCE">In repair</option>
               </select>
             </div>
           </div>
@@ -297,7 +309,7 @@ export function GearDashboard({
                           <td className="py-3.5 px-4 font-semibold text-white">
                             <div>{item.name}</div>
                             <div className="text-[10px] font-mono text-zinc-500">
-                              {item.discipline}
+                              {disciplineLabel(item.discipline)}
                             </div>
                           </td>
                           <td className="py-3.5 px-3 font-mono text-zinc-300">
@@ -323,7 +335,7 @@ export function GearDashboard({
                                   : "bg-red-500/10 text-red-400 border border-red-500/20"
                               }`}
                             >
-                              {item.condition}
+                              {conditionLabel(item.condition)}
                             </span>
                           </td>
                           <td className="py-3.5 px-3">
@@ -341,22 +353,22 @@ export function GearDashboard({
                               {isAvail ? (
                                 <>
                                   <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                  <span>AVAILABLE</span>
+                                  <span>Available</span>
                                 </>
                               ) : isOnShoot ? (
                                 <>
                                   <Camera className="size-3" />
-                                  <span>ON_SHOOT</span>
+                                  <span>On a shoot</span>
                                 </>
                               ) : isReserved ? (
                                 <>
                                   <Clock className="size-3" />
-                                  <span>RESERVED</span>
+                                  <span>Reserved</span>
                                 </>
                               ) : (
                                 <>
                                   <Wrench className="size-3" />
-                                  <span>MAINTENANCE</span>
+                                  <span>In repair</span>
                                 </>
                               )}
                             </span>
@@ -432,7 +444,7 @@ export function GearDashboard({
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700">
-                          {bundle.discipline}
+                          {disciplineLabel(bundle.discipline)}
                         </span>
 
                         {isReady ? (
@@ -531,6 +543,7 @@ export function GearDashboard({
                     const isReserved = res.status === "RESERVED";
                     const isCheckedOut = res.status === "CHECKED_OUT";
                     const isReturned = res.status === "RETURNED";
+                    const checkout = isReserved ? checkoutWindow(res) : null;
 
                     const startStr =
                       res.startDate instanceof Date
@@ -552,7 +565,7 @@ export function GearDashboard({
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-zinc-200">{res.item.name}</div>
                           <div className="text-[10px] font-mono text-zinc-500">
-                            {res.item.sku} • Current Cond: {res.item.condition}
+                            {res.item.sku} • condition: {conditionLabel(res.item.condition)}
                           </div>
                         </td>
                         <td className="py-3.5 px-3 font-mono text-zinc-300">
@@ -571,17 +584,17 @@ export function GearDashboard({
                             {isCheckedOut ? (
                               <>
                                 <Camera className="size-3" />
-                                <span>CHECKED_OUT</span>
+                                <span>Checked out</span>
                               </>
                             ) : isReserved ? (
                               <>
                                 <Clock className="size-3" />
-                                <span>RESERVED</span>
+                                <span>Reserved</span>
                               </>
                             ) : (
                               <>
                                 <CheckCircle2 className="size-3" />
-                                <span>RETURNED</span>
+                                <span>Returned</span>
                               </>
                             )}
                           </span>
@@ -608,7 +621,10 @@ export function GearDashboard({
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          {isReserved && (
+                          {isReserved && checkout && !checkout.open && (
+                            <span className="text-[11px] text-zinc-500">{checkout.message}</span>
+                          )}
+                          {isReserved && checkout?.open && (
                             <button
                               type="button"
                               onClick={() => {
@@ -618,7 +634,7 @@ export function GearDashboard({
                               }}
                               className="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/40 text-xs font-mono font-bold transition-all cursor-pointer"
                             >
-                              Pre-Shoot Check-Out
+                              Check out
                             </button>
                           )}
 
@@ -632,7 +648,7 @@ export function GearDashboard({
                               }}
                               className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-black border border-emerald-500/40 text-xs font-mono font-bold transition-all cursor-pointer"
                             >
-                              Post-Shoot Check-In
+                              Check in
                             </button>
                           )}
 
@@ -660,10 +676,7 @@ export function GearDashboard({
         tenantId={tenantId}
         tenantSlug={tenantSlug}
         itemToEdit={itemToEdit}
-        onSuccess={() => {
-          // Re-fetch or trigger reload
-          window.location.reload();
-        }}
+        onSuccess={() => router.refresh()}
       />
 
       <KitBundleDialog
@@ -673,9 +686,7 @@ export function GearDashboard({
         tenantSlug={tenantSlug}
         availableItems={items}
         bundleToEdit={bundleToEdit}
-        onSuccess={() => {
-          window.location.reload();
-        }}
+        onSuccess={() => router.refresh()}
       />
 
       <KitBundleBomViewer
@@ -692,10 +703,9 @@ export function GearDashboard({
         reservation={inspectionReservation}
         mode={inspectionMode}
         inspectorName={inspectorName}
-        onSuccess={() => {
-          window.location.reload();
-        }}
+        onSuccess={() => router.refresh()}
       />
+      {confirmDialog}
     </div>
   );
 }

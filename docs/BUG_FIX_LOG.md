@@ -17,6 +17,181 @@ Entries from before 5 Nov 2026 were rebuilt from commit messages, so they are sh
 
 ---
 
+## 2026-11-05: Owner walkthrough, remaining items (9–20)
+
+The second half of the owner walkthrough. Decisions taken with the owner: money actions are owner-only (item 20), and a rejected slip asks the client for a new one instead of cancelling (item 13). The full E2E suite passes: 2236 assertions, 0 failures. New tests are in Tiers 14 and 15.
+
+### BUG-20261105-09: Bookings were view-only
+
+- **Area:** Admin > Bookings, Admin > Calendar (booking details), client account
+- **Problem:** A booking couldn't be cancelled, moved, closed out after the shoot, or marked delivered. The Overview counted "delivered" work, but nothing could make a booking delivered.
+- **Cause:** Only creation and payment-approval actions existed.
+- **Fix:** The booking details dialog now has actions, backed by `lib/actions/admin-booking-lifecycle.ts`:
+  - **Move to another slot:** open, upcoming slots in the same category only. The slots swap, and an unpaid balance moves its due date to a week after the new session.
+  - **Cancel:** with a reason the client sees. The slot reopens and unpaid invoices are voided. A paid deposit stays on record, and cancelling a paid booking is owner-only.
+  - **Mark session done / Client didn't show:** only once the session has started.
+  - **Mark delivered:** after a done session, with an optional gallery link the client sees in their account.
+  - The client is emailed on move, cancel and delivery (new `STUDIO_UPDATE` notification).
+  - New booking statuses: `COMPLETED`, `NO_SHOW`, `DELIVERED`. New fields: `cancelledAt`, `cancelReason`, `completedAt`, `deliveredAt`, `deliveryUrl`.
+- **Files:** `lib/actions/admin-booking-lifecycle.ts`, `components/admin/bookings/booking-actions.tsx`, `components/admin/bookings/booking-details-dialog.tsx`, `components/admin/bookings/bookings-console.tsx`, `components/admin/calendar/calendar-admin-dashboard.tsx`, `components/account/client-dashboard.tsx`, `lib/bookings/details.ts`, `lib/notifications.ts`, `lib/actions/admin-analytics.ts`, `prisma/schema.prisma`
+- **Tests:** T14-MOVE-01, T14-CANCEL-01/02, T14-DONE-01/02, T14-AUTH-01
+- **Commit:** pending
+
+### BUG-20261105-10: Invoices were view-only
+
+- **Area:** Admin > Invoices
+- **Problem:** An invoice couldn't be marked paid (cash or bank transfer), cancelled or sent as a reminder, and there was no way to bill anything outside a booking or proposal.
+- **Cause:** No invoice actions existed.
+- **Fix:** New invoice actions in `lib/actions/admin-invoices.ts`:
+  - **Record payment** (owner): cash, bank transfer, QR or card, with an optional reference. It has the same effects as approving a slip: confirms the booking, issues the balance, unlocks the vault.
+  - **Cancel invoice** (owner): with a reason. A booking's deposit can't be cancelled on its own; cancel the booking instead.
+  - **Send reminder** (any staff): emails the client a link to view and pay.
+  - **New invoice** (owner): a `CUSTOM` invoice for a client, with a description, amount and due date, numbered in the studio's sequence. The invoice document shows the description.
+- **Files:** `lib/actions/admin-invoices.ts`, `components/admin/invoices/invoice-admin-actions.tsx`, `components/admin/invoices/new-invoice-dialog.tsx`, `components/admin/invoices/invoices-console.tsx`, `app/[tenantSlug]/admin/invoices/page.tsx`, `app/[tenantSlug]/admin/invoices/[invoiceId]/page.tsx`, `lib/invoices/document.ts`, `prisma/schema.prisma` (`description`)
+- **Tests:** T14-INV-01/02/03
+- **Commit:** pending
+
+### BUG-20261105-11: Proposals, projects, gear reservations, call sheets and photo delivery had no screens
+
+- **Area:** Admin > Proposals, new Admin > Projects, client vault
+- **Problem:** Only seeded proposals and projects existed. There was no way to send a proposal, plan shoot days, reserve gear for a project, or give a client their photos.
+- **Cause:** These features had data models and client-facing pages, but no studio-side screens or actions.
+- **Fix:**
+  - **New proposal** (owner): pick an existing client or add one, set the title, category, discipline, base price, deposit % and terms, and choose which add-ons to offer. It's numbered `PR-<year>-NNN`, emailed to the client, and its signing link is shown to copy. When the client signs, the project and retainer invoice are created, as before.
+  - **Projects** tab: a list of projects with stage, next shoot day, files and budget.
+  - **Project page:**
+    - Change the stage (Planning → Shooting → Editing → Client review → Delivered).
+    - Add or delete shoot days, as call sheets with a crew list that open in the existing call-sheet view.
+    - Reserve or release gear.
+    - Upload files for the client.
+    - See the project's invoices.
+  - **Photo delivery:**
+    - Full-resolution masters are stored privately in `storage/` (git-ignored), never under `/public`. Only `/api/download` serves them, after the final balance is paid.
+    - Clients see a public preview, at most 1600 px and tiled with the studio name as a watermark (`sharp`, now a direct dependency).
+    - Videos take a review copy (streamed) plus a private master.
+    - Deleting a file removes both copies.
+- **Files:** `lib/actions/admin-projects.ts`, `lib/projects/constants.ts`, `lib/deliverables/storage.ts`, `app/api/deliverables/route.ts`, `app/api/download/route.ts`, `app/[tenantSlug]/admin/projects/page.tsx`, `app/[tenantSlug]/admin/projects/[projectId]/page.tsx`, `components/admin/projects/project-workspace.tsx`, `components/admin/proposals/new-proposal-dialog.tsx`, `components/admin/proposals/proposal-admin-dashboard.tsx`, `app/[tenantSlug]/admin/proposals/page.tsx`, `components/admin/admin-nav-bar.tsx`, `package.json`, `.gitignore`
+- **Tests:** T15-PROP-01/02, T15-PROJ-01, T15-GEAR-01, T15-FILES-01. Upload, privacy, preview size, the paywall before and after payment, and deletion were also checked in the browser.
+- **Commit:** pending
+
+### BUG-20261105-12: Book for Customer was confusing
+
+- **Area:** Admin > Calendar > Book for Customer; calendar table; Track Booking
+- **Problem:**
+  - "Service Tier" (Standard / Premium / Cinematic) changed nothing and was shown to clients as raw "STANDARD".
+  - Discipline didn't follow the chosen package.
+  - A booked slot showed the slot's default price, not what the client was paying.
+- **Fix:**
+  - Service Tier was removed from the form.
+  - A chosen package sets the discipline, both in the form and on the server.
+  - Booked slots show the booking's package price, deposit and package name. Open slots with no fee show "By package".
+  - Track Booking shows the package name, or "None chosen".
+- **Files:** `components/admin/calendar/book-for-customer-dialog.tsx`, `components/admin/calendar/slot-table.tsx`, `components/admin/calendar/single-slot-dialog.tsx`, `app/[tenantSlug]/admin/calendar/page.tsx`, `components/booking/package-picker.tsx`, `lib/actions/admin-bookings.ts`, `lib/actions/my-booking.ts`, `components/booking/my-booking-lookup.tsx`
+- **Commit:** pending
+
+### BUG-20261105-13: Rejecting a slip cancelled the whole booking
+
+- **Area:** Admin > Verification; client account; expiry
+- **Problem:** Rejecting a payment slip (for example "Illegible screenshot") cancelled the booking and freed the slot, so the client couldn't simply send a clearer one. The rejection email also linked to a broken address (`?invoice=` instead of `?invoiceId=`).
+- **Fix:**
+  - Rejection keeps the booking and slot, and records `rejectedAt` and `rejectionReason`.
+  - The client sees the reason and a "Send new slip" button, in their account and on the invoice.
+  - If no new slip arrives within 24 hours of the rejection, `expireUnpaidDeposits` releases the slot and voids the deposit.
+  - The dialog, toast and email wording now say so, and the email link is fixed.
+- **Files:** `lib/actions/admin-verification.ts`, `lib/bookings/expiry.ts`, `components/checkout/admin-verification-console.tsx`, `components/account/client-dashboard.tsx`, `app/[tenantSlug]/account/invoices/[invoiceId]/page.tsx`, `components/invoices/invoice-document.tsx`, `lib/invoices/document.ts`, `lib/notifications.ts`, `prisma/schema.prisma`
+- **Tests:** T1-F19-04 (reject, resend, reject again, expire after 24 h), T7-BKG-09
+- **Commit:** pending
+
+### BUG-20261105-14: Raw codes showed in the UI
+
+- **Area:** Admin header, Verification, Overview, Gear, showcase, booking page, forms
+- **Problem:** Codes such as HYBRID, QR_CODE, ON_SHOOT, CHECKED_OUT, MAINTENANCE_NEEDED, "RETAINER 50" and "(studio-portrait)" were shown to users. The Verification card also had no session date.
+- **Fix:**
+  - A shared `lib/labels.ts` gives readable labels for disciplines, payment methods, invoice types and statuses, gear status, condition and reservation status ("Photo & video", "QR / bank transfer", "On a shoot", "Project retainer (50%)").
+  - Category slugs show their category name.
+  - The Verification card shows the session date.
+- **Files:** `lib/labels.ts`, `lib/invoices/document.ts`, `components/checkout/admin-verification-console.tsx`, `app/[tenantSlug]/admin/verification/page.tsx`, `components/gear/*`, `components/admin/studio-dashboard.tsx`, `components/showcase/*`, `components/booking/cinema-booking-shell.tsx`, the discipline selects in the admin forms, `app/[tenantSlug]/admin/layout.tsx`, `components/checkout/order-summary-card.tsx`
+- **Commit:** pending
+
+### BUG-20261105-15: Inconsistent naming and jargon
+
+- **Area:** Admin navigation and page headings
+- **Problem:**
+  - The same section was "Inventory" (nav), "Gear Fleet" (button) and "Gear Fleet & Kit BOM Studio Command" (heading).
+  - Headings used jargon: "Command Center", "Holding Engine", "Manual Payment Authorization", "gross escrow", "Enterprise hardware fleet registry".
+- **Fix:**
+  - Nav and headings now match: Gear, Showcase, Calendar, Services, Proposals, Frames & prints, Settings, Payment verification.
+  - Subtitles and KPI labels are plain sentences ("Waiting to be confirmed", "On a shoot", "Checked out right now").
+  - The Overview's section titles were renamed ("Recent invoices", "Upcoming shoot days"), and its shoot-day link goes to Projects.
+- **Files:** `components/admin/admin-nav-bar.tsx`, `app/[tenantSlug]/admin/layout.tsx`, `components/admin/studio-dashboard.tsx`, `components/checkout/admin-verification-console.tsx`, `components/admin/calendar/calendar-admin-dashboard.tsx`, `components/admin/services/services-dashboard.tsx`, `components/admin/proposals/proposal-admin-dashboard.tsx`, `components/admin/frames/frames-manager.tsx`, `components/admin/cms/cms-manager.tsx`, `components/admin/settings/studio-settings-form.tsx`, `components/gear/gear-dashboard.tsx`, `components/gear/gear-kpi-summary.tsx`
+- **Commit:** pending
+
+### BUG-20261105-16: Deletes used the browser's confirm() popup
+
+- **Area:** Gear, kits, packages, categories, frames, print sizes, add-ons, showcase items, slots
+- **Problem:** Deleting showed the browser's plain `confirm()` box, unlike the app's other dialogs.
+- **Fix:** A styled `useConfirm()` dialog (`components/ui/confirm-dialog.tsx`, built on `useDialog`) with clearer wording, such as "Delete 'Print order'? Clients will no longer be able to order this print size." Focus starts on Cancel.
+- **Files:** `components/ui/confirm-dialog.tsx` and the seven list components that delete
+- **Commit:** pending
+
+### BUG-20261105-17: Settings had two confusing save buttons
+
+- **Area:** Admin > Settings
+- **Problem:** "Save Settings" (top) and "Save payment settings" (Toyyibpay) sat in the same form, with no hint of what each saved. Pressing Enter in a Toyyibpay field submitted the main form.
+- **Fix:**
+  - Toyyibpay moved out of the settings form into its own section, with the button "Connect Toyyibpay" / "Update connection".
+  - The main form has a sticky "Save settings" bar at the bottom that says what it saves.
+  - "Workspace & License Meta" is now "Plan".
+- **Files:** `components/admin/settings/studio-settings-form.tsx`
+- **Commit:** pending
+
+### BUG-20261105-18: Past slots showed as "Available"; slot actions were off-screen on phones
+
+- **Area:** Admin > Calendar
+- **Fix:**
+  - Past slots are hidden by default, with a "Show past slots" checkbox; picking a date shows them.
+  - Open slots that have passed read "Passed · not booked" and can't be booked for a customer.
+  - The Available count ignores them.
+  - The Actions column stays pinned on the right when the table scrolls sideways.
+- **Files:** `components/admin/calendar/calendar-admin-dashboard.tsx`, `components/admin/calendar/slot-table.tsx`
+- **Commit:** pending
+
+### BUG-20261105-19: Gear check-in reloaded the page; check-out was allowed at any time
+
+- **Area:** Admin > Gear > Reservations & checks
+- **Problem:**
+  - Checking gear in or out reloaded the whole page and dropped you back on the first tab.
+  - Gear could be checked out days before a reservation, or twice.
+  - Gear could be checked in without having been checked out.
+- **Fix:**
+  - Saves refresh the data in place and keep the tab.
+  - Check-out opens 48 hours before the reservation starts and closes when it ends (`lib/gear/checkout-window.ts`), and only from "Reserved".
+  - Check-in requires a check-out.
+  - Outside the window, the button is replaced with the reason ("Too early: this gear can be checked out from …").
+- **Files:** `lib/actions/gear.ts`, `lib/gear/checkout-window.ts`, `components/gear/gear-dashboard.tsx`
+- **Tests:** T1-F35-03b. Tier 4 and Tier 5 scenarios now move the reservation to the shoot day before checking out.
+- **Commit:** pending
+
+### BUG-20261105-20: Staff could approve payments and change prices
+
+- **Area:** Verification, Services, Calendar, Book for Customer, Bookings, Invoices
+- **Problem:** Photographers, videographers and crew could approve or reject payments, create bookings marked paid, change package prices, delete packages and categories, and set slot fees.
+- **Cause:** Only Settings and payment setup used `requireOwner`.
+- **Fix (decided with the owner: "owner-only money"):**
+  - These are now owner-only on the server, and hidden for staff in the UI with a short note:
+    - approve and reject slips
+    - record payments and create or cancel invoices
+    - cancel paid bookings
+    - book a customer as "Paid"
+    - create, edit or delete packages
+    - delete categories
+    - set or change a slot's fee or deposit
+  - Slots that staff open are priced by the category's packages; a category with no packages needs the owner first.
+  - Staff keep the calendar, bookings (unpaid cancel, move, done, deliver), gear, showcase, frames and reminders.
+- **Files:** `lib/auth/owner.ts`, `lib/actions/admin-verification.ts`, `lib/actions/admin-services.ts`, `lib/actions/admin-calendar.ts`, `lib/actions/admin-bookings.ts`, the matching admin pages and dialogs
+- **Tests:** T10-VER-03, T10-OWN-01/02/03
+- **Commit:** pending
+
 ## 2026-11-05: Studio owner walkthrough (admin suite)
 
 The bugs below were found by signing in as the Lumina demo owner and using every admin page. All are fixed. The full E2E suite passes: 2107 assertions, 0 failures.
@@ -194,21 +369,6 @@ Commit `4d5c669`.
 
 ## Still open (found, not yet fixed)
 
-From the 2026-11-05 owner walkthrough:
-
-- Bookings are view-only: no cancel, reschedule, complete or no-show. Nothing marks a booking "delivered".
-- Invoices are view-only: no mark-as-paid for bank or cash, void, resend or create.
-- Proposals, projects, gear reservations, call sheets and client photo uploads have no screens to create them.
-- Book for Customer:
-  - "Service Tier" does nothing.
-  - Discipline doesn't follow the package.
-  - The calendar shows the slot price instead of the package price.
-- Rejecting a slip cancels the booking instead of asking the client to upload it again.
-- Raw codes show in the UI (HYBRID, QR_CODE, ON_SHOOT, RETAINER 50).
-- Naming is inconsistent (Inventory / Gear Fleet), and headings use jargon.
-- Deletes use the browser's `confirm()` popup.
-- Settings has two separate save buttons.
-- Past slots show as "Available" in the admin calendar, and slot actions are off-screen on phones.
-- Gear check-in reloads the page, and is allowed before the reservation window.
-- Staff (photographer or crew) can approve payments and change prices; owner-only rules are to be decided.
-- Several admin form labels aren't linked to their inputs.
+- Several admin form labels aren't linked to their inputs (`htmlFor`/`id`), so screen readers don't announce them.
+- The client vault (`/<studio>/vault/<project>`) and `/api/download` don't check who is signed in: anyone with the project link can see the watermarked previews and, once the balance is paid, download the masters.
+- Demo data: seeded receipt and portfolio images are 1×1 placeholders, and `lumina_showcase_02.jpg` is missing.

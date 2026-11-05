@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createZipArchive, ZipFileEntry } from "@/lib/zip";
+// Masters live in private storage (or, for older seed data, under /public); see lib/deliverables/storage.ts.
+import { masterFilePath } from "@/lib/deliverables/storage";
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,8 +62,7 @@ export async function GET(request: NextRequest) {
 
       for (let idx = 0; idx < photoItems.length; idx++) {
         const item = photoItems[idx]!;
-        const relativePath = item.downloadUrl.startsWith("/") ? item.downloadUrl.slice(1) : item.downloadUrl;
-        const filePath = path.join(process.cwd(), "public", relativePath);
+                const filePath = masterFilePath(item.downloadUrl);
 
         try {
           const fileData = await fs.readFile(filePath);
@@ -104,8 +105,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Video master deliverable not found" }, { status: 404 });
       }
 
-      const relativePath = videoItem.downloadUrl.startsWith("/") ? videoItem.downloadUrl.slice(1) : videoItem.downloadUrl;
-      const filePath = path.join(process.cwd(), "public", relativePath);
+            const filePath = masterFilePath(videoItem.downloadUrl);
 
       let fileData: Buffer;
       try {
@@ -140,8 +140,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Photo deliverable asset not found" }, { status: 404 });
       }
 
-      const relativePath = photoItem.downloadUrl.startsWith("/") ? photoItem.downloadUrl.slice(1) : photoItem.downloadUrl;
-      const filePath = path.join(process.cwd(), "public", relativePath);
+            const filePath = masterFilePath(photoItem.downloadUrl);
 
       let fileData: Buffer;
       try {

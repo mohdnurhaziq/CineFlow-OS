@@ -168,6 +168,12 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
                 <dd>{doc.verifiedBy}</dd>
               </>
             )}
+            {doc.rejectionReason && (
+              <>
+                <dt className="text-zinc-500">Slip rejected</dt>
+                <dd className="text-red-700">{doc.rejectionReason}</dd>
+              </>
+            )}
             {doc.paymentProofUrl && (
               <>
                 <dt className="text-zinc-500">Slip</dt>

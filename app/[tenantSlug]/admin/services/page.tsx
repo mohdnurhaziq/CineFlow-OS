@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { currentUserIsOwner } from "@/lib/auth/owner";
 import { ServicesDashboard } from "@/components/admin/services/services-dashboard";
 import type { PackageRow } from "@/components/admin/services/package-dialog";
 import type { CategoryRow } from "@/components/admin/services/category-dialog";
@@ -61,6 +62,7 @@ export default async function AdminServicesPage({ params }: ServicesPageProps) {
         currency={tenant.currency}
         initialPackages={packages as unknown as PackageRow[]}
         initialCategories={categories as unknown as CategoryRow[]}
+        isOwner={await currentUserIsOwner()}
       />
     </div>
   );

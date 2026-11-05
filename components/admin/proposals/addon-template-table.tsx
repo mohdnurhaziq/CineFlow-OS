@@ -16,6 +16,7 @@ import {
   toggleAddOnTemplateActive,
 } from "@/lib/actions/admin-proposals";
 import type { ProposalAddOnTemplateRow } from "./addon-template-dialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface AddOnTemplateTableProps {
   templates: ProposalAddOnTemplateRow[];
@@ -34,11 +35,12 @@ export function AddOnTemplateTable({
   onEdit,
   onSuccess,
 }: AddOnTemplateTableProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleDelete = async (t: ProposalAddOnTemplateRow) => {
-    if (!confirm(`Are you sure you want to delete add-on "${t.name}"?`)) return;
+    if (!(await confirm({ title: `Delete "${t.name}"?`, message: "It will no longer be offered on new proposals.", confirmLabel: "Delete" }))) return;
 
     setDeletingId(t.id);
     setErrorMessage(null);
@@ -210,6 +212,7 @@ export function AddOnTemplateTable({
           </table>
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }
