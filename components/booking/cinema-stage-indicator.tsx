@@ -7,20 +7,20 @@ interface CinemaStageIndicatorProps {
 export function CinemaStageIndicator({ brandColor }: CinemaStageIndicatorProps) {
   const color = brandColor || "#f59e0b";
 
+  // The stage is the "screen"; the slot grid below is the seating.
   return (
-    <div className="relative w-full max-w-3xl mx-auto my-8 text-center select-none">
-      {/* Top ambient arc */}
+    <div className="w-full max-w-3xl mx-auto my-6 text-center select-none" aria-hidden="true">
       <div
-        className="w-full h-8 border-t-2 rounded-t-[100px] border-zinc-700/80 transition-all"
+        className="h-1 rounded-full"
         style={{
-          boxShadow: `0 -12px 30px ${color}25`,
-          borderColor: `${color}60`,
+          background: `linear-gradient(90deg, transparent 0%, ${color} 20%, ${color} 80%, transparent 100%)`,
+          boxShadow: `0 8px 28px ${color}55`,
         }}
       />
-
-      <div className="relative -top-4 inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#121215] border border-zinc-800 text-[11px] font-mono tracking-wider uppercase text-zinc-300 shadow-md">
-        <span className="size-2 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-        <span>STUDIO CYCLORAMA WALL &amp; MAIN PRODUCTION STAGE</span>
+      <div className="mt-3 inline-flex items-center gap-2 text-[11px] font-mono tracking-[0.18em] uppercase text-zinc-400">
+        <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
+        <span className="sm:hidden">Main production stage</span>
+        <span className="hidden sm:inline">Stage · Studio cyclorama wall &amp; main production stage</span>
       </div>
     </div>
   );

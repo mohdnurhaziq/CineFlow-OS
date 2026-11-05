@@ -279,7 +279,7 @@ async function main() {
       description: "Comprehensive wedding day narrative documentation with two cinematographers and drone aerial capture.",
       deliverables: "10-minute Documentary Highlight Film (4K), Full Ceremony & Speeches Multi-Cam Cut, 60s Teaser.",
       turnaround: "21 Business Days",
-      isFeatured: true,
+      isFeatured: false,
     },
   });
 
@@ -327,7 +327,7 @@ async function main() {
       description: "90-minute festive heritage session for multi-generational families (up to 12 pax) with traditional setups.",
       deliverables: "35 Master Retouched High-Res Stills, 1x Framed 16R Heirloom Wall Art, All Soft Copies via Vault.",
       turnaround: "5 Business Days",
-      isFeatured: true,
+      isFeatured: false,
     },
   });
 

@@ -271,7 +271,7 @@ export function CinemaBookingShell({
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           <button
             onClick={() => setSelectedCategory("all")}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
               selectedCategory === "all"
                 ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
                 : "bg-[#121215] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
@@ -283,7 +283,7 @@ export function CinemaBookingShell({
             <button
               key={c.id}
               onClick={() => setSelectedCategory(c.slug)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
                 selectedCategory === c.slug
                   ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
                   : "bg-[#121215] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"

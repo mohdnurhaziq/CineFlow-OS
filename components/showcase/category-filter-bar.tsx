@@ -57,7 +57,8 @@ export function CategoryFilterBar({
         {/* Dynamic Categories */}
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat.slug;
-          const count = counts[cat.slug];
+          // Once counts are known, a category with no works shows 0 rather than no badge.
+          const count = counts["all"] !== undefined ? counts[cat.slug] ?? 0 : undefined;
 
           return (
             <button
@@ -83,7 +84,11 @@ export function CategoryFilterBar({
               {count !== undefined && (
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                    isSelected ? "bg-black/20 text-black font-bold" : "bg-zinc-800 text-zinc-400"
+                    isSelected
+                      ? "bg-black/20 text-black font-bold"
+                      : count === 0
+                        ? "bg-zinc-900 text-zinc-600"
+                        : "bg-zinc-800 text-zinc-400"
                   }`}
                 >
                   {count}

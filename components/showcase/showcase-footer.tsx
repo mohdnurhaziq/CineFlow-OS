@@ -38,7 +38,7 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 bg-[#121215] text-white text-xs font-semibold hover:border-zinc-700"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-zinc-800 bg-[#121215] text-white text-xs font-semibold hover:border-zinc-700"
             >
               <MessageSquare className="size-3.5 text-emerald-400" />
               Direct WhatsApp Dispatch
@@ -46,7 +46,7 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
 
             <Link
               href={`/${tenant.slug}/book`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400"
             >
               Calendar Booking
             </Link>
@@ -54,14 +54,14 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] font-mono text-zinc-400">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <CreditCard className="size-3 text-zinc-500" /> Card &amp; Online Checkout
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <QrCode className="size-3 text-zinc-500" /> Studio QR Scan &amp; Receipt Upload
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <ShieldCheck className="size-3 text-zinc-500" /> 100% Gated Deliverable Vault
             </span>
           </div>
@@ -69,19 +69,19 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link
               href={`/${tenant.slug}/account`}
-              className="text-zinc-300 hover:text-amber-400 transition-colors"
+              className="inline-flex items-center min-h-11 sm:min-h-0 text-zinc-300 hover:text-amber-400 transition-colors"
             >
               Client Login
             </Link>
             <Link
               href={`/${tenant.slug}/my-booking`}
-              className="text-zinc-300 hover:text-amber-400 transition-colors"
+              className="inline-flex items-center min-h-11 sm:min-h-0 text-zinc-300 hover:text-amber-400 transition-colors"
             >
               Track Booking
             </Link>
             <Link
               href={`/${tenant.slug}/login`}
-              className="text-zinc-300 hover:text-amber-400 transition-colors"
+              className="inline-flex items-center min-h-11 sm:min-h-0 text-zinc-300 hover:text-amber-400 transition-colors"
             >
               Studio Login
             </Link>
