@@ -33,10 +33,12 @@ export function ShowcaseNav({ tenant, studioLead, client = null }: ShowcaseNavPr
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+            // Platform home is for studio owners, not a studio's clients; hidden on phones to fit the header.
+            className="hidden sm:inline-flex p-1.5 items-center justify-center rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
             title="Back to Platform Home"
+            aria-label="Back to Platform Home"
           >
-            <ArrowLeft className="size-4" />
+            <ArrowLeft className="size-4" aria-hidden="true" />
           </Link>
 
           <Link href={`/${tenant.slug}`} className="flex items-center gap-2.5 group">
@@ -81,7 +83,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null }: ShowcaseNavPr
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Inquire with ${tenant.name} on WhatsApp`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <MessageSquare className="size-3.5 text-emerald-400" />
             <span className="hidden sm:inline">WhatsApp Dispatch</span>

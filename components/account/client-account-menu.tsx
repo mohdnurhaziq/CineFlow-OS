@@ -46,7 +46,7 @@ export function ClientAccountMenu({ tenantSlug, client, returnTo }: ClientAccoun
         href={`/${tenantSlug}/account`}
         title={`Signed in as ${client.email}`}
         aria-label={`My account (signed in as ${client.name})`}
-        className="inline-flex items-center gap-2 pl-1.5 pr-1.5 sm:pr-3 py-1 rounded-l-lg text-xs font-semibold text-zinc-200 hover:text-white hover:bg-zinc-800/60 transition-colors"
+        className="inline-flex items-center gap-2 pl-1.5 pr-1.5 sm:pr-3 py-1 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 rounded-l-lg text-xs font-semibold text-zinc-200 hover:text-white hover:bg-zinc-800/60 transition-colors"
       >
         <span
           aria-hidden
@@ -68,7 +68,7 @@ export function ClientAccountMenu({ tenantSlug, client, returnTo }: ClientAccoun
         }
         title="Sign out"
         aria-label="Sign out"
-        className="px-2 py-1.5 border-l border-zinc-800 rounded-r-lg text-zinc-500 hover:text-white hover:bg-zinc-800/60 disabled:opacity-50 transition-colors"
+        className="inline-flex items-center justify-center px-2 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 self-stretch border-l border-zinc-800 rounded-r-lg text-zinc-500 hover:text-white hover:bg-zinc-800/60 disabled:opacity-50 transition-colors"
       >
         <LogOut className="size-3.5" />
       </button>
