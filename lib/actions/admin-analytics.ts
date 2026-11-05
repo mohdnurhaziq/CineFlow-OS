@@ -38,6 +38,7 @@ export interface StudioAnalyticsData {
     id: string;
     invoiceNumber: string;
     clientName: string;
+    projectId: string | null;
     projectTitle: string | null;
     milestoneType: string;
     amount: number;
@@ -49,6 +50,7 @@ export interface StudioAnalyticsData {
   upcomingCallSheets: Array<{
     id: string;
     title: string;
+    projectId: string | null;
     projectTitle: string;
     shootDate: string;
     callTime: string;
@@ -98,7 +100,7 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
         where: { tenantId },
         include: {
           client: { select: { name: true } },
-          project: { select: { title: true } },
+          project: { select: { id: true, title: true } },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -134,7 +136,7 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
           project: { tenantId },
         },
         include: {
-          project: { select: { title: true } },
+          project: { select: { id: true, title: true } },
         },
         orderBy: { shootDate: "asc" },
         take: 5,
@@ -207,6 +209,7 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,
       clientName: inv.client?.name ?? "Client",
+      projectId: inv.projectId ?? inv.project?.id ?? null,
       projectTitle: inv.project?.title ?? null,
       milestoneType: inv.milestoneType,
       amount: inv.amount,
@@ -220,6 +223,7 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
     const upcomingCallSheets = callSheets.map((cs) => ({
       id: cs.id,
       title: cs.title,
+      projectId: cs.projectId ?? cs.project?.id ?? null,
       projectTitle: cs.project?.title ?? "Shoot Production",
       shootDate: cs.shootDate
         ? new Date(cs.shootDate).toLocaleDateString("en-US", {

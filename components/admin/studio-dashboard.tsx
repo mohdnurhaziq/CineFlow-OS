@@ -128,30 +128,40 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Collected Revenue */}
-        <div className="p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-zinc-700/80 transition-all shadow-sm">
+        <Link
+          href={`/${tenant.slug}/admin/invoices`}
+          className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-emerald-500/40 transition-all shadow-sm block"
+        >
           <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Settled Revenue</span>
-            <div className="size-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <span className="text-xs font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">Settled Revenue</span>
+            <div className="size-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 group-hover:scale-105 transition-all">
               <DollarSign className="size-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums">
+            <div className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums group-hover:text-emerald-300 transition-colors">
               {formatCurrency(kpis.totalRevenue)}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-zinc-400">
-              <TrendingUp className="size-3.5 text-emerald-400" />
-              <span className="text-emerald-400 font-mono">100% verified</span>
-              <span>across milestones</span>
+            <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="size-3.5 text-emerald-400" />
+                <span className="text-emerald-400 font-mono">100% verified</span>
+              </div>
+              <span className="text-zinc-500 group-hover:text-emerald-400 font-mono text-[11px] flex items-center gap-0.5">
+                View <ChevronRight className="size-3" />
+              </span>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Metric 2: Pending Invoices / Verification */}
-        <div className="p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-zinc-700/80 transition-all shadow-sm">
+        <Link
+          href={`/${tenant.slug}/admin/verification`}
+          className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-amber-500/40 transition-all shadow-sm block"
+        >
           <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Pending Verification</span>
-            <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <span className="text-xs font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">Pending Verification</span>
+            <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:bg-amber-500/20 group-hover:scale-105 transition-all">
               <Clock className="size-4" />
             </div>
           </div>
@@ -161,46 +171,58 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
             </div>
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
               <span>{kpis.pendingVerificationCount} {kpis.pendingVerificationCount === 1 ? "proof" : "proofs"} queued</span>
-              <Link
-                href={`/${tenant.slug}/admin/verification`}
-                className="text-amber-400 hover:underline flex items-center gap-0.5 text-[11px]"
-              >
+              <span className="text-amber-400 group-hover:underline flex items-center gap-0.5 text-[11px]">
                 Review <ChevronRight className="size-3" />
-              </Link>
+              </span>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Metric 3: Active Productions & Shoots */}
-        <div className="p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-zinc-700/80 transition-all shadow-sm">
-          <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Active Productions</span>
-            <div className="size-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-              <Camera className="size-4" />
+        <div className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-blue-500/40 transition-all shadow-sm">
+          <Link href={`/${tenant.slug}/admin/projects`} className="block">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">Active Productions</span>
+              <div className="size-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500/20 group-hover:scale-105 transition-all">
+                <Camera className="size-4" />
+              </div>
             </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums">
-              {kpis.activeProjectsCount}
+            <div className="mt-3">
+              <div className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums group-hover:text-blue-300 transition-colors">
+                {kpis.activeProjectsCount}
+              </div>
             </div>
-            <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
-              <span>{kpis.confirmedBookingsCount} confirmed {kpis.confirmedBookingsCount === 1 ? "booking" : "bookings"}</span>
-              <span className="text-zinc-500">{kpis.completedProjectsCount} delivered</span>
-            </div>
+          </Link>
+          <div className="flex items-center justify-between mt-2 text-xs text-zinc-400 pt-2 border-t border-zinc-800/60">
+            <Link
+              href={`/${tenant.slug}/admin/bookings`}
+              className="text-zinc-400 hover:text-amber-400 hover:underline flex items-center gap-0.5"
+            >
+              {kpis.confirmedBookingsCount} confirmed {kpis.confirmedBookingsCount === 1 ? "booking" : "bookings"}
+            </Link>
+            <Link
+              href={`/${tenant.slug}/admin/projects`}
+              className="text-zinc-500 hover:text-zinc-300 hover:underline"
+            >
+              {kpis.completedProjectsCount} delivered
+            </Link>
           </div>
         </div>
 
         {/* Metric 4: Fleet Readiness & Quarantine */}
-        <div className="p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-zinc-700/80 transition-all shadow-sm">
+        <Link
+          href={`/${tenant.slug}/admin/inventory`}
+          className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-purple-500/40 transition-all shadow-sm block"
+        >
           <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Gear Available</span>
-            <div className="size-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <span className="text-xs font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">Gear Available</span>
+            <div className="size-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-500/20 group-hover:scale-105 transition-all">
               <Layers className="size-4" />
             </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums">
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums group-hover:text-purple-300 transition-colors">
                 {kpis.gearAvailableCount}/{kpis.gearTotalCount}
               </span>
               <span className="text-xs font-mono text-zinc-400">ready to book</span>
@@ -210,11 +232,11 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               {kpis.gearMaintenanceCount > 0 ? (
                 <span className="text-rose-400 font-mono whitespace-nowrap">{kpis.gearMaintenanceCount} in repair</span>
               ) : (
-                <span className="text-emerald-400 font-mono whitespace-nowrap">none in repair</span>
+                <span className="text-emerald-400 font-mono whitespace-nowrap">fleet 100% operational</span>
               )}
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Middle Section: Financial Pipeline & Upcoming Shoots Grid */}
@@ -257,17 +279,31 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                   </tr>
                 ) : (
                   recentInvoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-3 py-3 first:pl-5 last:pr-5 font-bold text-zinc-200 whitespace-nowrap">
-                        {inv.invoiceNumber}
+                    <tr key={inv.id} className="hover:bg-zinc-800/30 transition-colors group">
+                      <td className="px-3 py-3 first:pl-5 last:pr-5 whitespace-nowrap">
+                        <Link
+                          href={`/${tenant.slug}/admin/invoices/${inv.id}`}
+                          className="font-bold text-amber-400 hover:text-amber-300 hover:underline inline-flex items-center gap-1 group/link"
+                        >
+                          <span>{inv.invoiceNumber}</span>
+                          <ArrowUpRight className="size-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                        </Link>
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5">
                         <div className="font-sans font-medium text-white">{inv.clientName}</div>
-                        {inv.projectTitle && (
+                        {inv.projectId && inv.projectTitle ? (
+                          <Link
+                            href={`/${tenant.slug}/admin/projects/${inv.projectId}`}
+                            className="text-[11px] text-zinc-400 hover:text-amber-400 font-sans truncate max-w-[160px] block hover:underline transition-colors"
+                            title={inv.projectTitle}
+                          >
+                            {inv.projectTitle}
+                          </Link>
+                        ) : inv.projectTitle ? (
                           <div className="text-[11px] text-zinc-400 font-sans truncate max-w-[160px]">
                             {inv.projectTitle}
                           </div>
-                        )}
+                        ) : null}
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5">
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 whitespace-nowrap">
@@ -281,18 +317,23 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                         {getStatusBadge(inv.status)}
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5 text-right">
-                        {inv.status === "PENDING_VERIFICATION" ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          {inv.status === "PENDING_VERIFICATION" && (
+                            <Link
+                              href={`/${tenant.slug}/admin/verification`}
+                              className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-semibold text-[10px] uppercase tracking-wider transition-colors inline-block whitespace-nowrap"
+                            >
+                              Review Proof
+                            </Link>
+                          )}
                           <Link
-                            href={`/${tenant.slug}/admin/verification`}
-                            className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-semibold text-[10px] uppercase tracking-wider transition-colors inline-block whitespace-nowrap"
+                            href={`/${tenant.slug}/admin/invoices/${inv.id}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 hover:text-white text-[11px] font-sans transition-colors whitespace-nowrap"
                           >
-                            Review Proof
+                            View
+                            <ChevronRight className="size-3 text-amber-400" />
                           </Link>
-                        ) : (
-                          <span className="text-[11px] text-zinc-500 font-sans">
-                            {inv.paymentMethod ? paymentMethodLabel(inv.paymentMethod) : "Pending"}
-                          </span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -321,32 +362,47 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               </Link>
             </div>
 
-            <div className="bg-zinc-900/80 p-3.5 rounded-lg border border-zinc-800/80 space-y-1">
-              <div className="text-[11px] text-zinc-400 font-mono uppercase">Total Pipeline Value</div>
-              <div className="text-xl font-black text-white tabular-nums">
+            <Link
+              href={`/${tenant.slug}/admin/proposals`}
+              className="block bg-zinc-900/80 hover:bg-zinc-800/80 transition-colors p-3.5 rounded-lg border border-zinc-800/80 group space-y-1"
+            >
+              <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono uppercase">
+                <span>Total Pipeline Value</span>
+                <ChevronRight className="size-3 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+              </div>
+              <div className="text-xl font-black text-white tabular-nums group-hover:text-amber-400 transition-colors">
                 {formatCurrency(proposalsSummary.totalPipelineValue)}
               </div>
-            </div>
+            </Link>
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
-              <div className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800">
+              <Link
+                href={`/${tenant.slug}/admin/proposals`}
+                className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all block group"
+              >
                 <div className="text-base font-bold text-emerald-400 tabular-nums">
                   {proposalsSummary.accepted}
                 </div>
-                <div className="text-[10px] text-zinc-400 uppercase mt-0.5">Signed</div>
-              </div>
-              <div className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800">
+                <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">Signed</div>
+              </Link>
+              <Link
+                href={`/${tenant.slug}/admin/proposals`}
+                className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all block group"
+              >
                 <div className="text-base font-bold text-amber-400 tabular-nums">
                   {proposalsSummary.sent}
                 </div>
-                <div className="text-[10px] text-zinc-400 uppercase mt-0.5">In Review</div>
-              </div>
-              <div className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800">
+                <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">In Review</div>
+              </Link>
+              <Link
+                href={`/${tenant.slug}/admin/proposals`}
+                className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all block group"
+              >
                 <div className="text-base font-bold text-zinc-400 tabular-nums">
                   {proposalsSummary.draft}
                 </div>
-                <div className="text-[10px] text-zinc-400 uppercase mt-0.5">Draft</div>
-              </div>
+                <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">Draft</div>
+              </Link>
             </div>
           </div>
 
@@ -376,12 +432,16 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
             ) : (
               <div className="space-y-2">
                 {gearAlerts.map((item) => (
-                  <div
+                  <Link
                     key={item.id}
-                    className="p-2.5 rounded-lg bg-zinc-900/70 border border-zinc-800 flex items-center justify-between text-xs font-mono"
+                    href={`/${tenant.slug}/admin/inventory`}
+                    className="p-2.5 rounded-lg bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/60 transition-all flex items-center justify-between text-xs font-mono group block"
                   >
                     <div>
-                      <div className="font-semibold text-zinc-200">{item.name}</div>
+                      <div className="font-semibold text-zinc-200 group-hover:text-amber-400 transition-colors flex items-center gap-1">
+                        <span>{item.name}</span>
+                        <ArrowUpRight className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                       <div className="text-[10px] text-zinc-500">{item.category} · {item.serialNumber || "No SN"}</div>
                     </div>
                     <span
@@ -393,7 +453,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                     >
                       {conditionLabel(item.condition)}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -436,9 +496,18 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                       <Clock className="size-3" /> {cs.callTime}
                     </span>
                   </div>
-                  <h4 className="text-sm font-bold text-white mt-1.5 line-clamp-1">
-                    {cs.projectTitle}
-                  </h4>
+                  {cs.projectId ? (
+                    <Link
+                      href={`/${tenant.slug}/admin/projects/${cs.projectId}`}
+                      className="text-sm font-bold text-white mt-1.5 line-clamp-1 hover:text-amber-400 transition-colors block"
+                    >
+                      {cs.projectTitle}
+                    </Link>
+                  ) : (
+                    <h4 className="text-sm font-bold text-white mt-1.5 line-clamp-1">
+                      {cs.projectTitle}
+                    </h4>
+                  )}
                   <div className="flex items-center gap-1 text-xs text-zinc-400 mt-2 font-mono">
                     <MapPin className="size-3 text-zinc-500 flex-shrink-0" />
                     <span className="truncate">{cs.locationName}</span>
@@ -449,12 +518,22 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
                   <span className="text-[10px] font-mono text-zinc-500 uppercase truncate max-w-[140px]">
                     {cs.weatherSummary || "Scheduled Shoot"}
                   </span>
-                  <Link
-                    href={`/${tenant.slug}/set-hud/${cs.id}`}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] font-mono text-zinc-200 transition-colors"
-                  >
-                    Set HUD <ArrowUpRight className="size-3 text-amber-400" />
-                  </Link>
+                  <div className="flex items-center gap-1.5">
+                    {cs.projectId && (
+                      <Link
+                        href={`/${tenant.slug}/admin/projects/${cs.projectId}`}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] font-mono text-zinc-200 hover:text-white transition-colors"
+                      >
+                        Project <ChevronRight className="size-3 text-zinc-400" />
+                      </Link>
+                    )}
+                    <Link
+                      href={`/${tenant.slug}/set-hud/${cs.id}`}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-[10px] font-mono text-amber-300 transition-colors"
+                    >
+                      Set HUD <ArrowUpRight className="size-3 text-amber-400" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
