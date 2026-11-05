@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/slot-time";
 import type { InvoiceDocument } from "@/lib/invoices/document";
@@ -73,6 +74,32 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
           </div>
         </header>
 
+        {/* Verified Receipt Stamp / Settlement Confirmation */}
+        {isReceipt && (
+          <div className="border border-emerald-600/40 bg-emerald-500/10 text-emerald-900 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 print-break-inside-avoid">
+            <div className="flex items-center gap-3">
+              <div className="size-9 rounded-full border border-emerald-500 bg-emerald-100 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-5 text-emerald-600" />
+              </div>
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-emerald-950">
+                  Official Studio Payment Receipt • Paid in Full
+                </div>
+                <div className="text-[11px] text-emerald-800 font-mono">
+                  Settled {doc.paidAt ? day(doc.paidAt) : ""} {doc.paymentMethod ? `via ${method(doc.paymentMethod)}` : ""}
+                  {doc.paymentReference ? ` • Ref: ${doc.paymentReference}` : ""}
+                </div>
+              </div>
+            </div>
+            {doc.verifiedBy && (
+              <div className="text-left sm:text-right text-[11px] font-mono text-emerald-900 shrink-0">
+                <span className="block text-[9px] uppercase tracking-wider text-emerald-700 font-sans font-bold">Authorized & Verified</span>
+                <span>{doc.verifiedBy}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Parties & dates */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
           <div className="space-y-0.5">
@@ -111,7 +138,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
         </section>
 
         {/* Lines */}
-        <section>
+        <section className="print-break-inside-avoid">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-zinc-900 text-left text-[10px] uppercase tracking-widest text-zinc-500">

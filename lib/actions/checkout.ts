@@ -253,6 +253,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
     const notifyEmail = result.booking.clientEmail;
     if (notifyEmail) {
       const studio = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true, currency: true } });
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
       sendNotification({
         event: "BOOKING_CONFIRMED",
         studioName: studio?.name ?? tenantSlug,
@@ -266,6 +267,8 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         endTime: slot.endTime,
         depositAmount: deposit,
         currency: studio?.currency ?? "MYR",
+        trackingCode: result.booking.trackingCode,
+        bookingUrl: `${appUrl}/${tenantSlug}/portal`,
       }).catch((e) => console.error("Notification dispatch failed:", e));
     }
 

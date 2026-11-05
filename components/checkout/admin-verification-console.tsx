@@ -17,6 +17,7 @@ import {
   Loader2,
   RefreshCw,
   ExternalLink,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptLightboxModal } from "./receipt-lightbox-modal";
@@ -155,7 +156,17 @@ export function AdminVerificationConsole({
       });
 
       if (res.success) {
-        toast.success(`Invoice ${invoiceNumber} approved and marked as PAID!`);
+        if (res.whatsappUrl) {
+          toast.success(`Invoice ${invoiceNumber} approved and marked as PAID!`, {
+            action: {
+              label: "WhatsApp Receipt",
+              onClick: () => window.open(res.whatsappUrl, "_blank"),
+            },
+            duration: 9000,
+          });
+        } else {
+          toast.success(`Invoice ${invoiceNumber} approved and marked as PAID!`);
+        }
         if (res.unlockedDownloads) {
           toast.success("Final balance settled: Master download vault unlocked.");
         }
@@ -177,7 +188,17 @@ export function AdminVerificationConsole({
       });
 
       if (res.success) {
-        toast.success(`Slip for ${rejectModalItem.invoiceNumber} rejected. The client has been asked for a new one.`);
+        if (res.whatsappUrl) {
+          toast.success(`Slip for ${rejectModalItem.invoiceNumber} rejected.`, {
+            action: {
+              label: "WhatsApp Notice",
+              onClick: () => window.open(res.whatsappUrl, "_blank"),
+            },
+            duration: 9000,
+          });
+        } else {
+          toast.success(`Slip for ${rejectModalItem.invoiceNumber} rejected. The client has been asked for a new one.`);
+        }
         setRejectModalItem(null);
       } else {
         toast.error(res.message || "Failed to reject payment.");
@@ -398,6 +419,18 @@ export function AdminVerificationConsole({
                         <div className="text-zinc-400 text-[11px] font-mono truncate">
                           {item.client.email} {item.client.phone ? `• ${item.client.phone}` : ""}
                         </div>
+                        {item.client.phone && (
+                          <a
+                            href={`https://wa.me/${item.client.phone.replace(/[^0-9]/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 hover:text-emerald-300 hover:underline pt-0.5"
+                            title="Chat with client on WhatsApp"
+                          >
+                            <MessageSquare className="size-3" />
+                            <span>WhatsApp Client</span>
+                          </a>
+                        )}
                       </div>
 
                       {/* Shoot / Project Box */}

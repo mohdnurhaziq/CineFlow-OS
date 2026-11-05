@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CineFlow OS Multi-Channel Transactional Notification Engine
  * Supports Responsive HTML Email and WhatsApp Dispatch
  */
@@ -26,6 +26,8 @@ export interface BookingConfirmedPayload {
   endTime: string;
   depositAmount: number;
   currency: string;
+  trackingCode?: string;
+  bookingUrl?: string;
 }
 
 export interface PaymentApprovedPayload {
@@ -41,6 +43,8 @@ export interface PaymentApprovedPayload {
   milestoneType: string;
   projectTitle: string;
   projectId?: string;
+  invoiceId?: string;
+  receiptUrl?: string;
 }
 
 export interface PaymentRejectedPayload {
@@ -264,20 +268,31 @@ export async function sendNotification(
         <p>Your studio production booking has been locked into our schedule.</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
+            ${payload.trackingCode ? `<tr><td style="color: #71717a; padding: 4px 0;">Booking Ref:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.trackingCode)}</td></tr>` : ""}
             <tr><td style="color: #71717a; padding: 4px 0;">Package:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.packageName)}</td></tr>
             <tr><td style="color: #71717a; padding: 4px 0;">Date:</td><td style="color: #ffffff; text-align: right;">${esc(payload.slotDate)}</td></tr>
             <tr><td style="color: #71717a; padding: 4px 0;">Time Window:</td><td style="color: #ffffff; text-align: right;">${esc(payload.startTime)} - ${esc(payload.endTime)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Deposit Paid:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositAmount.toFixed(2))}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">Deposit Paid:</td><td style="color: #10b981; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositAmount.toFixed(2))}</td></tr>
           </table>
         </div>
+        ${
+          payload.bookingUrl
+            ? `<div style="text-align: center; margin: 24px 0 10px 0;">
+          <a href="${esc(payload.bookingUrl)}" style="display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 13px;">
+            View My Booking Details
+          </a>
+        </div>`
+            : ""
+        }
         <p>Our production team will contact you with call times, wardrobe guidelines, and location ephemeris.</p>
       `;
-      emailText = `Booking Confirmed with ${payload.studioName}!\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\nDeposit: ${payload.currency} ${payload.depositAmount.toFixed(2)}`;
-      whatsappText = `*${payload.studioName} — Booking Confirmed!*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is confirmed. Deposit paid: ${payload.currency} ${payload.depositAmount.toFixed(2)}.`;
+      emailText = `Booking Confirmed with ${payload.studioName}!\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\nDeposit: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\nLink: ${payload.bookingUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — Booking Confirmed!*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is confirmed.${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} Deposit paid: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 View details: ${payload.bookingUrl}` : ""}`;
       break;
     }
 
     case "PAYMENT_APPROVED": {
+      const receiptLink = payload.receiptUrl;
       emailSubject = `Payment Verified: Invoice #${payload.invoiceNumber} (${payload.currency} ${payload.amount.toFixed(2)})`;
       bodyHtml = `
         <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
@@ -290,10 +305,19 @@ export async function sendNotification(
             <tr><td style="color: #71717a; padding: 4px 0;">Amount Settled:</td><td style="color: #10b981; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.amount.toFixed(2))}</td></tr>
           </table>
         </div>
+        ${
+          receiptLink
+            ? `<div style="text-align: center; margin: 24px 0 10px 0;">
+          <a href="${esc(receiptLink)}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: #ffffff; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 13px;">
+            View Official Receipt
+          </a>
+        </div>`
+            : ""
+        }
         <p style="color: #10b981; font-weight: bold;">Status: 100% PAID & VERIFIED</p>
       `;
-      emailText = `Payment Verified for ${payload.invoiceNumber}: ${payload.currency} ${payload.amount.toFixed(2)} for ${payload.projectTitle}.`;
-      whatsappText = `*${payload.studioName} — Payment Verified*\n\nHi ${payload.clientName}, your payment for Invoice *#${payload.invoiceNumber}* (${payload.currency} ${payload.amount.toFixed(2)}) has been verified. Thank you!`;
+      emailText = `Payment Verified for ${payload.invoiceNumber}: ${payload.currency} ${payload.amount.toFixed(2)} for ${payload.projectTitle}.${receiptLink ? ` View receipt: ${receiptLink}` : ""}`;
+      whatsappText = `*${payload.studioName} — Payment Verified*\n\nHi ${payload.clientName}, your payment for Invoice *#${payload.invoiceNumber}* (${payload.currency} ${payload.amount.toFixed(2)}) has been verified. Thank you!${receiptLink ? `\n\n📄 View Receipt: ${receiptLink}` : ""}`;
       break;
     }
 
@@ -306,9 +330,18 @@ export async function sendNotification(
           <strong>Reviewer Note:</strong> ${esc(payload.reason)}
         </div>
         <p>Please send a new payment slip within 24 hours. Your booking is held until then; after that the time slot is released.</p>
+        ${
+          payload.reuploadUrl
+            ? `<div style="text-align: center; margin: 24px 0 10px 0;">
+          <a href="${esc(payload.reuploadUrl)}" style="display: inline-block; padding: 12px 24px; background-color: #f43f5e; color: #ffffff; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 13px;">
+            Upload New Payment Slip
+          </a>
+        </div>`
+            : ""
+        }
       `;
-      emailText = `Payment verification issue for ${payload.invoiceNumber}. Reason: ${payload.reason}`;
-      whatsappText = `*${payload.studioName} — Payment Verification Notice*\n\nHi ${payload.clientName}, we could not verify your receipt for #${payload.invoiceNumber}. Note: ${payload.reason}. Please send a new slip within 24 hours to keep your booking.`;
+      emailText = `Payment verification issue for ${payload.invoiceNumber}. Reason: ${payload.reason}.${payload.reuploadUrl ? ` Send new slip: ${payload.reuploadUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — Payment Verification Notice*\n\nHi ${payload.clientName}, we could not verify your receipt for #${payload.invoiceNumber}. Note: ${payload.reason}. Please send a new slip within 24 hours to keep your booking.${payload.reuploadUrl ? `\n\n🔗 Upload new slip: ${payload.reuploadUrl}` : ""}`;
       break;
     }
 

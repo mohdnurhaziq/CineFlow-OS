@@ -58,7 +58,7 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
                 Verify payment
               </Link>
             )}
-            <PrintButton />
+            <PrintButton doc={doc} />
           </>
         }
       />

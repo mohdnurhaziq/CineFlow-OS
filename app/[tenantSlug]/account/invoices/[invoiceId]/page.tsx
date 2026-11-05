@@ -65,7 +65,7 @@ export default async function ClientInvoicePage({ params }: ClientInvoicePagePro
                   {status === "REJECTED" ? "Send a new payment slip" : needsSlip ? "Upload payment slip" : "Pay this invoice"}
                 </Link>
               )}
-              <PrintButton />
+              <PrintButton doc={doc} />
             </>
           }
         />

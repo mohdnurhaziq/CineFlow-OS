@@ -105,11 +105,22 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Printing (invoices and receipts): plain white paper, no dark app chrome. */
+/* Printing (invoices and receipts): standard A4 paper, pure white background, preserved color graphics */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
   html,
   body {
     background: #fff !important;
-    color: #000;
+    color: #09090b !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Avoid breaking receipt sections across pages */
+  .print-break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }

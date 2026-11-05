@@ -143,23 +143,67 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
     }
 
     // Dispatch automated transactional notifications
+    let notifResult: any = null;
     if (invoice.client?.email) {
-      sendNotification({
-        event: "PAYMENT_APPROVED",
-        studioName: invoice.tenant.name,
-        studioSlug: tenantSlug,
-        clientName: invoice.client.name,
-        clientEmail: invoice.client.email,
-        clientPhone: invoice.client.phone || undefined,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: invoice.amount,
-        currency: invoice.tenant.currency,
-        milestoneType: invoice.milestoneType,
-        projectTitle: invoice.project?.title || "Production Project",
-        projectId: invoice.projectId || undefined,
-      }).catch((e) => console.error("Notification dispatch failed:", e));
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+      const receiptUrl = `${appUrl}/${tenantSlug}/account/invoices/${invoice.id}`;
+      const vaultUrl = invoice.projectId ? `${appUrl}/${tenantSlug}/vault/${invoice.projectId}` : undefined;
 
-      if (unlockedDownloads && invoice.projectId) {
+      try {
+        notifResult = await sendNotification({
+          event: "PAYMENT_APPROVED",
+          studioName: invoice.tenant.name,
+          studioSlug: tenantSlug,
+          clientName: invoice.client.name,
+          clientEmail: invoice.client.email,
+          clientPhone: invoice.client.phone || undefined,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: invoice.amount,
+          currency: invoice.tenant.currency,
+          milestoneType: invoice.milestoneType,
+          projectTitle: invoice.project?.title || "Production Project",
+          projectId: invoice.projectId || undefined,
+          invoiceId: invoice.id,
+          receiptUrl,
+        });
+      } catch (e) {
+        console.error("Payment notification dispatch failed:", e);
+      }
+
+      // If this was a booking deposit, also dispatch a booking confirmation
+      if (invoice.milestoneType === "BOOKING_DEPOSIT") {
+        try {
+          const linked = await resolveInvoiceBooking(db, invoice);
+          if (linked) {
+            const slot = linked.slotId ? await db.bookingSlot.findUnique({ where: { id: linked.slotId } }) : null;
+            const slotDate = slot?.date
+              ? new Date(slot.date).toLocaleDateString("en-US", { dateStyle: "medium" })
+              : (linked.targetDate ?? "Scheduled Date");
+            const bookingUrl = `${appUrl}/${tenantSlug}/account`;
+
+            await sendNotification({
+              event: "BOOKING_CONFIRMED",
+              studioName: invoice.tenant.name,
+              studioSlug: tenantSlug,
+              clientName: invoice.client.name,
+              clientEmail: invoice.client.email,
+              clientPhone: invoice.client.phone || undefined,
+              packageName: linked.packageName || "Studio Production Session",
+              slotDate,
+              startTime: slot?.startTime ?? "",
+              endTime: slot?.endTime ?? "",
+              depositAmount: invoice.amount,
+              currency: invoice.tenant.currency,
+              trackingCode: linked.trackingCode,
+              bookingUrl,
+            });
+          }
+        } catch (e) {
+          console.error("Booking confirmed notification dispatch failed:", e);
+        }
+      }
+
+      if (unlockedDownloads && invoice.projectId && vaultUrl) {
         sendNotification({
           event: "VAULT_UNLOCKED",
           studioName: invoice.tenant.name,
@@ -168,7 +212,7 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
           clientEmail: invoice.client.email,
           clientPhone: invoice.client.phone || undefined,
           projectTitle: invoice.project?.title || "Production Project",
-          vaultUrl: `/${tenantSlug}/vault/${invoice.projectId}`,
+          vaultUrl,
         }).catch((e) => console.error("Notification dispatch failed:", e));
       }
     }
@@ -178,6 +222,10 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
       invoiceNumber: invoice.invoiceNumber,
       unlockedDownloads,
       verifiedBy: staffName,
+      whatsappUrl: notifResult?.whatsappUrl,
+      whatsappMessage: notifResult?.whatsappMessage,
+      clientName: invoice.client?.name,
+      clientPhone: invoice.client?.phone,
     };
   } catch (err: any) {
     console.error("Error approving payment:", err);
@@ -257,20 +305,28 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
     safeRevalidate(`/${tenantSlug}/book`);
 
     // Dispatch rejection notification
+    let notifResult: any = null;
     if (invoice.client?.email) {
-      sendNotification({
-        event: "PAYMENT_REJECTED",
-        studioName: invoice.tenant.name,
-        studioSlug: tenantSlug,
-        clientName: invoice.client.name,
-        clientEmail: invoice.client.email,
-        clientPhone: invoice.client.phone || undefined,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: invoice.amount,
-        currency: invoice.tenant.currency,
-        reason,
-        reuploadUrl: `/${tenantSlug}/checkout?invoiceId=${invoice.id}`,
-      }).catch((e) => console.error("Notification dispatch failed:", e));
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+      const reuploadUrl = `${appUrl}/${tenantSlug}/checkout?invoiceId=${invoice.id}`;
+
+      try {
+        notifResult = await sendNotification({
+          event: "PAYMENT_REJECTED",
+          studioName: invoice.tenant.name,
+          studioSlug: tenantSlug,
+          clientName: invoice.client.name,
+          clientEmail: invoice.client.email,
+          clientPhone: invoice.client.phone || undefined,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: invoice.amount,
+          currency: invoice.tenant.currency,
+          reason,
+          reuploadUrl,
+        });
+      } catch (e) {
+        console.error("Rejection notification dispatch failed:", e);
+      }
     }
 
     return {
@@ -278,6 +334,10 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
       invoiceNumber: invoice.invoiceNumber,
       rejectedBy: staffName,
       reason,
+      whatsappUrl: notifResult?.whatsappUrl,
+      whatsappMessage: notifResult?.whatsappMessage,
+      clientName: invoice.client?.name,
+      clientPhone: invoice.client?.phone,
     };
   } catch (err: any) {
     console.error("Error rejecting payment:", err);

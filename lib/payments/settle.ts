@@ -156,6 +156,7 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
   });
 
   if (!result.alreadySettled && result.booking && !result.refundRequired && result.booking.clientEmail) {
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
     sendNotification({
       event: "BOOKING_CONFIRMED",
       studioName: invoice.tenant.name,
@@ -163,12 +164,14 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       clientName: result.booking.clientName,
       clientEmail: result.booking.clientEmail,
       clientPhone: result.booking.clientPhone || undefined,
-      packageName: "Studio Production Session",
+      packageName: result.booking.packageName || "Studio Production Session",
       slotDate: result.slot?.date ? new Date(result.slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
       startTime: result.slot?.startTime ?? "",
       endTime: result.slot?.endTime ?? "",
       depositAmount: invoice.amount,
-      currency: "MYR",
+      currency: invoice.tenant.currency || "MYR",
+      trackingCode: result.booking.trackingCode,
+      bookingUrl: `${appUrl}/${invoice.tenant.slug}/portal`,
     }).catch((e) => console.error("Notification dispatch failed:", e));
   }
 
