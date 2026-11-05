@@ -29,7 +29,7 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
           <div className="space-y-1">
             <h4 className="text-base font-bold text-white tracking-tight">{tenant.name}</h4>
             <p className="text-xs text-zinc-400">
-              Creative {tenant.discipline} Studio • All bookings governed by 50% milestone paywall.
+              Creative {tenant.discipline} Studio • Every booking is secured with a deposit.
             </p>
           </div>
 

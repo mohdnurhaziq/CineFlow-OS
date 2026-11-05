@@ -1,4 +1,4 @@
-import { Sparkles, MapPin, Award } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 interface ShowcaseHeroProps {
   tenant: {
@@ -48,16 +48,8 @@ export function ShowcaseHero({ tenant }: ShowcaseHeroProps) {
           </p>
         )}
 
-        {/* Quick studio accolades */}
+        {/* Booking promise (true of every studio; no studio-specific claims here) */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-400">
-          <div className="flex items-center gap-1.5">
-            <Award className="size-3.5 text-amber-400" />
-            <span>Award-Winning Color Grading</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="size-3.5 text-cyan-400" />
-            <span>4K Cinema &amp; Medium Format</span>
-          </div>
           <div className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">10-Min</span>
             <span>Cinema Booking Hold Active</span>

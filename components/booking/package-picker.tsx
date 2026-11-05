@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
+import { formatMoney } from "@/lib/money";
 
 export interface BookingPackageOption {
   id: string;
@@ -18,11 +19,7 @@ export function packagesFor(packages: BookingPackageOption[], category: string):
   return packages.filter((p) => sameCategory(p.category, category)).sort((a, b) => a.price - b.price);
 }
 
-/** "$1,900.00" / "RM 1,900.00". */
-export function formatMoney(currency: string, amount: number): string {
-  const symbol = currency === "MYR" ? "RM " : currency === "USD" ? "$" : `${currency} `;
-  return `${symbol}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+export { formatMoney };
 
 interface PackagePickerProps {
   packages: BookingPackageOption[];

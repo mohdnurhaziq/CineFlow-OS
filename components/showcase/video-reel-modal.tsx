@@ -82,13 +82,7 @@ export function VideoReelModal({ item, onClose, brandColor }: VideoReelModalProp
         <div className="p-4 sm:p-5 border-t border-zinc-800 bg-[#121215] flex items-center justify-between">
           <div className="space-y-0.5">
             <h3 className="text-sm font-bold text-white tracking-tight">{item.title}</h3>
-            <p className="text-xs text-zinc-400 font-mono">
-              Shot on ARRI ALEXA Mini LF • Cooke Anamorphic /i Full Frame Plus
-            </p>
           </div>
-          <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/30">
-            4K DCI MASTER
-          </span>
         </div>
       </div>
     </div>

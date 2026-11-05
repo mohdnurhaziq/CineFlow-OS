@@ -5,8 +5,6 @@ import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { getSessionClient } from "@/lib/clients";
 import { ShowcaseHero } from "@/components/showcase/showcase-hero";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
-import { StudioPedigree } from "@/components/showcase/studio-pedigree";
-import { ClientTestimonials } from "@/components/showcase/client-testimonials";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 
 interface PageProps {
@@ -162,11 +160,8 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
           initialCategory={initialCategory || "all"}
         />
 
-        {/* Studio Equipment & Craft Pedigree */}
-        <StudioPedigree tenant={tenant} />
-
-        {/* Client Testimonials */}
-        <ClientTestimonials tenant={tenant} />
+        {/* The equipment ("pedigree") and testimonials sections are hidden until studios can enter
+            their own: their fixed copy read as real reviews and gear claims on every studio's page. */}
       </main>
 
       {/* Showcase Footer */}

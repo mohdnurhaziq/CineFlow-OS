@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ClientBooking, BookingSlot, MilestoneInvoice, Proposal } from "@prisma/client";
 import { LogoutButton } from "./logout-button";
+import { formatMoney } from "@/lib/money";
 
 type BookingRow = ClientBooking & { slot: BookingSlot | null };
 
@@ -95,13 +96,7 @@ function Section({
 }
 
 export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects }: ClientDashboardProps) {
-  const money = (amount: number) => {
-    try {
-      return new Intl.NumberFormat("en-US", { style: "currency", currency: tenant.currency }).format(amount);
-    } catch {
-      return `${tenant.currency} ${amount.toFixed(2)}`;
-    }
-  };
+  const money = (amount: number) => formatMoney(tenant.currency, amount);
   const date = (d: Date) =>
     d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 

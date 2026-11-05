@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { lookupMyBooking, type MyBookingView } from "@/lib/actions/my-booking";
+import { formatMoney } from "@/lib/money";
 
 interface MyBookingLookupProps {
   tenantSlug: string;
@@ -59,13 +60,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
   const [booking, setBooking] = useState<MyBookingView | null>(null);
   const [currency, setCurrency] = useState("USD");
 
-  const money = (amount: number) => {
-    try {
-      return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
-    } catch {
-      return `${currency} ${amount.toFixed(2)}`;
-    }
-  };
+  const money = (amount: number) => formatMoney(currency, amount);
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, {

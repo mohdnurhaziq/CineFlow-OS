@@ -68,6 +68,9 @@ export function ShowcaseShell({
     return packages.filter((pkg) => pkg.category === selectedCategory);
   }, [packages, selectedCategory]);
 
+  // A studio with no portfolio yet: the filter still narrows packages, but there is no gallery to show.
+  const hasWorks = showcaseItems.length > 0;
+
   return (
     <div className="space-y-12">
       {/* Category Filter Pills Bar */}
@@ -76,9 +79,11 @@ export function ShowcaseShell({
           <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
             FILTER BY CAMPAIGN CATEGORY
           </span>
-          <span className="text-xs font-mono text-zinc-400">
-            {filteredItems.length} Works Displayed
-          </span>
+          {hasWorks && (
+            <span className="text-xs font-mono text-zinc-400">
+              {filteredItems.length} {filteredItems.length === 1 ? "Work" : "Works"} Displayed
+            </span>
+          )}
         </div>
 
         <CategoryFilterBar
@@ -86,17 +91,19 @@ export function ShowcaseShell({
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
           brandColor={tenant.brandColor}
-          counts={counts}
+          counts={hasWorks ? counts : undefined}
         />
       </div>
 
       {/* Responsive Portfolio Gallery */}
-      <PortfolioGrid
-        items={filteredItems}
-        onOpenLightbox={setActiveLightboxItem}
-        onOpenVideo={setActiveVideoItem}
-        brandColor={tenant.brandColor}
-      />
+      {hasWorks && (
+        <PortfolioGrid
+          items={filteredItems}
+          onOpenLightbox={setActiveLightboxItem}
+          onOpenVideo={setActiveVideoItem}
+          brandColor={tenant.brandColor}
+        />
+      )}
 
       {/* Filtered Packages Section */}
       <PackageGrid

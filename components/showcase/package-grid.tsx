@@ -46,7 +46,7 @@ export function PackageGrid({
           Transparent Creative Production Packages
         </h2>
         <p className="text-xs sm:text-sm text-zinc-400">
-          50% deposit locks your cinema calendar slot; 50% balance unlocks high-res masters in your private delivery vault.
+          A deposit locks your calendar slot; the balance is due after the shoot, and unlocks your full-resolution files.
         </p>
       </div>
 
@@ -93,7 +93,7 @@ export function PackageGrid({
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-mono pt-1 border-t border-zinc-800/80">
-                    <span className="text-amber-400">50% Retainer Deposit:</span>
+                    <span className="text-amber-400">Deposit to book:</span>
                     <span className="text-amber-400 font-bold tabular-nums">
                       {currencySymbol}
                       {pkg.depositPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}

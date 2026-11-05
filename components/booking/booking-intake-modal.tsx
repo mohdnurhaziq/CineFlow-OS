@@ -141,7 +141,7 @@ export function BookingIntakeModal({
           <div className="shrink-0 px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
             <div className="space-y-0.5">
               <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400">
-                QUICK ACCOUNT // 4 FIELDS
+                {clientAccount ? "Booking summary" : "Quick account // 4 fields"}
               </span>
               <Dialog.Title className="text-base font-bold text-white tracking-tight">
                 Complete Session Reservation

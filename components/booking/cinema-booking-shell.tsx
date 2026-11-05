@@ -231,7 +231,7 @@ export function CinemaBookingShell({
     <div className={`space-y-10 ${heldSlot ? "pb-64 sm:pb-40" : "pb-16"}`}>
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <Link
             href={`/${tenant.slug}`}
             className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
@@ -247,7 +247,7 @@ export function CinemaBookingShell({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         <ClientAccountMenu
           tenantSlug={tenant.slug}
           client={clientAccount ? { name: clientAccount.name, email: clientAccount.email } : null}

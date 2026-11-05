@@ -27,10 +27,10 @@ export function ClientRegisterCard({ tenantSlug, tenantName, defaultMode = "regi
       <ClientAuthPanel
         tenantSlug={tenantSlug}
         defaultMode={defaultMode}
-        onSuccess={() => {
-          router.push(`/${tenantSlug}/account`);
-          router.refresh();
-        }}
+        // One navigation only: a refresh here re-renders /register, which itself redirects signed-in
+        // clients, and the two navigations race (the page could be left blank). /account is
+        // dynamic, so it renders fresh with the new session; replace keeps /register out of history.
+        onSuccess={() => router.replace(`/${tenantSlug}/account`)}
       />
 
       <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
