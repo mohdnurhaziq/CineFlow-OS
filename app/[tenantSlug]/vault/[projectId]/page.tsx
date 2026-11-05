@@ -69,7 +69,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
         },
       },
       invoices: {
-        where: { milestoneType: "FINAL_BALANCE_50" },
+        where: { milestoneType: { in: ["FINAL_BALANCE_50", "BOOKING_BALANCE"] } },
         select: {
           id: true,
           invoiceNumber: true,

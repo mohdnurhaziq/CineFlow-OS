@@ -235,7 +235,7 @@ export function OrderSummaryCard({
               <div>
                 <span className="text-sm font-bold text-white block">Total Settlement Due</span>
                 <span className="text-[10px] text-emerald-400 font-mono">
-                  {invoice.milestoneType === "FINAL_BALANCE_50"
+                  {invoice.milestoneType === "FINAL_BALANCE_50" || invoice.milestoneType === "BOOKING_BALANCE"
                     ? "Immediately unlocks 4K masters & ZIP"
                     : "Locks production milestone"}
                 </span>

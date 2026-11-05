@@ -377,12 +377,22 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
       }
 
       // If paying final balance with card, immediately unlock project paywall
-      if (isCard && invoice.milestoneType === "FINAL_BALANCE_50" && invoice.projectId) {
-        await tx.project.update({
-          where: { id: invoice.projectId },
-          data: { isFinalBalancePaid: true },
-        });
-        unlockedDownloads = true;
+      if (
+        isCard &&
+        (invoice.milestoneType === "FINAL_BALANCE_50" || invoice.milestoneType === "BOOKING_BALANCE")
+      ) {
+        const projectId =
+          invoice.projectId ??
+          (invoice.bookingId
+            ? (await tx.project.findFirst({ where: { bookingId: invoice.bookingId }, select: { id: true } }))?.id
+            : null);
+        if (projectId) {
+          await tx.project.update({
+            where: { id: projectId },
+            data: { isFinalBalancePaid: true },
+          });
+          unlockedDownloads = true;
+        }
       }
 
       // If paying booking deposit with card, confirm any linked booking & slot

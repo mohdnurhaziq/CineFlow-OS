@@ -202,7 +202,9 @@ export async function provisionProjectForBooking(
 
   // Check if final balance is already paid
   const balanceInvoice = booking.invoices.find((i) => i.milestoneType === "BOOKING_BALANCE");
-  const isFinalBalancePaid = balanceInvoice ? balanceInvoice.status === "PAID" : false;
+  const isFinalBalancePaid = balanceInvoice
+    ? balanceInvoice.status === "PAID"
+    : booking.depositPaid && budget <= booking.depositAmount;
 
   // 6. Create the Project
   const project = await tx.project.create({

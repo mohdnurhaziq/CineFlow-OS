@@ -195,6 +195,11 @@ const CURRENCIES = [
 
 const DISCIPLINES = ["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"];
 
+function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return url.startsWith("/") || url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:");
+}
+
 function ImageUploadField({
   label,
   folder,
@@ -247,7 +252,7 @@ function ImageUploadField({
       <label className="text-xs font-mono text-zinc-400 block mb-1.5">{label}</label>
       <div className="flex items-center gap-3 mb-2">
         <div className="size-14 shrink-0 rounded-xl border border-zinc-700 bg-zinc-900 flex items-center justify-center overflow-hidden">
-          {value ? (
+          {value && isValidImageUrl(value) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt={label} className="size-full object-contain" />
           ) : (
@@ -637,7 +642,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
         />
 
         {/* Live QR Preview */}
-        {qrCodeUrl && (
+        {qrCodeUrl && isValidImageUrl(qrCodeUrl) && (
           <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs space-y-2">
             <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
               QR Code Preview

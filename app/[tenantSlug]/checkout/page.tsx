@@ -92,7 +92,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       where: {
         projectId: search.projectId,
         tenantId: tenant.id,
-        milestoneType: "FINAL_BALANCE_50",
+        milestoneType: { in: ["FINAL_BALANCE_50", "BOOKING_BALANCE"] },
       },
       include: {
         client: true,
