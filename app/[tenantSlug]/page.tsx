@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { ShowcaseNav } from "@/components/showcase/showcase-nav";
+import { getSessionClient } from "@/lib/clients";
 import { ShowcaseHero } from "@/components/showcase/showcase-hero";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { StudioPedigree } from "@/components/showcase/studio-pedigree";
@@ -132,6 +133,9 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
     priceRange: "$$$",
   };
 
+  // Show the signed-in client (if any) a way back to their account.
+  const client = await getSessionClient(tenant.id);
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
       <script
@@ -139,7 +143,11 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* Studio Navigation Bar */}
-      <ShowcaseNav tenant={tenant} studioLead={studioLead} />
+      <ShowcaseNav
+        tenant={tenant}
+        studioLead={studioLead}
+        client={client ? { name: client.name, email: client.email } : null}
+      />
 
       {/* Cinematic Studio Hero */}
       <ShowcaseHero tenant={tenant} />

@@ -12,6 +12,7 @@ import { BookingIntakeModal } from "./booking-intake-modal";
 import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
 import { formatMoney, packagesFor, type BookingPackageOption } from "./package-picker";
+import { ClientAccountMenu } from "@/components/account/client-account-menu";
 
 interface TenantData {
   id: string;
@@ -246,6 +247,12 @@ export function CinemaBookingShell({
           </p>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <ClientAccountMenu
+          tenantSlug={tenant.slug}
+          client={clientAccount ? { name: clientAccount.name, email: clientAccount.email } : null}
+          returnTo={`/${tenant.slug}/book`}
+        />
         {/* Studio Branding Pill */}
         <div className="flex items-center gap-2.5">
           <div
@@ -260,6 +267,7 @@ export function CinemaBookingShell({
               {tenant.discipline} // {tenant.currency}
             </div>
           </div>
+        </div>
         </div>
       </div>
 

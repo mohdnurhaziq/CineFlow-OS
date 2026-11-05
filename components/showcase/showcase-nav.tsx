@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MessageSquare, Calendar, Aperture, ArrowLeft } from "lucide-react";
+import { ClientAccountMenu } from "@/components/account/client-account-menu";
 
 interface ShowcaseNavProps {
   tenant: {
@@ -14,9 +15,11 @@ interface ShowcaseNavProps {
     name: string;
     phone?: string | null;
   } | null;
+  /** Signed-in client of this studio, if any. */
+  client?: { name: string; email: string } | null;
 }
 
-export function ShowcaseNav({ tenant, studioLead }: ShowcaseNavProps) {
+export function ShowcaseNav({ tenant, studioLead, client = null }: ShowcaseNavProps) {
   const brandColor = tenant.brandColor || "#f59e0b";
   const whatsappNumber = studioLead?.phone ? studioLead.phone.replace(/[^0-9]/g, "") : "60123456789";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
@@ -30,7 +33,7 @@ export function ShowcaseNav({ tenant, studioLead }: ShowcaseNavProps) {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-1.5 rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+            className="p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
             title="Back to Platform Home"
           >
             <ArrowLeft className="size-4" />
@@ -49,7 +52,7 @@ export function ShowcaseNav({ tenant, studioLead }: ShowcaseNavProps) {
                   {tenant.name}
                 </span>
                 <span
-                  className="text-[10px] font-mono px-1.5 py-0.2 rounded border"
+                  className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded border"
                   style={{
                     borderColor: `${brandColor}40`,
                     backgroundColor: `${brandColor}15`,
@@ -78,24 +81,26 @@ export function ShowcaseNav({ tenant, studioLead }: ShowcaseNavProps) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Inquire with ${tenant.name} on WhatsApp`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <MessageSquare className="size-3.5 text-emerald-400" />
             <span className="hidden sm:inline">WhatsApp Dispatch</span>
-            <span className="sm:hidden">WhatsApp</span>
           </a>
+
+          <ClientAccountMenu tenantSlug={tenant.slug} client={client} returnTo={`/${tenant.slug}`} />
 
           <Link
             href={`/${tenant.slug}/book`}
             aria-label={`Book production session with ${tenant.name}`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-black shadow-lg active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-xs sm:text-sm font-bold text-black shadow-lg active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
             style={{
               backgroundColor: brandColor,
               boxShadow: `0 4px 14px ${brandColor}30`,
             }}
           >
             <Calendar className="size-3.5" />
-            <span>Book Session</span>
+            <span className="hidden sm:inline">Book Session</span>
+            <span className="sm:hidden">Book</span>
           </Link>
         </div>
       </div>
