@@ -25,7 +25,7 @@ import {
   deleteShotItem,
   toggleShotCompletion,
 } from "@/lib/actions/logistics";
-import { acceptProposal } from "@/lib/actions/proposals";
+import { acceptProposalAsClient } from "./proposal-helpers";
 import {
   createEquipmentReservation,
   quarantineGearItem,
@@ -106,7 +106,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
 
   let projectId = "";
   await harness.test("T15-PROP-02: when the client signs, the project and its retainer invoice appear", async () => {
-    const res: any = await acceptProposal({
+    const res: any = await acceptProposalAsClient({
       proposalId,
       tenantSlug: "lumina-cine",
       signatureDataUrl: `data:image/png;base64,${"A".repeat(80)}`,

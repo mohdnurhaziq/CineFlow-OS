@@ -48,6 +48,8 @@
 }
 
 @theme inline {
+  /* Between zinc-800 and zinc-900; used for subtle skeleton fills and row dividers. */
+  --color-zinc-850: #1f1f23;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));

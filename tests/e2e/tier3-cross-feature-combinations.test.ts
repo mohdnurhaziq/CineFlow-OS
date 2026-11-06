@@ -12,7 +12,7 @@ import { holdBookingSlot } from "@/lib/actions/booking";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { GET as downloadHandler } from "@/app/api/download/route";
-import { acceptProposal } from "@/lib/actions/proposals";
+import { acceptProposalAsClient } from "./proposal-helpers";
 import { calculateGoldenHour, extractCoordinates } from "@/lib/solar";
 import { generateWhatsAppCallSheetUrl, type CallSheetWithDetails } from "@/lib/whatsapp";
 import {
@@ -246,7 +246,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
     });
 
     // Accept selecting only Drone ($500) -> total: $5,500, retainer: $2,750
-    const acceptRes = await acceptProposal({
+    const acceptRes = await acceptProposalAsClient({
       proposalId: prop.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -540,7 +540,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
       },
     });
 
-    const acceptRes = await acceptProposal({
+    const acceptRes = await acceptProposalAsClient({
       proposalId: proposal.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySig,

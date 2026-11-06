@@ -13,7 +13,7 @@ interface InvoicesPageProps {
 export async function generateMetadata({ params }: InvoicesPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Invoices | ${tenant.name} Studio Admin` : "Invoices | CineFlow OS" };
+  return { title: tenant ? `Invoices | ${tenant.name} Studio Admin` : "Invoices" };
 }
 
 // Access is enforced by the admin layout (studio staff or super-admin only).

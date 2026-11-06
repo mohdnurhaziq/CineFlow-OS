@@ -12,7 +12,7 @@ interface BookingsPageProps {
 export async function generateMetadata({ params }: BookingsPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Bookings | ${tenant.name} Studio Admin` : "Bookings | CineFlow OS" };
+  return { title: tenant ? `Bookings | ${tenant.name} Studio Admin` : "Bookings" };
 }
 
 /** Local calendar date as YYYY-MM-DD. */

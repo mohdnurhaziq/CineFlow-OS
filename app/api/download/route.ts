@@ -5,6 +5,8 @@ import path from "node:path";
 import { createZipArchive, ZipFileEntry } from "@/lib/zip";
 // Masters live in private storage (or, for older seed data, under /public); see lib/deliverables/storage.ts.
 import { masterFilePath } from "@/lib/deliverables/storage";
+import { getCurrentUser } from "@/lib/auth/session";
+import { canAccessClientRecord } from "@/lib/auth/project-access";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +35,15 @@ export async function GET(request: NextRequest) {
     });
 
     if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Masters are for the project's client or the studio's staff, signed in.
+    const session = await getCurrentUser();
+    if (!session) {
+      return NextResponse.json({ error: "Please sign in to download files." }, { status: 401 });
+    }
+    if (!canAccessClientRecord(session, project.tenantId, project.clientId)) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 

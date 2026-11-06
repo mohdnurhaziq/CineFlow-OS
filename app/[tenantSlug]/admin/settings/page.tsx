@@ -17,7 +17,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Settings Not Found" };
 
   return {
-    title: `Studio Settings & Bank Details | ${tenant.name} Studio Admin`,
+    title: `Settings | ${tenant.name} Studio Admin`,
     description: "Manage studio identity, branding colors, bank payment wire info, and QR codes.",
   };
 }

@@ -12,7 +12,8 @@ import {
   approvePaymentVerification,
   rejectPaymentVerification,
 } from "@/lib/actions/admin-verification";
-import { getProposalBySlugAndId, acceptProposal } from "@/lib/actions/proposals";
+import { getProposalBySlugAndId } from "@/lib/actions/proposals";
+import { acceptProposalAsClient } from "../proposal-helpers";
 import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";
 import { GET as downloadHandler } from "@/app/api/download/route";
 import { TestHarness } from "../test-harness";
@@ -1163,7 +1164,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       await db.proposal.delete({ where: { id: testProposal.id } }).catch(() => null);
     });
 
-    const acceptRes = await acceptProposal({
+    const acceptRes = await acceptProposalAsClient({
       proposalId: testProposal.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -1235,7 +1236,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       await db.proposal.delete({ where: { id: testProp.id } }).catch(() => null);
     });
 
-    const res = await acceptProposal({
+    const res = await acceptProposalAsClient({
       proposalId: testProp.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -1278,7 +1279,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       await db.proposal.delete({ where: { id: testProp.id } }).catch(() => null);
     });
 
-    const res = await acceptProposal({
+    const res = await acceptProposalAsClient({
       proposalId: testProp.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -1322,7 +1323,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       await db.proposal.delete({ where: { id: testProp.id } }).catch(() => null);
     });
 
-    const res = await acceptProposal({
+    const res = await acceptProposalAsClient({
       proposalId: testProp.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -1367,7 +1368,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       await db.proposal.delete({ where: { id: testProp.id } }).catch(() => null);
     });
 
-    const res = await acceptProposal({
+    const res = await acceptProposalAsClient({
       proposalId: testProp.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -1409,7 +1410,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       await db.proposal.delete({ where: { id: testProp.id } }).catch(() => null);
     });
 
-    const call1 = await acceptProposal({
+    const call1 = await acceptProposalAsClient({
       proposalId: testProp.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -1417,7 +1418,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       consentAccepted: true,
       selectedAddOnIds: [],
     });
-    const call2 = await acceptProposal({
+    const call2 = await acceptProposalAsClient({
       proposalId: testProp.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,

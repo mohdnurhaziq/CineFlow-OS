@@ -32,7 +32,7 @@ import {
   createFrameDesign,
   createPrintSize,
 } from "@/lib/actions/admin-frames";
-import { acceptProposal } from "@/lib/actions/proposals";
+import { acceptProposalAsClient } from "./proposal-helpers";
 import { createGearItem } from "@/lib/actions/gear";
 import { onboardStudio, checkSlugAvailability } from "@/lib/actions/onboarding";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
@@ -767,7 +767,7 @@ export async function runTier2BoundaryTests(harness: TestHarness) {
       },
     });
 
-    const call1 = await acceptProposal({
+    const call1 = await acceptProposalAsClient({
       proposalId: prop.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,
@@ -776,7 +776,7 @@ export async function runTier2BoundaryTests(harness: TestHarness) {
       selectedAddOnIds: [],
     });
 
-    const call2 = await acceptProposal({
+    const call2 = await acceptProposalAsClient({
       proposalId: prop.id,
       tenantSlug: "lumina-cine",
       signatureDataUrl: dummySignature,

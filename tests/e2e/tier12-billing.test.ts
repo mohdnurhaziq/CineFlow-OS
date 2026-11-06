@@ -6,6 +6,7 @@
  * - A paid project retainer issues the final 50% balance invoice
  */
 
+import { payAsInvoiceClient } from "./proposal-helpers";
 import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
@@ -207,8 +208,8 @@ export async function runTier12BillingTests(harness: TestHarness) {
     await approve(res.invoiceId);
     const [bal] = await balanceFor(res.bookingId);
 
-    const pay: any = await withSession(null, () =>
-      processInvoicePayment({
+    const pay: any = await (
+      payAsInvoiceClient({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
         invoiceId: bal!.id,
@@ -274,8 +275,8 @@ export async function runTier12BillingTests(harness: TestHarness) {
     await ageBooking(res.bookingId, 25);
     await expireUnpaidDeposits(lumina.id);
 
-    const pay: any = await withSession(null, () =>
-      processInvoicePayment({
+    const pay: any = await (
+      payAsInvoiceClient({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
         invoiceId: res.invoiceId,
@@ -332,8 +333,8 @@ export async function runTier12BillingTests(harness: TestHarness) {
     harness.assertEqual(finals[0]?.amount, 1000, "Final balance = budget - retainer");
     harness.assertEqual(finals[0]?.status, "PENDING", "Final balance awaits payment");
 
-    const pay: any = await withSession(null, () =>
-      processInvoicePayment({
+    const pay: any = await (
+      payAsInvoiceClient({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
         invoiceId: finals[0]!.id,

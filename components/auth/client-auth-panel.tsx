@@ -10,6 +10,9 @@ interface ClientAuthPanelProps {
   /** Called after a successful sign-in or account creation. */
   onSuccess: () => void;
   defaultMode?: "register" | "login";
+  /** From a studio invite email: proves ownership of the account the studio created. */
+  inviteToken?: string;
+  defaultEmail?: string;
 }
 
 const inputClass =
@@ -36,10 +39,16 @@ function Field({
   );
 }
 
-export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register" }: ClientAuthPanelProps) {
+export function ClientAuthPanel({
+  tenantSlug,
+  onSuccess,
+  defaultMode = "register",
+  inviteToken,
+  defaultEmail = "",
+}: ClientAuthPanelProps) {
   const [mode, setMode] = useState<"register" | "login">(defaultMode);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [claimCode, setClaimCode] = useState("");
@@ -75,6 +84,7 @@ export function ClientAuthPanel({ tenantSlug, onSuccess, defaultMode = "register
           phone,
           password,
           claimCode: needsClaim ? claimCode : undefined,
+          inviteToken: inviteToken || undefined,
         });
         if (!res.success) {
           if (res.error === "CLAIM_REQUIRED" || res.error === "CLAIM_INVALID") setNeedsClaim(true);

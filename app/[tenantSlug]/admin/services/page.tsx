@@ -20,7 +20,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Services Not Found" };
 
   return {
-    title: `Packages & Categories | ${tenant.name} Studio Admin`,
+    title: `Services | ${tenant.name} Studio Admin`,
     description: "Manage service packages, pricing, deliverables, and campaign categories.",
   };
 }

@@ -21,7 +21,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Proposals Not Found" };
 
   return {
-    title: `Proposals & Add-On Templates | ${tenant.name} Studio Admin`,
+    title: `Proposals | ${tenant.name} Studio Admin`,
     description: "Manage proposal add-on options, pricing units, and monitor client quote status.",
   };
 }
@@ -65,7 +65,6 @@ export default async function AdminProposalsPage({ params }: ProposalsPageProps)
       project: true,
     },
     orderBy: { createdAt: "desc" },
-    take: 50,
   });
 
   // Creating a proposal sets prices: owner only.

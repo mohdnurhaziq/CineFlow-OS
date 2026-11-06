@@ -10,7 +10,7 @@ import {
   type FrameDesignOption,
   type PhotoOption,
 } from "./configurator-panel";
-import { OrderModal } from "./order-modal";
+import { OrderModal, type PrintOrderer } from "./order-modal";
 
 interface VisualizerShellProps {
   tenantSlug: string;
@@ -18,6 +18,8 @@ interface VisualizerShellProps {
   tenantName: string;
   currency: string;
   projectId?: string | null;
+  /** Signed-in person who would place an order; null when signed out. */
+  orderer: PrintOrderer | null;
   initialPrintSizes: PrintSizeOption[];
   initialFrameDesigns: FrameDesignOption[];
   initialPhotos: PhotoOption[];
@@ -29,6 +31,7 @@ export function VisualizerShell({
   tenantName,
   currency,
   projectId,
+  orderer,
   initialPrintSizes,
   initialFrameDesigns,
   initialPhotos,
@@ -53,10 +56,15 @@ export function VisualizerShell({
     isAvailable: true,
   };
 
+  // Studios with no showcase photos yet get a neutral stand-in, never another studio's work.
   const defaultPhoto: PhotoOption = initialPhotos[0] || {
-    id: "default_photo_1",
-    title: "Editorial Fine Art Portrait",
-    url: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
+    id: "placeholder_photo",
+    title: "Your photo here",
+    url:
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3f3f46"/><stop offset="1" stop-color="#18181b"/></linearGradient></defs><rect width="1200" height="800" fill="url(#g)"/><text x="600" y="410" fill="#a1a1aa" font-family="sans-serif" font-size="44" text-anchor="middle">Your photo here</text></svg>'
+      ),
   };
 
   // State
@@ -186,6 +194,7 @@ export function VisualizerShell({
         tenantId={tenantId}
         tenantSlug={tenantSlug}
         projectId={projectId}
+        orderer={orderer}
         currency={currency}
         selectedPhoto={selectedPhoto}
         selectedPrintSize={selectedPrintSize}

@@ -32,7 +32,7 @@ export function SignedInRedirect({ name, href }: SignedInRedirectProps) {
       <div className="text-sm font-bold text-white">You&apos;re signed in as {name}</div>
       <p className="text-xs text-zinc-400 inline-flex items-center gap-1.5">
         <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-        Taking you to your account…
+        Taking you there…
       </p>
       <div>
         <Link href={href} className="text-xs font-mono text-amber-400 hover:text-amber-300">

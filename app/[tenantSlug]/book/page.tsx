@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: BookingPageProps): Promise<Me
     select: { name: true },
   });
 
-  if (!tenant) return { title: "Booking | CineFlow OS" };
+  if (!tenant) return { title: "Booking" };
 
   return {
     title: `Cinema Calendar Booking — ${tenant.name}`,

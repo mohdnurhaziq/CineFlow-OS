@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { requirePageAccess } from "@/lib/auth/project-access";
+import { getCurrentUser } from "@/lib/auth/session";
+import { STAFF_ROLES } from "@/lib/auth/guard";
+import { currencySymbol } from "@/lib/money";
+import type { PrintOrderer } from "@/components/visualizer/order-modal";
 import { VisualizerShell } from "@/components/visualizer/visualizer-shell";
 import type {
   PrintSizeOption,
@@ -14,7 +19,6 @@ interface VisualizerPageProps {
   }>;
   searchParams: Promise<{
     projectId?: string;
-    photoUrl?: string;
   }>;
 }
 
@@ -36,7 +40,7 @@ export default async function VisualizerPage({
   searchParams,
 }: VisualizerPageProps) {
   const { tenantSlug } = await params;
-  const { projectId, photoUrl } = await searchParams;
+  const { projectId: requestedProjectId } = await searchParams;
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({
@@ -56,44 +60,36 @@ export default async function VisualizerPage({
     }),
   ]);
 
-  // 3. Prepare Photos: project deliverables (if specified) + curated studio masterpieces
-  const curatedPhotos: PhotoOption[] = [
-    {
-      id: "curated_1",
-      title: "Aurora Luxury Editorial Portrait",
-      url: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    },
-    {
-      id: "curated_2",
-      title: "Pavilion 4 Fashion Close-Up",
-      url: "/uploads/deliverables/previews/aurora_hero_02_watermarked.jpg",
-    },
-    {
-      id: "curated_3",
-      title: "Heirloom Convocation Graduate",
-      url: "/uploads/deliverables/previews/farah_convo_01_preview.jpg",
-    },
-    {
-      id: "curated_4",
-      title: "Royal Family Heritage Portrait",
-      url: "/uploads/deliverables/previews/farah_family_02_preview.jpg",
-    },
-  ];
+  // 3. Photos to try on the wall: this studio's own published showcase covers, plus the
+  //    project's photos when opened from a vault (below).
+  const showcase = await db.showcaseItem.findMany({
+    where: { tenantId: tenant.id },
+    orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }],
+    select: { id: true, title: true, coverImageUrl: true },
+    take: 12,
+  });
+  const curatedPhotos: PhotoOption[] = showcase
+    .filter((item) => item.coverImageUrl)
+    .map((item) => ({ id: `showcase_${item.id}`, title: item.title, url: item.coverImageUrl }));
 
-  // If client provided a direct photoUrl in query param, insert as first option
-  if (photoUrl) {
-    curatedPhotos.unshift({
-      id: "query_photo",
-      title: "Client Deliverable Photo",
-      url: photoUrl,
+  // A project's own photos are private: only its client or the studio's staff, signed in.
+  const project = requestedProjectId
+    ? await db.project.findFirst({ where: { id: requestedProjectId, tenantId: tenant.id }, select: { id: true, clientId: true } })
+    : null;
+  if (requestedProjectId && !project) notFound();
+  const projectId = project?.id;
+
+  if (project) {
+    await requirePageAccess({
+      tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      clientId: project.clientId,
+      returnTo: `/${tenant.slug}/visualizer?projectId=${project.id}`,
     });
-  }
 
-  // If projectId is provided, query project deliverables
-  if (projectId) {
     const deliverableItems = await db.deliverableItem.findMany({
       where: {
-        deliverable: { projectId, project: { tenantId: tenant.id } },
+        deliverable: { projectId: project.id },
         itemType: "PHOTO",
       },
     });
@@ -109,20 +105,34 @@ export default async function VisualizerPage({
     }
   }
 
-  const currencySymbol = tenant.currency === "MYR" ? "RM" : "$";
+  // Who would place an order: ordering prints needs a sign-in.
+  const session = await getCurrentUser();
+  let orderer: PrintOrderer | null = null;
+  if (session?.role === "CLIENT" && session.tenantId === tenant.id) {
+    const me = await db.user.findFirst({
+      where: { id: session.id, tenantId: tenant.id, role: "CLIENT" },
+      select: { name: true, email: true, phone: true },
+    });
+    if (me) orderer = { kind: "client", name: me.name, email: me.email, phone: me.phone ?? "" };
+  } else if (session && STAFF_ROLES.has(session.role) && (session.role === "SUPER_ADMIN" || session.tenantId === tenant.id)) {
+    orderer = { kind: "staff", name: session.name, email: "", phone: "" };
+  }
 
   return (
-    <div className="min-h-screen bg-[#070709] text-zinc-100 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      <main className="py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <VisualizerShell
         tenantSlug={tenant.slug}
         tenantId={tenant.id}
         tenantName={tenant.name}
-        currency={currencySymbol}
+        currency={currencySymbol(tenant.currency)}
         projectId={projectId}
+        orderer={orderer}
         initialPrintSizes={printSizes as PrintSizeOption[]}
         initialFrameDesigns={frameDesigns as FrameDesignOption[]}
         initialPhotos={curatedPhotos}
       />
+      </main>
     </div>
   );
 }

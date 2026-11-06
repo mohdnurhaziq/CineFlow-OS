@@ -10,7 +10,7 @@ interface AccountPageProps {
 }
 
 export const metadata: Metadata = {
-  title: "My Account | CineFlow OS",
+  title: "My Account",
   robots: { index: false, follow: false },
 };
 

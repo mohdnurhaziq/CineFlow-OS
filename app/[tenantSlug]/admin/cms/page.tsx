@@ -18,7 +18,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "CMS Not Found" };
 
   return {
-    title: `Showcase Portfolio CMS | ${tenant.name} Studio Admin`,
+    title: `Showcase CMS | ${tenant.name} Studio Admin`,
     description: "Manage published portfolio films, campaigns, gallery covers, and featured showcases.",
   };
 }

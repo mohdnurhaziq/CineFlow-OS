@@ -6,7 +6,7 @@ import { SuperAdminView } from "@/components/super-admin/super-admin-view";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Super-Admin Console — CineFlow OS",
+  title: "Super-Admin Console",
   description: "Platform-wide operations, macro telemetry, and studio tenant management.",
   robots: { index: false, follow: false },
 };

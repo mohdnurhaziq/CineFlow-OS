@@ -364,6 +364,8 @@ model DigitalRelease {
   signatureDataUrl String   // Base64 encoded signature image
   signedAt         DateTime @default(now())
   notes            String?
+  collectedById    String?  // Signed-in user whose session submitted the release (staff or the project's client)
+  collectedByName  String?  // Their name at the time, kept even if the account is later renamed or removed
 
   project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 

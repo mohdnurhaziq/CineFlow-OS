@@ -38,7 +38,7 @@ export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
   return (
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
           <Clapperboard className="size-6 text-amber-400" />
           Projects
         </h1>

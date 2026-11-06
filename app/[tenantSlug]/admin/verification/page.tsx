@@ -17,10 +17,10 @@ export async function generateMetadata({ params }: VerificationPageProps): Promi
     select: { name: true },
   });
 
-  if (!tenant) return { title: "Verification | CineFlow OS" };
+  if (!tenant) return { title: "Verification" };
 
   return {
-    title: `Manual Payment Verification Console | ${tenant.name}`,
+    title: `Verification | ${tenant.name} Studio Admin`,
     description: "Audit offline QR receipts and cash counter orders to lock slots and unlock project deliverables.",
   };
 }
@@ -48,7 +48,7 @@ export default async function AdminVerificationPage({ params }: VerificationPage
       status: "PENDING_VERIFICATION",
     },
     include: {
-      client: true,
+      client: { select: { id: true, name: true, email: true, phone: true } },
       project: true,
       booking: true,
     },
@@ -83,7 +83,7 @@ export default async function AdminVerificationPage({ params }: VerificationPage
       status: { in: ["PAID", "REJECTED", "VOID"] },
     },
     include: {
-      client: true,
+      client: { select: { id: true, name: true, email: true, phone: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 20,
@@ -93,6 +93,7 @@ export default async function AdminVerificationPage({ params }: VerificationPage
   const categories = await db.campaignCategory.findMany({ where: { tenantId: tenant.id }, select: { slug: true, name: true } });
 
   return (
+    <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
     <AdminVerificationConsole
       tenant={tenant}
       verifierName={user?.name ?? "Studio staff"}
@@ -101,5 +102,6 @@ export default async function AdminVerificationPage({ params }: VerificationPage
       pendingInvoices={enrichedPending}
       historyInvoices={historyInvoices}
     />
+    </div>
   );
 }

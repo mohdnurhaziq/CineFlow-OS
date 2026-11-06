@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { settleToyyibpayBill } from "@/lib/payments/settle";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Payment status", robots: { index: false, follow: false } };
@@ -21,9 +22,15 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
   if (outcome.status === "NOT_FOUND") notFound();
   if ("tenantSlug" in outcome && outcome.tenantSlug !== tenantSlug) notFound();
 
+  // Signed-in clients see everything in their account; the tracking-code page is for guests.
+  const session = await getCurrentUser();
+  const signedInClient = session?.role === "CLIENT" && session.tenantSlug === tenantSlug;
+
   if (outcome.status === "PAID" && !outcome.refundRequired) {
-    if (outcome.trackingCode) redirect(`/${tenantSlug}/my-booking?code=${encodeURIComponent(outcome.trackingCode)}`);
-    redirect(`/${tenantSlug}/account`);
+    if (outcome.trackingCode && !signedInClient) {
+      redirect(`/${tenantSlug}/my-booking?code=${encodeURIComponent(outcome.trackingCode)}`);
+    }
+    redirect(`/${tenantSlug}/account?tab=${outcome.trackingCode ? "bookings" : "invoices"}`);
   }
 
   const message =
@@ -34,18 +41,25 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
         : "We have not received confirmation of your payment yet. If you completed it, this can take a minute.";
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center px-4">
-      <div role="status" className="max-w-md rounded-xl border border-white/10 bg-white/5 p-8 text-center space-y-4">
-        <h1 className="text-xl font-semibold">Payment status</h1>
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center px-4 selection:bg-amber-500/20 selection:text-amber-400">
+      <div role="status" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#121215] p-8 text-center space-y-4 shadow-2xl">
+        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Payment</span>
+        <h1 className="text-2xl font-black tracking-tight text-white">Payment status</h1>
         <p className="text-sm text-zinc-300">{message}</p>
-        <div className="flex justify-center gap-3 text-sm">
+        <div className="flex flex-col sm:flex-row justify-center gap-2 pt-2">
           {outcome.status === "NOT_PAID" && (
-            <Link className="underline" href={`/${tenantSlug}/checkout/payment-return?billcode=${encodeURIComponent(billcode)}`}>
+            <Link
+              className="inline-flex items-center justify-center min-h-11 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors"
+              href={`/${tenantSlug}/checkout/payment-return?billcode=${encodeURIComponent(billcode)}`}
+            >
               Check again
             </Link>
           )}
-          <Link className="underline" href={`/${tenantSlug}/my-booking`}>
-            My booking
+          <Link
+            className="inline-flex items-center justify-center min-h-11 px-4 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200 hover:text-white text-xs font-semibold transition-colors"
+            href={signedInClient ? `/${tenantSlug}/account` : `/${tenantSlug}/my-booking`}
+          >
+            {signedInClient ? "My account" : "My booking"}
           </Link>
         </div>
       </div>

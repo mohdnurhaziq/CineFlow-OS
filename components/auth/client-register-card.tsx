@@ -8,9 +8,20 @@ interface ClientRegisterCardProps {
   tenantSlug: string;
   tenantName: string;
   defaultMode?: "register" | "login";
+  inviteToken?: string;
+  defaultEmail?: string;
+  /** Where to go once signed in (a path inside this studio); the account page by default. */
+  next?: string;
 }
 
-export function ClientRegisterCard({ tenantSlug, tenantName, defaultMode = "register" }: ClientRegisterCardProps) {
+export function ClientRegisterCard({
+  tenantSlug,
+  tenantName,
+  defaultMode = "register",
+  inviteToken,
+  defaultEmail,
+  next,
+}: ClientRegisterCardProps) {
   const router = useRouter();
 
   return (
@@ -19,18 +30,21 @@ export function ClientRegisterCard({ tenantSlug, tenantName, defaultMode = "regi
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Client Account</span>
         <h1 className="text-2xl font-black tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400">
-          Create a quick account to book sessions, track your booking status and see your photos,
-          invoices and deliveries in one place.
+          {inviteToken
+            ? `${tenantName} set up an account for you. Choose a password to continue.`
+            : "Create a quick account to book sessions, track your booking status and see your photos, invoices and deliveries in one place."}
         </p>
       </div>
 
       <ClientAuthPanel
         tenantSlug={tenantSlug}
         defaultMode={defaultMode}
+        inviteToken={inviteToken}
+        defaultEmail={defaultEmail}
         // One navigation only: a refresh here re-renders /register, which itself redirects signed-in
         // clients, and the two navigations race (the page could be left blank). /account is
         // dynamic, so it renders fresh with the new session; replace keeps /register out of history.
-        onSuccess={() => router.replace(`/${tenantSlug}/account`)}
+        onSuccess={() => router.replace(next || `/${tenantSlug}/account`)}
       />
 
       <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
