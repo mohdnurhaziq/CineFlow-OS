@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { isRateLimited } from "@/lib/rate-limit";
 import { setSessionCookie, type SessionUser } from "@/lib/auth/token";
+import { inviteMatches } from "@/lib/auth/invite";
 
 /**
  * Quick client account creation: Name, Email, Phone, Password.
@@ -13,6 +14,9 @@ import { setSessionCookie, type SessionUser } from "@/lib/auth/token";
  * this studio, the person must prove they own it by supplying a tracking code
  * from one of that account's bookings before a password can be set. This stops
  * anyone from claiming someone else's email and seeing their bookings.
+ *
+ * An account the studio created for the client (e.g. with a proposal) has no booking, so its
+ * email carries an invite token instead; that token is accepted as the same proof.
  */
 
 const RegisterSchema = z.object({
@@ -25,6 +29,7 @@ const RegisterSchema = z.object({
     .min(8, "Password must be at least 8 characters.")
     .max(72, "Password cannot exceed 72 characters."),
   claimCode: z.string().trim().max(40).optional(),
+  inviteToken: z.string().trim().max(100).optional(),
 });
 
 export type RegisterClientInput = z.input<typeof RegisterSchema>;
@@ -54,7 +59,7 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
     };
   }
 
-  const { tenantSlug, name, phone, password, claimCode } = parsed.data;
+  const { tenantSlug, name, phone, password, claimCode, inviteToken } = parsed.data;
   const rawEmail = parsed.data.email;
   const email = rawEmail.toLowerCase();
 
@@ -104,8 +109,21 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
         error: "EMAIL_EXISTS",
         message: "An account with this email already exists. Please sign in instead.",
       };
+    } else if (inviteMatches(existing, inviteToken)) {
+      // Passwordless account the studio created and invited by email: the invite is the proof.
+      user = await db.user.update({
+        where: { id: existing.id },
+        data: { name, phone, passwordHash, isQuickCreated: false, inviteToken: null, inviteTokenExpires: null },
+      });
     } else {
       // Passwordless account created by an earlier guest booking: require proof of ownership.
+      if (inviteToken && !claimCode) {
+        return {
+          success: false,
+          error: "CLAIM_INVALID",
+          message: "This invite link has expired or was replaced by a newer one. Please ask the studio to send it again.",
+        };
+      }
       if (!claimCode) {
         return {
           success: false,

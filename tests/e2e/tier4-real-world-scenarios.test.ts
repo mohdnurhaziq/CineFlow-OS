@@ -18,7 +18,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
-import { acceptProposal } from "@/lib/actions/proposals";
+import { acceptProposalAsClient } from "./proposal-helpers";
 import { processInvoicePayment, processBookingCheckout } from "@/lib/actions/checkout";
 import { holdBookingSlot } from "@/lib/actions/booking";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
@@ -97,7 +97,7 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         },
       });
 
-      const acceptRes = await acceptProposal({
+      const acceptRes = await acceptProposalAsClient({
         proposalId: proposal.id,
         tenantSlug: "lumina-cine",
         signatureDataUrl: dummySignature,
@@ -618,7 +618,7 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
         },
       });
 
-      const acceptRes = await acceptProposal({
+      const acceptRes = await acceptProposalAsClient({
         proposalId: weddingProposal.id,
         tenantSlug: studioSlug,
         signatureDataUrl: dummySignature,

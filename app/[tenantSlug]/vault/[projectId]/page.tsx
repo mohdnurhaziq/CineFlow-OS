@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { requirePageAccess } from "@/lib/auth/project-access";
 import { VaultShell } from "@/components/vault/vault-shell";
 
 interface VaultPageProps {
@@ -11,24 +12,19 @@ interface VaultPageProps {
 }
 
 export async function generateMetadata({ params }: VaultPageProps): Promise<Metadata> {
-  const { tenantSlug, projectId } = await params;
+  const { tenantSlug } = await params;
 
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
-    select: { id: true, name: true },
+    select: { name: true },
   });
 
-  if (!tenant) return { title: "Vault | CineFlow OS" };
+  if (!tenant) return { title: "Vault" };
 
-  const project = await db.project.findFirst({
-    where: { id: projectId, tenantId: tenant.id },
-    select: { title: true, projectNumber: true },
-  });
-
-  if (!project) return { title: "Vault Not Found | CineFlow OS" };
-
+  // Generic: the page needs a sign-in, so the tab title must not reveal the project.
   return {
-    title: `${project.title} — Private Delivery Vault | ${tenant.name}`,
+    title: `Delivery Vault | ${tenant.name}`,
+    robots: { index: false, follow: false },
     description: "Review watermarked proofs, stream review video, select favorites, and access 4K master deliverables.",
   };
 }
@@ -89,6 +85,14 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
   });
 
   if (!project) notFound();
+
+  // The project's client or the studio's staff, signed in.
+  await requirePageAccess({
+    tenantSlug: tenant.slug,
+    tenantId: tenant.id,
+    clientId: project.client.id,
+    returnTo: `/${tenant.slug}/vault/${project.id}`,
+  });
 
   const finalInvoice = project.invoices[0] || null;
   const allItems = project.deliverables.flatMap((d) => d.items);

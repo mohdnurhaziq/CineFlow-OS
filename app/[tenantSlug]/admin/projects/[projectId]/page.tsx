@@ -9,8 +9,11 @@ interface ProjectPageProps {
 
 export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
   const { tenantSlug, projectId } = await params;
-  const project = await db.project.findFirst({ where: { id: projectId, tenant: { slug: tenantSlug } }, select: { title: true } });
-  return { title: project ? `${project.title} | Projects` : "Project" };
+  const project = await db.project.findFirst({
+    where: { id: projectId, tenant: { slug: tenantSlug } },
+    select: { title: true, tenant: { select: { name: true } } },
+  });
+  return { title: project ? `${project.title} | ${project.tenant.name} Studio Admin` : "Project" };
 }
 
 // Access is enforced by the admin layout (studio staff or super-admin only).

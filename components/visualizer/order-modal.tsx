@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   X,
   ShoppingBag,
@@ -13,7 +14,11 @@ import { createPrintOrder } from "@/lib/actions/visualizer";
 import type { PrintSizeOption, FrameDesignOption, PhotoOption } from "./configurator-panel";
 import { useDialog } from "@/lib/use-dialog";
 
+/** A client orders for themselves; studio staff order on a client's behalf. */
+export type PrintOrderer = { kind: "client" | "staff"; name: string; email: string; phone: string };
+
 interface OrderModalProps {
+  orderer: PrintOrderer | null;
   isOpen: boolean;
   onClose: () => void;
   tenantId: string;
@@ -34,6 +39,7 @@ export function OrderModal({
   tenantId,
   tenantSlug,
   projectId,
+  orderer,
   currency,
   selectedPhoto,
   selectedPrintSize,
@@ -42,9 +48,10 @@ export function OrderModal({
   orientation,
   totalPrice,
 }: OrderModalProps) {
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
+  const isClient = orderer?.kind === "client";
+  const [clientName, setClientName] = useState(isClient ? orderer.name : "");
+  const [clientEmail, setClientEmail] = useState(isClient ? orderer.email : "");
+  const [clientPhone, setClientPhone] = useState(isClient ? orderer.phone : "");
   const [notes, setNotes] = useState("");
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -167,8 +174,38 @@ export function OrderModal({
           </div>
         </div>
 
-        {/* Form */}
+        {!orderer ? (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3 text-sm">
+            <p className="text-white font-semibold">Sign in to place your order</p>
+            <p className="text-xs text-zinc-400">
+              Orders are billed to your client account, so you can track and pay them from My Account.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(
+                  typeof window !== "undefined" ? window.location.pathname + window.location.search : `/${tenantSlug}/visualizer`
+                )}`}
+                className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors"
+              >
+                Sign in
+              </Link>
+              <Link
+                href={`/${tenantSlug}/register?next=${encodeURIComponent(
+                  typeof window !== "undefined" ? window.location.pathname + window.location.search : `/${tenantSlug}/visualizer`
+                )}`}
+                className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-200 hover:text-white text-xs font-semibold transition-colors"
+              >
+                Create an account
+              </Link>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isClient && (
+            <p className="text-xs text-zinc-400">
+              Ordering as <span className="text-white font-semibold">{orderer.name}</span> ({orderer.email}).
+            </p>
+          )}
           {errorMessage && (
             <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
               <AlertCircle className="size-4 shrink-0" />
@@ -176,6 +213,8 @@ export function OrderModal({
             </div>
           )}
 
+          {!isClient && (
+          <>
           <div>
             <label className="text-xs font-mono text-zinc-400 block mb-1">
               Recipient / Client Legal Name *
@@ -217,6 +256,8 @@ export function OrderModal({
               />
             </div>
           </div>
+          </>
+          )}
 
           <div>
             <label className="text-xs font-mono text-zinc-400 block mb-1">
@@ -256,6 +297,7 @@ export function OrderModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

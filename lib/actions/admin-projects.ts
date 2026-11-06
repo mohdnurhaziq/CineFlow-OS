@@ -8,6 +8,7 @@ import { requireOwner, requireStaff } from "@/lib/auth/guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { deleteDeliverableFiles } from "@/lib/deliverables/storage";
 import { sendNotification } from "@/lib/notifications";
+import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
 import { PROJECT_STAGES } from "@/lib/projects/constants";
 
 /**
@@ -145,6 +146,10 @@ export async function createProposal(
     const shareUrl = `/${tenant.slug}/proposals/${proposal.id}`;
     revalidate([`/${tenant.slug}/admin/proposals`, `/${tenant.slug}/admin`]);
     if (data.notifyClient && client.email) {
+      // Signing needs a signed-in client. One without a password gets a link that sets one first.
+      const link = client.passwordHash
+        ? shareUrl
+        : clientInvitePath(tenant.slug, client.email, await issueClientInvite(client.id), shareUrl);
       sendNotification({
         event: "STUDIO_UPDATE",
         studioName: tenant.name,
@@ -154,8 +159,8 @@ export async function createProposal(
         clientPhone: client.phone || undefined,
         headline: `Your proposal: ${data.title}`,
         message: `${tenant.name} has sent you a proposal. Review the details, choose any extras, and sign it online to book.`,
-        linkUrl: `${env.NEXT_PUBLIC_APP_URL}${shareUrl}`,
-        linkLabel: "Review and sign",
+        linkUrl: `${env.NEXT_PUBLIC_APP_URL}${link}`,
+        linkLabel: client.passwordHash ? "Sign in to review and sign" : "Set your password, then review and sign",
       }).catch((e) => console.error("Notification dispatch failed:", e));
     }
     return { success: true, proposalId: proposal.id, proposalNumber: proposal.proposalNumber, shareUrl };

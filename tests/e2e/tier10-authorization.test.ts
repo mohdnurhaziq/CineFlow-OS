@@ -19,7 +19,15 @@ import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { getStudioAnalytics } from "@/lib/actions/admin-analytics";
 import { getPlatformMetrics, getAllTenantsSummary } from "@/lib/actions/super-admin";
-import { toggleShotCompletion } from "@/lib/actions/logistics";
+import { toggleShotCompletion, submitDigitalRelease } from "@/lib/actions/logistics";
+import { acceptProposal, getProposalBySlugAndId, toggleProposalAddOn } from "@/lib/actions/proposals";
+import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";
+import { registerClient } from "@/lib/actions/client-auth";
+import { createPrintOrder } from "@/lib/actions/visualizer";
+import { processInvoicePayment } from "@/lib/actions/checkout";
+import { issueClientInvite } from "@/lib/auth/invite";
+import { GET as downloadHandler } from "@/app/api/download/route";
+import { NextRequest } from "next/server";
 
 /** Actions that are intentionally callable by clients or the public, with the reason. */
 const PUBLIC_ACTIONS: Record<string, string> = {
@@ -32,17 +40,9 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "onboarding.onboardStudio": "public studio sign-up",
   "my-booking.lookupMyBooking": "tracking-code lookup",
   "checkout.processBookingCheckout": "client checkout",
-  "checkout.processInvoicePayment": "client checkout",
-  "proposals.getProposalBySlugAndId": "client proposal link",
-  "proposals.acceptProposal": "client proposal link",
-  "proposals.toggleProposalAddOn": "client proposal link",
-  "vault.toggleClientFavorite": "client vault link",
-  "vault.submitRetouchNote": "client vault link",
-  "visualizer.createPrintOrder": "client print order",
-  "logistics.submitDigitalRelease": "talent/location release link",
 };
 
-const GUARD_RE = /await (requireStaff|requireOwner|requireSuperAdmin|requireStaffBySlug|assertOwner)\(|await getCurrentUser\(\)/;
+const GUARD_RE = /await (requireStaff|requireOwner|requireSuperAdmin|requireStaffBySlug|assertOwner|requireRecordAccess|requireItemAccess)\(|await getCurrentUser\(\)/;
 
 type Who = { id: string; email: string; name: string; role: string; tenantId: string | null; tenantSlug: string | null } | null;
 
@@ -58,6 +58,11 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
   harness.registerTeardown(async () => {
     await db.milestoneInvoice.deleteMany({ where: { invoiceNumber: { startsWith: `T10-${run}` } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
+    // Records owned by this run's clients (signing a proposal also creates a project and invoice).
+    const t10Client = { client: { email: { startsWith: `t10-owner-client-${run}` } } };
+    await db.milestoneInvoice.deleteMany({ where: t10Client });
+    await db.project.deleteMany({ where: t10Client });
+    await db.proposal.deleteMany({ where: t10Client });
     await db.user.deleteMany({ where: { email: { startsWith: "t10-" } } });
   });
 
@@ -294,5 +299,168 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     const ok = await withSession(luminaCrew, () => toggleShotCompletion({ shotId: shot.id, status: target as any }));
     harness.assertEqual(ok.success, true, "Studio crew can toggle", JSON.stringify(ok));
     await withSession(luminaCrew, () => toggleShotCompletion({ shotId: shot.id, status: shot.status as any }));
+  });
+
+  // ---- Client records: proposals, vault, releases, downloads need a signed-in owner ------
+  const recordClientRow = await db.user.create({
+    data: { tenantId: lumina.id, email: `t10-owner-client-${run}@example.test`, name: "T10 Record Client", role: "CLIENT" },
+  });
+  const recordClient = as(recordClientRow, "lumina-cine");
+  const sig = `data:image/png;base64,${"A".repeat(80)}`;
+  const newProposal = (n: number) =>
+    db.proposal.create({
+      data: {
+        tenantId: lumina.id, clientId: recordClientRow.id, studioId: luminaOwner!.id, proposalNumber: `T10-${run}-P${n}`,
+        title: "T10 proposal", discipline: "PHOTOGRAPHY", basePrice: 1000, totalPrice: 1000, depositAmount: 500,
+        finalBalanceAmount: 500, contractTerms: "Standard terms for the T10 test proposal.", status: "SENT",
+      },
+    });
+  const signInput = (proposalId: string) => ({
+    proposalId, tenantSlug: "lumina-cine", signatureDataUrl: sig, signerName: "T10 Record Client", consentAccepted: true, selectedAddOnIds: [],
+  });
+
+  await harness.test("T10-REC-01: only the addressed client, signed in, can sign a proposal", async () => {
+    const prop = await newProposal(1);
+    for (const [label, who] of [...outsiders, ["the studio owner", luminaOwner] as [string, Who], ["studio crew", luminaCrew] as [string, Who]]) {
+      const res: any = await withSession(who, () => acceptProposal(signInput(prop.id) as any));
+      harness.assert(denied(res), `Signing denied for ${label}`, JSON.stringify(res));
+    }
+    harness.assertEqual((await db.proposal.findUnique({ where: { id: prop.id } }))?.status, "SENT", "Proposal still unsigned");
+    const ok: any = await withSession(recordClient, () => acceptProposal(signInput(prop.id) as any));
+    harness.assertEqual(ok.success, true, "The proposal's client signs it", JSON.stringify(ok));
+  });
+
+  await harness.test("T10-REC-02: proposal reads and add-on changes need the client or studio staff", async () => {
+    const prop = await newProposal(2);
+    const addOn = await db.proposalAddOn.create({ data: { proposalId: prop.id, name: "Extra", description: "Extra hour", price: 50, unit: "fixed", isSelected: false } });
+    for (const [label, who] of outsiders) {
+      const read = await withSession(who, () => getProposalBySlugAndId("lumina-cine", prop.proposalNumber));
+      harness.assert(read === null, `Proposal hidden from ${label}`);
+      const t: any = await withSession(who, () => toggleProposalAddOn({ proposalId: prop.id, addOnId: addOn.id, isSelected: true }));
+      harness.assert(denied(t), `Add-on change denied for ${label}`, JSON.stringify(t));
+    }
+    const read = await withSession(recordClient, () => getProposalBySlugAndId("lumina-cine", prop.id));
+    harness.assert(read?.id === prop.id, "Client can read their proposal");
+    harness.assert(!("passwordHash" in (read?.client ?? {})), "Client row is trimmed (no password hash)");
+    const staffRead = await withSession(luminaCrew, () => getProposalBySlugAndId("lumina-cine", prop.id));
+    harness.assert(staffRead?.id === prop.id, "Studio staff can read it");
+  });
+
+  const project = await db.project.create({
+    data: {
+      tenantId: lumina.id, clientId: recordClientRow.id, studioLeadId: luminaOwner!.id, projectNumber: `T10-${run}-PRJ`, title: "T10 project",
+      category: "COMMERCIAL", discipline: "PHOTOGRAPHY", budget: 1000, isFinalBalancePaid: true,
+      deliverables: { create: { title: "T10 gallery", discipline: "PHOTOGRAPHY", items: { create: { title: "T10 photo", itemType: "PHOTO", previewUrl: "/x.jpg", downloadUrl: "/x.jpg" } } } },
+    },
+    include: { deliverables: { include: { items: true } } },
+  });
+  const itemId = project.deliverables[0]!.items[0]!.id;
+
+  await harness.test("T10-REC-03: vault favourites and retouch notes need the project's client or staff", async () => {
+    for (const [label, who] of outsiders) {
+      const f: any = await withSession(who, () => toggleClientFavorite({ itemId, isFav: true }));
+      harness.assert(denied(f), `Favourite denied for ${label}`, JSON.stringify(f));
+      const n: any = await withSession(who, () => submitRetouchNote({ itemId, note: "Brighten" }));
+      harness.assert(denied(n), `Retouch note denied for ${label}`, JSON.stringify(n));
+    }
+    const item = await db.deliverableItem.findUnique({ where: { id: itemId } });
+    harness.assertEqual(item?.isClientFav, false, "Item untouched");
+    const ok: any = await withSession(recordClient, () => toggleClientFavorite({ itemId, isFav: true }));
+    harness.assertEqual(ok.success, true, "Project client can favourite", JSON.stringify(ok));
+  });
+
+  await harness.test("T10-REC-04: releases need a signed-in client or staff, and record who collected them", async () => {
+    const input = {
+      projectId: project.id, tenantSlug: "lumina-cine", releaseType: "TALENT", signerName: "Talent", signerEmail: "talent@example.test",
+      termsContent: "Standard likeness release terms for the T10 test.", signatureDataUrl: sig,
+    } as any;
+    for (const [label, who] of outsiders) {
+      const r: any = await withSession(who, () => submitDigitalRelease(input));
+      harness.assert(denied(r), `Release denied for ${label}`, JSON.stringify(r));
+    }
+    const ok: any = await withSession(luminaCrew, () => submitDigitalRelease(input));
+    harness.assertEqual(ok.success, true, "Studio crew collects a release", JSON.stringify(ok));
+    const row = await db.digitalRelease.findUnique({ where: { id: ok.releaseId } });
+    harness.assertEqual(row?.collectedById, luminaCrew!.id, "Collector id recorded");
+    harness.assertEqual(row?.collectedByName, luminaCrew!.name, "Collector name recorded");
+  });
+
+  await harness.test("T10-REC-05: master downloads need the project's client or staff", async () => {
+    const url = `http://localhost:3000/api/download?projectId=${project.id}&type=photo_master&assetId=${itemId}`;
+    const anon = await withSession(null, () => downloadHandler(new NextRequest(url)));
+    harness.assertEqual(anon.status, 401, "Signed out: 401");
+    const other = await withSession(client, () => downloadHandler(new NextRequest(url)));
+    harness.assertEqual(other.status, 404, "Another client: 404");
+    const otherStudio = await withSession(apexOwner, () => downloadHandler(new NextRequest(url)));
+    harness.assertEqual(otherStudio.status, 404, "Another studio's owner: 404");
+    const mine = await withSession(recordClient, () => downloadHandler(new NextRequest(url)));
+    harness.assert(mine.status !== 401 && mine.status !== 404 && mine.status !== 403, `Project client passes the access check (got ${mine.status})`);
+  });
+
+  await harness.test("T10-REC-06: a studio-created client sets a password with the emailed invite only", async () => {
+    const invited = await db.user.create({
+      data: { tenantId: lumina.id, email: `t10-invited-${run}@example.test`, name: "Invited", role: "CLIENT", isQuickCreated: true },
+    });
+    const token = await issueClientInvite(invited.id);
+    const base = { tenantSlug: "lumina-cine", name: "Invited Client", email: invited.email, phone: "+60123456789", password: "a-strong-pass" };
+    const none: any = await withSession(null, () => registerClient(base));
+    harness.assertEqual(none.error, "CLAIM_REQUIRED", "No proof: refused");
+    const wrong: any = await withSession(null, () => registerClient({ ...base, inviteToken: "not-the-token" }));
+    harness.assertEqual(wrong.error, "CLAIM_INVALID", "Wrong invite: refused");
+    const ok: any = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
+    harness.assertEqual(ok.success, true, "Correct invite: password set", JSON.stringify(ok));
+    const after = await db.user.findUnique({ where: { id: invited.id } });
+    harness.assert(!!after?.passwordHash && after.inviteToken === null, "Invite used up");
+    const again: any = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
+    harness.assertEqual(again.success, false, "Invite can't be reused");
+  });
+
+  await harness.test("T10-REC-07: print orders need a sign-in, and a client is billed as themselves", async () => {
+    const size = await db.printSize.findFirst({ where: { tenantId: lumina.id } });
+    const frame = await db.frameDesign.findFirst({ where: { tenantId: lumina.id } });
+    if (!size || !frame) {
+      harness.assert(true, "No seeded print catalog (skipped)");
+      return;
+    }
+    const order = (extra: Record<string, unknown> = {}) => ({
+      tenantId: lumina.id, tenantSlug: "lumina-cine", printSizeId: size.id, frameDesignId: frame.id,
+      matBoardType: "NONE", orientation: "PORTRAIT", photoUrl: "/x.jpg",
+      clientName: "Someone Else", clientEmail: `t10-victim-${run}@example.test`, ...extra,
+    }) as any;
+    const anon: any = await withSession(null, () => createPrintOrder(order()));
+    harness.assert(denied(anon), "Signed out: refused", JSON.stringify(anon));
+    const cross: any = await withSession(apexOwner, () => createPrintOrder(order()));
+    harness.assert(denied(cross), "Another studio's owner: refused", JSON.stringify(cross));
+    const peek: any = await withSession(client, () => createPrintOrder(order({ projectId: project.id })));
+    harness.assert(denied(peek), "A client can't attach another client's project", JSON.stringify(peek));
+
+    const mine: any = await withSession(recordClient, () => createPrintOrder(order({ projectId: project.id })));
+    harness.assertEqual(mine.success, true, "Client orders for themselves", JSON.stringify(mine));
+    const inv = await db.milestoneInvoice.findUnique({ where: { id: mine.invoiceId } });
+    harness.assertEqual(inv?.clientId, recordClientRow.id, "Billed to the signed-in client, not the typed email");
+    harness.assert(!(await db.user.findFirst({ where: { email: `t10-victim-${run}@example.test` } })), "No account made for the typed email");
+
+    const counter: any = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: `t10-counter-${run}@example.test` })));
+    harness.assertEqual(counter.success, true, "Staff can order for a client", JSON.stringify(counter));
+    const staffEmail: any = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: luminaOwner!.email })));
+    harness.assertEqual(staffEmail.success, false, "Staff can't bill a team member");
+    await db.milestoneInvoice.deleteMany({ where: { id: { in: [mine.invoiceId, counter.invoiceId].filter(Boolean) } } });
+  });
+
+  await harness.test("T10-REC-08: only the invoice's client or studio staff can pay it", async () => {
+    const inv = await db.milestoneInvoice.create({
+      data: {
+        tenantId: lumina.id, invoiceNumber: `T10-${run}-PAY`, clientId: recordClientRow.id, milestoneType: "PRINT_FRAME_ORDER",
+        amount: 80, status: "PENDING", dueDate: new Date(Date.now() + 86400000),
+      },
+    });
+    const pay = { tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: inv.id, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t10.jpg" } as any;
+    for (const [label, who] of outsiders) {
+      const r: any = await withSession(who, () => processInvoicePayment(pay));
+      harness.assert(denied(r), `Payment denied for ${label}`, JSON.stringify(r));
+    }
+    harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: inv.id } }))?.status, "PENDING", "Invoice untouched");
+    const ok: any = await withSession(recordClient, () => processInvoicePayment(pay));
+    harness.assertEqual(ok.success, true, "Its client sends a slip", JSON.stringify(ok));
   });
 }

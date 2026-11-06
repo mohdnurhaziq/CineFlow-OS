@@ -19,7 +19,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Frames Not Found" };
 
   return {
-    title: `Frames & Print Sizes | ${tenant.name} Studio Admin`,
+    title: `Frames & Prints | ${tenant.name} Studio Admin`,
     description: "Manage custom frame moldings, dimensions, and wall art visualizer options.",
   };
 }

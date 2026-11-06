@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { currencySymbol } from "@/lib/money";
 import { getCurrentUser } from "@/lib/auth/session";
 import { GearDashboard } from "@/components/gear/gear-dashboard";
 import type { InventoryItemRow } from "@/components/gear/gear-item-dialog";
@@ -21,7 +22,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Inventory Not Found" };
 
   return {
-    title: `Gear Inventory & Kit BOM | ${tenant.name}`,
+    title: `Gear & Fleet | ${tenant.name} Studio Admin`,
     description: "Manage equipment fleet, kit bundle recipes, and pre/post-shoot inspection condition logs.",
   };
 }
@@ -67,7 +68,6 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
     orderBy: { startDate: "desc" },
   });
 
-  const currencySymbol = tenant.currency === "MYR" ? "RM" : "$";
 
   const user = await getCurrentUser();
 
@@ -76,7 +76,7 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
       <GearDashboard
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
-        currency={currencySymbol}
+        currency={currencySymbol(tenant.currency)}
         initialItems={items as InventoryItemRow[]}
         initialBundles={bundles as unknown as KitBundleRow[]}
         initialReservations={reservations as unknown as ReservationWithDetails[]}

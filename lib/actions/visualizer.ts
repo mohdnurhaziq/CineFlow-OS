@@ -3,6 +3,9 @@
 import { db } from "@/lib/db";
 import { nextInvoiceNumber } from "@/lib/bookings/billing";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/auth/session";
+import { STAFF_ROLES } from "@/lib/auth/guard";
+import { canAccessClientRecord } from "@/lib/auth/project-access";
 import {
   CreatePrintOrderSchema,
   type CreatePrintOrderInput,
@@ -41,6 +44,25 @@ export async function createPrintOrder(input: CreatePrintOrderInput) {
       notes,
     } = validated;
 
+    // Ordering needs a sign-in: a client orders for themselves; studio staff can order for a client.
+    const session = await getCurrentUser();
+    if (!session) {
+      return { success: false, error: "UNAUTHENTICATED", message: "UNAUTHENTICATED: Please sign in to order prints." };
+    }
+    const isStaff = STAFF_ROLES.has(session.role) && (session.role === "SUPER_ADMIN" || session.tenantId === tenantId);
+    const isClient = session.role === "CLIENT" && session.tenantId === tenantId;
+    if (!isStaff && !isClient) {
+      return { success: false, error: "FORBIDDEN", message: "FORBIDDEN: Sign in with an account at this studio to order prints." };
+    }
+
+    // A project's photos are private: the order may only reference a project the caller can see.
+    if (projectId) {
+      const project = await db.project.findFirst({ where: { id: projectId, tenantId }, select: { clientId: true } });
+      if (!project || !canAccessClientRecord(session, tenantId, project.clientId)) {
+        return { success: false, error: "FORBIDDEN", message: "FORBIDDEN: That project isn't available to this account." };
+      }
+    }
+
     // 1. Fetch Tenant, PrintSize and FrameDesign
     const [tenant, printSize, frameDesign] = await Promise.all([
       db.tenant.findUnique({ where: { id: tenantId } }),
@@ -78,21 +100,21 @@ export async function createPrintOrder(input: CreatePrintOrderInput) {
 
     // 3. Atomic Database Transaction
     const invoice = await db.$transaction(async (tx) => {
-      // Find or create Client User
-      let user = await tx.user.findFirst({
-        where: { email: clientEmail, tenantId },
-      });
-
-      if (!user) {
-        user = await tx.user.create({
-          data: {
-            tenantId,
-            name: clientName,
-            email: clientEmail,
-            phone: clientPhone || null,
-            role: "CLIENT",
-          },
-        });
+      // A signed-in client is billed themselves (the typed name/email are ignored). Staff order for
+      // the client with that email, creating a passwordless account if needed, never a team member.
+      let user;
+      if (isClient) {
+        user = await tx.user.findFirst({ where: { id: session.id, tenantId, role: "CLIENT" } });
+        if (!user) throw new Error("Your client account was not found.");
+      } else {
+        const email = clientEmail.trim().toLowerCase();
+        user = await tx.user.findFirst({ where: { email, tenantId } });
+        if (user && user.role !== "CLIENT") throw new Error("That email belongs to a studio team member.");
+        if (!user) {
+          user = await tx.user.create({
+            data: { tenantId, name: clientName, email, phone: clientPhone || null, role: "CLIENT", isQuickCreated: true },
+          });
+        }
       }
 
       // Assemble structured itemized specification payload
@@ -122,9 +144,9 @@ export async function createPrintOrder(input: CreatePrintOrderInput) {
         photoUrl,
         photoTitle: photoTitle || "Archival Wall Art Print",
         client: {
-          name: clientName,
-          email: clientEmail,
-          phone: clientPhone || null,
+          name: user.name,
+          email: user.email,
+          phone: user.phone ?? (clientPhone || null),
         },
         notes: notes || null,
         financialBreakdown: {

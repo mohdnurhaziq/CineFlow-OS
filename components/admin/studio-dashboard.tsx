@@ -89,7 +89,7 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
               /{tenant.slug}
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1">
             {tenant.name}
           </h1>
           <p className="text-sm text-zinc-400 mt-1 max-w-2xl">

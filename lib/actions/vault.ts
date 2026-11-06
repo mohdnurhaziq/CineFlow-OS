@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { requireRecordAccess } from "@/lib/auth/project-access";
 
 function safeRevalidate(path: string) {
   try {
@@ -10,6 +11,17 @@ function safeRevalidate(path: string) {
   } catch {
     // Non-request context fallback
   }
+}
+
+/** Only the project's client or the studio's staff may mark up its deliverables. */
+async function requireItemAccess(itemId: string) {
+  const item = await db.deliverableItem.findUnique({
+    where: { id: itemId },
+    select: { deliverable: { select: { project: { select: { tenantId: true, clientId: true } } } } },
+  });
+  if (!item) throw new Error("Deliverable item not found");
+  const { tenantId, clientId } = item.deliverable.project;
+  await requireRecordAccess(tenantId, clientId);
 }
 
 const ToggleFavoriteSchema = z.object({
@@ -25,6 +37,7 @@ const SubmitRetouchNoteSchema = z.object({
 export async function toggleClientFavorite(input: z.infer<typeof ToggleFavoriteSchema>) {
   try {
     const { itemId, isFav } = ToggleFavoriteSchema.parse(input);
+    await requireItemAccess(itemId);
 
     const item = await db.deliverableItem.update({
       where: { id: itemId },
@@ -53,6 +66,7 @@ export async function toggleClientFavorite(input: z.infer<typeof ToggleFavoriteS
 export async function submitRetouchNote(input: z.infer<typeof SubmitRetouchNoteSchema>) {
   try {
     const { itemId, note } = SubmitRetouchNoteSchema.parse(input);
+    await requireItemAccess(itemId);
 
     const item = await db.deliverableItem.update({
       where: { id: itemId },

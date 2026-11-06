@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { requirePageAccess } from "@/lib/auth/project-access";
 import { ProposalViewer } from "@/components/proposals/proposal-viewer";
+import { PortalTopBar } from "@/components/portal/portal-top-bar";
 
 interface ProposalPageProps {
   params: Promise<{
@@ -11,27 +13,19 @@ interface ProposalPageProps {
 }
 
 export async function generateMetadata({ params }: ProposalPageProps): Promise<Metadata> {
-  const { tenantSlug, proposalId } = await params;
+  const { tenantSlug } = await params;
 
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
-    select: { id: true, name: true },
+    select: { name: true },
   });
 
-  if (!tenant) return { title: "Proposal | CineFlow OS" };
+  if (!tenant) return { title: "Proposal" };
 
-  const proposal = await db.proposal.findFirst({
-    where: {
-      tenantId: tenant.id,
-      OR: [{ id: proposalId }, { proposalNumber: proposalId }],
-    },
-    select: { title: true, proposalNumber: true },
-  });
-
-  if (!proposal) return { title: "Proposal Not Found | CineFlow OS" };
-
+  // Generic: the page needs a sign-in, so the tab title must not reveal the proposal.
   return {
-    title: `${proposal.title} (#${proposal.proposalNumber}) | ${tenant.name}`,
+    title: `Proposal | ${tenant.name}`,
+    robots: { index: false, follow: false },
     description: "Review production scope, itemized add-ons, contract terms, and sign digitally.",
   };
 }
@@ -93,8 +87,22 @@ export default async function ProposalPage({ params }: ProposalPageProps) {
 
   if (!proposal) notFound();
 
+  // The proposal's client or the studio's staff, signed in.
+  await requirePageAccess({
+    tenantSlug: tenant.slug,
+    tenantId: tenant.id,
+    clientId: proposal.client.id,
+    returnTo: `/${tenant.slug}/proposals/${proposal.id}`,
+  });
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      <PortalTopBar
+        tenant={tenant}
+        width="5xl"
+        back={{ href: `/${tenant.slug}/account?tab=proposals`, label: "My proposals" }}
+        staffBack={{ href: `/${tenant.slug}/admin/proposals`, label: "All proposals" }}
+      />
       <ProposalViewer tenant={tenant} proposal={proposal} />
     </div>
   );

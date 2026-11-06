@@ -136,7 +136,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">{project.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{project.title}</h1>
             <p className="text-xs text-zinc-400 mt-1">
               {project.projectNumber} · {project.client.name} · {project.client.email}
               {project.client.phone ? ` · ${project.client.phone}` : ""}

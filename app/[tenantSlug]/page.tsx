@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     select: { name: true, tagline: true, bio: true, logoUrl: true },
   });
 
-  if (!tenant) return { title: "Studio Not Found | CineFlow OS" };
+  if (!tenant) return { title: "Studio Not Found" };
 
   const title = `${tenant.name} — ${tenant.tagline || "Creative Production Studio"}`;
   const description =

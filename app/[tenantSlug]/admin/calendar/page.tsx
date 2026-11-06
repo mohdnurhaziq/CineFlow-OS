@@ -19,7 +19,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Calendar Not Found" };
 
   return {
-    title: `Calendar Inventory & Holding Engine | ${tenant.name} Studio Admin`,
+    title: `Calendar | ${tenant.name} Studio Admin`,
     description: "Manage shooting availability, time windows, batch scheduling, and slot lease holds.",
   };
 }

@@ -183,7 +183,11 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
 
       <div className="pt-2 text-center space-y-2">
         <Link
-          href={`/${tenantSlug}/register`}
+          href={
+            callbackUrl && !callbackUrl.includes("/admin")
+              ? `/${tenantSlug}/register?next=${encodeURIComponent(callbackUrl)}`
+              : `/${tenantSlug}/register`
+          }
           className="block text-xs font-mono text-amber-400 hover:text-amber-300 transition-colors"
         >
           New client? Create a quick account

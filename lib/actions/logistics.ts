@@ -1,6 +1,7 @@
 "use server";
 
 import { requireStaff } from "@/lib/auth/guard";
+import { requireRecordAccess } from "@/lib/auth/project-access";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -359,6 +360,10 @@ export async function submitDigitalRelease(input: SubmitDigitalReleaseInput) {
       };
     }
 
+    // Releases are collected while signed in (studio staff or the project's client) so each one
+    // records who took it.
+    const collector = await requireRecordAccess(project.tenantId, project.clientId);
+
     // 2. Insert digital release
     const release = await db.digitalRelease.create({
       data: {
@@ -372,6 +377,8 @@ export async function submitDigitalRelease(input: SubmitDigitalReleaseInput) {
         signatureDataUrl,
         notes: notes || null,
         signedAt: new Date(),
+        collectedById: collector.id,
+        collectedByName: collector.name,
       },
     });
 

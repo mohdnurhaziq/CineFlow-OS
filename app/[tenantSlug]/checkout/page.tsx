@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { requirePageAccess } from "@/lib/auth/project-access";
 import { CheckoutShell } from "@/components/checkout/checkout-shell";
+import { PortalTopBar } from "@/components/portal/portal-top-bar";
 import { Metadata } from "next";
 import { getSessionClient } from "@/lib/clients";
 import { getCheckoutGateway } from "@/lib/payments/settle";
@@ -30,7 +32,7 @@ export async function generateMetadata({ params }: CheckoutPageProps): Promise<M
     select: { name: true },
   });
 
-  if (!tenant) return { title: "Checkout | CineFlow OS" };
+  if (!tenant) return { title: "Checkout" };
 
   return {
     title: `Secure Checkout & Production Escrow | ${tenant.name}`,
@@ -82,7 +84,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         tenantId: tenant.id,
       },
       include: {
-        client: true,
+        client: { select: { id: true, name: true, email: true, phone: true } },
         project: true,
       },
     });
@@ -95,9 +97,25 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         milestoneType: { in: ["FINAL_BALANCE_50", "BOOKING_BALANCE"] },
       },
       include: {
-        client: true,
+        client: { select: { id: true, name: true, email: true, phone: true } },
         project: true,
       },
+    });
+  }
+
+  // Paying an invoice is for its client (or studio staff), signed in.
+  if (invoice) {
+    const query = new URLSearchParams();
+    if (search.invoiceId) query.set("invoiceId", search.invoiceId);
+    else {
+      query.set("projectId", invoice.projectId ?? "");
+      query.set("type", "FINAL_BALANCE");
+    }
+    await requirePageAccess({
+      tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      clientId: invoice.clientId,
+      returnTo: `/${tenant.slug}/checkout?${query.toString()}`,
     });
   }
 
@@ -125,6 +143,16 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      <PortalTopBar
+        tenant={tenant}
+        width="7xl"
+        back={
+          invoice
+            ? { href: `/${tenant.slug}/account?tab=invoices`, label: "My invoices" }
+            : { href: `/${tenant.slug}/book`, label: "Back to booking" }
+        }
+        staffBack={invoice ? { href: `/${tenant.slug}/admin/invoices/${invoice.id}`, label: "Back to invoice" } : undefined}
+      />
       <CheckoutShell
         tenant={tenant}
         slot={slot}

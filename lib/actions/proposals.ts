@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { nextInvoiceNumber } from "@/lib/bookings/billing";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
+import { getCurrentUser } from "@/lib/auth/session";
+import { requireRecordAccess } from "@/lib/auth/project-access";
 import {
   SignProposalSchema,
   type SignProposalInput,
@@ -33,9 +35,9 @@ export async function getProposalBySlugAndId(tenantSlug: string, proposalIdOrNum
         OR: [{ id: proposalIdOrNumber }, { proposalNumber: proposalIdOrNumber }],
       },
       include: {
-        tenant: true,
-        client: true,
-        studio: true,
+        tenant: { select: { id: true, name: true, slug: true, currency: true, brandColor: true } },
+        client: { select: { id: true, name: true, email: true, phone: true } },
+        studio: { select: { id: true, name: true, email: true } },
         addOns: {
           orderBy: { price: "desc" },
         },
@@ -45,7 +47,10 @@ export async function getProposalBySlugAndId(tenantSlug: string, proposalIdOrNum
         project: true,
       },
     });
+    if (!proposal) return null;
 
+    // Only the proposal's client or the studio's staff, signed in.
+    await requireRecordAccess(tenant.id, proposal.clientId);
     return proposal;
   } catch (error) {
     console.error("Error fetching proposal:", error);
@@ -72,6 +77,16 @@ export async function acceptProposal(input: SignProposalInput) {
 
     if (!proposal || proposal.tenant.slug !== tenantSlug) {
       return { success: false, error: "PROPOSAL_NOT_FOUND", message: "Proposal not found." };
+    }
+
+    // Only the client the proposal is addressed to may sign it, while signed in to their account,
+    // so the signature is tied to a known person. Staff cannot sign on a client's behalf.
+    const session = await getCurrentUser();
+    if (!session) {
+      return { success: false, error: "UNAUTHENTICATED", message: "UNAUTHENTICATED: Please sign in to sign this proposal." };
+    }
+    if (session.role !== "CLIENT" || session.id !== proposal.clientId) {
+      return { success: false, error: "FORBIDDEN", message: "FORBIDDEN: Only the client this proposal is addressed to can sign it." };
     }
 
     // If already accepted, return existing project & invoice
@@ -260,6 +275,16 @@ export const signAndAcceptProposal = acceptProposal;
 export async function toggleProposalAddOn(input: ToggleAddOnInput) {
   try {
     const { proposalId, addOnId, isSelected } = ToggleAddOnSchema.parse(input);
+
+    const proposal = await db.proposal.findUnique({
+      where: { id: proposalId },
+      select: { tenantId: true, clientId: true, status: true },
+    });
+    if (!proposal) return { success: false, error: "Proposal not found." };
+    await requireRecordAccess(proposal.tenantId, proposal.clientId);
+    if (proposal.status === "ACCEPTED") {
+      return { success: false, error: "This proposal is already signed; its add-ons can no longer change." };
+    }
 
     const addOn = await db.proposalAddOn.update({
       where: { id: addOnId, proposalId },

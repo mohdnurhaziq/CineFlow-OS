@@ -17,6 +17,129 @@ Entries from before 5 Nov 2026 were rebuilt from commit messages, so they are sh
 
 ---
 
+## 2026-11-06: Page audit, client records need a signed-in owner
+
+From a full audit of every page. Decision taken with the owner: vault, proposals, releases and set-hud need the customer (or studio staff) to sign in, so every view and signature has a name on it. The full E2E suite passes: 2349 assertions, 0 failures. New tests are T10-REC-01 to 08.
+
+### BUG-20261106-01: Proposals could be read and signed by anyone
+
+- **Area:** Client proposal page, `acceptProposal`, `toggleProposalAddOn`, `getProposalBySlugAndId`
+- **Problem:** The page accepted the proposal number in the URL, and numbers run in sequence (`PR-2026-001`, `-002`…). Anyone could guess a number, see the client's name, email and phone, change the add-ons, and sign the contract.
+- **Cause:** No sign-in or ownership check on the page or its actions. `getProposalBySlugAndId` also returned the whole tenant and client rows.
+- **Fix:** The page needs a sign-in, by the proposal's client or the studio's staff. Signed-out visitors go to the login page and come back afterwards. Only the client the proposal is addressed to can sign it; staff can't sign on a client's behalf. Add-ons can't change once a proposal is signed. `getProposalBySlugAndId` returns trimmed rows. Tab titles no longer show the proposal title.
+- **Files:** `app/[tenantSlug]/proposals/[proposalId]/page.tsx`, `lib/actions/proposals.ts`, `lib/auth/project-access.ts`
+- **Tests:** T10-REC-01, T10-REC-02
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-02: Studio-created clients could never sign in
+
+- **Area:** New proposal (admin), client sign-up
+- **Problem:** A client added through "New proposal" got an account with no password. Claiming it needed a booking tracking code, which a proposal-only client doesn't have. Once proposals needed a sign-in (BUG-20261106-01), those clients could not open them at all.
+- **Cause:** Claiming only accepted a tracking code; the `inviteToken` fields on User were unused.
+- **Fix:** The proposal email for a client without a password now links to a "set your password" page with a one-time invite (30 days; only a SHA-256 of it is stored). Sign-up accepts the invite as proof of ownership and then continues to the proposal. An expired invite says to ask the studio to resend it. The login page's "Create account" link keeps the page the visitor was going to.
+- **Files:** `lib/auth/invite.ts`, `lib/actions/client-auth.ts`, `lib/actions/admin-projects.ts`, `app/[tenantSlug]/register/page.tsx`, `components/auth/client-register-card.tsx`, `components/auth/client-auth-panel.tsx`, `components/auth/studio-login-form.tsx`
+- **Tests:** T10-REC-06
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-03: Vaults, master downloads and print previews were open to anyone
+
+- **Area:** Vault page, `/api/download`, vault favourites and retouch notes, visualizer `?projectId=`
+- **Problem:** Anyone with a project link could see the client's gallery and details, download masters once the balance was paid, and change favourites and retouch notes. `/visualizer?projectId=` showed any project's photo previews, and `?photoUrl=` put any outside image on the page.
+- **Cause:** No sign-in or ownership checks.
+- **Fix:** All of these need a sign-in, by the project's client or the studio's staff. The download route answers 401 when signed out and 404 for anyone else. `?photoUrl=` was removed (nothing linked to it).
+- **Files:** `app/[tenantSlug]/vault/[projectId]/page.tsx`, `app/api/download/route.ts`, `lib/actions/vault.ts`, `app/[tenantSlug]/visualizer/page.tsx`
+- **Tests:** T10-REC-03, T10-REC-05
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-04: Releases and call sheets were public, and releases didn't record who took them
+
+- **Area:** Releases page, `submitDigitalRelease`, set-hud (call sheet) page
+- **Problem:** Anyone with the link could see signed releases (names, emails, signature images) and submit new ones. The call sheet page sent the studio's whole record, including bank details and the encrypted payment gateway secret, to the browser.
+- **Cause:** No sign-in checks; `tenant: true` on the call sheet query.
+- **Fix:** Both pages need a sign-in, by the project's client or the studio's staff. Each release stores who collected it (`collectedById`, `collectedByName`), shown as "Collected by …" in the list. The call sheet query now loads only the studio's id, name and slug.
+- **Files:** `app/[tenantSlug]/releases/[projectId]/page.tsx`, `app/[tenantSlug]/set-hud/[callSheetId]/page.tsx`, `lib/actions/logistics.ts`, `components/logistics/release-form-shell.tsx`, `prisma/schema.prisma`
+- **Tests:** T10-REC-04
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-05: Password hashes sent to the browser
+
+- **Area:** Checkout (paying an invoice), Admin > Verification
+- **Problem:** Both pages loaded invoices with the whole client row, so the client's password hash and invite token were in the page sent to the browser.
+- **Cause:** `client: true` passed into client components.
+- **Fix:** Both load only the client's id, name, email and phone.
+- **Files:** `app/[tenantSlug]/checkout/page.tsx`, `app/[tenantSlug]/admin/verification/page.tsx`
+- **Tests:** Checked by loading the live pages (no `passwordHash` or bcrypt hash in the response)
+- **Commit:** `a47a9f6`
+
+
+### BUG-20261106-06: Print orders and invoice payments needed no sign-in
+
+- **Area:** Visualizer print orders, checkout for invoices (`checkout?invoiceId=`, final balance), `processInvoicePayment`
+- **Problem:** Anyone could place a print order under any email (creating an account and invoice for that person), view any invoice's checkout page from its link, and send a payment slip for any invoice.
+- **Cause:** No sign-in or ownership checks. Decision with the owner: customers must sign in (option A).
+- **Fix:** Print orders need a sign-in. A client is billed as themselves (typed name and email are ignored). Studio staff can still order for a client at the counter, but never bill a team member. An order can only reference a project the caller can see. Signed-out visitors see "Sign in / Create an account" in the order dialog and come back to the visualizer afterwards. Invoice checkout and invoice payment need the invoice's client or studio staff.
+- **Files:** `lib/actions/visualizer.ts`, `components/visualizer/order-modal.tsx`, `components/visualizer/visualizer-shell.tsx`, `app/[tenantSlug]/visualizer/page.tsx`, `app/[tenantSlug]/checkout/page.tsx`, `lib/actions/checkout.ts`
+- **Tests:** T10-REC-07, T10-REC-08; Tier 12 now pays balances as the invoice's client
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-07: Visualizer showed another studio's photos
+
+- **Area:** Visualizer
+- **Problem:** Every studio's wall visualizer offered the same four demo photos ("Aurora…", "Farah…") from the seed studios.
+- **Cause:** The photo list was hard-coded.
+- **Fix:** It now offers the studio's own showcase covers (plus the project's photos when opened from a vault). A studio with none gets a neutral "Your photo here" placeholder.
+- **Files:** `app/[tenantSlug]/visualizer/page.tsx`, `components/visualizer/visualizer-shell.tsx`
+- **Tests:** Checked by loading the live page
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-08: Wrong currency symbol on Gear and Visualizer
+
+- **Area:** Admin > Gear & Fleet, Visualizer
+- **Problem:** Any currency other than MYR showed as `$` (e.g. SGD, EUR).
+- **Cause:** Each page had `MYR ? "RM" : "$"`.
+- **Fix:** New `currencySymbol()` in `lib/money.ts` (RM, $, or the ISO code), used by both pages.
+- **Files:** `lib/money.ts`, `app/[tenantSlug]/admin/inventory/page.tsx`, `app/[tenantSlug]/visualizer/page.tsx`
+- **Tests:** Typecheck; live page check
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-09: Tab titles said "CineFlow OS" twice, and some were missing or inconsistent
+
+- **Area:** Page titles
+- **Problem:** Titles like "My Account | CineFlow OS | CineFlow OS". The admin Overview and the login page had no title. Admin titles each followed a different pattern.
+- **Cause:** Pages added "CineFlow OS" on top of the root title template.
+- **Fix:** Removed the extra suffix (the landing page uses an absolute title). Every admin page is now "<menu label> | <studio> Studio Admin", using the same names as the admin menu. Added titles for Overview and Sign in.
+- **Files:** most `app/**/page.tsx` metadata
+- **Tests:** Checked by loading the live pages
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-10: Signing in to the admin always landed on Overview
+
+- **Area:** Admin login redirect
+- **Problem:** Opening a deep admin link (e.g. one invoice) while signed out, then signing in, went to the Overview instead. A wrong-studio redirect dropped the return path entirely.
+- **Cause:** Middleware always set `callbackUrl` to `/<studio>/admin`.
+- **Fix:** It now keeps the requested path and query string, including on the wrong-studio redirect.
+- **Files:** `middleware.ts`, `app/[tenantSlug]/admin/layout.tsx`
+- **Tests:** Checked against the live server
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-11: Smaller fixes from the audit
+
+- **Proposals list** showed only the latest 50 with no notice; the limit is gone (`admin/proposals/page.tsx`).
+- **`bg-zinc-850`** (32 uses) wasn't a defined colour, so those fills and borders didn't render; it's now defined in `app/globals.css`.
+- **Login page** showed the form again to someone already signed in; it now moves them on to their page, like `/register` does (`login/page.tsx`).
+- **After an online payment,** a signed-in client lands in their account instead of the tracking-code lookup (`checkout/payment-return/page.tsx`).
+- **Commit:** `a47a9f6`
+
+### BUG-20261106-12: Dead-end pages and inconsistent layout
+
+- **Area:** Checkout, proposal, call sheet, releases, admin pages
+- **Problem:** Checkout, proposal, call sheet and releases had no way back. Releases, call sheet and visualizer painted their background only on the centred column. Verification used a different page wrapper. Admin headings used four different sizes and weights.
+- **Fix:** New `PortalTopBar` on those four pages: a back link (to the account tab for clients, the admin project or list for staff) and a "My account" / "Studio admin" link. Full-width backgrounds. Verification uses the standard admin wrapper. All admin page headings use one style. The payment status card matches the other cards.
+- **Files:** `components/portal/portal-top-bar.tsx`, the four pages, `components/checkout/admin-verification-console.tsx`, admin console components
+- **Tests:** Checked by loading the live pages as signed-out, client and owner
+- **Commit:** `a47a9f6`
+---
+
 ## 2026-11-05: Owner walkthrough, remaining items (9–20)
 
 The second half of the owner walkthrough. Decisions taken with the owner: money actions are owner-only (item 20), and a rejected slip asks the client for a new one instead of cancelling (item 13). The full E2E suite passes: 2236 assertions, 0 failures. New tests are in Tiers 14 and 15.

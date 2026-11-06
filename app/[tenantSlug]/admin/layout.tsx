@@ -38,7 +38,7 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
   }
   if (currentUser.role === "CLIENT") redirect(`/${tenantSlug}/account`);
   if (currentUser.role !== "SUPER_ADMIN" && currentUser.tenantId !== tenant.id) {
-    redirect(`/${tenantSlug}/login`);
+    redirect(`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(`/${tenantSlug}/admin`)}`);
   }
 
   // Release slots whose QR/cash deposit went unpaid for 24 hours, before counting.

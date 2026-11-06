@@ -27,6 +27,7 @@ export interface ExistingRelease {
   signatureDataUrl: string;
   signedAt: Date | string;
   notes?: string | null;
+  collectedByName?: string | null;
 }
 
 interface ReleaseFormShellProps {
@@ -407,6 +408,9 @@ export function ReleaseFormShell({
                           <div className="text-xs text-zinc-400">
                             {rel.signerRole || "Signatory"} • {rel.signerEmail}
                           </div>
+                          {rel.collectedByName && (
+                            <div className="text-[11px] text-zinc-500">Collected by {rel.collectedByName}</div>
+                          )}
                         </div>
 
                         <span

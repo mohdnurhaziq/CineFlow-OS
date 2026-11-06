@@ -131,16 +131,17 @@ export async function middleware(request: NextRequest) {
   if (adminMatch) {
     const slug = adminMatch[1] ?? "";
     const session = await readSession(request);
+    // After signing in, return to the exact admin page that was asked for (e.g. one invoice).
+    const loginUrl = new URL(`/${slug}/login`, request.url);
+    loginUrl.searchParams.set("callbackUrl", `${effectivePath}${url.search}`);
     if (!session) {
-      const loginUrl = new URL(`/${slug}/login`, request.url);
-      loginUrl.searchParams.set("callbackUrl", `/${slug}/admin`);
       return NextResponse.redirect(loginUrl);
     }
     if (session.role === "CLIENT") {
       return NextResponse.redirect(new URL(`/${slug}/account`, request.url));
     }
     if (session.role !== "SUPER_ADMIN" && session.tenantSlug?.toLowerCase() !== slug.toLowerCase()) {
-      return NextResponse.redirect(new URL(`/${slug}/login`, request.url));
+      return NextResponse.redirect(loginUrl);
     }
   }
 

@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: MyBookingPageProps): Promise<
     select: { name: true },
   });
   return {
-    title: tenant ? `My Booking | ${tenant.name}` : "My Booking | CineFlow OS",
+    title: tenant ? `My Booking | ${tenant.name}` : "My Booking",
     description: "Look up your booking status, invoices, proposals and delivery vault.",
     robots: { index: false, follow: false },
   };

@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { requireRecordAccess } from "@/lib/auth/project-access";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/notifications";
 import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
@@ -305,6 +306,8 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
     if (!invoice) {
       return { success: false, error: "INVOICE_NOT_FOUND", message: "Invoice not found or does not belong to studio." };
     }
+    // Paying, or sending a slip, is for the invoice's client (or studio staff), signed in.
+    await requireRecordAccess(invoice.tenantId, invoice.clientId);
 
     if (invoice.status === "PAID") {
       return { success: false, error: "ALREADY_PAID", message: "Invoice is already paid." };
