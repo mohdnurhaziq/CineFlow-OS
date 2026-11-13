@@ -24,9 +24,8 @@ import {
   Loader2,
   Upload,
   X,
-  Eye,
-  EyeOff,
 } from "lucide-react";
+import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { toast } from "sonner";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
 import type { OnboardStudioInput } from "@/lib/validations/onboarding";
@@ -559,16 +558,7 @@ export default function CreateStudioPage() {
                         autoComplete="new-password"
                         required
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        aria-pressed={showPassword}
-                        title={showPassword ? "Hide password" : "Show password"}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-md text-zinc-500 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-                      >
-                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
+                      <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
                     </div>
                   </div>
 

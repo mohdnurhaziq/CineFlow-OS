@@ -4,6 +4,7 @@ import { useId, useState, type ComponentType, type InputHTMLAttributes } from "r
 import { User, Mail, Phone, Lock, Hash, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
+import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 
 interface ClientAuthPanelProps {
   tenantSlug: string;
@@ -16,16 +17,22 @@ interface ClientAuthPanelProps {
 }
 
 const inputClass =
-  "w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 placeholder-zinc-500";
+  "w-full pl-9 py-2 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 placeholder-zinc-500";
 
-/** Text input with a visible label (placeholders disappear while typing, so they can't be the label). */
+/**
+ * Text input with a visible label (placeholders disappear while typing, so they can't be the label).
+ * A password field gets a show/hide toggle.
+ */
 function Field({
   label,
   icon: Icon,
   className = "",
+  type,
   ...input
 }: { label: string; icon: ComponentType<{ className?: string }> } & InputHTMLAttributes<HTMLInputElement>) {
   const id = useId();
+  const isPassword = type === "password";
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="block text-[11px] font-semibold text-zinc-300">
@@ -33,7 +40,15 @@ function Field({
       </label>
       <div className="relative">
         <Icon className="absolute left-3 top-2.5 size-4 text-zinc-500 pointer-events-none" aria-hidden="true" />
-        <input id={id} className={`${inputClass} ${className}`} {...input} />
+        <input
+          id={id}
+          type={isPassword && showPassword ? "text" : type}
+          className={`${inputClass} ${isPassword ? "pr-10" : "pr-3"} ${className}`}
+          {...input}
+        />
+        {isPassword && (
+          <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+        )}
       </div>
     </div>
   );
