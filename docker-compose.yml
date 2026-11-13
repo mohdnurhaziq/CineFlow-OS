@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        # Read from your .env (falls back to localhost)
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-localhost:3000}
+    image: cineflow-os:latest
+    container_name: cineflow-os
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      # Overrides .env so the database lives on the persistent volume
+      DATABASE_URL: file:/app/data/dev.db
+      NODE_ENV: production
+    volumes:
+      - cineflow-data:/app/data              # SQLite database
+      - cineflow-uploads:/app/public/uploads # user uploads (logos, previews…)
+      - cineflow-storage:/app/storage        # private deliverable masters
+
+volumes:
+  cineflow-data:
+  cineflow-uploads:
+  cineflow-storage:

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { APP_DOMAIN } from "@/lib/domain-name";
 import {
   Sparkles,
   ArrowRight,
@@ -262,7 +263,7 @@ export default function CreateStudioPage() {
                     </div>
                     <div className="flex items-center rounded-lg border border-zinc-700 bg-[#18181b] overflow-hidden focus-within:border-amber-500">
                       <span className="px-3 text-xs font-mono text-zinc-400 border-r border-zinc-800">
-                        cineflow.app/
+                        {APP_DOMAIN}/
                       </span>
                       <input
                         type="text"
@@ -733,7 +734,7 @@ export default function CreateStudioPage() {
                 <div className="p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs font-mono text-zinc-400">
                   <span>URL:</span>
                   <span className="text-white">
-                    cineflow.app/{formData.slug || "your-slug"}
+                    {APP_DOMAIN}/{formData.slug || "your-slug"}
                   </span>
                 </div>
 

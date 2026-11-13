@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { platformSubdomainSlug, tenantSlugForDomain } from "@/lib/tenant-domain";
+import { PLATFORM_BASE_DOMAINS, platformSubdomainSlug, tenantSlugForDomain } from "@/lib/tenant-domain";
 
 // ─── Auth helpers (Web Crypto only) ────────────────────────
 const COOKIE_NAME = "cineflow_session";
@@ -65,14 +65,12 @@ async function readSession(request: NextRequest): Promise<EdgeSession | null> {
   }
 }
 
-// Hosts that are the platform itself, never a studio.
+// Hosts that are the platform itself, never a studio: every base domain (driven by
+// NEXT_PUBLIC_APP_DOMAIN) plus its www. form, and the loopback addresses.
 const PLATFORM_HOSTS = new Set([
-  "localhost",
   "127.0.0.1",
   "0.0.0.0",
-  "cineflow.app",
-  "www.cineflow.app",
-  "cineflow.local",
+  ...PLATFORM_BASE_DOMAINS.flatMap((base) => [base, `www.${base}`]),
 ]);
 
 export async function middleware(request: NextRequest) {
@@ -106,7 +104,7 @@ export async function middleware(request: NextRequest) {
   } else if (simulatedCustomDomain) {
     resolvedTenantSlug = await tenantSlugForDomain(simulatedCustomDomain);
   } else if (!PLATFORM_HOSTS.has(hostname) && hostname.length > 0) {
-    // <slug>.cineflow.app (or <slug>.localhost) is a platform subdomain; any other host is a
+    // <slug>.<APP_DOMAIN> (or <slug>.localhost) is a platform subdomain; any other host is a
     // studio's own domain, looked up from the domain saved in its settings.
     resolvedTenantSlug = platformSubdomainSlug(hostname) ?? (await tenantSlugForDomain(hostname));
   }

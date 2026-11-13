@@ -3,8 +3,23 @@
  * from validation schemas and client code.
  */
 
+/**
+ * The platform's own domain, read from NEXT_PUBLIC_APP_DOMAIN (e.g. "mystudioapp.com" or
+ * "localhost:3000"). The port is dropped. NEXT_PUBLIC_* values are inlined at build time,
+ * so this works in middleware and client code alike; a change needs a rebuild.
+ */
+export const APP_DOMAIN = (process.env.NEXT_PUBLIC_APP_DOMAIN || "cineflow.app")
+  .trim()
+  .toLowerCase()
+  .replace(/^[a-z]+:\/\//, "")
+  .replace(/[/?#].*$/, "")
+  .replace(/^www\./, "");
+
+/** APP_DOMAIN without its port, i.e. the bare hostname. */
+export const APP_BASE_DOMAIN = APP_DOMAIN.replace(/:\d+$/, "");
+
 /** Hosts the platform itself runs on. A studio can never claim these. */
-export const PLATFORM_BASE_DOMAINS = ["cineflow.app", "cineflow.local", "localhost"];
+export const PLATFORM_BASE_DOMAINS = Array.from(new Set([APP_BASE_DOMAIN, "cineflow.local", "localhost"]));
 
 const HOSTNAME = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
@@ -25,7 +40,7 @@ export function normalizeDomain(input: string): string | null {
   return host;
 }
 
-/** The studio slug for a `<slug>.cineflow.app`-style platform subdomain, or null. */
+/** The studio slug for a `<slug>.<APP_DOMAIN>`-style platform subdomain, or null. */
 export function platformSubdomainSlug(host: string): string | null {
   for (const base of PLATFORM_BASE_DOMAINS) {
     if (host.endsWith(`.${base}`)) {

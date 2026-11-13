@@ -80,3 +80,26 @@ Detailed technical architecture, database schemas, API contracts, design tokens,
 
 ## 📄 License
 Private & Proprietary © CineFlow OS. All Rights Reserved.
+
+## Running with Docker
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+cp .env.example .env        # first time only — set AUTH_SECRET (32+ chars)
+docker compose up -d --build
+```
+
+Open http://localhost:3000. On the first start the container creates the SQLite
+database and seeds demo data (set `SEED_ON_FIRST_RUN=false` in `.env` to skip).
+
+| Task | Command |
+| --- | --- |
+| Stop | `docker compose down` |
+| View logs | `docker compose logs -f` |
+| Rebuild after code changes | `docker compose up -d --build` |
+| Wipe database & uploads | `docker compose down -v` |
+
+The database, uploads and private deliverables live in Docker volumes
+(`cineflow-data`, `cineflow-uploads`, `cineflow-storage`), so they survive
+restarts and rebuilds.
