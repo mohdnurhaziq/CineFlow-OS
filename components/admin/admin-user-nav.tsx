@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, User, LogIn } from "lucide-react";
+import { LogOut, User, LogIn, PlayCircle } from "lucide-react";
 import { logoutAction, type SessionUser } from "@/lib/auth/session";
 
 interface AdminUserNavProps {
@@ -41,7 +41,7 @@ export function AdminUserNav({ tenantSlug, user }: AdminUserNavProps) {
     : "U";
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div data-tour="account" className="flex items-center gap-2.5">
       <div className="flex items-center gap-2">
         <div className="size-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-amber-400">
           {initials}
@@ -51,6 +51,15 @@ export function AdminUserNav({ tenantSlug, user }: AdminUserNavProps) {
           <span className="text-[9px] font-mono text-zinc-400 uppercase">{user.role.replace(/_/g, " ")}</span>
         </div>
       </div>
+
+      <Link
+        href={`/${tenantSlug}/admin?tour=1`}
+        title="Take the tour"
+        aria-label="Take the tour"
+        className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+      >
+        <PlayCircle className="size-3.5" />
+      </Link>
 
       <button
         type="button"

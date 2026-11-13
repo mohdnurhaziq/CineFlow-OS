@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -6,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getSetupChecklist, type SetupChecklist as SetupChecklistData } from "@/lib/onboarding/checklist";
 import { StudioDashboard } from "@/components/admin/studio-dashboard";
 import { SetupChecklist } from "@/components/admin/onboarding/setup-checklist";
+import { DashboardTour } from "@/components/admin/onboarding/dashboard-tour";
 
 interface AdminPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -17,20 +19,34 @@ export async function generateMetadata({ params }: AdminPageProps): Promise<Meta
   return { title: tenant ? `Overview | ${tenant.name} Studio Admin` : "Studio Admin" };
 }
 
-/** The setup checklist, for this studio's own owner until they close it. Null otherwise. */
-async function ownerChecklist(tenantSlug: string): Promise<{ checklist: SetupChecklistData } | null> {
+/**
+ * Onboarding help for the signed-in user: the setup checklist (this studio's own owner, until
+ * they close it) and whether the tour should start on its own (never finished or skipped).
+ * The admin layout has already checked that the user is staff of this studio.
+ */
+async function onboardingFor(
+  tenantSlug: string,
+): Promise<{ checklist: SetupChecklistData | null; autoStartTour: boolean }> {
+  const none = { checklist: null, autoStartTour: false };
   const user = await getCurrentUser();
-  if (!user || user.role !== "STUDIO_OWNER" || !user.tenantId) return null;
-  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } });
-  if (!tenant || tenant.id !== user.tenantId) return null;
-  const row = await db.user.findUnique({ where: { id: user.id }, select: { onboardingChecklistDismissedAt: true } });
-  if (!row || row.onboardingChecklistDismissedAt) return null;
-  return { checklist: await getSetupChecklist(tenant.id) };
+  if (!user) return none;
+  const row = await db.user.findUnique({
+    where: { id: user.id },
+    select: { onboardingChecklistDismissedAt: true, onboardingTourSeenAt: true },
+  });
+  if (!row) return none;
+
+  let checklist: SetupChecklistData | null = null;
+  if (user.role === "STUDIO_OWNER" && user.tenantId && !row.onboardingChecklistDismissedAt) {
+    const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } });
+    if (tenant && tenant.id === user.tenantId) checklist = await getSetupChecklist(tenant.id);
+  }
+  return { checklist, autoStartTour: !row.onboardingTourSeenAt };
 }
 
 export default async function AdminDashboardPage({ params }: AdminPageProps) {
   const { tenantSlug } = await params;
-  const [analytics, guide] = await Promise.all([getStudioAnalytics(tenantSlug), ownerChecklist(tenantSlug)]);
+  const [analytics, onboarding] = await Promise.all([getStudioAnalytics(tenantSlug), onboardingFor(tenantSlug)]);
 
   if (!analytics) {
     notFound();
@@ -44,9 +60,14 @@ export default async function AdminDashboardPage({ params }: AdminPageProps) {
       <StudioDashboard
         data={analytics}
         guide={
-          guide ? <SetupChecklist tenantSlug={tenantSlug} checklist={guide.checklist} bookingUrl={bookingUrl} /> : null
+          onboarding.checklist ? (
+            <SetupChecklist tenantSlug={tenantSlug} checklist={onboarding.checklist} bookingUrl={bookingUrl} />
+          ) : null
         }
       />
+      <Suspense fallback={null}>
+        <DashboardTour tenantSlug={tenantSlug} autoStart={onboarding.autoStartTour} />
+      </Suspense>
     </div>
   );
 }

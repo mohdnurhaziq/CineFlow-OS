@@ -181,6 +181,7 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
               onOpenChange={(open) => setOpenDropdown(open ? domain.id : null)}
             >
               <DropdownMenu.Trigger
+                data-tour={`nav-${domain.id}`}
                 className={cn(
                   "group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all border outline-none select-none whitespace-nowrap",
                   isDomainActive
@@ -268,6 +269,7 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
         {/* 5. Settings */}
         <Link
           href={`/${tenantSlug}/admin/settings`}
+          data-tour="nav-settings"
           aria-current={isSettingsActive ? "page" : undefined}
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all border whitespace-nowrap",
