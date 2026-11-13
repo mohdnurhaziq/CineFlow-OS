@@ -23,9 +23,11 @@ import { conditionLabel, milestoneLabel, paymentMethodLabel } from "@/lib/labels
 
 interface StudioDashboardProps {
   data: StudioAnalyticsData;
+  /** Onboarding help (setup checklist) shown between the header and the KPI cards. */
+  guide?: React.ReactNode;
 }
 
-export function StudioDashboard({ data }: StudioDashboardProps) {
+export function StudioDashboard({ data, guide }: StudioDashboardProps) {
   const { tenant, kpis, proposalsSummary, recentInvoices, upcomingCallSheets, gearAlerts } = data;
   const currency = tenant.currency || "USD";
 
@@ -125,8 +127,10 @@ export function StudioDashboard({ data }: StudioDashboardProps) {
         </div>
       </div>
 
+      {guide}
+
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="kpis" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Collected Revenue */}
         <Link
           href={`/${tenant.slug}/admin/invoices`}
