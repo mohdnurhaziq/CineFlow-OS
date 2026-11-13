@@ -10,11 +10,14 @@ import { Eye, EyeOff } from "lucide-react";
 export function PasswordVisibilityToggle({
   visible,
   onToggle,
+  what = "password",
 }: {
   visible: boolean;
   onToggle: () => void;
+  /** What the field holds, for the button's label ("Show password", "Show secret key"). */
+  what?: string;
 }) {
-  const label = visible ? "Hide password" : "Show password";
+  const label = visible ? `Hide ${what}` : `Show ${what}`;
   return (
     <button
       type="button"

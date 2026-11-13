@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { saveGatewayCredentials, removeGatewayCredentials } from "@/lib/actions/admin-payments";
 import { disciplineLabel } from "@/lib/labels";
+import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 
 function GatewaySettings({
   tenantId,
@@ -39,6 +40,7 @@ function GatewaySettings({
   const supported = currency === "MYR";
   const router = useRouter();
   const [secretKey, setSecretKey] = useState("");
+  const [showSecretKey, setShowSecretKey] = useState(false);
   const [categoryCode, setCategoryCode] = useState(initialCategoryCode);
   const [busy, setBusy] = useState(false);
 
@@ -105,14 +107,21 @@ function GatewaySettings({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="space-y-1 block">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">User Secret Key</span>
-            <input
-              type="password"
-              autoComplete="off"
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-              placeholder={configured ? "Saved (leave blank to keep)" : "xxxxxxxx-xxxx-xxxx-xxxx"}
-              className={inputCls}
-            />
+            <span className="relative block">
+              <input
+                type={showSecretKey ? "text" : "password"}
+                autoComplete="off"
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                placeholder={configured ? "Saved (leave blank to keep)" : "xxxxxxxx-xxxx-xxxx-xxxx"}
+                className={`${inputCls.replace("px-3.5", "pl-3.5")} pr-10`}
+              />
+              <PasswordVisibilityToggle
+                visible={showSecretKey}
+                onToggle={() => setShowSecretKey((v) => !v)}
+                what="secret key"
+              />
+            </span>
           </label>
           <label className="space-y-1 block">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">Category Code</span>
