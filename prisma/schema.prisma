@@ -153,6 +153,10 @@ model User {
   inviteToken        String?             @unique
   inviteTokenExpires DateTime?
   isQuickCreated     Boolean             @default(false)
+  // Onboarding guide on the admin dashboard: set when the owner closes the setup checklist,
+  // and when this user finishes or skips the dashboard tour. Null = not yet.
+  onboardingChecklistDismissedAt DateTime?
+  onboardingTourSeenAt           DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
