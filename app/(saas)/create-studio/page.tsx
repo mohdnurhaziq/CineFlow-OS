@@ -24,6 +24,8 @@ import {
   Loader2,
   Upload,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
@@ -80,6 +82,7 @@ export default function CreateStudioPage() {
   };
 
   const [logoUploading, setLogoUploading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -548,13 +551,24 @@ export default function CreateStudioPage() {
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-3 size-4 text-zinc-500" />
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••••••"
                         value={formData.password}
                         onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
+                        autoComplete="new-password"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-pressed={showPassword}
+                        title={showPassword ? "Hide password" : "Show password"}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-md text-zinc-500 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
                     </div>
                   </div>
 
