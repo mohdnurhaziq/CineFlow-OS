@@ -87,8 +87,9 @@ export default function CreateStudioPage() {
     e.target.value = "";
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file (PNG, JPG, WebP or SVG)");
+    // Must match what /api/upload accepts from visitors without an account (no SVG).
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast.error("Please choose a PNG, JPG or WebP image");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -435,7 +436,7 @@ export default function CreateStudioPage() {
                       <input
                         ref={logoInputRef}
                         type="file"
-                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        accept="image/png,image/jpeg,image/webp"
                         onChange={handleLogoUpload}
                         className="hidden"
                       />
@@ -463,7 +464,7 @@ export default function CreateStudioPage() {
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-500">PNG, JPG, WebP or SVG, up to 5MB. Or paste a URL below.</p>
+                    <p className="text-[11px] text-zinc-500">PNG, JPG or WebP, up to 5MB. Or paste a URL below.</p>
                     <input
                       type="text"
                       placeholder="e.g. /uploads/logos/my-studio.png"

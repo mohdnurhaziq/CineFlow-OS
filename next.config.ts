@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  async rewrites() {
+    return {
+      // Runs only when no build-time public/ file matched: files uploaded after the build
+      // are served from disk by app/api/uploads/[...path]/route.ts.
+      afterFiles: [{ source: "/uploads/:path*", destination: "/api/uploads/:path*" }],
+    };
+  },
   async headers() {
     return [
       {
