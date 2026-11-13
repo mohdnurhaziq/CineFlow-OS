@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { APP_DOMAIN } from "@/lib/domain-name";
 import {
   Sparkles,
   ArrowRight,
@@ -23,6 +24,8 @@ import {
   Loader2,
   Upload,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
@@ -79,6 +82,7 @@ export default function CreateStudioPage() {
   };
 
   const [logoUploading, setLogoUploading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,8 +90,9 @@ export default function CreateStudioPage() {
     e.target.value = "";
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file (PNG, JPG, WebP or SVG)");
+    // Must match what /api/upload accepts from visitors without an account (no SVG).
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast.error("Please choose a PNG, JPG or WebP image");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -262,7 +267,7 @@ export default function CreateStudioPage() {
                     </div>
                     <div className="flex items-center rounded-lg border border-zinc-700 bg-[#18181b] overflow-hidden focus-within:border-amber-500">
                       <span className="px-3 text-xs font-mono text-zinc-400 border-r border-zinc-800">
-                        cineflow.app/
+                        {APP_DOMAIN}/
                       </span>
                       <input
                         type="text"
@@ -434,7 +439,7 @@ export default function CreateStudioPage() {
                       <input
                         ref={logoInputRef}
                         type="file"
-                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        accept="image/png,image/jpeg,image/webp"
                         onChange={handleLogoUpload}
                         className="hidden"
                       />
@@ -462,7 +467,7 @@ export default function CreateStudioPage() {
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-500">PNG, JPG, WebP or SVG, up to 5MB. Or paste a URL below.</p>
+                    <p className="text-[11px] text-zinc-500">PNG, JPG or WebP, up to 5MB. Or paste a URL below.</p>
                     <input
                       type="text"
                       placeholder="e.g. /uploads/logos/my-studio.png"
@@ -546,13 +551,24 @@ export default function CreateStudioPage() {
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-3 size-4 text-zinc-500" />
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••••••"
                         value={formData.password}
                         onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
+                        autoComplete="new-password"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-pressed={showPassword}
+                        title={showPassword ? "Hide password" : "Show password"}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-md text-zinc-500 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
                     </div>
                   </div>
 
@@ -733,7 +749,7 @@ export default function CreateStudioPage() {
                 <div className="p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs font-mono text-zinc-400">
                   <span>URL:</span>
                   <span className="text-white">
-                    cineflow.app/{formData.slug || "your-slug"}
+                    {APP_DOMAIN}/{formData.slug || "your-slug"}
                   </span>
                 </div>
 

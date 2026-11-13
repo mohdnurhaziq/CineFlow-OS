@@ -4,6 +4,7 @@ import { OnboardStudioSchema, CheckSlugSchema } from "@/lib/validations/onboardi
 import { holdBookingSlot, getTenantBookingSlots } from "@/lib/actions/booking";
 import { middleware } from "@/middleware";
 import { NextRequest } from "next/server";
+import { APP_BASE_DOMAIN } from "@/lib/domain-name";
 import bcrypt from "bcryptjs";
 
 interface TestResult {
@@ -619,19 +620,20 @@ export async function runChallengerM2Suite() {
     recordFail("Middleware", "Failed to resolve host 'studio.apexfilms.com'");
   }
 
-  // 8.3 Subdomain pattern (<slug>.cineflow.app)
-  const reqSubdomain = new NextRequest("http://lumina-cine.cineflow.app/book", {
-    headers: { host: "lumina-cine.cineflow.app" },
+  // 8.3 Subdomain pattern (<slug>.<NEXT_PUBLIC_APP_DOMAIN>)
+  const subdomainHost = `lumina-cine.${APP_BASE_DOMAIN}`;
+  const reqSubdomain = new NextRequest(`http://${subdomainHost}/book`, {
+    headers: { host: subdomainHost },
   });
   const resSubdomain = await middleware(reqSubdomain);
   if (resSubdomain.headers.get("x-tenant-slug") === "lumina-cine") {
-    recordPass("Middleware", "Subdomain 'lumina-cine.cineflow.app' resolves to 'lumina-cine'");
+    recordPass("Middleware", `Subdomain '${subdomainHost}' resolves to 'lumina-cine'`);
   } else {
-    recordFail("Middleware", "Failed to resolve subdomain 'lumina-cine.cineflow.app'");
+    recordFail("Middleware", `Failed to resolve subdomain '${subdomainHost}'`);
   }
 
   // 8.4 Platform Host Passthrough (no tenant rewrite)
-  const platformHosts = ["localhost:3000", "cineflow.app", "www.cineflow.app", "app.cineflow.app"];
+  const platformHosts = ["localhost:3000", APP_BASE_DOMAIN, `www.${APP_BASE_DOMAIN}`, `app.${APP_BASE_DOMAIN}`];
   for (const host of platformHosts) {
     const reqPlatform = new NextRequest(`http://${host}/create-studio`, {
       headers: { host },
