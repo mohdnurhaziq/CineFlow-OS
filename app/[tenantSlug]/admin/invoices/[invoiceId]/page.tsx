@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { db } from "@/lib/db";
 import { loadInvoiceDocument } from "@/lib/invoices/document";
 import { InvoiceDocumentView } from "@/components/invoices/invoice-document";
 import { PrintButton } from "@/components/invoices/print-button";
 import { InvoiceAdminActions } from "@/components/admin/invoices/invoice-admin-actions";
 import { currentUserIsOwner } from "@/lib/auth/owner";
+import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 
 interface AdminInvoicePageProps {
   params: Promise<{ tenantSlug: string; invoiceId: string }>;
@@ -42,13 +43,14 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
         doc={doc}
         actions={
           <>
-            <Link
-              href={`/${tenant.slug}/admin/invoices`}
-              className="mr-auto inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white"
-            >
-              <ArrowLeft className="size-3.5" />
-              All invoices
-            </Link>
+            <AdminBreadcrumb
+              className="mr-auto"
+              items={[
+                { label: "Finance" },
+                { label: "Invoices", href: `/${tenant.slug}/admin/invoices` },
+                { label: doc.invoiceNumber },
+              ]}
+            />
             {doc.status === "PENDING_VERIFICATION" && (
               <Link
                 href={`/${tenant.slug}/admin/verification`}
