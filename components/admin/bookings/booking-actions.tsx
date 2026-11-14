@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUpRight, CalendarClock, CheckCircle2, Clapperboard, Loader2, PackageCheck, UserX, XCircle } from "lucide-react";
+import { ArrowUpRight, CalendarClock, CheckCircle2, Clapperboard, Loader2, Mail, PackageCheck, UserX, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { BookingDetails } from "@/lib/bookings/details";
 import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
@@ -12,6 +12,7 @@ import {
   markBookingDelivered,
   recordSessionOutcome,
   rescheduleBooking,
+  resendBookingConfirmation,
   type RescheduleOption,
 } from "@/lib/actions/admin-booking-lifecycle";
 import { formatSlotDate, isSlotInPast } from "@/lib/slot-time";
@@ -62,6 +63,15 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
       onChanged();
     });
 
+  // Not "run": nothing on the booking changes, and the toast names who the email went to.
+  const resendConfirmation = () =>
+    start(async () => {
+      setError(null);
+      const res = await resendBookingConfirmation(ids);
+      if (res.success) toast.success(`Confirmation emailed to ${res.sentTo}.`);
+      else setError(res.message);
+    });
+
   const openReschedule = () => {
     setMode("reschedule");
     setError(null);
@@ -84,6 +94,11 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
           {upcoming && (
             <button type="button" className={quiet} onClick={openReschedule}>
               <CalendarClock className="size-3.5" /> Move to another slot
+            </button>
+          )}
+          {upcoming && (
+            <button type="button" className={quiet} disabled={pending} onClick={resendConfirmation}>
+              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Mail className="size-3.5" />} Resend confirmation email
             </button>
           )}
           {booking.status === "CONFIRMED" && started && (

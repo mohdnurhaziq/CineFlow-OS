@@ -149,6 +149,25 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const RESEND_TIMEOUT_MS = 8000;
 
 /**
+ * Resend's refusals in words a studio owner can act on (shown when staff resend an email),
+ * ending with the HTTP status for debugging.
+ */
+function resendRefusalReason(status: number, detail: string): string {
+  let reason = "Resend refused the email.";
+  if (/testing emails|verify a domain/i.test(detail)) {
+    reason =
+      "Resend only delivers to your own address until you verify your domain at resend.com/domains, then set RESEND_FROM_EMAIL to an address on it.";
+  } else if (/not verified/i.test(detail)) {
+    reason = "The sender address in RESEND_FROM_EMAIL is on a domain Resend hasn't verified yet. Verify it at resend.com/domains.";
+  } else if (status === 401 || /invalid api key|api key is invalid/i.test(detail)) {
+    reason = "Resend rejected the API key. Check RESEND_API_KEY.";
+  } else if (status === 429) {
+    reason = "Resend's sending limit was reached. Try again in a minute.";
+  }
+  return `${reason} (HTTP ${status})`;
+}
+
+/**
  * Sends one email through Resend's REST API. Never throws: the booking, payment
  * and proposal flows that trigger notifications must not fail because mail did.
  */
@@ -178,7 +197,7 @@ async function deliverEmail(input: {
     if (!res.ok) {
       const detail = (await res.text().catch(() => "")).slice(0, 300);
       console.error(`Resend rejected email (${res.status}): ${detail}`);
-      return { delivery: "FAILED", error: `Resend responded ${res.status}` };
+      return { delivery: "FAILED", error: resendRefusalReason(res.status, detail) };
     }
     return { delivery: "SENT" };
   } catch (err: any) {

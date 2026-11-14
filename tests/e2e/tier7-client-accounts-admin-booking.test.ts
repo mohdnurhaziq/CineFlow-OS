@@ -17,6 +17,7 @@ import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "./test-harness";
 import { registerClient } from "@/lib/actions/client-auth";
 import { createBookingForCustomer, getBookingDetails } from "@/lib/actions/admin-bookings";
+import { resendBookingConfirmation } from "@/lib/actions/admin-booking-lifecycle";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { createClientBooking } from "@/lib/actions/booking";
@@ -372,6 +373,60 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       const after = await db.user.findUnique({ where: { id: customer!.id } });
       harness.assertEqual(after?.inviteToken ?? null, null, "No invite token was issued");
     } finally {
+      globalThis.fetch = realFetch;
+      if (savedKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = savedKey;
+    }
+  });
+
+  await harness.test("T7-ADM-EMAIL-03: staff can resend a booking confirmation, with a clear result", async () => {
+    const slot = await makeSlot(lumina.id);
+    const e = email("resend");
+    createdUserEmails.push(e);
+    const realFetch = globalThis.fetch;
+    const savedKey = process.env.RESEND_API_KEY;
+    let reply: () => Response = () => new Response(JSON.stringify({ id: "email_test" }), { status: 200 });
+    const sent: { to: string[]; html: string }[] = [];
+    globalThis.fetch = (async (url: any, init: any) => {
+      if (String(url).includes("api.resend.com")) sent.push(JSON.parse(String(init?.body ?? "{}")));
+      return reply();
+    }) as typeof fetch;
+    const originalError = console.error;
+    console.error = () => {}; // the 403 case logs the provider's refusal on purpose
+    try {
+      delete process.env.RESEND_API_KEY; // made before email was set up: nothing sent
+      const made: any = await withSession(luminaStaff, () =>
+        createBookingForCustomer({ tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, newClient: { name: "Resend Me", email: e, phone: "0123456789" } })
+      );
+      harness.assert(made.success === true, "Booking created");
+      const input = { tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: made.bookingId };
+
+      const notSetUp: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      harness.assertEqual(notSetUp.success, false, "Without an email key the resend reports failure");
+      harness.assertEqual(notSetUp.error, "EMAIL_NOT_CONFIGURED", "and says email isn't set up");
+
+      process.env.RESEND_API_KEY = "re_test_key";
+      const ok: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      harness.assertEqual(ok.success, true, `Resend succeeds (${ok.message ?? "ok"})`);
+      harness.assertEqual(ok.sentTo, e, "and reports who it went to");
+      const mail = sent.filter((m) => m.to?.includes(e)).at(-1);
+      harness.assert(!!mail?.html?.includes("/lumina-cine/register?invite="), "The resent email carries a set-password link");
+
+      reply = () => new Response(JSON.stringify({ statusCode: 403, message: "You can only send testing emails to your own email address. To send emails to other recipients, please verify a domain at resend.com/domains" }), { status: 403 });
+      const refused: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      harness.assertEqual(refused.success, false, "A provider refusal is reported");
+      harness.assert(/verify (your|a) domain/i.test(refused.message ?? ""), `with the reason in plain words (${refused.message})`);
+
+      const byOther: any = await withSession(asUser(apexOwner, "apex-media"), () => resendBookingConfirmation(input));
+      harness.assertEqual(byOther.success, false, "Another studio's owner is refused");
+      const byNobody: any = await withSession(null, () => resendBookingConfirmation(input));
+      harness.assertEqual(byNobody.success, false, "A signed-out caller is refused");
+
+      await db.clientBooking.update({ where: { id: made.bookingId }, data: { status: "CANCELLED" } });
+      const cancelled: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      harness.assertEqual(cancelled.error, "BOOKING_CANCELLED", "A cancelled booking can't be 'confirmed' again");
+    } finally {
+      console.error = originalError;
       globalThis.fetch = realFetch;
       if (savedKey === undefined) delete process.env.RESEND_API_KEY;
       else process.env.RESEND_API_KEY = savedKey;

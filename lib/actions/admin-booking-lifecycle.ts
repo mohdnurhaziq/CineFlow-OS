@@ -10,6 +10,7 @@ import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
 import { isSlotInPast, minutesOfDay, slotDateKey, formatSlotDate } from "@/lib/slot-time";
 import { sendNotification } from "@/lib/notifications";
+import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 
 /**
  * What a studio does with a booking after it is made:
@@ -277,5 +278,50 @@ export async function markBookingDelivered(input: z.input<typeof DeliverSchema>)
     return { success: true };
   } catch (err) {
     return fail("DELIVER_FAILED", actionErrorMessage(err, "Could not mark the booking delivered."));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Resend the booking confirmation email
+// ---------------------------------------------------------------------------
+
+/**
+ * Emails the booking confirmation again (e.g. the booking predates email, or the client lost
+ * it). A client account without a password gets a fresh set-password link, which replaces any
+ * earlier one. Reports plainly whether the email went out, so staff aren't left guessing.
+ */
+export async function resendBookingConfirmation(
+  input: z.input<typeof Base>
+): Promise<{ success: true; sentTo: string } | { success: false; error: string; message: string }> {
+  try {
+    const data = Base.parse(input);
+    await requireStaff(data.tenantId);
+    const booking = await db.clientBooking.findFirst({
+      where: { id: data.bookingId, tenantId: data.tenantId },
+      select: { id: true, status: true, clientEmail: true },
+    });
+    if (!booking) return fail("NOT_FOUND", "Booking not found.") as { success: false; error: string; message: string };
+    if (booking.status === "CANCELLED") {
+      return { success: false, error: "BOOKING_CANCELLED", message: "This booking was cancelled, so there is nothing to confirm." };
+    }
+    if (!booking.clientEmail) {
+      return { success: false, error: "NO_EMAIL", message: "This booking has no client email address." };
+    }
+
+    const result = await sendBookingConfirmation(booking.id);
+    if (!result) return { success: false, error: "EMAIL_FAILED", message: "The email could not be prepared. Please try again." };
+    if (result.emailDelivery === "SKIPPED") {
+      return {
+        success: false,
+        error: "EMAIL_NOT_CONFIGURED",
+        message: "Email isn't set up yet: add RESEND_API_KEY to the server settings, then try again.",
+      };
+    }
+    if (result.emailDelivery === "FAILED") {
+      return { success: false, error: "EMAIL_FAILED", message: result.emailError || "The email provider refused the message." };
+    }
+    return { success: true, sentTo: booking.clientEmail };
+  } catch (err) {
+    return { success: false, error: "RESEND_FAILED", message: actionErrorMessage(err, "Could not resend the confirmation.") };
   }
 }
