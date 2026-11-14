@@ -14,7 +14,7 @@ interface DashboardTourProps {
 }
 
 /** Stops of the dashboard tour. A stop whose element isn't on the page (e.g. the checklist for staff) is skipped. */
-const STOPS: { anchor: string | null; title: string; description: string }[] = [
+const STOPS: { anchor: string | null; title: string; description: string; readyTitle?: string; readyDescription?: string }[] = [
   {
     anchor: null,
     title: "Welcome to your studio admin",
@@ -54,6 +54,9 @@ const STOPS: { anchor: string | null; title: string; description: string }[] = [
     anchor: "checklist",
     title: "Start here",
     description: "Work through these steps to get your studio ready. Each one ticks itself off when it's done.",
+    // Shown instead when every setup step is already done (the card reads "Your studio is ready").
+    readyTitle: "You're all set",
+    readyDescription: "Every setup step is done. Close this card with × whenever you like. It won't come back.",
   },
 ];
 
@@ -66,12 +69,20 @@ export function DashboardTour({ tenantSlug, autoStart }: DashboardTourProps) {
 
   const start = useCallback(() => {
     if (running.current) return;
-    const steps: DriveStep[] = STOPS.filter(
-      (stop) => stop.anchor === null || document.querySelector(`[data-tour="${stop.anchor}"]`),
-    ).map((stop) => ({
-      element: stop.anchor ? `[data-tour="${stop.anchor}"]` : undefined,
-      popover: { title: stop.title, description: stop.description },
-    }));
+    const steps: DriveStep[] = STOPS.flatMap((stop) => {
+      const el = stop.anchor ? document.querySelector<HTMLElement>(`[data-tour="${stop.anchor}"]`) : null;
+      if (stop.anchor && !el) return [];
+      const ready = el?.dataset.state === "ready";
+      return [
+        {
+          element: stop.anchor ? `[data-tour="${stop.anchor}"]` : undefined,
+          popover: {
+            title: (ready && stop.readyTitle) || stop.title,
+            description: (ready && stop.readyDescription) || stop.description,
+          },
+        },
+      ];
+    });
 
     running.current = true;
     const tour = driver({

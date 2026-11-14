@@ -57,6 +57,7 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
   return (
     <section
       data-tour="checklist"
+      data-state={checklist.allDone ? "ready" : "in-progress"}
       aria-labelledby="setup-guide-title"
       className="relative rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.06] to-transparent p-5 sm:p-6"
     >
