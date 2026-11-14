@@ -42,11 +42,15 @@ export default async function StudioLoginPage({ params, searchParams }: LoginPag
     typeof callbackUrl === "string" && callbackUrl.startsWith(`/${tenant.slug}`) && !callbackUrl.startsWith("//")
       ? callbackUrl
       : null;
+  const isShowcaseRoot =
+    safeCallback === `/${tenant.slug}` || safeCallback === `/${tenant.slug}/`;
   const target = isClient
-    ? safeCallback && !safeCallback.includes("/admin")
+    ? safeCallback && !safeCallback.includes("/admin") && !isShowcaseRoot
       ? safeCallback
       : `/${tenant.slug}/account`
-    : safeCallback ?? `/${tenant.slug}/admin`;
+    : safeCallback && !isShowcaseRoot
+    ? safeCallback
+    : `/${tenant.slug}/admin`;
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center p-4 selection:bg-amber-500/20 selection:text-amber-400">

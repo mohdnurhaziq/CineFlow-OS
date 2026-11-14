@@ -54,11 +54,15 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
       }
 
       const isClient = result.user?.role === "CLIENT";
+      const isShowcaseRoot =
+        callbackUrl === `/${tenantSlug}` || callbackUrl === `/${tenantSlug}/`;
       const target = isClient
-        ? callbackUrl && !callbackUrl.includes("/admin")
+        ? callbackUrl && !callbackUrl.includes("/admin") && !isShowcaseRoot
           ? callbackUrl
           : `/${tenantSlug}/account`
-        : callbackUrl || `/${tenantSlug}/admin`;
+        : callbackUrl && !isShowcaseRoot
+        ? callbackUrl
+        : `/${tenantSlug}/admin`;
       router.push(target);
       router.refresh();
     } catch {

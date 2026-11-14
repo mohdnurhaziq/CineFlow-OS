@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { setSessionCookie } from "@/lib/auth/token";
 import {
   OnboardStudioSchema,
   CheckSlugSchema,
@@ -262,14 +263,30 @@ export async function onboardStudio(formData: OnboardStudioInput) {
         },
       });
 
-      return { tenantId: tenant.id, slug: tenant.slug, ownerId: owner.id };
+      return {
+        tenantId: tenant.id,
+        slug: tenant.slug,
+        ownerId: owner.id,
+        ownerEmail: owner.email,
+        ownerName: owner.name,
+      };
+    });
+
+    // Automatically authenticate the new studio owner
+    await setSessionCookie({
+      id: result.ownerId,
+      email: result.ownerEmail,
+      name: result.ownerName,
+      role: "STUDIO_OWNER",
+      tenantId: result.tenantId,
+      tenantSlug: result.slug,
     });
 
     return {
       success: true,
       tenantId: result.tenantId,
       slug: result.slug,
-      redirectUrl: `/${result.slug}`,
+      redirectUrl: `/${result.slug}/admin`,
     };
   } catch (error: any) {
     console.error("Onboarding transaction error:", error);

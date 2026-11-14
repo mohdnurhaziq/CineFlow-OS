@@ -18,9 +18,11 @@ interface ShowcaseNavProps {
   } | null;
   /** Signed-in client of this studio, if any. */
   client?: { name: string; email: string } | null;
+  /** Signed-in staff/owner of this studio, if any. */
+  staff?: { name: string; email?: string; role?: string } | null;
 }
 
-export function ShowcaseNav({ tenant, studioLead, client = null }: ShowcaseNavProps) {
+export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }: ShowcaseNavProps) {
   const brandColor = tenant.brandColor || "#f59e0b";
   const whatsappNumber = studioLead?.phone ? studioLead.phone.replace(/[^0-9]/g, "") : "60123456789";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
@@ -90,7 +92,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null }: ShowcaseNavPr
             <span className="hidden sm:inline">WhatsApp Dispatch</span>
           </a>
 
-          <ClientAccountMenu tenantSlug={tenant.slug} client={client} returnTo={`/${tenant.slug}`} />
+          <ClientAccountMenu tenantSlug={tenant.slug} client={client} staff={staff} returnTo={`/${tenant.slug}`} />
 
           <Link
             href={`/${tenant.slug}/book`}

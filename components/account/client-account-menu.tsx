@@ -3,13 +3,15 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
 
 interface ClientAccountMenuProps {
   tenantSlug: string;
   /** The signed-in client of this studio, or null when signed out. */
-  client: { name: string; email: string } | null;
+  client?: { name: string; email: string } | null;
+  /** The signed-in staff/owner of this studio, or null if not staff. */
+  staff?: { name: string; email?: string; role?: string } | null;
   /** Where to come back to after signing in (defaults to the current page). */
   returnTo?: string;
 }
@@ -21,10 +23,43 @@ function initials(name: string): string {
   return (first + last).toUpperCase() || "?";
 }
 
-/** Header control for clients: "My account" + sign out when signed in, otherwise "Sign in". */
-export function ClientAccountMenu({ tenantSlug, client, returnTo }: ClientAccountMenuProps) {
+/** Header control: "Studio Admin" when staff is signed in, "My account" when client is signed in, otherwise "Sign in". */
+export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: ClientAccountMenuProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  if (staff) {
+    return (
+      <div className="inline-flex items-center rounded-lg border border-amber-500/30 bg-amber-500/10">
+        <Link
+          href={`/${tenantSlug}/admin`}
+          title={`Signed in as ${staff.name}`}
+          aria-label={`Studio admin (signed in as ${staff.name})`}
+          className="inline-flex items-center gap-1.5 pl-2.5 pr-2.5 sm:pr-3 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 rounded-l-lg text-xs font-semibold text-amber-300 hover:text-amber-200 hover:bg-amber-500/15 transition-colors"
+        >
+          <ShieldCheck className="size-3.5 text-amber-400" />
+          <span className="hidden sm:inline max-w-[10rem] truncate">{staff.name}</span>
+          <span className="hidden sm:inline text-amber-400/80">· Studio Admin</span>
+          <span className="sm:hidden font-mono text-[11px]">Admin</span>
+        </Link>
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() =>
+            startTransition(async () => {
+              await logoutAction();
+              router.refresh();
+            })
+          }
+          title="Sign out"
+          aria-label="Sign out"
+          className="inline-flex items-center justify-center px-2 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 self-stretch border-l border-amber-500/20 rounded-r-lg text-amber-400/80 hover:text-white hover:bg-amber-500/20 disabled:opacity-50 transition-colors"
+        >
+          <LogOut className="size-3.5" />
+        </button>
+      </div>
+    );
+  }
 
   if (!client) {
     const back = returnTo ?? `/${tenantSlug}`;

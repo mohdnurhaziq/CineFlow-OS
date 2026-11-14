@@ -39,6 +39,7 @@ interface CinemaBookingShellProps {
   initialCategory?: string;
   initialPackageId?: string;
   clientAccount?: { name: string; email: string; phone: string } | null;
+  staffAccount?: { name: string; email?: string; role?: string } | null;
   packages?: BookingPackageOption[];
 }
 
@@ -49,6 +50,7 @@ export function CinemaBookingShell({
   initialCategory = "all",
   initialPackageId,
   clientAccount = null,
+  staffAccount = null,
   packages = [],
 }: CinemaBookingShellProps) {
   const [isPending, startTransition] = useTransition();
@@ -252,6 +254,7 @@ export function CinemaBookingShell({
         <ClientAccountMenu
           tenantSlug={tenant.slug}
           client={clientAccount ? { name: clientAccount.name, email: clientAccount.email } : null}
+          staff={staffAccount}
           returnTo={`/${tenant.slug}/book`}
         />
         {/* Studio Branding Pill */}

@@ -147,7 +147,7 @@ export default function CreateStudioPage() {
       const res = await onboardStudio(formData);
       if (res.success && res.slug) {
         toast.success("Studio workspace launched successfully!");
-        router.push(`/${res.slug}`);
+        router.push(res.redirectUrl || `/${res.slug}/admin`);
       } else {
         toast.error(res.error || "Failed to create studio workspace");
       }

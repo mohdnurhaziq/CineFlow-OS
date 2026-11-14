@@ -51,6 +51,7 @@ yarn-error.log*
 # Obsidian
 .obsidian/
 *.tsbuildinfo
+.mcp.json
 
 # graphify local state (machine-specific / derived cache)
 graphify-out/cache/

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { getSessionClient } from "@/lib/clients";
+import { getCurrentUser } from "@/lib/auth/session";
+import { STAFF_ROLES } from "@/lib/auth/guard";
 import { ShowcaseHero } from "@/components/showcase/showcase-hero";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
@@ -131,8 +133,16 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
     priceRange: "$$$",
   };
 
-  // Show the signed-in client (if any) a way back to their account.
-  const client = await getSessionClient(tenant.id);
+  // Show the signed-in client or staff (if any) a way back to their account/admin.
+  const [client, session] = await Promise.all([
+    getSessionClient(tenant.id),
+    getCurrentUser(),
+  ]);
+  const isStaff =
+    !!session &&
+    STAFF_ROLES.has(session.role) &&
+    (session.role === "SUPER_ADMIN" || session.tenantId === tenant.id);
+  const staff = isStaff && session ? { name: session.name, email: session.email, role: session.role } : null;
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
@@ -145,6 +155,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
         tenant={tenant}
         studioLead={studioLead}
         client={client ? { name: client.name, email: client.email } : null}
+        staff={staff}
       />
 
       {/* Cinematic Studio Hero */}
