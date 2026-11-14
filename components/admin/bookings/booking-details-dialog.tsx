@@ -19,6 +19,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
 import { BookingActions } from "@/components/admin/bookings/booking-actions";
+import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
 
 // ---------------------------------------------------------------------------
 // Shared presentation helpers (also used by the Bookings list)
@@ -123,6 +124,7 @@ function titleCase(value: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** In the studio's time zone, so the booking page renders the same text on the server (UTC) and in the browser. */
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-GB", {
     day: "numeric",
@@ -130,6 +132,7 @@ function formatDateTime(iso: string): string {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: STUDIO_TIME_ZONE,
   });
 }
 
@@ -201,6 +204,14 @@ export function BookingDetailsDialog({
               Booking Details
             </h2>
           </div>
+          {booking && !loading && !error && (
+            <Link
+              href={`/${tenantSlug}/admin/bookings/${booking.id}`}
+              className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:underline whitespace-nowrap"
+            >
+              Open full page <ExternalLink className="size-3" aria-hidden="true" />
+            </Link>
+          )}
           <button
             ref={closeRef}
             type="button"
@@ -258,7 +269,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function BookingDetailsBody({
+export function BookingDetailsBody({
   booking,
   tenantSlug,
   currency,
@@ -276,7 +287,7 @@ function BookingDetailsBody({
       <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-lg font-bold text-white tracking-tight truncate">{booking.clientName}</div>
+            <div className="text-lg font-bold text-white tracking-tight break-words">{booking.clientName}</div>
             <div className="text-[11px] font-mono text-amber-400 tracking-wider">{booking.trackingCode}</div>
           </div>
           <BookingStageBadge booking={booking} />

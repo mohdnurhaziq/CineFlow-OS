@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   CheckCircle2,
@@ -28,7 +29,7 @@ import {
 import { useDialog } from "@/lib/use-dialog";
 import { humanize, invoiceStatusLabel, milestoneLabel, paymentMethodLabel } from "@/lib/labels";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
-import { formatSlotDate } from "@/lib/slot-time";
+import { formatSlotDate, STUDIO_TIME_ZONE } from "@/lib/slot-time";
 
 interface AdminVerificationConsoleProps {
   /** The signed-in staff member; the server records approvals and rejections under this name. */
@@ -404,9 +405,11 @@ export function AdminVerificationConsole({
                         {item.paymentMethod ? paymentMethodLabel(item.paymentMethod) : "Not chosen"}
                       </span>
                       <span className="text-zinc-500 text-[11px] ml-auto">
+                        {/* Studio time zone, so the server (UTC) and the browser render the same text. */}
                         {new Date(item.createdAt).toLocaleString("en-US", {
                           dateStyle: "medium",
                           timeStyle: "short",
+                          timeZone: STUDIO_TIME_ZONE,
                         })}
                       </span>
                     </div>
@@ -441,7 +444,14 @@ export function AdminVerificationConsole({
                         {item.booking ? (
                           <>
                             <div className="font-semibold text-amber-400 font-mono text-xs">
-                              {item.booking.trackingCode} · {categoryName(item.booking.category)}
+                              <Link
+                                href={`/${tenant.slug}/admin/bookings/${item.booking.id}`}
+                                className="underline decoration-amber-500/40 underline-offset-2 hover:decoration-amber-400"
+                                title="Open this booking's full details"
+                              >
+                                {item.booking.trackingCode}
+                              </Link>{" "}
+                              · {categoryName(item.booking.category)}
                             </div>
                             <div className="text-zinc-400 text-[11px] font-mono">
                               {[
@@ -611,6 +621,7 @@ export function AdminVerificationConsole({
                     {item.paidAt
                       ? new Date(item.paidAt).toLocaleDateString("en-US", {
                           dateStyle: "medium",
+                          timeZone: STUDIO_TIME_ZONE,
                         })
                       : "—"}
                   </td>

@@ -7,6 +7,7 @@
  */
 import { db } from "@/lib/db";
 import { loadBookableSlots } from "@/lib/bookings/bookable-slots";
+import { loadBookingDetails } from "@/lib/bookings/details";
 import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
 import { processBookingCheckout } from "@/lib/actions/checkout";
@@ -287,5 +288,17 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     );
     const released = await db.bookingSlot.findUnique({ where: { id: expiredHold.id } });
     harness.assertEqual(released?.status, "AVAILABLE", "An expired hold is released so it can be booked");
+  });
+
+  await harness.test("T14-BOOKING-PAGE-01: a booking page only loads the booking within its own studio", async () => {
+    const apex = await db.tenant.findUnique({ where: { slug: "apex-media" } });
+    const lumina = await db.tenant.findUnique({ where: { slug: "lumina-cine" } });
+    const apexBooking = apex ? await db.clientBooking.findFirst({ where: { tenantId: apex.id } }) : null;
+    if (!apex || !lumina || !apexBooking) throw new Error("Seed apex-media booking and lumina-cine are required");
+    const own = await loadBookingDetails(apex.id, { bookingId: apexBooking.id });
+    harness.assertEqual(own.length, 1, "The studio's own booking loads");
+    harness.assertEqual(own[0]?.id, apexBooking.id, "It is the requested booking");
+    const foreign = await loadBookingDetails(lumina.id, { bookingId: apexBooking.id });
+    harness.assertEqual(foreign.length, 0, "Another studio's booking id loads nothing (page shows 404)");
   });
 }
