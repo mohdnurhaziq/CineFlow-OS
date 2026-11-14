@@ -13,7 +13,8 @@ import type { Prisma } from "@prisma/client";
 export async function getSessionClient(tenantId: string) {
   const session = await getCurrentUser();
   if (!session || session.role !== "CLIENT" || session.tenantId !== tenantId) return null;
-  return db.user.findFirst({ where: { id: session.id, tenantId, role: "CLIENT" } });
+  // staffNotes are the studio's private notes about this client; never hand them to client pages.
+  return db.user.findFirst({ where: { id: session.id, tenantId, role: "CLIENT" }, omit: { staffNotes: true } });
 }
 
 /**

@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Users, ChevronRight } from "lucide-react";
+import { Search, Users, ChevronRight, Download } from "lucide-react";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { toCsv } from "@/lib/csv";
+import { CLIENT_ACCOUNT_STATUS_LABELS } from "@/lib/client-directory-labels";
 import type { ClientDirectoryRow } from "@/lib/client-directory";
 import type { ClientAccountStatus } from "@/lib/client-directory-labels";
 import { ClientAccountBadge } from "@/components/admin/clients/client-account-badge";
@@ -46,6 +48,34 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
     });
   }, [clients, query, filter]);
 
+  /** Downloads the clients currently shown (search and filter applied) as a CSV file. */
+  function exportCsv() {
+    const csv = toCsv(
+      ["Name", "Email", "Phone", "Account", "Bookings", "Projects", `Paid (${currency})`, `Balance due (${currency})`, "Last active", "Client since"],
+      visible.map((c) => [
+        c.name,
+        c.email,
+        c.phone,
+        CLIENT_ACCOUNT_STATUS_LABELS[c.accountStatus],
+        c.bookingCount,
+        c.projectCount,
+        c.paid.toFixed(2),
+        c.outstanding.toFixed(2),
+        c.lastActivityDate,
+        c.clientSinceDate,
+      ])
+    );
+    // BOM so Excel reads the file as UTF-8 (names with accents).
+    const url = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff) + csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${tenantSlug}-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   const filters: { id: Filter; label: string }[] = [
     { id: "ALL", label: "All" },
     { id: "REGISTERED", label: "Registered" },
@@ -77,6 +107,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
         </label>
       </div>
 
+      <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Filter clients">
         {filters.map((f) => (
           <button
@@ -95,6 +126,17 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
             <span className={cn("text-[10px]", filter === f.id ? "text-amber-300" : "text-zinc-500")}>{counts[f.id]}</span>
           </button>
         ))}
+      </div>
+        <button
+          type="button"
+          onClick={exportCsv}
+          disabled={visible.length === 0}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 text-xs font-mono text-zinc-300 hover:text-white disabled:opacity-40 transition-colors"
+        >
+          <Download className="size-3.5 text-amber-400" aria-hidden="true" />
+          Export CSV
+          <span className="text-[10px] text-zinc-500">{visible.length}</span>
+        </button>
       </div>
 
       {clients.length === 0 ? (

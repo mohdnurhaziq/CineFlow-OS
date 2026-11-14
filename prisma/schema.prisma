@@ -153,6 +153,8 @@ model User {
   inviteToken        String?             @unique
   inviteTokenExpires DateTime?
   isQuickCreated     Boolean             @default(false)
+  // Private notes the studio keeps about a client (preferences, reminders). Never shown to the client.
+  staffNotes         String?
   // Onboarding guide on the admin dashboard: set when the owner closes the setup checklist,
   // and when this user finishes or skips the dashboard tour. Null = not yet.
   onboardingChecklistDismissedAt DateTime?

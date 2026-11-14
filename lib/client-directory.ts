@@ -50,12 +50,20 @@ export interface ClientDirectoryRow {
   lastActivityAt: string;
   /** lastActivityAt as a studio-local date ("13 Nov 2026"), formatted here so server and browser agree. */
   lastActivityLabel: string;
+  /** Studio-local "YYYY-MM-DD" dates, for the CSV export (sorts and parses in spreadsheets). */
+  lastActivityDate: string;
+  clientSinceDate: string;
   createdAt: string;
 }
 
 /** A timestamp as a studio-local calendar date, e.g. "13 Nov 2026". */
 export function formatStudioDate(date: Date): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: STUDIO_TIME_ZONE });
+}
+
+/** A timestamp as a studio-local "YYYY-MM-DD" (the en-CA locale writes dates that way). */
+export function studioIsoDate(date: Date): string {
+  return date.toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: STUDIO_TIME_ZONE });
 }
 
 function latest(...dates: (Date | null | undefined)[]): Date {
@@ -118,6 +126,8 @@ export async function loadClientDirectory(tenantId: string): Promise<ClientDirec
         outstanding: money.outstanding,
         lastActivityAt: lastActivity.toISOString(),
         lastActivityLabel: formatStudioDate(lastActivity),
+        lastActivityDate: studioIsoDate(lastActivity),
+        clientSinceDate: studioIsoDate(c.createdAt),
         createdAt: c.createdAt.toISOString(),
       };
     })
@@ -136,6 +146,7 @@ export async function loadClientProfile(tenantId: string, clientId: string) {
       passwordHash: true,
       inviteToken: true,
       isQuickCreated: true,
+      staffNotes: true,
       createdAt: true,
     },
   });
@@ -194,8 +205,11 @@ export async function loadClientProfile(tenantId: string, clientId: string) {
       id: client.id,
       name: client.name,
       email: client.email,
+      /** The phone saved on the account itself (null if it has none), for the edit form. */
+      accountPhone: client.phone,
       phone: client.phone || bookingPhone,
       accountStatus: clientAccountStatus(client),
+      staffNotes: client.staffNotes ?? "",
       createdAt: client.createdAt,
     },
     bookings,

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mail, Phone, MessageSquare, CalendarCheck, Clapperboard, Receipt, FileText, ChevronRight } from "lucide-react";
+import { CalendarCheck, Clapperboard, Receipt, FileText, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatStudioDate, loadClientProfile } from "@/lib/client-directory";
 import { formatSlotDate } from "@/lib/slot-time";
@@ -9,7 +9,8 @@ import { formatMoney } from "@/lib/money";
 import { humanize, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
-import { ClientAccountBadge } from "@/components/admin/clients/client-account-badge";
+import { ClientContactCard } from "@/components/admin/clients/client-contact-card";
+import { ClientNotesCard } from "@/components/admin/clients/client-notes-card";
 
 interface ClientPageProps {
   params: Promise<{ tenantSlug: string; clientId: string }>;
@@ -125,7 +126,6 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
 
   const { client, bookings, projects, invoices, proposals, money } = profile;
   const base = `/${tenant.slug}/admin`;
-  const phoneDigits = client.phone?.replace(/[^0-9]/g, "") ?? "";
 
   const stats = [
     { label: "Bookings", value: String(bookings.length) },
@@ -142,44 +142,20 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
     <div className="py-6 sm:py-8 px-4 sm:px-6 max-w-4xl mx-auto space-y-5">
       <AdminBreadcrumb items={[{ label: "Clients", href: `${base}/clients` }, { label: client.name }]} />
 
-      {/* Contact card */}
-      <div className="rounded-2xl border border-zinc-800 bg-[#121215] p-5 space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-black tracking-tight text-white">{client.name}</h1>
-          <ClientAccountBadge status={client.accountStatus} />
-        </div>
-        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-x-5 text-sm">
-          <a href={`mailto:${client.email}`} className="inline-flex items-center gap-2 text-zinc-300 hover:text-amber-400 transition-colors min-w-0">
-            <Mail className="size-3.5 text-amber-400 shrink-0" aria-hidden="true" />
-            <span className="truncate">{client.email}</span>
-          </a>
-          {client.phone ? (
-            <>
-              <a href={`tel:${client.phone}`} className="inline-flex items-center gap-2 text-zinc-300 hover:text-amber-400 transition-colors">
-                <Phone className="size-3.5 text-amber-400" aria-hidden="true" />
-                {client.phone}
-              </a>
-              {phoneDigits.length >= 7 && (
-                <a
-                  href={`https://wa.me/${phoneDigits}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-zinc-300 hover:text-emerald-400 transition-colors"
-                >
-                  <MessageSquare className="size-3.5 text-emerald-400" aria-hidden="true" />
-                  WhatsApp
-                </a>
-              )}
-            </>
-          ) : (
-            <span className="inline-flex items-center gap-2 text-zinc-500">
-              <Phone className="size-3.5" aria-hidden="true" />
-              No phone on file
-            </span>
-          )}
-        </div>
-        <p className="text-xs font-mono text-zinc-500">Client since {formatDate(client.createdAt)}</p>
-      </div>
+      <ClientContactCard
+        tenantId={tenant.id}
+        tenantSlug={tenant.slug}
+        client={{
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          phone: client.phone,
+          accountPhone: client.accountPhone,
+          accountStatus: client.accountStatus,
+        }}
+        clientSinceLabel={formatDate(client.createdAt)}
+        bookingCount={bookings.length}
+      />
 
       {/* Stats */}
       <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -190,6 +166,8 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
           </div>
         ))}
       </dl>
+
+      <ClientNotesCard tenantId={tenant.id} tenantSlug={tenant.slug} clientId={client.id} notes={client.staffNotes} />
 
       <Section title="Bookings" icon={CalendarCheck} count={bookings.length} empty="No bookings yet.">
         {bookings.map((b) => (
