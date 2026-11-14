@@ -6,10 +6,14 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
 import { formatSlotDate } from "@/lib/slot-time";
+import { PROJECT_LIST_TABS, projectListWhere, type ProjectListTab } from "@/lib/projects/list";
 
 interface ProjectsPageProps {
   params: Promise<{ tenantSlug: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
+
+const TAB_LABELS: Record<ProjectListTab, string> = { productions: "Productions", sessions: "Sessions", all: "All" };
 
 export async function generateMetadata({ params }: ProjectsPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
@@ -18,13 +22,19 @@ export async function generateMetadata({ params }: ProjectsPageProps): Promise<M
 }
 
 // Access is enforced by the admin layout (studio staff or super-admin only).
-export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
+export default async function AdminProjectsPage({ params, searchParams }: ProjectsPageProps) {
   const { tenantSlug } = await params;
+  const { tab: tabParam } = await searchParams;
+  const tab: ProjectListTab = PROJECT_LIST_TABS.includes(tabParam as ProjectListTab) ? (tabParam as ProjectListTab) : "productions";
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
   if (!tenant) notFound();
 
+  const counts = Object.fromEntries(
+    await Promise.all(PROJECT_LIST_TABS.map(async (t) => [t, await db.project.count({ where: projectListWhere(tenant.id, t) })] as const))
+  ) as Record<ProjectListTab, number>;
+
   const projects = await db.project.findMany({
-    where: { tenantId: tenant.id },
+    where: projectListWhere(tenant.id, tab),
     include: {
       client: { select: { name: true } },
       callSheets: { select: { shootDate: true }, orderBy: { shootDate: "asc" } },
@@ -43,20 +53,36 @@ export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
           Projects
         </h1>
         <p className="text-xs text-zinc-400">
-          Production engagements from confirmed bookings and signed proposals: plan shoot days, reserve gear, and deliver files via the Vault.
+          Every confirmed booking and signed proposal has a project: upload the client&apos;s photos here. Productions also get shoot-day planning.
         </p>
       </div>
+
+      <nav aria-label="Project kinds" className="flex flex-wrap gap-1.5">
+        {PROJECT_LIST_TABS.map((t) => (
+          <Link
+            key={t}
+            href={t === "productions" ? `/${tenant.slug}/admin/projects` : `/${tenant.slug}/admin/projects?tab=${t}`}
+            aria-current={t === tab ? "page" : undefined}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              t === tab ? "bg-amber-500 text-black border-amber-500" : "border-zinc-800 text-zinc-300 hover:border-zinc-600"
+            }`}
+          >
+            {TAB_LABELS[t]} <span className="opacity-70">({counts[t]})</span>
+          </Link>
+        ))}
+      </nav>
 
       {projects.length === 0 ? (
         <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-10 text-center space-y-2">
           <Inbox className="size-8 text-zinc-600 mx-auto" />
-          <p className="text-sm text-zinc-300">No projects yet.</p>
+          <p className="text-sm text-zinc-300">No {tab === "all" ? "projects" : TAB_LABELS[tab].toLowerCase()} yet.</p>
           <p className="text-xs text-zinc-500">
-            Projects appear automatically when production bookings (Weddings, Commercial, Events) are approved, or when a client signs a{" "}
+            Every confirmed booking gets a project automatically: sessions (convocation, portrait, Raya) under Sessions, productions
+            (weddings, commercial, events) here. Signed{" "}
             <Link href={`/${tenant.slug}/admin/proposals`} className="text-amber-400 hover:underline">
-              Proposal
-            </Link>
-            .
+              proposals
+            </Link>{" "}
+            become productions.
           </p>
         </div>
       ) : (
@@ -100,7 +126,11 @@ export default async function AdminProjectsPage({ params }: ProjectsPageProps) {
                     <td className="px-4 py-3 text-zinc-300">{p.client.name}</td>
                     <td className="px-4 py-3 text-zinc-300">{PROJECT_STAGE_LABELS[p.status as keyof typeof PROJECT_STAGE_LABELS] ?? p.status}</td>
                     <td className="px-4 py-3 text-zinc-400 text-xs">
-                      {next ? formatSlotDate(next.shootDate, { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Not scheduled"}
+                      {next
+                        ? formatSlotDate(next.shootDate, { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+                        : p.kind === "SESSION" && p.shootDates
+                          ? formatSlotDate(`${p.shootDates.slice(0, 10)}T00:00:00.000Z`, { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+                          : "Not scheduled"}
                     </td>
                     <td className="px-4 py-3 text-zinc-400 text-xs">{files === 0 ? "None yet" : `${files} delivered`}</td>
                     <td className="px-4 py-3 text-right font-mono text-zinc-200">

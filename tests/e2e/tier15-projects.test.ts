@@ -21,6 +21,7 @@ import {
   updateProjectStatus,
 } from "@/lib/actions/admin-projects";
 import { getNotificationHistory } from "@/lib/notifications";
+import { projectListWhere } from "@/lib/projects/list";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import {
   createShotItem,
@@ -594,6 +595,59 @@ export async function runTier15ProjectTests(harness: TestHarness) {
 
     await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
     harness.assert(!(await fs.stat(masterFilePath(item!.viewUrl!)).catch(() => null)), "Removing the photo deletes its viewing copy too");
+  });
+
+  await harness.test("T15-LIST-01: the Projects page lists productions and sessions apart, hiding cancelled bookings", async () => {
+    const listClient = await db.user.create({
+      data: { tenantId: lumina.id, email: `t15-list-${run}@example.test`, name: "List Client", role: "CLIENT" },
+    });
+    const mk = (kind: string, n: number, bookingId?: string) =>
+      db.project.create({
+        data: {
+          tenantId: lumina.id,
+          projectNumber: `PJ-LIST-${run}-${n}`,
+          title: `List ${kind} ${n}`,
+          clientId: listClient.id,
+          studioLeadId: ownerRow.id,
+          discipline: "PHOTOGRAPHY",
+          budget: 100,
+          kind,
+          bookingId,
+        },
+      });
+    const cancelled = await db.clientBooking.create({
+      data: {
+        tenantId: lumina.id,
+        trackingCode: `BK-LST-${run.toUpperCase()}`,
+        category: "studio-portrait",
+        clientName: listClient.name,
+        clientEmail: listClient.email,
+        clientPhone: "0123000000",
+        serviceTier: "Portrait",
+        discipline: "PHOTOGRAPHY",
+        status: "CANCELLED",
+        depositAmount: 0,
+      },
+    });
+    await mk("PRODUCTION", 1);
+    await mk("SESSION", 2);
+    await mk("SESSION", 3, cancelled.id);
+    try {
+      const count = (tab: "productions" | "sessions" | "all") =>
+        db.project.count({ where: { AND: [projectListWhere(lumina.id, tab), { clientId: listClient.id }] } });
+      harness.assertEqual(await count("productions"), 1, "Productions tab: productions only");
+      harness.assertEqual(await count("sessions"), 1, "Sessions tab hides cancelled bookings");
+      harness.assertEqual(await count("all"), 3, "All shows everything");
+      harness.assertEqual(
+        await db.project.count({ where: { AND: [projectListWhere("some-other-studio", "all"), { clientId: listClient.id }] } }),
+        0,
+        "Another studio's list never includes them"
+      );
+    } finally {
+      await db.project.deleteMany({ where: { clientId: listClient.id } });
+      await db.clientBooking.delete({ where: { id: cancelled.id } });
+      await db.user.delete({ where: { id: listClient.id } });
+    }
   });
 
   await harness.test("T15-BOOKING-PROJ-01: every confirmed booking gets a project, labelled session or production by category", async () => {
