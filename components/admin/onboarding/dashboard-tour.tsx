@@ -66,9 +66,20 @@ export function DashboardTour({ tenantSlug, autoStart }: DashboardTourProps) {
   const searchParams = useSearchParams();
   const running = useRef(false);
   const autoStarted = useRef(false);
+  // Whether the account already records the tour as seen. Saved as soon as the tour starts (not only
+  // when it closes), so leaving the page mid-tour can't make it start on its own again.
+  const seenSaved = useRef(!autoStart);
+
+  const saveSeen = useCallback(async () => {
+    if (seenSaved.current) return;
+    seenSaved.current = true;
+    const res = await markTourSeen(tenantSlug);
+    if (!res.success) seenSaved.current = false; // try again when the tour closes
+  }, [tenantSlug]);
 
   const start = useCallback(() => {
     if (running.current) return;
+    void saveSeen();
     const steps: DriveStep[] = STOPS.flatMap((stop) => {
       const el = stop.anchor ? document.querySelector<HTMLElement>(`[data-tour="${stop.anchor}"]`) : null;
       if (stop.anchor && !el) return [];
@@ -110,12 +121,12 @@ export function DashboardTour({ tenantSlug, autoStart }: DashboardTourProps) {
       },
       onDestroyed: () => {
         running.current = false;
-        // Finished or skipped: either way, don't start it on its own again.
-        void markTourSeen(tenantSlug);
+        // Normally saved already when the tour started; this retries if that save failed.
+        void saveSeen();
       },
     });
     tour.drive();
-  }, [tenantSlug]);
+  }, [saveSeen]);
 
   // "Take the tour" links land here with ?tour=1; first-time users get it once on their own.
   const requested = searchParams.get("tour") === "1";

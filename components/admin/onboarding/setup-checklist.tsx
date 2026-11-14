@@ -23,6 +23,37 @@ const STEP_COPY: Record<SetupStepId, { label: string; hint: string; path: string
   firstBooking: { label: "Share your booking page", hint: "Send the link to clients to get your first booking.", path: null },
 };
 
+/**
+ * Copies text to the clipboard. The Clipboard API only exists on secure pages (https or localhost),
+ * so on plain http (e.g. the studio opened by LAN address) fall back to the older execCommand copy.
+ */
+async function copyText(text: string): Promise<boolean> {
+  if (window.isSecureContext && navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Permission denied or not focused: try the fallback below.
+    }
+  }
+  const previousFocus = document.activeElement as HTMLElement | null;
+  const field = document.createElement("textarea");
+  field.value = text;
+  field.setAttribute("readonly", "");
+  field.style.position = "fixed";
+  field.style.opacity = "0";
+  document.body.appendChild(field);
+  field.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    field.remove();
+    previousFocus?.focus();
+  }
+}
+
 export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupChecklistProps) {
   const [hidden, setHidden] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -46,12 +77,8 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
   const copyLink = async () => {
     // Without NEXT_PUBLIC_APP_URL the server sends a bare path: complete it with this site's address.
     const url = bookingUrl.startsWith("/") ? `${window.location.origin}${bookingUrl}` : bookingUrl;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Booking link copied");
-    } catch {
-      toast.error(`Copy failed. Your booking link is ${url}`);
-    }
+    if (await copyText(url)) toast.success("Booking link copied");
+    else toast.error(`Copy failed. Your booking link is ${url}`);
   };
 
   return (
