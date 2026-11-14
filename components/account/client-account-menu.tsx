@@ -62,10 +62,14 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
   }
 
   if (!client) {
-    const back = returnTo ?? `/${tenantSlug}`;
+    const hasSpecificReturn =
+      returnTo && returnTo !== `/${tenantSlug}` && returnTo !== `/${tenantSlug}/`;
+    const loginHref = hasSpecificReturn
+      ? `/${tenantSlug}/login?callbackUrl=${encodeURIComponent(returnTo)}`
+      : `/${tenantSlug}/login`;
     return (
       <Link
-        href={`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(back)}`}
+        href={loginHref}
         aria-label="Sign in"
         className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-colors"
       >

@@ -42,8 +42,9 @@ export default async function StudioLoginPage({ params, searchParams }: LoginPag
     typeof callbackUrl === "string" && callbackUrl.startsWith(`/${tenant.slug}`) && !callbackUrl.startsWith("//")
       ? callbackUrl
       : null;
+  const callbackPath = safeCallback?.split("?")[0];
   const isShowcaseRoot =
-    safeCallback === `/${tenant.slug}` || safeCallback === `/${tenant.slug}/`;
+    !safeCallback || callbackPath === `/${tenant.slug}` || callbackPath === `/${tenant.slug}/`;
   const target = isClient
     ? safeCallback && !safeCallback.includes("/admin") && !isShowcaseRoot
       ? safeCallback

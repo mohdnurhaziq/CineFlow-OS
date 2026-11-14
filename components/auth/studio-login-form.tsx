@@ -54,8 +54,9 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
       }
 
       const isClient = result.user?.role === "CLIENT";
+      const callbackPath = callbackUrl?.split("?")[0];
       const isShowcaseRoot =
-        callbackUrl === `/${tenantSlug}` || callbackUrl === `/${tenantSlug}/`;
+        !callbackUrl || callbackPath === `/${tenantSlug}` || callbackPath === `/${tenantSlug}/`;
       const target = isClient
         ? callbackUrl && !callbackUrl.includes("/admin") && !isShowcaseRoot
           ? callbackUrl

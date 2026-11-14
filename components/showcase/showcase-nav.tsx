@@ -92,7 +92,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
             <span className="hidden sm:inline">WhatsApp Dispatch</span>
           </a>
 
-          <ClientAccountMenu tenantSlug={tenant.slug} client={client} staff={staff} returnTo={`/${tenant.slug}`} />
+          <ClientAccountMenu tenantSlug={tenant.slug} client={client} staff={staff} />
 
           <Link
             href={`/${tenant.slug}/book`}
