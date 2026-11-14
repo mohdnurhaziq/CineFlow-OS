@@ -50,7 +50,13 @@ export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData;
           <p className="text-sm text-zinc-400 mt-1">Your studio, how clients pay you, and how their photos are delivered.</p>
         </div>
 
-        <nav aria-label="Settings sections" className="flex gap-1 overflow-x-auto border-b border-zinc-800 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {/* The grey base line is an inset shadow, so the active tab's underline covers it without
+            spilling outside the bar (which made the browser show a scrollbar). The bar still scrolls
+            sideways on a very narrow phone, with the scrollbar hidden. */}
+        <nav
+          aria-label="Settings sections"
+          className="flex gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shadow-[inset_0_-1px_0_#27272a] -mx-4 px-4 sm:mx-0 sm:px-0"
+        >
           {SETTINGS_TABS.map((t) => (
             <a
               key={t.id}
@@ -61,7 +67,7 @@ export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData;
                 void go(t.id);
               }}
               aria-current={t.id === tab ? "page" : undefined}
-              className={`shrink-0 px-3.5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              className={`shrink-0 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 t.id === tab ? "border-amber-500 text-white" : "border-transparent text-zinc-400 hover:text-white"
               }`}
             >
