@@ -293,6 +293,42 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assertEqual(booking?.depositPaid, false, "Deposit not marked paid");
   });
 
+  await harness.test("T7-ADM-EMAIL-01: a booking staff make emails the customer a confirmation", async () => {
+    const slot = await makeSlot(lumina.id);
+    const e = email("emailconf");
+    createdUserEmails.push(e);
+    // Stub the email provider: capture what would be sent, touch no network.
+    const realFetch = globalThis.fetch;
+    const savedKey = process.env.RESEND_API_KEY;
+    const sent: { to: string[]; subject: string; html: string; text: string }[] = [];
+    process.env.RESEND_API_KEY = "re_test_key";
+    globalThis.fetch = (async (url: any, init: any) => {
+      if (String(url).includes("api.resend.com")) sent.push(JSON.parse(String(init?.body ?? "{}")));
+      return new Response(JSON.stringify({ id: "email_test" }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res: any = await withSession(luminaStaff, () =>
+        createBookingForCustomer({
+          tenantId: lumina.id,
+          tenantSlug: "lumina-cine",
+          slotId: slot.id,
+          newClient: { name: "Email Walk In", email: e, phone: "0123456789" },
+        })
+      );
+      harness.assert(res.success === true, `Booking created (${res.error ?? "ok"})`);
+      const mail = sent.find((m) => m.to?.includes(e));
+      harness.assert(!!mail, "A confirmation email is sent to the customer");
+      harness.assert(!!mail?.subject?.includes("Confirmed"), "Subject says the booking is confirmed");
+      harness.assert(!!mail?.html?.includes(res.trackingCode), "Email carries the booking reference");
+      harness.assert(!!mail?.text?.includes("Deposit due"), "An unpaid deposit is shown as due, not paid");
+      harness.assert(!mail?.text?.includes("Deposit paid"), "It does not claim the deposit was paid");
+    } finally {
+      globalThis.fetch = realFetch;
+      if (savedKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = savedKey;
+    }
+  });
+
   await harness.test("T7-ADM-04: staff books for an EXISTING customer, marked PAID -> confirmed", async () => {
     const slot = await makeSlot(lumina.id);
     const input = validInput("existing");

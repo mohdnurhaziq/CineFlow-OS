@@ -10,6 +10,7 @@ import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
 import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
+import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 
 
 const AdminCreateBookingSchema = z
@@ -176,6 +177,9 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
 
       return { booking, customerName: customer.name };
     });
+
+    // Tell the customer, as an online booking does. Never fails the booking (logged instead).
+    await sendBookingConfirmation(result.booking.id);
 
     try {
       revalidatePath(`/${data.tenantSlug}/admin/calendar`);

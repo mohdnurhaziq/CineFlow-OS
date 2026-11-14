@@ -28,6 +28,8 @@ export interface BookingConfirmedPayload {
   currency: string;
   trackingCode?: string;
   bookingUrl?: string;
+  /** False while the deposit still awaits payment or verification: the email then says "Deposit due". */
+  depositPaid?: boolean;
 }
 
 export interface PaymentApprovedPayload {
@@ -262,6 +264,8 @@ export async function sendNotification(
 
   switch (payload.event) {
     case "BOOKING_CONFIRMED": {
+      const depositLabel = payload.depositPaid === false ? "Deposit due" : "Deposit paid";
+      const depositColor = payload.depositPaid === false ? "#f59e0b" : "#10b981";
       emailSubject = `Confirmed: Production Session with ${payload.studioName}`;
       bodyHtml = `
         <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
@@ -272,7 +276,7 @@ export async function sendNotification(
             <tr><td style="color: #71717a; padding: 4px 0;">Package:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.packageName)}</td></tr>
             <tr><td style="color: #71717a; padding: 4px 0;">Date:</td><td style="color: #ffffff; text-align: right;">${esc(payload.slotDate)}</td></tr>
             <tr><td style="color: #71717a; padding: 4px 0;">Time Window:</td><td style="color: #ffffff; text-align: right;">${esc(payload.startTime)} - ${esc(payload.endTime)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Deposit Paid:</td><td style="color: #10b981; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositAmount.toFixed(2))}</td></tr>
+            <tr><td style="color: #71717a; padding: 4px 0;">${depositLabel}:</td><td style="color: ${depositColor}; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositAmount.toFixed(2))}</td></tr>
           </table>
         </div>
         ${
@@ -286,8 +290,8 @@ export async function sendNotification(
         }
         <p>Our production team will contact you with call times, wardrobe guidelines, and location ephemeris.</p>
       `;
-      emailText = `Booking Confirmed with ${payload.studioName}!\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\nDeposit: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\nLink: ${payload.bookingUrl}` : ""}`;
-      whatsappText = `*${payload.studioName} — Booking Confirmed!*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is confirmed.${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} Deposit paid: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 View details: ${payload.bookingUrl}` : ""}`;
+      emailText = `Booking Confirmed with ${payload.studioName}!\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\n${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\nLink: ${payload.bookingUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — Booking Confirmed!*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is confirmed.${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} ${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 View details: ${payload.bookingUrl}` : ""}`;
       break;
     }
 

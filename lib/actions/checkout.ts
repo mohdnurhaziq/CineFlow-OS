@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { requireRecordAccess } from "@/lib/auth/project-access";
 import { revalidatePath } from "next/cache";
-import { sendNotification } from "@/lib/notifications";
+import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
 import { env } from "@/lib/env";
 import { createBill, toSen } from "@/lib/payments/toyyibpay";
@@ -250,28 +250,9 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       };
     }
 
-    // Dispatch automated booking confirmation notification
-    const notifyEmail = result.booking.clientEmail;
-    if (notifyEmail) {
-      const studio = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true, currency: true } });
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
-      sendNotification({
-        event: "BOOKING_CONFIRMED",
-        studioName: studio?.name ?? tenantSlug,
-        studioSlug: tenantSlug,
-        clientName: result.booking.clientName,
-        clientEmail: notifyEmail,
-        clientPhone: result.booking.clientPhone || undefined,
-        packageName: "Studio Production Session",
-        slotDate: slot.date ? new Date(slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        depositAmount: deposit,
-        currency: studio?.currency ?? "MYR",
-        trackingCode: result.booking.trackingCode,
-        bookingUrl: `${appUrl}/${tenantSlug}/portal`,
-      }).catch((e) => console.error("Notification dispatch failed:", e));
-    }
+    // Booking confirmation email (same as staff-made bookings). Sent in the background so the
+    // client isn't kept waiting on the email provider; it never throws.
+    void sendBookingConfirmation(result.booking.id);
 
     return {
       success: true,
