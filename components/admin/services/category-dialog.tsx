@@ -14,7 +14,7 @@ export interface CategoryRow {
   description?: string | null;
   sortOrder: number;
   isActive: boolean;
-  autoCreateProject?: boolean;
+  isProduction?: boolean;
 }
 
 interface CategoryDialogProps {
@@ -44,7 +44,7 @@ export function CategoryDialog({
   const [description, setDescription] = useState(categoryToEdit?.description || "");
   const [sortOrder, setSortOrder] = useState(categoryToEdit?.sortOrder?.toString() || "0");
   const [isActive, setIsActive] = useState(categoryToEdit?.isActive ?? true);
-  const [autoCreateProject, setAutoCreateProject] = useState(categoryToEdit?.autoCreateProject ?? false);
+  const [isProduction, setIsProduction] = useState(categoryToEdit?.isProduction ?? false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export function CategoryDialog({
       setDescription(categoryToEdit.description || "");
       setSortOrder(categoryToEdit.sortOrder.toString());
       setIsActive(categoryToEdit.isActive);
-      setAutoCreateProject(categoryToEdit.autoCreateProject ?? false);
+      setIsProduction(categoryToEdit.isProduction ?? false);
     } else {
       setName("");
       setSlug("");
@@ -65,7 +65,7 @@ export function CategoryDialog({
       setDescription("");
       setSortOrder("0");
       setIsActive(true);
-      setAutoCreateProject(false);
+      setIsProduction(false);
     }
     setErrorMessage(null);
   }, [categoryToEdit, isOpen]);
@@ -88,7 +88,7 @@ export function CategoryDialog({
         generated.includes("event") ||
         generated.includes("film")
       ) {
-        setAutoCreateProject(true);
+        setIsProduction(true);
       }
     }
   };
@@ -112,7 +112,7 @@ export function CategoryDialog({
           description: description || null,
           sortOrder: isNaN(parsedOrder) ? 0 : parsedOrder,
           isActive,
-          autoCreateProject,
+          isProduction,
         });
 
         if (!res.success) {
@@ -130,7 +130,7 @@ export function CategoryDialog({
           description: description || null,
           sortOrder: isNaN(parsedOrder) ? 0 : parsedOrder,
           isActive,
-          autoCreateProject,
+          isProduction,
         });
 
         if (!res.success) {
@@ -270,8 +270,8 @@ export function CategoryDialog({
             <label className="flex items-start gap-2.5 p-3 rounded-lg bg-zinc-900 border border-zinc-700 cursor-pointer hover:border-zinc-600 transition-colors">
               <input
                 type="checkbox"
-                checked={autoCreateProject}
-                onChange={(e) => setAutoCreateProject(e.target.checked)}
+                checked={isProduction}
+                onChange={(e) => setIsProduction(e.target.checked)}
                 className="mt-0.5 rounded border-zinc-600 text-amber-500 focus:ring-0"
               />
               <div className="text-xs">

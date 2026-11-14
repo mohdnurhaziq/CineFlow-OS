@@ -38,7 +38,6 @@ import {
 } from "@/lib/actions/gear";
 import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
-import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
 import { nextInvoiceNumber } from "@/lib/bookings/billing";
 import { POST as uploadDeliverables } from "@/app/api/deliverables/route";
 import { GET as downloadHandler } from "@/app/api/download/route";
@@ -597,8 +596,8 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assert(!(await fs.stat(masterFilePath(item!.viewUrl!)).catch(() => null)), "Removing the photo deletes its viewing copy too");
   });
 
-  await harness.test("T15-BOOKING-PROJ-01: Category-based auto-provisioning of Projects from Bookings", async () => {
-    // 1. Wedding booking: Category with autoCreateProject = true (or wedding keyword)
+  await harness.test("T15-BOOKING-PROJ-01: every confirmed booking gets a project, labelled session or production by category", async () => {
+    // 1. Wedding booking: a Production category
     const weddingSlot = await db.bookingSlot.create({
       data: {
         tenantId: lumina.id,
@@ -672,9 +671,10 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(weddingProject?.status, "PRE_PRODUCTION", "Project status is PRE_PRODUCTION");
     harness.assertEqual(weddingProject?.budget, 2500, "Project budget matches sessionPrice");
     harness.assert((weddingProject?.callSheets.length ?? 0) > 0, "Initial call sheet generated for shoot day");
+    harness.assertEqual(weddingProject?.kind, "PRODUCTION", "Wedding booking -> Production project");
     harness.assertEqual(weddingProject?.callSheets[0]?.generalCallTime, "07:00 AM", "Call time matches slot start time");
 
-    // 2. Convocation booking: Category without autoCreateProject (remains Booking only)
+    // 2. Convocation booking: a Session category still gets a gallery
     const convoSlot = await db.bookingSlot.create({
       data: {
         tenantId: lumina.id,
@@ -738,31 +738,21 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     );
     harness.assert(approveConvoRes.success === true, "Convo deposit approved");
 
-    // Convo should NOT auto-create a project
-    const convoProject = await db.project.findFirst({
-      where: { bookingId: convoBooking.id },
-    });
-    harness.assert(convoProject === null, "Convocation booking stays clean in Bookings without creating a Project");
+    const convoProject = await db.project.findFirst({ where: { bookingId: convoBooking.id }, include: { callSheets: true } });
+    harness.assert(convoProject !== null, "Convocation booking gets a gallery too");
+    harness.assertEqual(convoProject?.kind, "SESSION", "Convocation -> Session project");
+    harness.assertEqual(convoProject?.callSheets.length, 0, "Sessions get no call sheet");
 
-    // 3. Manual promotion: promote convo booking to Project
-    const promoteRes = await withSession(owner, () =>
-      promoteBookingToProjectAction({
-        tenantId: lumina.id,
-        tenantSlug: lumina.slug,
-        bookingId: convoBooking.id,
-      })
+    // Approving the same deposit again keeps one project per booking.
+    await withSession(owner, () =>
+      approvePaymentVerification({ invoiceId: convoDepositInvoice.id, tenantId: lumina.id, tenantSlug: lumina.slug })
     );
-    harness.assert(promoteRes.success === true, "Owner manually promoted convo booking to Project");
-
-    const manuallyPromotedProject = await db.project.findFirst({
-      where: { bookingId: convoBooking.id },
-    });
-    harness.assert(manuallyPromotedProject !== null, "Manually promoted project exists");
+    harness.assertEqual(await db.project.count({ where: { bookingId: convoBooking.id } }), 1, "Still one project per booking");
 
     // Cleanup
     await db.callSheet.deleteMany({ where: { projectId: weddingProject!.id } });
     await db.project.delete({ where: { id: weddingProject!.id } });
-    await db.project.delete({ where: { id: manuallyPromotedProject!.id } });
+    await db.project.deleteMany({ where: { bookingId: convoBooking.id } });
     await db.milestoneInvoice.deleteMany({ where: { bookingId: { in: [weddingBooking.id, convoBooking.id] } } });
     await db.clientBooking.deleteMany({ where: { id: { in: [weddingBooking.id, convoBooking.id] } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: [weddingSlot.id, convoSlot.id] } } });

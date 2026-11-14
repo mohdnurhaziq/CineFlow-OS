@@ -45,29 +45,25 @@ export function isProjectCategorySlug(categorySlugOrName: string): boolean {
   return PROJECT_CATEGORY_KEYWORDS.some((kw) => norm.includes(kw));
 }
 
+export type ProjectKind = "SESSION" | "PRODUCTION";
+
 /**
- * Decides whether a booking should automatically provision a Project.
- * Checks tenant CampaignCategory configuration first; falls back to category keywords.
+ * Every confirmed booking gets a project (its gallery); the category decides which kind.
+ * The studio's category setting wins when it says Production; otherwise category keywords decide
+ * (wedding, commercial, event... -> Production; convocation, portrait, Raya... -> Session).
  */
-export async function shouldAutoProvisionProject(
+export async function projectKindForBooking(
   tx: Tx,
   booking: { tenantId: string; category: string }
-): Promise<boolean> {
+): Promise<ProjectKind> {
   const category = await tx.campaignCategory.findFirst({
-    where: {
-      tenantId: booking.tenantId,
-      slug: booking.category,
-    },
-    select: { autoCreateProject: true, slug: true, name: true },
+    where: { tenantId: booking.tenantId, slug: booking.category },
+    select: { isProduction: true, slug: true, name: true },
   });
-
-  if (category) {
-    if (category.autoCreateProject) return true;
-    // If explicitly marked false and does NOT match keyword, return false
-    return isProjectCategorySlug(category.slug) || isProjectCategorySlug(category.name);
-  }
-
-  return isProjectCategorySlug(booking.category);
+  const production = category
+    ? category.isProduction || isProjectCategorySlug(category.slug) || isProjectCategorySlug(category.name)
+    : isProjectCategorySlug(booking.category);
+  return production ? "PRODUCTION" : "SESSION";
 }
 
 /**
@@ -206,6 +202,8 @@ export async function provisionProjectForBooking(
     ? balanceInvoice.status === "PAID"
     : booking.depositPaid && budget <= booking.depositAmount;
 
+  const kind = await projectKindForBooking(tx, booking);
+
   // 6. Create the Project
   const project = await tx.project.create({
     data: {
@@ -218,6 +216,7 @@ export async function provisionProjectForBooking(
       discipline: booking.discipline || "PHOTOGRAPHY",
       bookingId: booking.id,
       status: "PRE_PRODUCTION",
+      kind,
       shootDates,
       budget,
       isFinalBalancePaid,
@@ -230,9 +229,9 @@ export async function provisionProjectForBooking(
     data: { projectId: project.id },
   });
 
-  // 8. Automatically generate an initial Call Sheet if slot date is known
+  // 8. Productions get an initial call sheet for the shoot day; sessions don't use call sheets.
   const shootDay = booking.slot?.date ?? (booking.targetDate ? new Date(`${booking.targetDate}T00:00:00.000Z`) : null);
-  if (shootDay && !isNaN(shootDay.getTime())) {
+  if (kind === "PRODUCTION" && shootDay && !isNaN(shootDay.getTime())) {
     await tx.callSheet.create({
       data: {
         projectId: project.id,

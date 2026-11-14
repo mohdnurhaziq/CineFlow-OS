@@ -46,6 +46,8 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t7-" } } });
     await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t7-" } } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: createdSlotIds } } });
+    // Every confirmed booking now has a project; remove those before their clients.
+    await db.project.deleteMany({ where: { client: { email: { startsWith: "t7-" } } } });
     await db.user.deleteMany({ where: { email: { startsWith: "t7-" } } });
   });
 

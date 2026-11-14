@@ -12,7 +12,7 @@ import { isSlotInPast } from "@/lib/slot-time";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
-import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
+import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import {
   ProcessBookingCheckoutSchema,
@@ -204,9 +204,8 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       // A simulated card deposit is paid on the spot: issue the balance invoice now.
       if (isCard) {
         await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
-        if (await shouldAutoProvisionProject(tx, booking)) {
-          await provisionProjectForBooking(tx, booking.id);
-        }
+        // Every confirmed booking gets its gallery (a Session or Production project).
+        await provisionProjectForBooking(tx, booking.id);
       }
 
       return { booking, invoice };
@@ -405,9 +404,8 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
             });
           }
 
-          if (await shouldAutoProvisionProject(tx, booking)) {
-            await provisionProjectForBooking(tx, booking.id);
-          }
+          // Every confirmed booking gets its gallery (a Session or Production project).
+          await provisionProjectForBooking(tx, booking.id);
         }
       }
     });

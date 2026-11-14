@@ -195,6 +195,8 @@ export async function runTier9ToyyibpayTests(harness: TestHarness) {
     await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t9-" } } } });
     await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t9-" } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
+    // Every confirmed booking now has a project; remove those before their clients.
+    await db.project.deleteMany({ where: { client: { email: { startsWith: "t9-" } } } });
     await db.user.deleteMany({ where: { email: { startsWith: "t9-" } } });
   });
 

@@ -5,7 +5,7 @@ import { requireOwner } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { onInvoicePaid } from "@/lib/bookings/billing";
-import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
+import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
@@ -98,9 +98,8 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
           }
 
           // If this booking qualifies as a project (e.g. Wedding, Commercial, Event), auto-provision a Project
-          if (await shouldAutoProvisionProject(tx, booking)) {
-            await provisionProjectForBooking(tx, booking.id);
-          }
+          // Every confirmed booking gets its gallery (a Session or Production project).
+          await provisionProjectForBooking(tx, booking.id);
         }
       }
 

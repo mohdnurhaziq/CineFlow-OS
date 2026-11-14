@@ -105,7 +105,7 @@ export function CategoryList({
                   <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
                     <span className="text-base">{cat.badgeIcon || "📸"}</span>
                     <span>{cat.name}</span>
-                    {cat.autoCreateProject && (
+                    {cat.isProduction && (
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/25" title="Auto-provisions a Project upon booking approval">
                         Auto-Project
                       </span>

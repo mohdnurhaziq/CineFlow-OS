@@ -59,7 +59,7 @@ model CampaignCategory {
   description String?
   isActive          Boolean  @default(true)
   sortOrder         Int      @default(0)
-  autoCreateProject Boolean  @default(false)
+  isProduction      Boolean  @default(false) @map("autoCreateProject") // true: bookings become Production projects; false: Session projects
 
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -290,6 +290,7 @@ model Project {
   proposalId         String?             @unique
   bookingId          String?             @unique
   status             String              @default("PRE_PRODUCTION") // PRE_PRODUCTION, PRODUCTION, POST_PRODUCTION, IN_REVIEW, DELIVERED
+  kind               String              @default("PRODUCTION") // SESSION (quick shoot: files + payments) or PRODUCTION (full planning tools)
   shootDates         String?
   budget             Float
   isFinalBalancePaid Boolean             @default(false)
@@ -313,6 +314,7 @@ model Project {
   @@index([studioLeadId])
   @@index([bookingId])
   @@index([tenantId, status])
+  @@index([tenantId, kind])
 }
 
 model CallSheet {

@@ -1,6 +1,6 @@
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { onInvoicePaid } from "@/lib/bookings/billing";
-import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
+import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import type { BookingSlot, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto/secret-box";
@@ -142,9 +142,8 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
         await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
 
         // Auto-provision project if category qualifies
-        if (await shouldAutoProvisionProject(tx, booking)) {
-          await provisionProjectForBooking(tx, booking.id);
-        }
+        // Every confirmed booking gets its gallery (a Session or Production project).
+        await provisionProjectForBooking(tx, booking.id);
       } else {
         // The slot hold lapsed and someone else took the slot: money received, nothing to give.
         refundRequired = true;

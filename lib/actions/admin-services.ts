@@ -229,7 +229,7 @@ export async function createCampaignCategory(input: CreateCampaignCategoryInput)
   try {
     const validated = CreateCampaignCategorySchema.parse(input);
     await requireStaff(validated.tenantId);
-    const { tenantId, tenantSlug, name, slug, badgeIcon, description, sortOrder, isActive, autoCreateProject } = validated;
+    const { tenantId, tenantSlug, name, slug, badgeIcon, description, sortOrder, isActive, isProduction } = validated;
 
     // Check slug uniqueness within tenant
     const existing = await db.campaignCategory.findFirst({
@@ -248,7 +248,7 @@ export async function createCampaignCategory(input: CreateCampaignCategoryInput)
         description: description || null,
         sortOrder,
         isActive,
-        autoCreateProject: autoCreateProject ?? false,
+        isProduction: isProduction ?? false,
       },
     });
 
@@ -294,7 +294,7 @@ export async function updateCampaignCategory(input: UpdateCampaignCategoryInput)
   try {
     const validated = UpdateCampaignCategorySchema.parse(input);
     await requireStaff(validated.tenantId);
-    const { id, tenantId, tenantSlug, name, slug, badgeIcon, description, sortOrder, isActive, autoCreateProject } = validated;
+    const { id, tenantId, tenantSlug, name, slug, badgeIcon, description, sortOrder, isActive, isProduction } = validated;
 
     // Check category ownership
     const existing = await db.campaignCategory.findFirst({
@@ -324,7 +324,7 @@ export async function updateCampaignCategory(input: UpdateCampaignCategoryInput)
           description: description || null,
           sortOrder,
           isActive,
-          autoCreateProject: autoCreateProject ?? false,
+          isProduction: isProduction ?? false,
         },
       });
       // Packages, slots, bookings and the rest store the category as its slug text, so a

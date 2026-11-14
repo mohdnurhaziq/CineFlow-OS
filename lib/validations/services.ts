@@ -60,7 +60,7 @@ export const CreateCampaignCategorySchema = z.object({
   description: z.string().optional().nullable(),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.boolean().default(true),
-  autoCreateProject: z.boolean().optional().default(false),
+  isProduction: z.boolean().optional().default(false),
 });
 
 export type CreateCampaignCategoryInput = z.input<typeof CreateCampaignCategorySchema>;

@@ -8,7 +8,7 @@ import { requireStaff, STAFF_ROLES, OWNER_ROLES } from "@/lib/auth/guard";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
-import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
+import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { errorMessageOf } from "@/lib/action-error";
@@ -171,9 +171,8 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
       // Deposit recorded as paid: the balance invoice goes out now.
       if (isPaid) {
         await onInvoicePaid(tx, depositInvoice);
-        if (await shouldAutoProvisionProject(tx, booking)) {
-          await provisionProjectForBooking(tx, booking.id, { studioLeadId: session.id });
-        }
+        // Every confirmed booking gets its gallery (a Session or Production project).
+        await provisionProjectForBooking(tx, booking.id, { studioLeadId: session.id });
       }
 
       return { booking, customerName: customer.name };
