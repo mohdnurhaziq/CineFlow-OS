@@ -874,6 +874,52 @@ export async function runAdminVerificationTests(harness: TestHarness) {
     });
   });
 
+  await harness.test("T1-F45-04b: each settings tab saves only its own fields; the rest stay as they are", async () => {
+    const before = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
+    const ids = { tenantId: luminaTenant!.id, tenantSlug: "lumina-cine" };
+    try {
+      // Getting paid tab
+      const paid = await updateStudioSettings({ ...ids, currency: "MYR", bankDetails: "Maybank 5140 1234 5678", qrCodeUrl: null });
+      harness.assert(paid.success === true, "Payment details saved on their own", JSON.stringify(paid));
+      let row = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
+      harness.assertEqual(row?.currency, "MYR", "Currency saved");
+      harness.assertEqual(row?.bankDetails, "Maybank 5140 1234 5678", "Bank details saved");
+      harness.assertEqual(row?.qrCodeUrl, null, "QR code cleared when sent empty");
+      harness.assertEqual(row?.name, before?.name, "Studio name untouched");
+      harness.assertEqual(row?.tagline, before?.tagline, "Tagline untouched");
+      harness.assertEqual(row?.brandColor, before?.brandColor, "Brand colour untouched");
+      harness.assertEqual(row?.releaseFilesBeforePayment, before?.releaseFilesBeforePayment, "Delivery choice untouched");
+
+      // Photo delivery tab
+      const delivery = await updateStudioSettings({ ...ids, releaseFilesBeforePayment: !before?.releaseFilesBeforePayment });
+      harness.assert(delivery.success === true, "Delivery choice saved on its own", JSON.stringify(delivery));
+      row = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
+      harness.assertEqual(row?.releaseFilesBeforePayment, !before?.releaseFilesBeforePayment, "Delivery choice changed");
+      harness.assertEqual(row?.bankDetails, "Maybank 5140 1234 5678", "Bank details untouched by the delivery tab");
+      harness.assertEqual(row?.slug, "lumina-cine", "Web address untouched");
+
+      // Studio tab
+      const studio = await updateStudioSettings({ ...ids, name: "Lumina Tab Test", newSlug: "lumina-cine", tagline: "" });
+      harness.assert(studio.success === true, "Studio details saved on their own", JSON.stringify(studio));
+      row = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
+      harness.assertEqual(row?.name, "Lumina Tab Test", "Name saved");
+      harness.assertEqual(row?.tagline, null, "Tagline cleared when sent empty");
+      harness.assertEqual(row?.currency, "MYR", "Currency untouched by the studio tab");
+    } finally {
+      await db.tenant.update({
+        where: { id: luminaTenant!.id },
+        data: {
+          name: before!.name,
+          tagline: before!.tagline,
+          currency: before!.currency,
+          bankDetails: before!.bankDetails,
+          qrCodeUrl: before!.qrCodeUrl,
+          releaseFilesBeforePayment: before!.releaseFilesBeforePayment,
+        },
+      });
+    }
+  });
+
   await harness.test("T1-F45-05: updateStudioSettings rejects changing slug or customDomain if already taken (SLUG_EXISTS, DOMAIN_EXISTS)", async () => {
     // Attempt to claim apex-media slug
     const resSlug = await updateStudioSettings({

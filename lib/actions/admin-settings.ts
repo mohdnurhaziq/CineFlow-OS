@@ -22,22 +22,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
   try {
     const validated = UpdateStudioSettingsSchema.parse(input);
     await requireOwner(validated.tenantId);
-    const {
-      tenantId,
-      tenantSlug,
-      name,
-      newSlug,
-      customDomain,
-      discipline,
-      tagline,
-      bio,
-      logoUrl,
-      brandColor,
-      currency,
-      qrCodeUrl,
-      bankDetails,
-      releaseFilesBeforePayment,
-    } = validated;
+    const { tenantId, tenantSlug, newSlug, customDomain } = validated;
 
     // Check tenant exists
     const currentTenant = await db.tenant.findUnique({
@@ -48,7 +33,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
     }
 
     // Slug conflict check
-    if (newSlug !== currentTenant.slug) {
+    if (newSlug !== undefined && newSlug !== currentTenant.slug) {
       const slugConflict = await db.tenant.findUnique({
         where: { slug: newSlug },
       });
@@ -56,7 +41,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
         return {
           success: false,
           error: "SLUG_EXISTS",
-          message: `Studio URL slug '${newSlug}' is already claimed by another tenant.`,
+          message: `The web address '${newSlug}' is already taken by another studio.`,
         };
       }
     }
@@ -75,21 +60,23 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
       }
     }
 
+    // Only what this save sent: each settings tab saves its own fields.
+    const text = (v: string | null | undefined) => (v === undefined ? undefined : v || null);
     const updated = await db.tenant.update({
       where: { id: tenantId },
       data: {
-        name,
+        name: validated.name,
         slug: newSlug,
-        customDomain: customDomain || null,
-        discipline,
-        tagline: tagline || null,
-        bio: bio || null,
-        logoUrl: logoUrl || null,
-        brandColor,
-        currency,
-        qrCodeUrl: qrCodeUrl || null,
-        bankDetails: bankDetails || null,
-        ...(releaseFilesBeforePayment === undefined ? {} : { releaseFilesBeforePayment }),
+        customDomain,
+        discipline: validated.discipline,
+        tagline: text(validated.tagline),
+        bio: text(validated.bio),
+        logoUrl: text(validated.logoUrl),
+        brandColor: validated.brandColor,
+        currency: validated.currency,
+        qrCodeUrl: text(validated.qrCodeUrl),
+        bankDetails: text(validated.bankDetails),
+        releaseFilesBeforePayment: validated.releaseFilesBeforePayment,
       },
     });
 
@@ -97,16 +84,16 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
     const { toyyibpaySecretEnc: _secret, ...publicTenant } = updated;
 
     safeRevalidate(`/${tenantSlug}/admin/settings`);
-    safeRevalidate(`/${newSlug}/admin/settings`);
+    safeRevalidate(`/${updated.slug}/admin/settings`);
     safeRevalidate(`/${tenantSlug}`);
-    safeRevalidate(`/${newSlug}`);
+    safeRevalidate(`/${updated.slug}`);
     safeRevalidate(`/${tenantSlug}/checkout`);
-    safeRevalidate(`/${newSlug}/checkout`);
+    safeRevalidate(`/${updated.slug}/checkout`);
 
     return {
       success: true,
-      slugChanged: newSlug !== tenantSlug,
-      newSlug,
+      slugChanged: updated.slug !== tenantSlug,
+      newSlug: updated.slug,
       tenant: publicTenant,
     };
   } catch (error) {
