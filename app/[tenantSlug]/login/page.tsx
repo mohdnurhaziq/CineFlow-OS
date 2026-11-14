@@ -12,6 +12,9 @@ interface LoginPageProps {
   searchParams: Promise<{ callbackUrl?: string }>;
 }
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function generateMetadata({ params }: LoginPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
@@ -42,9 +45,10 @@ export default async function StudioLoginPage({ params, searchParams }: LoginPag
     typeof callbackUrl === "string" && callbackUrl.startsWith(`/${tenant.slug}`) && !callbackUrl.startsWith("//")
       ? callbackUrl
       : null;
-  const callbackPath = safeCallback?.split("?")[0];
+  const callbackPath = (safeCallback?.split("?")[0] ?? "").replace(/\/+$/, "").toLowerCase();
+  const tenantRoot = `/${tenant.slug}`.toLowerCase();
   const isShowcaseRoot =
-    !safeCallback || callbackPath === `/${tenant.slug}` || callbackPath === `/${tenant.slug}/`;
+    !safeCallback || callbackPath === tenantRoot || callbackPath === "";
   const target = isClient
     ? safeCallback && !safeCallback.includes("/admin") && !isShowcaseRoot
       ? safeCallback

@@ -54,9 +54,10 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
       }
 
       const isClient = result.user?.role === "CLIENT";
-      const callbackPath = callbackUrl?.split("?")[0];
+      const callbackPath = (callbackUrl?.split("?")[0] ?? "").replace(/\/+$/, "").toLowerCase();
+      const tenantRoot = `/${tenantSlug}`.toLowerCase();
       const isShowcaseRoot =
-        !callbackUrl || callbackPath === `/${tenantSlug}` || callbackPath === `/${tenantSlug}/`;
+        !callbackUrl || callbackPath === tenantRoot || callbackPath === "";
       const target = isClient
         ? callbackUrl && !callbackUrl.includes("/admin") && !isShowcaseRoot
           ? callbackUrl
@@ -64,8 +65,7 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         : callbackUrl && !isShowcaseRoot
         ? callbackUrl
         : `/${tenantSlug}/admin`;
-      router.push(target);
-      router.refresh();
+      window.location.href = target;
     } catch {
       setError("An unexpected network error occurred.");
       setLoading(false);

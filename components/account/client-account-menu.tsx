@@ -48,7 +48,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
           onClick={() =>
             startTransition(async () => {
               await logoutAction();
-              router.refresh();
+              window.location.href = `/${tenantSlug}`;
             })
           }
           title="Sign out"
@@ -62,10 +62,11 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
   }
 
   if (!client) {
+    const normalizedReturn = returnTo?.replace(/\/+$/, "").toLowerCase();
     const hasSpecificReturn =
-      returnTo && returnTo !== `/${tenantSlug}` && returnTo !== `/${tenantSlug}/`;
+      Boolean(normalizedReturn) && normalizedReturn !== `/${tenantSlug}`.toLowerCase();
     const loginHref = hasSpecificReturn
-      ? `/${tenantSlug}/login?callbackUrl=${encodeURIComponent(returnTo)}`
+      ? `/${tenantSlug}/login?callbackUrl=${encodeURIComponent(returnTo!)}`
       : `/${tenantSlug}/login`;
     return (
       <Link
@@ -102,7 +103,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
         onClick={() =>
           startTransition(async () => {
             await logoutAction();
-            router.refresh();
+            window.location.href = `/${tenantSlug}`;
           })
         }
         title="Sign out"

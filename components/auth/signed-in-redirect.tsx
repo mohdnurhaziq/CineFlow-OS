@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
 interface SignedInRedirectProps {
@@ -16,11 +15,9 @@ interface SignedInRedirectProps {
  * visible "you're signed in" state while it moves on.
  */
 export function SignedInRedirect({ name, href }: SignedInRedirectProps) {
-  const router = useRouter();
-
   useEffect(() => {
-    router.replace(href);
-  }, [router, href]);
+    window.location.replace(href);
+  }, [href]);
 
   return (
     <div

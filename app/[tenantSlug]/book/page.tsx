@@ -8,6 +8,9 @@ import { STAFF_ROLES } from "@/lib/auth/guard";
 import { isSlotInPast, studioNow } from "@/lib/slot-time";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface BookingPageProps {
   params: Promise<{ tenantSlug: string }>;
   searchParams: Promise<{ category?: string; packageId?: string }>;

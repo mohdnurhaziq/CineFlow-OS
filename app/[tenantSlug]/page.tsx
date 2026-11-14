@@ -9,6 +9,9 @@ import { ShowcaseHero } from "@/components/showcase/showcase-hero";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{ tenantSlug: string }>;
   searchParams: Promise<{ category?: string }>;
