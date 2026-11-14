@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/slot-time";
 import type { InvoiceDocument } from "@/lib/invoices/document";
 
@@ -175,11 +175,56 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
 
         {/* How this fits the whole session */}
         {b && b.sessionPrice != null && (doc.milestoneType === "BOOKING_DEPOSIT" || doc.milestoneType === "BOOKING_BALANCE") && (
-          <section className="rounded-xl bg-zinc-50 border border-zinc-200 p-4 text-xs space-y-1">
-            <div className="font-bold uppercase tracking-widest text-[10px] text-zinc-500 mb-1">Session payment plan</div>
-            <div className="flex justify-between"><span>Session price{b.packageName ? ` (${b.packageName})` : ""}</span><span className="font-mono">{money(b.sessionPrice)}</span></div>
-            <div className="flex justify-between"><span>Deposit</span><span className="font-mono">{money(b.depositAmount)}</span></div>
-            <div className="flex justify-between"><span>Balance, due after the session</span><span className="font-mono">{money(balance ?? 0)}</span></div>
+          <section className="rounded-xl bg-zinc-50 border border-zinc-200 p-4 text-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold uppercase tracking-widest text-[10px] text-zinc-500">Session payment plan</span>
+              <span className="font-mono font-bold text-zinc-900">{money(b.sessionPrice)}</span>
+            </div>
+            {b.packageName && <div className="text-[11px] text-zinc-500 font-medium">{b.packageName}</div>}
+
+            {b.milestones && b.milestones.length > 0 ? (
+              <div className="space-y-1.5 pt-1 border-t border-zinc-200">
+                {b.milestones.map((m) => (
+                  <div
+                    key={m.id}
+                    className={cn(
+                      "flex items-center justify-between p-2 rounded-lg text-xs",
+                      m.isCurrent
+                        ? "bg-amber-50 border border-amber-300 font-medium"
+                        : "bg-white border border-zinc-200 text-zinc-600"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{m.title}</span>
+                      <span className="text-[10px] font-mono text-zinc-500">({m.invoiceNumber})</span>
+                      {m.isCurrent && (
+                        <span className="text-[9px] font-mono uppercase bg-amber-500 text-black px-1.5 py-0.5 rounded font-bold">
+                          This invoice
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono tabular-nums">{money(m.amount)}</span>
+                      <span
+                        className={cn(
+                          "text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase",
+                          m.status === "PAID"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        )}
+                      >
+                        {m.status === "PAID" ? "Paid" : "Unpaid"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between"><span>Deposit</span><span className="font-mono">{money(b.depositAmount)}</span></div>
+                <div className="flex justify-between"><span>Balance, due after the session</span><span className="font-mono">{money(balance ?? 0)}</span></div>
+              </>
+            )}
           </section>
         )}
 

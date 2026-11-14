@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { milestoneTitle } from "@/lib/invoices/document";
+import { milestoneInstallmentLabel } from "@/lib/labels";
 import { InvoicesConsole, type InvoiceRow } from "@/components/admin/invoices/invoices-console";
 import { NewInvoiceButton } from "@/components/admin/invoices/new-invoice-dialog";
 import { currentUserIsOwner } from "@/lib/auth/owner";
@@ -50,7 +50,7 @@ export default async function AdminInvoicesPage({ params }: InvoicesPageProps) {
     id: inv.id,
     invoiceNumber: inv.invoiceNumber,
     type: inv.milestoneType,
-    typeLabel: milestoneTitle(inv.milestoneType),
+    typeLabel: milestoneInstallmentLabel(inv.milestoneType),
     // Overdue is derived here so the server and browser render the same thing.
     status: inv.status === "PENDING" && inv.dueDate < now ? "OVERDUE" : inv.status,
     amount: inv.amount,

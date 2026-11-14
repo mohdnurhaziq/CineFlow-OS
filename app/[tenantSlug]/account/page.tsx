@@ -71,7 +71,16 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
       orderBy: { createdAt: "desc" },
       include: {
         project: { select: { id: true, title: true, projectNumber: true } },
-        booking: { select: { id: true, trackingCode: true, category: true } },
+        booking: {
+          select: {
+            id: true,
+            trackingCode: true,
+            category: true,
+            packageName: true,
+            sessionPrice: true,
+            depositAmount: true,
+          },
+        },
       },
     }),
     db.proposal.findMany({

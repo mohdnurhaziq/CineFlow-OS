@@ -219,8 +219,12 @@ export function InvoicesConsole({
                       <span className="block text-[11px] text-zinc-500 truncate">{inv.clientEmail}</span>
                     </span>
                     <span className="min-w-0 col-span-2 md:col-span-1">
-                      <span className="block text-xs text-zinc-300">{inv.typeLabel}</span>
-                      {inv.reference && <span className="block text-[11px] text-zinc-500 truncate">{inv.reference}</span>}
+                      <span className="block text-xs text-zinc-200 font-medium">{inv.typeLabel}</span>
+                      {inv.reference && (
+                        <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800/80 text-zinc-300 border border-zinc-700/60 truncate max-w-full">
+                          {inv.reference}
+                        </span>
+                      )}
                     </span>
                     <span className="text-[11px] text-zinc-400">
                       {inv.status === "PAID" && inv.paidAt ? `Paid ${day(inv.paidAt)}` : `Due ${day(inv.dueDate)}`}

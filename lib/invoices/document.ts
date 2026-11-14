@@ -38,6 +38,7 @@ export interface InvoiceDocument {
   lines: Array<{ description: string; detail?: string; amount: number }>;
   /** For booking invoices: the session and how the total breaks down. */
   booking: {
+    id?: string;
     trackingCode: string;
     sessionDate: string | null;
     startTime: string | null;
@@ -45,6 +46,15 @@ export interface InvoiceDocument {
     packageName: string | null;
     sessionPrice: number | null;
     depositAmount: number;
+    milestones?: Array<{
+      id: string;
+      invoiceNumber: string;
+      milestoneType: string;
+      title: string;
+      amount: number;
+      status: string;
+      isCurrent: boolean;
+    }>;
   } | null;
   project: { title: string; projectNumber: string; budget: number } | null;
 }
@@ -72,8 +82,33 @@ export async function loadInvoiceDocument(tenantId: string, invoiceId: string): 
   const linked = isBookingInvoice ? await resolveInvoiceBooking(db, invoice) : null;
   const slot = linked?.slotId ? await db.bookingSlot.findUnique({ where: { id: linked.slotId } }) : null;
 
+  const siblings = isBookingInvoice && linked
+    ? await db.milestoneInvoice.findMany({
+        where: { tenantId, bookingId: linked.id },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          milestoneType: true,
+          amount: true,
+          status: true,
+        },
+      })
+    : [];
+
+  const milestones = siblings.map((s) => ({
+    id: s.id,
+    invoiceNumber: s.invoiceNumber,
+    milestoneType: s.milestoneType,
+    title: s.milestoneType === "BOOKING_DEPOSIT" ? "Deposit (1 of 2)" : s.milestoneType === "BOOKING_BALANCE" ? "Session balance (2 of 2)" : milestoneTitle(s.milestoneType),
+    amount: s.amount,
+    status: s.status,
+    isCurrent: s.id === invoice.id,
+  }));
+
   const booking = linked
     ? {
+        id: linked.id,
         trackingCode: linked.trackingCode,
         sessionDate: slot ? slot.date.toISOString().slice(0, 10) : linked.targetDate ?? null,
         startTime: slot?.startTime ?? null,
@@ -81,6 +116,7 @@ export async function loadInvoiceDocument(tenantId: string, invoiceId: string): 
         packageName: linked.packageName,
         sessionPrice: linked.sessionPrice,
         depositAmount: linked.depositAmount,
+        milestones,
       }
     : null;
 

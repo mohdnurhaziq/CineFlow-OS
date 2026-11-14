@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  CalendarCheck,
   CalendarClock,
   CalendarPlus,
   Camera,
@@ -76,7 +77,14 @@ interface ProjectRow {
 
 interface InvoiceRow extends MilestoneInvoice {
   project?: { id: string; title: string; projectNumber?: string } | null;
-  booking?: { id: string; trackingCode: string; category?: string } | null;
+  booking?: {
+    id: string;
+    trackingCode: string;
+    category?: string;
+    packageName?: string | null;
+    sessionPrice?: number | null;
+    depositAmount?: number | null;
+  } | null;
 }
 
 interface ClientDashboardProps {
@@ -227,18 +235,169 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
     [spotlightProject]
   );
 
-  // Invoices to show based on filter
-  const visibleInvoices = useMemo(() => {
-    let list: InvoiceRow[] = [];
-    if (invoiceFilter === "unpaid") {
-      list = unpaidInvoices;
-    } else if (invoiceFilter === "paid") {
-      list = paidInvoices;
-    } else {
-      list = showVoidInvoices ? invoices : invoices.filter((i) => i.status !== "VOID" && i.status !== "CANCELLED");
+  const getMilestoneLabel = (type: string) => {
+    switch (type) {
+      case "BOOKING_DEPOSIT":
+        return "Milestone 1: Booking Deposit";
+      case "BOOKING_BALANCE":
+        return "Milestone 2: Final Session Balance";
+      case "RETAINER_50":
+        return "Milestone 1: Project Retainer (50%)";
+      case "FINAL_BALANCE_50":
+        return "Milestone 2: Final Balance (50%)";
+      case "PRINT_FRAME_ORDER":
+        return "Print & Fine Art Frame Order";
+      case "CUSTOM":
+        return "Custom Studio Invoice";
+      default:
+        return humanize(type);
     }
-    return list;
-  }, [invoiceFilter, unpaidInvoices, paidInvoices, invoices, showVoidInvoices]);
+  };
+
+  interface InvoiceGroup {
+    id: string;
+    type: "booking" | "proposal";
+    title: string;
+    trackingCode?: string;
+    totalAmount: number;
+    paidAmount: number;
+    balanceDue: number;
+    percentage: number;
+    isFullyPaid: boolean;
+    hasReview: boolean;
+    invoices: InvoiceRow[];
+  }
+
+  const { invoiceGroups, standaloneInvoices } = useMemo(() => {
+    const activeList = showVoidInvoices
+      ? invoices
+      : invoices.filter((i) => i.status !== "VOID" && i.status !== "CANCELLED");
+
+    const bookingMap = new Map<string, InvoiceRow[]>();
+    const proposalMap = new Map<string, InvoiceRow[]>();
+    const standalone: InvoiceRow[] = [];
+
+    for (const inv of activeList) {
+      if (inv.bookingId) {
+        const arr = bookingMap.get(inv.bookingId) || [];
+        arr.push(inv);
+        bookingMap.set(inv.bookingId, arr);
+      } else if (inv.proposalId) {
+        const arr = proposalMap.get(inv.proposalId) || [];
+        arr.push(inv);
+        proposalMap.set(inv.proposalId, arr);
+      } else {
+        standalone.push(inv);
+      }
+    }
+
+    const groups: InvoiceGroup[] = [];
+
+    for (const [bookingId, groupInvoices] of bookingMap.entries()) {
+      if (!groupInvoices || groupInvoices.length === 0) continue;
+      groupInvoices.sort((a, b) => {
+        if (a.milestoneType === "BOOKING_DEPOSIT") return -1;
+        if (b.milestoneType === "BOOKING_DEPOSIT") return 1;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+
+      const first = groupInvoices[0];
+      const matchedBooking = bookings.find((b) => b.id === bookingId) || first?.booking;
+      const title =
+        matchedBooking?.packageName ||
+        (matchedBooking?.category ? humanize(matchedBooking.category) : null) ||
+        "Studio Photoshoot Session";
+      const trackingCode = matchedBooking?.trackingCode || first?.booking?.trackingCode;
+
+      const totalAmount =
+        matchedBooking?.sessionPrice && matchedBooking.sessionPrice > 0
+          ? matchedBooking.sessionPrice
+          : groupInvoices.reduce((s, i) => s + (i.status !== "VOID" ? i.amount : 0), 0);
+
+      const paidAmount = groupInvoices
+        .filter((i) => i.status === "PAID")
+        .reduce((s, i) => s + i.amount, 0);
+
+      const balanceDue = groupInvoices
+        .filter((i) => i.status === "PENDING" || i.status === "OVERDUE")
+        .reduce((s, i) => s + i.amount, 0);
+
+      const hasReview = groupInvoices.some((i) => i.status === "PENDING_VERIFICATION");
+      const isFullyPaid = balanceDue <= 0 && paidAmount > 0;
+      const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : isFullyPaid ? 100 : 0;
+
+      if (invoiceFilter === "unpaid" && balanceDue <= 0 && !hasReview) continue;
+      if (invoiceFilter === "paid" && paidAmount <= 0) continue;
+
+      groups.push({
+        id: bookingId,
+        type: "booking",
+        title,
+        trackingCode,
+        totalAmount,
+        paidAmount,
+        balanceDue,
+        percentage,
+        isFullyPaid,
+        hasReview,
+        invoices: groupInvoices,
+      });
+    }
+
+    for (const [proposalId, groupInvoices] of proposalMap.entries()) {
+      groupInvoices.sort((a, b) => {
+        if (a.milestoneType === "RETAINER_50") return -1;
+        if (b.milestoneType === "RETAINER_50") return 1;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+
+      const matchedProposal = proposals.find((p) => p.id === proposalId);
+      const title = matchedProposal?.title || "Production Contract";
+      const trackingCode = matchedProposal?.proposalNumber;
+
+      const totalAmount =
+        matchedProposal?.totalPrice && matchedProposal.totalPrice > 0
+          ? matchedProposal.totalPrice
+          : groupInvoices.reduce((s, i) => s + (i.status !== "VOID" ? i.amount : 0), 0);
+
+      const paidAmount = groupInvoices
+        .filter((i) => i.status === "PAID")
+        .reduce((s, i) => s + i.amount, 0);
+
+      const balanceDue = groupInvoices
+        .filter((i) => i.status === "PENDING" || i.status === "OVERDUE")
+        .reduce((s, i) => s + i.amount, 0);
+
+      const hasReview = groupInvoices.some((i) => i.status === "PENDING_VERIFICATION");
+      const isFullyPaid = balanceDue <= 0 && paidAmount > 0;
+      const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : isFullyPaid ? 100 : 0;
+
+      if (invoiceFilter === "unpaid" && balanceDue <= 0 && !hasReview) continue;
+      if (invoiceFilter === "paid" && paidAmount <= 0) continue;
+
+      groups.push({
+        id: proposalId,
+        type: "proposal",
+        title,
+        trackingCode,
+        totalAmount,
+        paidAmount,
+        balanceDue,
+        percentage,
+        isFullyPaid,
+        hasReview,
+        invoices: groupInvoices,
+      });
+    }
+
+    const filteredStandalone = standalone.filter((inv) => {
+      if (invoiceFilter === "unpaid") return inv.status === "PENDING" || inv.status === "OVERDUE" || inv.status === "PENDING_VERIFICATION";
+      if (invoiceFilter === "paid") return inv.status === "PAID";
+      return true;
+    });
+
+    return { invoiceGroups: groups, standaloneInvoices: filteredStandalone };
+  }, [invoices, bookings, proposals, showVoidInvoices, invoiceFilter]);
 
   return (
     <div className="w-full">
@@ -1139,93 +1298,276 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               </div>
             </div>
 
-            {visibleInvoices.length === 0 ? (
+            {invoiceGroups.length === 0 && standaloneInvoices.length === 0 ? (
               <p className="text-xs text-zinc-500 py-6 text-center">
-                {invoiceFilter === "unpaid" ? "Great news! You have zero unpaid invoices." : "No invoices recorded."}
+                {invoiceFilter === "unpaid" ? "Great news! You have zero unpaid invoices or balances." : "No invoices recorded."}
               </p>
             ) : (
-              <div className="divide-y divide-zinc-800/60">
-                {visibleInvoices.map((inv) => {
-                  const isUnpaid = inv.status === "PENDING" || inv.status === "OVERDUE";
-                  const isPaid = inv.status === "PAID";
-
-                  return (
-                    <div
-                      key={inv.id}
-                      className={cn(
-                        "py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 -mx-2 px-2 rounded-xl transition-colors",
-                        isUnpaid ? "bg-amber-500/5 border border-amber-500/20 my-1" : "hover:bg-zinc-900/20"
-                      )}
-                    >
+              <div className="space-y-4">
+                {/* 1. Grouped Booking & Production Invoices */}
+                {invoiceGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="rounded-2xl border border-zinc-800 bg-[#0d0d10] overflow-hidden shadow-sm transition-all hover:border-zinc-700/80"
+                  >
+                    {/* Booking/Contract Billing Header */}
+                    <div className="p-4 sm:p-5 border-b border-zinc-800/80 bg-zinc-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Link
-                            href={`/${tenant.slug}/account/invoices/${inv.id}`}
-                            className="font-mono text-xs font-bold text-white hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-1"
-                          >
-                            <span>{inv.invoiceNumber}</span>
-                            <ArrowUpRight className="size-3 text-zinc-500" />
-                          </Link>
-                          <span className="text-xs text-zinc-300 font-medium">
-                            · {humanize(inv.milestoneType)}
+                          <span className="font-bold text-white text-sm sm:text-base tracking-tight flex items-center gap-2">
+                            <CalendarCheck className="size-4 text-amber-400" />
+                            {group.title}
                           </span>
+                          {group.trackingCode && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700">
+                              {group.trackingCode}
+                            </span>
+                          )}
                         </div>
-
-                        <div className="text-[11px] text-zinc-400 font-mono flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                          <span>
-                            {isPaid && inv.paidAt
-                              ? `Paid ${formatDate(inv.paidAt)}`
-                              : `Due ${formatDate(inv.dueDate)}`}
-                          </span>
-                          {inv.project && <span>Project: {inv.project.title}</span>}
-                        </div>
-
-                        {inv.status === "REJECTED" && (
-                          <p className="text-[11px] text-rose-400 font-mono">
-                            Payment proof not accepted{inv.rejectionReason ? `: ${inv.rejectionReason}` : ""}. Please upload a new slip within 24 hours.
-                          </p>
-                        )}
+                        <p className="text-xs text-zinc-400 font-mono">
+                          Total: <strong className="text-white">{money(group.totalAmount)}</strong>
+                          {group.paidAmount > 0 && (
+                            <span> · <span className="text-emerald-400">{money(group.paidAmount)} paid</span></span>
+                          )}
+                          {group.balanceDue > 0 && (
+                            <span> · <span className="text-amber-400">{money(group.balanceDue)} balance due</span></span>
+                          )}
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-3 self-end sm:self-center">
-                        <span className="font-mono font-bold text-white text-sm tabular-nums">
-                          {money(inv.amount)}
-                        </span>
-
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border",
-                            isPaid
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                              : isUnpaid
-                              ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                              : "bg-zinc-800 text-zinc-400 border-zinc-700"
-                          )}
-                        >
-                          {inv.status}
-                        </span>
-
-                        {isPaid && (
-                          <Link
-                            href={`/${tenant.slug}/account/invoices/${inv.id}`}
-                            className="px-2.5 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
-                          >
-                            Receipt
-                          </Link>
-                        )}
-
-                        {isUnpaid && (
-                          <Link
-                            href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
-                            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono transition-colors shadow-sm"
-                          >
-                            Pay Now
-                          </Link>
+                      <div className="flex items-center gap-3">
+                        {group.isFullyPaid ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                            <CheckCircle2 className="size-3.5" /> All settled
+                          </span>
+                        ) : group.hasReview ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            Under review
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            {money(group.balanceDue)} due
+                          </span>
                         )}
                       </div>
                     </div>
-                  );
-                })}
+
+                    {/* Progress Bar */}
+                    <div className="h-1 w-full bg-zinc-800/80">
+                      <div
+                        className={cn(
+                          "h-full transition-all duration-500",
+                          group.isFullyPaid ? "bg-emerald-500" : "bg-amber-400"
+                        )}
+                        style={{ width: `${Math.min(100, Math.max(0, group.percentage))}%` }}
+                      />
+                    </div>
+
+                    {/* Milestone Invoices Inside Card */}
+                    <div className="divide-y divide-zinc-800/60 p-2 sm:p-3">
+                      {group.invoices.map((inv) => {
+                        const isUnpaid = inv.status === "PENDING" || inv.status === "OVERDUE";
+                        const isPaid = inv.status === "PAID";
+                        const isReview = inv.status === "PENDING_VERIFICATION";
+
+                        return (
+                          <div
+                            key={inv.id}
+                            className={cn(
+                              "p-3 sm:p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors",
+                              isUnpaid
+                                ? "bg-amber-500/5 border border-amber-500/25 my-1"
+                                : "hover:bg-zinc-900/40 border border-transparent"
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5 shrink-0">
+                                {isPaid ? (
+                                  <div className="size-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
+                                    <Check className="size-3.5" />
+                                  </div>
+                                ) : isReview ? (
+                                  <div className="size-6 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center">
+                                    <Eye className="size-3.5" />
+                                  </div>
+                                ) : (
+                                  <div className="size-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                                    <Clock className="size-3.5" />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-white">
+                                    {getMilestoneLabel(inv.milestoneType)}
+                                  </span>
+                                  <Link
+                                    href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                    className="font-mono text-[11px] text-zinc-400 hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-0.5"
+                                  >
+                                    <span>{inv.invoiceNumber}</span>
+                                    <ArrowUpRight className="size-2.5 text-zinc-500" />
+                                  </Link>
+                                </div>
+
+                                <div className="text-[11px] text-zinc-400 font-mono flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                                  <span>
+                                    {isPaid && inv.paidAt
+                                      ? `Paid ${formatDate(inv.paidAt)}`
+                                      : `Due ${formatDate(inv.dueDate)}`}
+                                  </span>
+                                  {inv.paymentMethod && isPaid && (
+                                    <span className="text-zinc-500">· {humanize(inv.paymentMethod)}</span>
+                                  )}
+                                </div>
+
+                                {inv.status === "REJECTED" && (
+                                  <p className="text-[11px] text-rose-400 font-mono mt-1">
+                                    Payment proof not accepted{inv.rejectionReason ? `: ${inv.rejectionReason}` : ""}. Please upload a new slip within 24 hours.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+                              <span className="font-mono font-bold text-white text-sm tabular-nums">
+                                {money(inv.amount)}
+                              </span>
+
+                              <span
+                                className={cn(
+                                  "px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border",
+                                  isPaid
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : isUnpaid
+                                    ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                    : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                                )}
+                              >
+                                {inv.status}
+                              </span>
+
+                              {isPaid && (
+                                <Link
+                                  href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                  className="px-2.5 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
+                                >
+                                  Receipt
+                                </Link>
+                              )}
+
+                              {isUnpaid && (
+                                <Link
+                                  href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono transition-colors shadow-sm"
+                                >
+                                  Pay Now
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {/* 2. Standalone & Direct Orders (Prints, Frames, Custom) */}
+                {standaloneInvoices.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    {invoiceGroups.length > 0 && (
+                      <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-400 pt-2">
+                        Direct Orders &amp; Custom Invoices ({standaloneInvoices.length})
+                      </h3>
+                    )}
+                    <div className="divide-y divide-zinc-800/60 rounded-2xl border border-zinc-800 bg-[#0d0d10] p-2 sm:p-3">
+                      {standaloneInvoices.map((inv) => {
+                        const isUnpaid = inv.status === "PENDING" || inv.status === "OVERDUE";
+                        const isPaid = inv.status === "PAID";
+
+                        return (
+                          <div
+                            key={inv.id}
+                            className={cn(
+                              "p-3 sm:p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors",
+                              isUnpaid
+                                ? "bg-amber-500/5 border border-amber-500/25 my-1"
+                                : "hover:bg-zinc-900/40 border border-transparent"
+                            )}
+                          >
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Link
+                                  href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                  className="font-mono text-xs font-bold text-white hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-1"
+                                >
+                                  <span>{inv.invoiceNumber}</span>
+                                  <ArrowUpRight className="size-3 text-zinc-500" />
+                                </Link>
+                                <span className="text-xs text-zinc-300 font-medium">
+                                  · {getMilestoneLabel(inv.milestoneType)}
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-zinc-400 font-mono flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                                <span>
+                                  {isPaid && inv.paidAt
+                                    ? `Paid ${formatDate(inv.paidAt)}`
+                                    : `Due ${formatDate(inv.dueDate)}`}
+                                </span>
+                                {inv.project && <span>Project: {inv.project.title}</span>}
+                              </div>
+
+                              {inv.status === "REJECTED" && (
+                                <p className="text-[11px] text-rose-400 font-mono mt-1">
+                                  Payment proof not accepted{inv.rejectionReason ? `: ${inv.rejectionReason}` : ""}. Please upload a new slip within 24 hours.
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+                              <span className="font-mono font-bold text-white text-sm tabular-nums">
+                                {money(inv.amount)}
+                              </span>
+
+                              <span
+                                className={cn(
+                                  "px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border",
+                                  isPaid
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : isUnpaid
+                                    ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                    : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                                )}
+                              >
+                                {inv.status}
+                              </span>
+
+                              {isPaid && (
+                                <Link
+                                  href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                  className="px-2.5 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
+                                >
+                                  Receipt
+                                </Link>
+                              )}
+
+                              {isUnpaid && (
+                                <Link
+                                  href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono transition-colors shadow-sm"
+                                >
+                                  Pay Now
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

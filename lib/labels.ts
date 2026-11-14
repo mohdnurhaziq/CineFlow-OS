@@ -40,6 +40,22 @@ export const MILESTONE_TITLES: Record<string, string> = {
 };
 export const milestoneLabel = lookup(MILESTONE_TITLES);
 
+/** Installment title for lists where multiple milestone invoices share a booking or proposal. */
+export function milestoneInstallmentLabel(type: string | null | undefined): string {
+  switch (type) {
+    case "BOOKING_DEPOSIT":
+      return "Deposit (1 of 2)";
+    case "BOOKING_BALANCE":
+      return "Session balance (2 of 2)";
+    case "RETAINER_50":
+      return "Retainer (1 of 2)";
+    case "FINAL_BALANCE_50":
+      return "Final balance (2 of 2)";
+    default:
+      return milestoneLabel(type);
+  }
+}
+
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
   PENDING: "Unpaid",
   OVERDUE: "Overdue",
