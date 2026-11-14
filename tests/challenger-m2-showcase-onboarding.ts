@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
-import { OnboardStudioSchema, CheckSlugSchema } from "@/lib/validations/onboarding";
+import { OnboardStudioSchema } from "@/lib/validations/onboarding";
 import { holdBookingSlot, getTenantBookingSlots } from "@/lib/actions/booking";
 import { middleware } from "@/middleware";
 import { NextRequest } from "next/server";
@@ -328,7 +328,6 @@ export async function runChallengerM2Suite() {
   const orphanTenant = await db.tenant.findUnique({ where: { slug: rollbackSlug } });
   const orphanUser = await db.user.findFirst({ where: { email: rollbackEmail } });
   const orphanCats = await db.campaignCategory.findMany({ where: { slug: { in: ["cat-1", "cat-2"] } } });
-  const orphanPrints = await db.printSize.findMany({ where: { name: "8R", basePrice: 100 } });
 
   if (orphanTenant === null) {
     recordPass("Transaction Rollback", "Zero orphan Tenant records found in dev.db");

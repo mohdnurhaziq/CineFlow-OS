@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Loader2, Sparkles, Image as ImageIcon } from "lucide-react";
+import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createFrameDesign, updateFrameDesign } from "@/lib/actions/admin-frames";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";

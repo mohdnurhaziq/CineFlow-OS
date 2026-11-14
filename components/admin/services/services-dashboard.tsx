@@ -7,10 +7,8 @@ import {
   Layers,
   Plus,
   Search,
-  Filter,
   Sparkles,
   Clock,
-  CheckCircle2,
   Edit2,
   Trash2,
   Star,
@@ -20,7 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { deleteServicePackage, togglePackageFeatured } from "@/lib/actions/admin-services";
-import { PackageDialog, type PackageRow, type CategoryOption } from "./package-dialog";
+import { PackageDialog, type PackageRow } from "./package-dialog";
 import { CategoryDialog, type CategoryRow } from "./category-dialog";
 import { CategoryList } from "./category-list";
 import { disciplineLabel } from "@/lib/labels";

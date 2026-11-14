@@ -13,14 +13,10 @@ import { calculateGoldenHour, extractCoordinates } from "../lib/solar";
 import { generateWhatsAppCallSheetUrl, parseCrewJson } from "../lib/whatsapp";
 import { toggleShotCompletion, submitDigitalRelease } from "../lib/actions/logistics";
 import {
-  createGearItem,
   updateGearItem,
-  deleteGearItem,
-  createKitBundle,
   checkBundleAvailability,
   createEquipmentReservation,
   logPreShootInspection,
-  logPostShootInspection,
 } from "../lib/actions/gear";
 import { invalid } from "./e2e/result-helpers";
 

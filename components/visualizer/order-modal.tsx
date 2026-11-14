@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   X,
   ShoppingBag,
-  CheckCircle2,
   AlertCircle,
   CreditCard,
   ShieldCheck,

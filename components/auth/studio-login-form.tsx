@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Film, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, Sparkles } from "lucide-react";
 import { loginWithCredentials } from "@/lib/auth/session";
@@ -19,7 +19,6 @@ interface StudioLoginFormProps {
 }
 
 export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl");
   // Only allow same-site relative paths to prevent open redirects.

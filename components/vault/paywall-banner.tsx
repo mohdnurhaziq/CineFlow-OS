@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Lock, ArrowRight, ShieldAlert, Sparkles } from "lucide-react";
+import { Lock, ArrowRight, Sparkles } from "lucide-react";
 
 interface PaywallBannerProps {
   tenantSlug: string;

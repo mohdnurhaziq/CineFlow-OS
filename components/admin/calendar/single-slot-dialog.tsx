@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Loader2, Calendar } from "lucide-react";
+import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createSingleBookingSlot, updateBookingSlot } from "@/lib/actions/admin-calendar";
 import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
 import { packageRangeFor } from "@/lib/bookings/package-range";

@@ -11,7 +11,6 @@ import {
   Sparkles,
   ShoppingBag,
 } from "lucide-react";
-import type { WallColorKey } from "./room-scene";
 
 export interface PrintSizeOption {
   id: string;

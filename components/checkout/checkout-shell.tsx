@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CreditCard, QrCode, Banknote, User, Mail, Phone, FileText } from "lucide-react";
+import { CreditCard, QrCode, Banknote, User, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { OrderSummaryCard } from "./order-summary-card";
 import { OnlinePaymentForm } from "./online-payment-form";

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Aperture, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import { Aperture, ShieldCheck, Sparkles } from "lucide-react";
 
 export function SaasNavbar() {
   return (

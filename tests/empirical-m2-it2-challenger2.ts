@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
-import { SlugSchema, OnboardStudioSchema, RESERVED_SLUGS } from "@/lib/validations/onboarding";
+import { SlugSchema } from "@/lib/validations/onboarding";
 
 interface AssertResult {
   category: string;

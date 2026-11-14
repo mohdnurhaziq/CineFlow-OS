@@ -12,7 +12,6 @@ import {
   Pencil,
   Trash2,
   Film,
-  Sparkles,
 } from "lucide-react";
 import { toggleShotCompletion, deleteShotItem } from "@/lib/actions/logistics";
 import { ShotDialog } from "./shot-dialog";

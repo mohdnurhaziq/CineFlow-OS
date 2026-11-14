@@ -17,19 +17,15 @@ import {
   FileText,
   FolderLock,
   Heart,
-  HelpCircle,
   Image as ImageIcon,
-  Layers,
   LayoutDashboard,
   Lock,
   LockOpen,
   MapPin,
   Receipt,
   Sparkles,
-  User,
   Video,
   Wallet,
-  AlertCircle,
   ArrowUpRight,
 } from "lucide-react";
 import type { ClientBooking, BookingSlot, MilestoneInvoice, Proposal } from "@prisma/client";
@@ -792,7 +788,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                           {STAGES.map((s, idx) => {
                             const isCompleted = idx < stageIndex;
                             const isCurrent = idx === stageIndex;
-                            const isFuture = idx > stageIndex;
                             const StageIcon = s.icon;
 
                             return (
@@ -1148,7 +1143,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                 {visibleInvoices.map((inv) => {
                   const isUnpaid = inv.status === "PENDING" || inv.status === "OVERDUE";
                   const isPaid = inv.status === "PAID";
-                  const isVoid = inv.status === "VOID" || inv.status === "CANCELLED";
 
                   return (
                     <div

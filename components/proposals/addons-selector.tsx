@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Plus, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 
 export interface AddOnItem {
   id: string;

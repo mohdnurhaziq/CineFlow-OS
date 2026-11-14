@@ -27,6 +27,13 @@ const config = [
     ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      // `const { secret: _secret, ...safe } = row` is how the code omits a field; the named
+      // sibling exists only to be left out, so it is not an unused variable.
+      "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true }],
+    },
+  },
 ];
 
 export default config;

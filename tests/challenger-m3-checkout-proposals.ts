@@ -35,7 +35,7 @@
 import { db } from "@/lib/db";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import { approvePaymentVerification, rejectPaymentVerification } from "@/lib/actions/admin-verification";
-import { acceptProposal, toggleProposalAddOn } from "@/lib/actions/proposals";
+import { acceptProposal } from "@/lib/actions/proposals";
 import { holdBookingSlot } from "@/lib/actions/booking";
 import { invalid } from "./e2e/result-helpers";
 
@@ -700,7 +700,7 @@ async function runChallengerM3Suite() {
   // 3.8 Rejecting an Already REJECTED Invoice (Idempotency)
   console.log("\n--- 3.8 Rejecting an Already REJECTED Invoice ---");
   {
-    const reRejectRes = await rejectPaymentVerification({
+    await rejectPaymentVerification({
       invoiceId: cashInvoiceId, // Already marked REJECTED in 3.3
       tenantId: luminaTenant.id,
       tenantSlug: luminaTenant.slug,
@@ -760,7 +760,7 @@ async function runChallengerM3Suite() {
       },
     });
 
-    const addOn1 = await db.proposalAddOn.create({
+    await db.proposalAddOn.create({
       data: {
         proposalId: propZero.id,
         name: "Drone Aerial Coverage",

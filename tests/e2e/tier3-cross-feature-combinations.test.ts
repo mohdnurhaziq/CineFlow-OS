@@ -234,7 +234,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
       },
     });
 
-    const addOn2 = await db.proposalAddOn.create({
+    await db.proposalAddOn.create({
       data: {
         proposalId: prop.id,
         name: "Lighting Truck Package",

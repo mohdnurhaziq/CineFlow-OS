@@ -13,7 +13,6 @@ import {
   XCircle,
   Maximize2,
   Layers,
-  Sparkles,
   Loader2,
   AlertCircle,
 } from "lucide-react";

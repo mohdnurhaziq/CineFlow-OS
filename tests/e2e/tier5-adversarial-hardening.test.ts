@@ -193,7 +193,7 @@ export async function runTier5AdversarialHardeningTests(harness: TestHarness) {
         },
       });
 
-      const videoItem = await db.deliverableItem.create({
+      await db.deliverableItem.create({
         data: {
           deliverableId: deliverable.id,
           title: "Confidential_Brand_Anthem_4K",

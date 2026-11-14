@@ -9,8 +9,6 @@ import {
   Unlock,
   AlertTriangle,
   User,
-  Phone,
-  Mail,
   Loader2,
   CheckCircle,
   CalendarPlus,

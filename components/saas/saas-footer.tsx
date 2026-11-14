@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Aperture, ShieldCheck } from "lucide-react";
+import { Aperture } from "lucide-react";
 
 export function SaasFooter() {
   return (

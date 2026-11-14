@@ -35,12 +35,7 @@ import {
   deleteFrameDesign,
   createPrintSize,
 } from "@/lib/actions/admin-frames";
-import {
-  createGearItem,
-  updateKitBundle,
-  deleteKitBundle,
-  createEquipmentReservation,
-} from "@/lib/actions/gear";
+import { updateKitBundle, deleteKitBundle, createEquipmentReservation } from "@/lib/actions/gear";
 import {
   createShowcaseItem,
   toggleShowcaseFeatured,

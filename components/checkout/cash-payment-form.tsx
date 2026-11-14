@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, Clock, MapPin, Loader2, AlertCircle } from "lucide-react";
+import { Banknote, Clock, MapPin, Loader2 } from "lucide-react";
 
 interface CashPaymentFormProps {
   amount: number;

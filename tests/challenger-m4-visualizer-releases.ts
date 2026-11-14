@@ -234,7 +234,6 @@ async function runChallengerSuite() {
 
   const apex12R = apexSizes.find((s) => s.code === "12R")!;
   const apexGold = apexFrames.find((f) => f.name.includes("Gold")) || apexFrames[0]!;
-  const apexZeroFrame = apexFrames.find((f) => f.priceOffset === 0) || apexFrames[1]!;
 
   // 2.1 Lumina Cine (USD) Print Order Creation
   console.log("\n--- 2.1 Lumina Cine (USD) Order Verification ---");

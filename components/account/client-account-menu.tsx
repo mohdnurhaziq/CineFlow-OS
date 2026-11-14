@@ -2,7 +2,6 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
 
@@ -25,7 +24,6 @@ function initials(name: string): string {
 
 /** Header control: "Studio Admin" when staff is signed in, "My account" when client is signed in, otherwise "Sign in". */
 export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: ClientAccountMenuProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   if (staff) {

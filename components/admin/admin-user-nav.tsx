@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, User, LogIn, PlayCircle } from "lucide-react";
+import { LogOut, LogIn, PlayCircle } from "lucide-react";
 import { logoutAction, type SessionUser } from "@/lib/auth/session";
 
 interface AdminUserNavProps {

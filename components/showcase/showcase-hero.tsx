@@ -1,4 +1,3 @@
-import { MapPin } from "lucide-react";
 import { disciplineLabel } from "@/lib/labels";
 
 interface ShowcaseHeroProps {

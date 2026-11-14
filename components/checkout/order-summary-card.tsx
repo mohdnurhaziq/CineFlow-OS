@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Calendar, ShieldCheck, AlertCircle, FileText, Sparkles } from "lucide-react";
+import { Clock, Calendar, ShieldCheck, AlertCircle } from "lucide-react";
 import { milestoneLabel } from "@/lib/labels";
 
 interface OrderSummaryCardProps {

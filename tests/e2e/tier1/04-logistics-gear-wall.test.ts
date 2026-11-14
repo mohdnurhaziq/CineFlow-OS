@@ -14,7 +14,6 @@ import {
   logPostShootInspection,
 } from "@/lib/actions/gear";
 import { createPrintOrder } from "@/lib/actions/visualizer";
-import { createFrameDesign, toggleFrameAvailability, createPrintSize } from "@/lib/actions/admin-frames";
 import { invalid } from "../result-helpers";
 
 export async function runLogisticsGearWallTests(harness: TestHarness) {

@@ -7,7 +7,6 @@ import {
   QrCode,
   Banknote,
   Search,
-  Filter,
   AlertTriangle,
   User,
   DollarSign,

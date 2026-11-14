@@ -5,10 +5,6 @@ import {
   X,
   ClipboardCheck,
   AlertTriangle,
-  CheckCircle2,
-  ShieldCheck,
-  Wrench,
-  Camera,
   AlertCircle,
 } from "lucide-react";
 import { logPreShootInspection, logPostShootInspection } from "@/lib/actions/gear";

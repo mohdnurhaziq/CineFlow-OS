@@ -8,9 +8,6 @@ import {
   Lock,
   Maximize2,
   X,
-  Sparkles,
-  Filter,
-  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { RetouchNotesModal } from "./retouch-notes-modal";

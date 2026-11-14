@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Video, Heart, MessageSquare } from "lucide-react";
+import { CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Heart, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { createCallSheet, deleteCallSheet, deleteDeliverableItem, cancelEquipmentReservation, updateProjectStatus } from "@/lib/actions/admin-projects";
 import { createEquipmentReservation } from "@/lib/actions/gear";

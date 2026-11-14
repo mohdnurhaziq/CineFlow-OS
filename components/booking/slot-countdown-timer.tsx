@@ -12,7 +12,6 @@ interface SlotCountdownTimerProps {
 export function SlotCountdownTimer({
   heldUntil,
   onExpired,
-  brandColor,
 }: SlotCountdownTimerProps) {
   const [secondsRemaining, setSecondsRemaining] = useState<number>(() => {
     const target = new Date(heldUntil).getTime();

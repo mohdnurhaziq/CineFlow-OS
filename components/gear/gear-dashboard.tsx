@@ -7,7 +7,6 @@ import {
   ClipboardCheck,
   Plus,
   Search,
-  Filter,
   Trash2,
   Edit2,
   CheckCircle2,
@@ -16,7 +15,6 @@ import {
   Camera,
   Wrench,
   ShieldCheck,
-  Check,
   Scan,
 } from "lucide-react";
 import { GearKpiSummary } from "./gear-kpi-summary";
@@ -31,7 +29,6 @@ import { GearScannerConsole } from "./gear-scanner-console";
 import {
   deleteGearItem,
   deleteKitBundle,
-  updateGearConditionStatus,
   quarantineGearItem,
   releaseGearFromMaintenance,
 } from "@/lib/actions/gear";
@@ -368,7 +365,6 @@ export function GearDashboard({
                       const isAvail = item.status === "AVAILABLE";
                       const isOnShoot = item.status === "ON_SHOOT";
                       const isReserved = item.status === "RESERVED";
-                      const isMaintenance = item.status === "MAINTENANCE";
 
                       return (
                         <tr

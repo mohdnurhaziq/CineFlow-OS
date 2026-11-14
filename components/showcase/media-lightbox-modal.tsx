@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Camera, Aperture, Sliders, Maximize2 } from "lucide-react";
+import { X, Camera, Aperture, Sliders } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 
 export interface LightboxItem {

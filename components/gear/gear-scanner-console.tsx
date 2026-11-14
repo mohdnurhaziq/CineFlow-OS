@@ -3,14 +3,11 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import {
   Scan,
-  Search,
   X,
   Camera,
   Wrench,
   Clock,
   CheckCircle2,
-  AlertTriangle,
-  ArrowRight,
   ShieldCheck,
   Loader2,
   PackageCheck,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, Palette, Sun } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Palette } from "lucide-react";
 import { SofaMockup } from "./sofa-mockup";
 import { FrameCanvas } from "./frame-canvas";
 

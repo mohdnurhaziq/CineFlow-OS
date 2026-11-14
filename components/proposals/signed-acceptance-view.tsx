@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { CheckCircle2, CreditCard, ArrowRight, FileText, Calendar, Lock } from "lucide-react";
+import { CheckCircle2, CreditCard } from "lucide-react";
 import confetti from "canvas-confetti";
 
 interface SignedAcceptanceViewProps {
@@ -25,16 +25,13 @@ interface SignedAcceptanceViewProps {
 export function SignedAcceptanceView({
   tenantSlug,
   proposalNumber,
-  title,
   signerName,
   signedAt,
   clientSignature,
   depositAmount,
-  totalPrice,
   currency,
   invoiceId,
   invoiceNumber,
-  projectId,
   projectNumber,
   isInitialSigning = false,
 }: SignedAcceptanceViewProps) {

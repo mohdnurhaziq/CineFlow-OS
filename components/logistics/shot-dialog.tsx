@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { X, Sparkles, Video, Loader2, Camera, Sun, Film } from "lucide-react";
+import { X, Video, Loader2, Camera, Sun, Film } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 import { createShotItem, updateShotItem } from "@/lib/actions/logistics";
 import { toast } from "sonner";

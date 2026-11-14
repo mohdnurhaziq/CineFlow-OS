@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { RotateCcw, Trash2, CheckCircle2, PenTool } from "lucide-react";
+import { RotateCcw, Trash2, CheckCircle2 } from "lucide-react";
 
 interface Point {
   x: number;

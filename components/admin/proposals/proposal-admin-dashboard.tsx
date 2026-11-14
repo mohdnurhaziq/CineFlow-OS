@@ -8,7 +8,6 @@ import {
   Sparkles,
   Search,
   CheckCircle,
-  Clock,
   DollarSign,
   Layers,
 } from "lucide-react";

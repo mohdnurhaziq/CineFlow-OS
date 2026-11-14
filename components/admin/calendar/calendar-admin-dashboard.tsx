@@ -8,13 +8,10 @@ import {
   Sparkles,
   RefreshCw,
   Search,
-  Filter,
   CheckCircle,
   Clock,
   Lock,
   UserCheck,
-  AlertTriangle,
-  Loader2,
 } from "lucide-react";
 import { cleanupExpiredHolds } from "@/lib/actions/admin-calendar";
 import { DatePicker } from "@/components/ui/date-picker";

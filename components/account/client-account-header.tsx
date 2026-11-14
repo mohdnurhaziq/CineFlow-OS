@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, CalendarPlus, ArrowUpRight } from "lucide-react";
+import { CalendarPlus, ArrowUpRight } from "lucide-react";
 import { ClientNavBar } from "./client-nav-bar";
 import { ClientUserNav } from "./client-user-nav";
 import { disciplineLabel } from "@/lib/labels";

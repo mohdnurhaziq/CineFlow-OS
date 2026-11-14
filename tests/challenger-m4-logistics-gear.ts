@@ -47,12 +47,10 @@ import { createPrintOrder } from "../lib/actions/visualizer";
 import { invalid } from "./e2e/result-helpers";
 
 let assertionsPassed = 0;
-let assertionsFailed = 0;
 
 function assert(condition: boolean, description: string) {
   if (!condition) {
     console.error(`❌ CHALLENGE FAILED: ${description}`);
-    assertionsFailed++;
     throw new Error(`Challenge failure: ${description}`);
   }
   console.log(`✓ PASS: ${description}`);

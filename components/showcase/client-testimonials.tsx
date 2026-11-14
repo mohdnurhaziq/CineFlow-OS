@@ -1,10 +1,4 @@
-import { Star, Quote } from "lucide-react";
-
-interface ClientTestimonialsProps {
-  tenant: {
-    name: string;
-  };
-}
+import { Star } from "lucide-react";
 
 const TESTIMONIALS = [
   {
@@ -30,7 +24,7 @@ const TESTIMONIALS = [
   },
 ];
 
-export function ClientTestimonials({ tenant }: ClientTestimonialsProps) {
+export function ClientTestimonials() {
   return (
     <section className="space-y-8">
       <div className="space-y-2 text-center max-w-2xl mx-auto">

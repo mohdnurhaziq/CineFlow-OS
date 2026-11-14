@@ -42,7 +42,7 @@ async function main() {
   // ============================================================================
   // 1. GLOBAL SUPER ADMIN
   // ============================================================================
-  const superAdmin = await prisma.user.create({
+  await prisma.user.create({
     data: {
       id: "usr_superadmin",
       name: "CineFlow Super Admin",

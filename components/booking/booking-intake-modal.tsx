@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X, CheckCircle2, User, Mail, Phone, FileText, Loader2, Calendar, CreditCard, ArrowRight } from "lucide-react";
+import { X, CheckCircle2, Loader2, Calendar, CreditCard, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { createClientBooking, type CreateBookingInput } from "@/lib/actions/booking";
@@ -47,7 +47,6 @@ export function BookingIntakeModal({
   currency,
   slot,
   sessionId,
-  brandColor,
   clientAccount = null,
   packages = [],
   categoryName,

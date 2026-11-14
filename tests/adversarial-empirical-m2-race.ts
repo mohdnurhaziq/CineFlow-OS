@@ -1,9 +1,5 @@
 import { db } from "@/lib/db";
-import {
-  holdBookingSlot,
-  releaseBookingSlot,
-  createClientBooking,
-} from "@/lib/actions/booking";
+import { holdBookingSlot, createClientBooking } from "@/lib/actions/booking";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
 import { performance } from "perf_hooks";
 

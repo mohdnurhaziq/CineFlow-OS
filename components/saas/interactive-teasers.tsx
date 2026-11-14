@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, AlertTriangle, CheckSquare, Square, Calculator, Sparkles } from "lucide-react";
+import { Clock, AlertTriangle, CheckSquare, Square, Sparkles } from "lucide-react";
 
 export function InteractiveTeasers() {
   // --- Demo 1: Slot Countdown State ---

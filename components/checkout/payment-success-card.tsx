@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, Calendar, ArrowRight, FileText, Download } from "lucide-react";
+import { CheckCircle2, Clock, Calendar, ArrowRight, Download } from "lucide-react";
 import confetti from "canvas-confetti";
 
 interface PaymentSuccessCardProps {

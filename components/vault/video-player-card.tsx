@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Film, Download, Lock, MessageSquare, Clock, Video } from "lucide-react";
+import { Film, Download, Lock, MessageSquare } from "lucide-react";
 import { RetouchNotesModal } from "./retouch-notes-modal";
 
 export interface VideoItem {

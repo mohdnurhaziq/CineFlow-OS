@@ -1,6 +1,6 @@
 "use client";
 
-import { Shield, Sparkles, Clock, Lock } from "lucide-react";
+import { Clock, Lock } from "lucide-react";
 
 interface PricingBreakdownProps {
   basePrice: number;

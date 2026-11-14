@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Eye, Shield } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { RoomScene, type WallColorKey } from "./room-scene";
 import {
   ConfiguratorPanel,

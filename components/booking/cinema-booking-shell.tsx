@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Calendar, ShieldCheck, Sparkles, X, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { CinemaStageIndicator } from "./cinema-stage-indicator";
 import { StatusLegendBar } from "./status-legend-bar";
@@ -53,7 +53,7 @@ export function CinemaBookingShell({
   staffAccount = null,
   packages = [],
 }: CinemaBookingShellProps) {
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Local state
   const [slots, setSlots] = useState<BookingSlotItem[]>(initialSlots);
@@ -450,7 +450,7 @@ export function CinemaBookingShell({
         packages={packages}
         categoryName={heldSlot ? categoryLabel(heldSlot.category) : undefined}
         initialPackageId={initialPackageId}
-        onBookingConfirmed={(code) => {
+        onBookingConfirmed={() => {
           setHeldSlot(null);
           setHeldUntil(null);
           setSlots((prev) =>

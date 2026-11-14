@@ -9,8 +9,6 @@ import {
   Calendar,
   AlertCircle,
   FileSignature,
-  Download,
-  ExternalLink,
 } from "lucide-react";
 import { ReleaseSignaturePad } from "./release-signature-pad";
 import { submitDigitalRelease } from "@/lib/actions/logistics";

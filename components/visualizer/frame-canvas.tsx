@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Sparkles, Maximize2 } from "lucide-react";
 
 interface FrameCanvasProps {
   pixelsPerInch: number;
@@ -29,8 +28,6 @@ export function FrameCanvas({
   frameColor,
   frameMaterial,
   matBoardType,
-  orientation,
-  sofaWidthPx,
 }: FrameCanvasProps) {
   // Mat dimensions in inches
   const matInches = matBoardType === "NONE" ? 0 : 2.0;

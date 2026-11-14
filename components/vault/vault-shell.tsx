@@ -6,11 +6,8 @@ import {
   Download,
   Lock,
   CheckCircle2,
-  Calendar,
   User,
-  Shield,
   ArrowLeft,
-  Sparkles,
   Heart,
 } from "lucide-react";
 import { PaywallBanner } from "./paywall-banner";
@@ -60,7 +57,6 @@ export function VaultShell({
   photoItems,
   videoItems,
 }: VaultShellProps) {
-  const currencySymbol = tenant.currency === "MYR" ? "RM " : "$";
   const balanceAmount = finalInvoice?.amount ?? project.budget * 0.5;
   const isPaid = project.isFinalBalancePaid;
 

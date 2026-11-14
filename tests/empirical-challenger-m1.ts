@@ -49,7 +49,7 @@ async function runEmpiricalStressSuite() {
       `INSERT INTO CampaignCategory (id, tenantId, name, slug, isActive, sortOrder) VALUES ('raw_fk_bad', 'nonexistent_tenant_9999', 'Raw Test', 'raw-test', 1, 0)`
     );
     recordFail("Raw SQL Foreign Key enforcement", "SQLite accepted insert with non-existent tenantId without FK error");
-  } catch (err) {
+  } catch {
     recordPass("Raw SQL Foreign Key enforcement", "SQLite rejected raw INSERT with non-existent foreign key (Code 1811 / foreign key constraint failed)");
   }
 
@@ -553,17 +553,15 @@ async function runEmpiricalStressSuite() {
 
   // 4.3 Full Tenant Deletion Cascade (Adversarial Stress Test)
   console.log("  --- 4.3 Full Tenant Deletion Cascade ---");
-  let tUniId = "";
   try {
     const tUniverse = await prisma.tenant.create({
       data: { name: "Universe Studio", slug: `universe-stress-${Date.now()}` },
     });
-    tUniId = tUniverse.id;
 
     const uOwner = await prisma.user.create({ data: { tenantId: tUniverse.id, name: "Owner", email: `uo-${Date.now()}@stress.test` } });
     const uClient = await prisma.user.create({ data: { tenantId: tUniverse.id, name: "Client", email: `uc-${Date.now()}@stress.test` } });
-    const cat = await prisma.campaignCategory.create({ data: { tenantId: tUniverse.id, name: "Cat", slug: "cat" } });
-    const slot = await prisma.bookingSlot.create({ data: { tenantId: tUniverse.id, date: new Date(), startTime: "9am", endTime: "10am" } });
+    await prisma.campaignCategory.create({ data: { tenantId: tUniverse.id, name: "Cat", slug: "cat" } });
+    await prisma.bookingSlot.create({ data: { tenantId: tUniverse.id, date: new Date(), startTime: "9am", endTime: "10am" } });
     const inv = await prisma.inventoryItem.create({ data: { tenantId: tUniverse.id, name: "Cam", sku: `SKU-U-${Date.now()}`, category: "Cameras" } });
     const bundle = await prisma.kitBundle.create({ data: { tenantId: tUniverse.id, name: "Kit", description: "D", discipline: "PHOTOGRAPHY" } });
     await prisma.kitBundleItem.create({ data: { bundleId: bundle.id, itemId: inv.id } });
@@ -582,7 +580,7 @@ async function runEmpiricalStressSuite() {
     try {
       await prisma.tenant.delete({ where: { id: tUniverse.id } });
       recordPass("Full Tenant cascade deletion", "All 24 models cascaded cleanly without orphaned rows");
-    } catch (err) {
+    } catch {
       recordFail(
         "Full Tenant cascade deletion",
         `Foreign key constraint violated on EquipmentReservation.itemId -> InventoryItem.id (Code 1811: FOREIGN KEY constraint failed)`,

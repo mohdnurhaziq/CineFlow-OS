@@ -13,13 +13,11 @@ import {
   Camera,
   AlertTriangle,
   CheckCircle2,
-  Sparkles,
   MapPin,
   ChevronRight,
-  PlusCircle,
 } from "lucide-react";
 import type { StudioAnalyticsData } from "@/lib/actions/admin-analytics";
-import { conditionLabel, milestoneLabel, paymentMethodLabel } from "@/lib/labels";
+import { conditionLabel, milestoneLabel } from "@/lib/labels";
 
 interface StudioDashboardProps {
   data: StudioAnalyticsData;

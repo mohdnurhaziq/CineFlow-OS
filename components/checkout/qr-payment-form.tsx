@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { QrCode, Copy, Check, Upload, Image as ImageIcon, X, Loader2, AlertCircle } from "lucide-react";
+import { QrCode, Copy, Check, Upload, X, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { errorMessageOf } from "../../lib/action-error";

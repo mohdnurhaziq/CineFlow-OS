@@ -1,9 +1,6 @@
 import { db } from "@/lib/db";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
-import { holdBookingSlot, releaseBookingSlot, getTenantBookingSlots, createClientBooking } from "@/lib/actions/booking";
-import { getPlatformMetrics, getAllTenantsSummary } from "@/lib/actions/super-admin";
-import { getTenantBySlug } from "@/lib/tenant";
-import bcrypt from "bcryptjs";
+import { holdBookingSlot, releaseBookingSlot, createClientBooking } from "@/lib/actions/booking";
 
 interface ChallengeResult {
   suiteName: string;

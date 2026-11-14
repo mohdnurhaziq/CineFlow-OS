@@ -10,7 +10,7 @@ import { payAsInvoiceClient } from "./proposal-helpers";
 import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
-import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
+import { processBookingCheckout } from "@/lib/actions/checkout";
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { expireUnpaidDeposits, DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";

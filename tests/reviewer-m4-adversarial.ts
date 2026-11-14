@@ -276,9 +276,7 @@ async function runReviewerAdversarialTests() {
 
   // Verify 8R Portrait (8 x 10 in, No Mat, 1.25" Molding):
   const p8rW = 8;
-  const p8rH = 10;
   const total8rWInches = p8rW + 0 * 2 + 1.25 * 2; // 10.5 in
-  const total8rHInches = p8rH + 0 * 2 + 1.25 * 2; // 12.5 in
   const percent8rSofa = Math.round((total8rWInches / 84) * 100);
   check("8R No Mat width (8 + 2.5 = 10.5 in)", total8rWInches === 10.5);
   check("8R % of 84\" sofa (10.5 / 84 ≈ 13%)", percent8rSofa === 13, `Got: ${percent8rSofa}%`);

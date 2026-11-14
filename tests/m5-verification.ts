@@ -13,17 +13,13 @@
 import { db } from "../lib/db";
 import {
   createCampaignCategory,
-  updateCampaignCategory,
   deleteCampaignCategory,
-  toggleCategoryActive,
   createServicePackage,
-  updateServicePackage,
   deleteServicePackage,
   togglePackageFeatured,
 } from "../lib/actions/admin-services";
 import {
   createSingleBookingSlot,
-  updateBookingSlot,
   deleteBookingSlot,
   batchGenerateBookingSlots,
   forceReleaseHeldSlot,
@@ -32,26 +28,18 @@ import {
 } from "../lib/actions/admin-calendar";
 import {
   createProposalAddOnTemplate,
-  updateProposalAddOnTemplate,
   deleteProposalAddOnTemplate,
   toggleAddOnTemplateDefault,
   toggleAddOnTemplateActive,
 } from "../lib/actions/admin-proposals";
 import {
   createFrameDesign,
-  updateFrameDesign,
   deleteFrameDesign,
   toggleFrameAvailability,
   createPrintSize,
-  updatePrintSize,
   deletePrintSize,
 } from "../lib/actions/admin-frames";
-import {
-  createShowcaseItem,
-  updateShowcaseItem,
-  deleteShowcaseItem,
-  toggleShowcaseFeatured,
-} from "../lib/actions/admin-cms";
+import { createShowcaseItem, deleteShowcaseItem, toggleShowcaseFeatured } from "../lib/actions/admin-cms";
 import { updateStudioSettings } from "../lib/actions/admin-settings";
 import type { UpdateStudioSettingsInput } from "../lib/validations/admin-settings";
 

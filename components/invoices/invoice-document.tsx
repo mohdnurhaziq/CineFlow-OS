@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CheckCircle2, ShieldCheck } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { formatSlotDate } from "@/lib/slot-time";
 import type { InvoiceDocument } from "@/lib/invoices/document";

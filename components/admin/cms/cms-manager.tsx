@@ -7,7 +7,6 @@ import {
   Sparkles,
   Plus,
   Search,
-  Filter,
   ExternalLink,
   Edit2,
   Trash2,

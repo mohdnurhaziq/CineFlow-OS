@@ -1,13 +1,6 @@
 import { Camera, Film, Sun, Sparkles } from "lucide-react";
 
-interface StudioPedigreeProps {
-  tenant: {
-    discipline: string;
-    brandColor?: string | null;
-  };
-}
-
-export function StudioPedigree({ tenant }: StudioPedigreeProps) {
+export function StudioPedigree() {
   return (
     <section className="rounded-2xl border border-zinc-800 bg-[#121215] p-8 sm:p-10 space-y-8">
       <div className="space-y-2 text-center max-w-2xl mx-auto">

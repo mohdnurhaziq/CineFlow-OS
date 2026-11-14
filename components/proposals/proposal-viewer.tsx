@@ -1,18 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  Film,
-  Calendar,
-  User,
-  Shield,
-  FileCheck,
-  CheckCircle2,
-  Lock,
-  Loader2,
-  AlertCircle,
-  ExternalLink,
-} from "lucide-react";
+import { FileCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AddonsSelector, type AddOnItem } from "./addons-selector";
 import { PricingBreakdown } from "./pricing-breakdown";

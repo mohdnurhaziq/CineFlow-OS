@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
+import { processBookingCheckout } from "@/lib/actions/checkout";
 import { approvePaymentVerification, rejectPaymentVerification } from "@/lib/actions/admin-verification";
 import { acceptProposal } from "@/lib/actions/proposals";
 import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";

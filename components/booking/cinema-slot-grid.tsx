@@ -39,13 +39,11 @@ export function CinemaSlotGrid({
   currentHeldSlotId,
   onSlotClick,
   currency,
-  brandColor,
   categoryLabel = (slug) => slug,
   depositLabel,
   pendingSlotId = null,
 }: CinemaSlotGridProps) {
   const currencySymbol = currency === "MYR" ? "RM " : "$";
-  const activeColor = brandColor || "#f59e0b";
 
   if (slots.length === 0) {
     return (

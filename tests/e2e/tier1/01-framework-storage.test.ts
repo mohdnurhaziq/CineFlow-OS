@@ -342,7 +342,7 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
   });
 
   await harness.test("T1-F03-05: Concurrent read queries execute without SQLITE_BUSY contention", async () => {
-    const reads = Array.from({ length: 20 }, (_, i) =>
+    const reads = Array.from({ length: 20 }, () =>
       db.tenant.findMany({
         take: 5,
         include: { campaignCategories: true, servicePackages: true },

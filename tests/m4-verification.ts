@@ -15,7 +15,6 @@ import { toggleShotCompletion, submitDigitalRelease } from "../lib/actions/logis
 import {
   createGearItem,
   updateGearItem,
-  deleteGearItem,
   createKitBundle,
   checkBundleAvailability,
   createEquipmentReservation,

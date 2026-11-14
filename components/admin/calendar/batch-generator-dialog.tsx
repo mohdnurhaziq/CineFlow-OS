@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, Calendar, Layers, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
+import { X, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
 import { batchGenerateBookingSlots } from "@/lib/actions/admin-calendar";
 import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
 import { packageRangeFor } from "@/lib/bookings/package-range";

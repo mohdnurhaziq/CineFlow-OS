@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Film, Camera, Sparkles, Calendar, ExternalLink } from "lucide-react";
+import { Film, Camera, Sparkles, Calendar, ExternalLink } from "lucide-react";
 
 interface StudioData {
   id: string;

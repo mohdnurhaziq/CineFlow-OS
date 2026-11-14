@@ -11,10 +11,6 @@ import {
   Search,
   ExternalLink,
   Settings,
-  Activity,
-  Layers,
-  CheckCircle2,
-  AlertCircle,
   HardDrive,
   ArrowLeft,
 } from "lucide-react";

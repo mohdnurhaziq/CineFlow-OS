@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Film, Play, Volume2 } from "lucide-react";
+import { X, Play, Volume2 } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 
 export interface VideoItem {

@@ -12,8 +12,6 @@ import {
   AlertCircle,
   Loader2,
   Copy,
-  ExternalLink,
-  Sparkles,
   Upload,
   X,
 } from "lucide-react";

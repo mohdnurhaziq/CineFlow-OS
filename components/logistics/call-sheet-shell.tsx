@@ -13,7 +13,6 @@ import {
   FileSignature,
   Calendar,
   Clock,
-  Sparkles,
   ExternalLink,
   ShieldAlert,
   Info,

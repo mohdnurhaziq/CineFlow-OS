@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
 import { getPlatformMetrics, getAllTenantsSummary } from "@/lib/actions/super-admin";
-import { holdBookingSlot, releaseBookingSlot, getTenantBookingSlots } from "@/lib/actions/booking";
+import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { middleware } from "@/middleware";
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
