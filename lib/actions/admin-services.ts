@@ -84,7 +84,7 @@ export async function createServicePackage(input: CreateServicePackageInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, package: newPackage };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "CREATE_PACKAGE_FAILED",
@@ -140,7 +140,7 @@ export async function updateServicePackage(input: UpdateServicePackageInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, package: updatedPackage };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_PACKAGE_FAILED",
@@ -180,7 +180,7 @@ export async function deleteServicePackage(input: DeleteServicePackageInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, deletedId: id };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "DELETE_PACKAGE_FAILED",
@@ -212,7 +212,7 @@ export async function togglePackageFeatured(input: TogglePackageFeaturedInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, package: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "TOGGLE_FEATURED_FAILED",
@@ -257,7 +257,7 @@ export async function createCampaignCategory(input: CreateCampaignCategoryInput)
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, category };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "CREATE_CATEGORY_FAILED",
@@ -338,7 +338,7 @@ export async function updateCampaignCategory(input: UpdateCampaignCategoryInput)
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, category };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_CATEGORY_FAILED",
@@ -386,7 +386,7 @@ export async function deleteCampaignCategory(input: DeleteCampaignCategoryInput)
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, deletedId: id };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "DELETE_CATEGORY_FAILED",
@@ -418,7 +418,7 @@ export async function toggleCategoryActive(input: ToggleCategoryActiveInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, category: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "TOGGLE_CATEGORY_ACTIVE_FAILED",

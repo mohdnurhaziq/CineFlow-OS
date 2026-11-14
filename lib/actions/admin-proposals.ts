@@ -16,6 +16,7 @@ import {
   type ToggleTemplateActiveInput,
   type ToggleTemplateDefaultInput,
 } from "@/lib/validations/proposal-templates";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -51,11 +52,11 @@ export async function createProposalAddOnTemplate(input: CreateProposalAddOnTemp
     safeRevalidate(`/${tenantSlug}/admin/proposals`);
 
     return { success: true, template };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "CREATE_TEMPLATE_FAILED",
-      message: error.message || "Failed to create proposal add-on template.",
+      message: errorMessageOf(error) || "Failed to create proposal add-on template.",
     };
   }
 }
@@ -88,11 +89,11 @@ export async function updateProposalAddOnTemplate(input: UpdateProposalAddOnTemp
     safeRevalidate(`/${tenantSlug}/admin/proposals`);
 
     return { success: true, template: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_TEMPLATE_FAILED",
-      message: error.message || "Failed to update proposal add-on template.",
+      message: errorMessageOf(error) || "Failed to update proposal add-on template.",
     };
   }
 }
@@ -117,11 +118,11 @@ export async function deleteProposalAddOnTemplate(input: DeleteProposalAddOnTemp
     safeRevalidate(`/${tenantSlug}/admin/proposals`);
 
     return { success: true, deletedId: id };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "DELETE_TEMPLATE_FAILED",
-      message: error.message || "Failed to delete proposal add-on template.",
+      message: errorMessageOf(error) || "Failed to delete proposal add-on template.",
     };
   }
 }
@@ -147,11 +148,11 @@ export async function toggleAddOnTemplateDefault(input: ToggleTemplateDefaultInp
     safeRevalidate(`/${tenantSlug}/admin/proposals`);
 
     return { success: true, template: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "TOGGLE_DEFAULT_FAILED",
-      message: error.message || "Failed to toggle template default status.",
+      message: errorMessageOf(error) || "Failed to toggle template default status.",
     };
   }
 }
@@ -177,11 +178,11 @@ export async function toggleAddOnTemplateActive(input: ToggleTemplateActiveInput
     safeRevalidate(`/${tenantSlug}/admin/proposals`);
 
     return { success: true, template: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "TOGGLE_ACTIVE_FAILED",
-      message: error.message || "Failed to toggle template active status.",
+      message: errorMessageOf(error) || "Failed to toggle template active status.",
     };
   }
 }

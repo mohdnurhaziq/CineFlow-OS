@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createPrintSize, updatePrintSize } from "@/lib/actions/admin-frames";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface PrintSizeRow {
   id: string;
@@ -146,8 +147,8 @@ export function PrintSizeDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

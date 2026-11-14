@@ -17,6 +17,7 @@ import {
   type DeleteShotItemInput,
   type SubmitDigitalReleaseInput,
 } from "@/lib/validations/logistics";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -95,12 +96,12 @@ export async function toggleShotCompletion(input: ToggleShotCompletionInput) {
       pendingShots,
       percentage,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("toggleShotCompletion failed:", err);
     return {
       success: false,
       error: "UPDATE_FAILED",
-      message: err.message || "Failed to update shot status.",
+      message: errorMessageOf(err) || "Failed to update shot status.",
     };
   }
 }
@@ -184,12 +185,12 @@ export async function createShotItem(input: CreateShotItemInput) {
       success: true,
       shot,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("createShotItem failed:", err);
     return {
       success: false,
       error: "CREATE_FAILED",
-      message: err.message || "Failed to create shot item.",
+      message: errorMessageOf(err) || "Failed to create shot item.",
     };
   }
 }
@@ -255,12 +256,12 @@ export async function updateShotItem(input: UpdateShotItemInput) {
       success: true,
       shot: updatedShot,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("updateShotItem failed:", err);
     return {
       success: false,
       error: "UPDATE_FAILED",
-      message: err.message || "Failed to update shot item.",
+      message: errorMessageOf(err) || "Failed to update shot item.",
     };
   }
 }
@@ -314,12 +315,12 @@ export async function deleteShotItem(input: DeleteShotItemInput) {
     return {
       success: true,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("deleteShotItem failed:", err);
     return {
       success: false,
       error: "DELETE_FAILED",
-      message: err.message || "Failed to delete shot item.",
+      message: errorMessageOf(err) || "Failed to delete shot item.",
     };
   }
 }
@@ -393,12 +394,12 @@ export async function submitDigitalRelease(input: SubmitDigitalReleaseInput) {
       releaseId: release.id,
       release,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("submitDigitalRelease failed:", err);
     return {
       success: false,
       error: "SUBMISSION_FAILED",
-      message: err.message || "Failed to submit digital release.",
+      message: errorMessageOf(err) || "Failed to submit digital release.",
     };
   }
 }

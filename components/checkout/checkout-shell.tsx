@@ -10,6 +10,7 @@ import { CashPaymentForm } from "./cash-payment-form";
 import { PaymentSuccessCard } from "./payment-success-card";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import { PackagePicker, type BookingPackageOption } from "@/components/booking/package-picker";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface CheckoutShellProps {
   tenant: {
@@ -190,9 +191,9 @@ export function CheckoutShell({
           toast.error(res.message || "Failed to settle invoice.");
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Card payment error:", err);
-      toast.error(err.message || "An unexpected error occurred starting the payment.");
+      toast.error(errorMessageOf(err) || "An unexpected error occurred starting the payment.");
     } finally {
       // Keep the button disabled while the browser navigates to the gateway.
       if (!redirecting) setIsSubmitting(false);
@@ -258,9 +259,9 @@ export function CheckoutShell({
           toast.error(res.message || "Failed to submit payment slip.");
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("QR checkout error:", err);
-      toast.error(err.message || "An unexpected error occurred.");
+      toast.error(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }
@@ -320,9 +321,9 @@ export function CheckoutShell({
           toast.error(res.message || "Failed to process cash request.");
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Cash checkout error:", err);
-      toast.error(err.message || "An unexpected error occurred.");
+      toast.error(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

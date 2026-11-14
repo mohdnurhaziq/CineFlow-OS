@@ -10,6 +10,7 @@ import {
   CreatePrintOrderSchema,
   type CreatePrintOrderInput,
 } from "@/lib/validations/visualizer";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -184,12 +185,12 @@ export async function createPrintOrder(input: CreatePrintOrderInput) {
       totalAmount,
       checkoutUrl: `/${tenantSlug}/checkout?invoiceId=${invoice.id}`,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("createPrintOrder error:", err);
     return {
       success: false,
       error: "ORDER_CREATION_FAILED",
-      message: err.message || "Failed to process print and frame order.",
+      message: errorMessageOf(err) || "Failed to process print and frame order.",
     };
   }
 }

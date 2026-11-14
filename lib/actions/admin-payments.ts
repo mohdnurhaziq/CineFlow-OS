@@ -57,8 +57,8 @@ export async function saveGatewayCredentials(input: z.input<typeof SaveGatewaySc
       // non-request context
     }
     return { success: true };
-  } catch (err: any) {
-    const message = err?.issues?.[0]?.message ?? "Failed to save payment settings.";
+  } catch (err) {
+    const message = (err instanceof z.ZodError ? err.issues[0]?.message : undefined) ?? "Failed to save payment settings.";
     return { success: false, error: "SAVE_FAILED", message };
   }
 }

@@ -1,9 +1,10 @@
 "use server";
 
-import { actionErrorMessage } from "@/lib/action-error";
+import { actionErrorMessage, errorMessageOf } from "@/lib/action-error";
 import { OWNER_ROLES, requireStaff } from "@/lib/auth/guard";
 import { packagesForCategory } from "@/lib/bookings/pricing";
 
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
@@ -160,7 +161,7 @@ export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, slot };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "CREATE_SLOT_FAILED",
@@ -204,10 +205,11 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
       return { success: false, error: "DEPOSIT_EXCEEDS_FEE", message: SLOT_DEPOSIT_ERROR };
     }
 
-    const payload: any = { ...updateData };
-    if (updateData.date) {
-      payload.date = new Date(`${updateData.date}T00:00:00.000Z`);
-    }
+    const { date: newDateKey, ...slotFields } = updateData;
+    const payload: Prisma.BookingSlotUpdateInput & { date?: Date } = {
+      ...slotFields,
+      ...(newDateKey ? { date: new Date(`${newDateKey}T00:00:00.000Z`) } : {}),
+    };
 
     // Moving or resizing a slot gets the same checks as creating one.
     if (updateData.date || updateData.startTime || updateData.endTime) {
@@ -234,7 +236,7 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, slot: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_SLOT_FAILED",
@@ -274,7 +276,7 @@ export async function deleteBookingSlot(input: DeleteBookingSlotInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, deletedId: slotId };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "DELETE_SLOT_FAILED",
@@ -321,7 +323,7 @@ export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
       deletedCount: deleteResult.count,
       skippedCount: slotIds.length - deleteResult.count,
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "BATCH_DELETE_FAILED",
@@ -479,7 +481,7 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
       skippedCount,
       message: `Generated ${createResult.count} slots (${skippedCount} skipped: overlapping an existing slot or already past).`,
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "BATCH_GENERATE_FAILED",
@@ -520,7 +522,7 @@ export async function forceReleaseHeldSlot(input: ForceReleaseSlotInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, slotId };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "FORCE_RELEASE_FAILED",
@@ -562,7 +564,7 @@ export async function toggleBlockBookingSlot(input: ToggleBlockSlotInput) {
     safeRevalidate(`/${tenantSlug}/book`);
 
     return { success: true, slot: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "TOGGLE_BLOCK_FAILED",
@@ -594,7 +596,7 @@ export async function cleanupExpiredHolds(tenantId: string, tenantSlug: string) 
     }
 
     return { success: true, releasedCount: result.count };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: errorMessageOf(error) };
   }
 }

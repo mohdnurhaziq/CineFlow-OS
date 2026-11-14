@@ -14,6 +14,8 @@ import {
 import { logPreShootInspection, logPostShootInspection } from "@/lib/actions/gear";
 import { useDialog } from "@/lib/use-dialog";
 import { conditionLabel } from "@/lib/labels";
+import { errorMessageOf } from "@/lib/action-error";
+import type { LogPostShootInspectionInput, LogPreShootInspectionInput } from "@/lib/validations/gear";
 
 export interface ReservationWithDetails {
   id: string;
@@ -103,7 +105,7 @@ export function InspectionDialog({
           tenantId,
           tenantSlug,
           reservationId: reservation.id,
-          condition: condition as any,
+          condition: condition as LogPreShootInspectionInput["condition"],
           notes: notes || undefined,
           sensorVerified,
           mediaFormatted,
@@ -120,7 +122,7 @@ export function InspectionDialog({
           tenantId,
           tenantSlug,
           reservationId: reservation.id,
-          condition: condition as any,
+          condition: condition as LogPostShootInspectionInput["condition"],
           damageFlag,
           notes: notes || undefined,
         });
@@ -134,8 +136,8 @@ export function InspectionDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

@@ -7,7 +7,7 @@ let totalAssertions = 0;
 let passedAssertions = 0;
 let failedAssertions = 0;
 
-function assert(condition: boolean, description: string, details?: any) {
+function assert(condition: boolean, description: string, details?: unknown) {
   totalAssertions++;
   if (condition) {
     passedAssertions++;

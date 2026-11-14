@@ -13,6 +13,7 @@ import {
 import { createPrintOrder } from "@/lib/actions/visualizer";
 import type { PrintSizeOption, FrameDesignOption, PhotoOption } from "./configurator-panel";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 /** A client orders for themselves; studio staff order on a client's behalf. */
 export type PrintOrderer = { kind: "client" | "staff"; name: string; email: string; phone: string };
@@ -102,8 +103,8 @@ export function OrderModal({
         setErrorMessage(res.message || "Failed to create print order.");
         setIsSubmitting(false);
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
       setIsSubmitting(false);
     }
   };

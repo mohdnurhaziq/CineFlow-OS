@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import { errorMessageOf } from "../lib/action-error";
 
 const prisma = new PrismaClient();
 
@@ -16,7 +17,7 @@ function recordPass(name: string, details?: string) {
   console.log(`  ✓ PASS: ${name}${details ? ` — ${details}` : ""}`);
 }
 
-function recordFail(name: string, error: string, details?: string) {
+function recordFail(name: string, error: string | undefined, details?: string) {
   results.push({ test: name, status: "FAIL", error, details });
   console.error(`  ❌ FAIL: ${name} — ${error}${details ? ` (${details})` : ""}`);
 }
@@ -31,15 +32,15 @@ async function runEmpiricalStressSuite() {
   // ==============================================================================
   console.log("▶ 1. SQLite Engine & Foreign Key Pragma Verification");
   try {
-    const pragmaFk = await prisma.$queryRawUnsafe<any[]>("PRAGMA foreign_keys;");
-    const fkVal = Number(Object.values(pragmaFk[0])[0]);
+    const pragmaFk = await prisma.$queryRawUnsafe<Record<string, unknown>[]>("PRAGMA foreign_keys;");
+    const fkVal = Number(Object.values(pragmaFk[0] ?? {})[0]);
     if (fkVal === 1) {
       recordPass("PRAGMA foreign_keys enabled", "PRAGMA foreign_keys returns 1 (ACTIVE)");
     } else {
       recordFail("PRAGMA foreign_keys enabled", `Expected 1 but got ${fkVal}`);
     }
-  } catch (err: any) {
-    recordFail("PRAGMA foreign_keys enabled", err.message);
+  } catch (err) {
+    recordFail("PRAGMA foreign_keys enabled", errorMessageOf(err));
   }
 
   // Raw SQL FK constraint check
@@ -48,7 +49,7 @@ async function runEmpiricalStressSuite() {
       `INSERT INTO CampaignCategory (id, tenantId, name, slug, isActive, sortOrder) VALUES ('raw_fk_bad', 'nonexistent_tenant_9999', 'Raw Test', 'raw-test', 1, 0)`
     );
     recordFail("Raw SQL Foreign Key enforcement", "SQLite accepted insert with non-existent tenantId without FK error");
-  } catch (err: any) {
+  } catch (err) {
     recordPass("Raw SQL Foreign Key enforcement", "SQLite rejected raw INSERT with non-existent foreign key (Code 1811 / foreign key constraint failed)");
   }
 
@@ -65,11 +66,11 @@ async function runEmpiricalStressSuite() {
       data: { name: "Duplicate Slug Tenant", slug: existing.slug },
     });
     recordFail("Tenant.slug unique constraint", "Allowed duplicate tenant slug");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("Tenant.slug unique constraint", "Caught P2002 for duplicate tenant slug");
     } else {
-      recordFail("Tenant.slug unique constraint", `Expected P2002 but got: ${err.message}`);
+      recordFail("Tenant.slug unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -83,17 +84,17 @@ async function runEmpiricalStressSuite() {
         data: { name: "Domain Tenant 2", slug: `domain-t2-${Date.now()}`, customDomain: "stress.test.com" },
       });
       recordFail("Tenant.customDomain unique constraint", "Allowed duplicate customDomain");
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         recordPass("Tenant.customDomain unique constraint", "Caught P2002 for duplicate customDomain");
       } else {
-        recordFail("Tenant.customDomain unique constraint", `Expected P2002 but got: ${err.message}`);
+        recordFail("Tenant.customDomain unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
       }
     } finally {
       await prisma.tenant.delete({ where: { id: tDomain.id } });
     }
-  } catch (err: any) {
-    recordFail("Tenant.customDomain setup", err.message);
+  } catch (err) {
+    recordFail("Tenant.customDomain setup", errorMessageOf(err));
   }
 
   // 2.3 User email unique
@@ -104,11 +105,11 @@ async function runEmpiricalStressSuite() {
       data: { name: "Duplicate Email User", email: existingUser.email },
     });
     recordFail("User.email unique constraint", "Allowed duplicate user email");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("User.email unique constraint", "Caught P2002 for duplicate email");
     } else {
-      recordFail("User.email unique constraint", `Expected P2002 but got: ${err.message}`);
+      recordFail("User.email unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -122,17 +123,17 @@ async function runEmpiricalStressSuite() {
         data: { name: "Invite User 2", email: `inv2-${Date.now()}@stress.test`, inviteToken: "token_stress_unique_123" },
       });
       recordFail("User.inviteToken unique constraint", "Allowed duplicate inviteToken");
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         recordPass("User.inviteToken unique constraint", "Caught P2002 for duplicate inviteToken");
       } else {
-        recordFail("User.inviteToken unique constraint", `Expected P2002 but got: ${err.message}`);
+        recordFail("User.inviteToken unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
       }
     } finally {
       await prisma.user.delete({ where: { id: u1.id } });
     }
-  } catch (err: any) {
-    recordFail("User.inviteToken setup", err.message);
+  } catch (err) {
+    recordFail("User.inviteToken setup", errorMessageOf(err));
   }
 
   // 2.5 Proposal proposalNumber unique
@@ -155,11 +156,11 @@ async function runEmpiricalStressSuite() {
       },
     });
     recordFail("Proposal.proposalNumber unique constraint", "Allowed duplicate proposalNumber");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("Proposal.proposalNumber unique constraint", "Caught P2002 for duplicate proposalNumber");
     } else {
-      recordFail("Proposal.proposalNumber unique constraint", `Expected P2002 but got: ${err.message}`);
+      recordFail("Proposal.proposalNumber unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -178,11 +179,11 @@ async function runEmpiricalStressSuite() {
       },
     });
     recordFail("MilestoneInvoice.invoiceNumber unique constraint", "Allowed duplicate invoiceNumber");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("MilestoneInvoice.invoiceNumber unique constraint", "Caught P2002 for duplicate invoiceNumber");
     } else {
-      recordFail("MilestoneInvoice.invoiceNumber unique constraint", `Expected P2002 but got: ${err.message}`);
+      recordFail("MilestoneInvoice.invoiceNumber unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -202,11 +203,11 @@ async function runEmpiricalStressSuite() {
       },
     });
     recordFail("Project.projectNumber unique constraint", "Allowed duplicate projectNumber");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("Project.projectNumber unique constraint", "Caught P2002 for duplicate projectNumber");
     } else {
-      recordFail("Project.projectNumber unique constraint", `Expected P2002 but got: ${err.message}`);
+      recordFail("Project.projectNumber unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -223,11 +224,11 @@ async function runEmpiricalStressSuite() {
       },
     });
     recordFail("InventoryItem.sku unique constraint", "Allowed duplicate inventory item sku");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("InventoryItem.sku unique constraint", "Caught P2002 for duplicate sku");
     } else {
-      recordFail("InventoryItem.sku unique constraint", `Expected P2002 but got: ${err.message}`);
+      recordFail("InventoryItem.sku unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -247,11 +248,11 @@ async function runEmpiricalStressSuite() {
       },
     });
     recordFail("ClientBooking.trackingCode unique constraint", "Allowed duplicate trackingCode");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("ClientBooking.trackingCode unique constraint", "Caught P2002 for duplicate trackingCode");
     } else {
-      recordFail("ClientBooking.trackingCode unique constraint", `Expected P2002 but got: ${err.message}`);
+      recordFail("ClientBooking.trackingCode unique constraint", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -272,11 +273,11 @@ async function runEmpiricalStressSuite() {
       },
     });
     recordFail("ClientBooking.slotId 1-to-1 unique", "Allowed multiple bookings on same slotId");
-  } catch (err: any) {
+  } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       recordPass("ClientBooking.slotId 1-to-1 unique", "Prevented concurrent double-booking on same slotId (P2002)");
     } else {
-      recordFail("ClientBooking.slotId 1-to-1 unique", `Expected P2002 but got: ${err.message}`);
+      recordFail("ClientBooking.slotId 1-to-1 unique", `Expected P2002 but got: ${errorMessageOf(err)}`);
     }
   }
 
@@ -291,11 +292,11 @@ async function runEmpiricalStressSuite() {
         data: { tenantId: cat.tenantId, slug: cat.slug, name: "Duplicate Slug Within Tenant" },
       });
       recordFail("CampaignCategory compound unique (same tenant)", "Allowed duplicate slug within same tenant");
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         recordPass("CampaignCategory compound unique (same tenant)", "Prevented duplicate category slug within same tenant");
       } else {
-        recordFail("CampaignCategory compound unique (same tenant)", err.message);
+        recordFail("CampaignCategory compound unique (same tenant)", errorMessageOf(err));
       }
     }
 
@@ -311,8 +312,8 @@ async function runEmpiricalStressSuite() {
     } finally {
       await prisma.tenant.delete({ where: { id: tTemp.id } });
     }
-  } catch (err: any) {
-    recordFail("CampaignCategory compound unique test", err.message);
+  } catch (err) {
+    recordFail("CampaignCategory compound unique test", errorMessageOf(err));
   }
 
   // 2.12 Compound Unique: PrintSize [tenantId, code]
@@ -332,15 +333,15 @@ async function runEmpiricalStressSuite() {
         },
       });
       recordFail("PrintSize compound unique (same tenant)", "Allowed duplicate size code within same tenant");
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         recordPass("PrintSize compound unique (same tenant)", "Prevented duplicate print size code within same tenant");
       } else {
-        recordFail("PrintSize compound unique (same tenant)", err.message);
+        recordFail("PrintSize compound unique (same tenant)", errorMessageOf(err));
       }
     }
-  } catch (err: any) {
-    recordFail("PrintSize compound unique test", err.message);
+  } catch (err) {
+    recordFail("PrintSize compound unique test", errorMessageOf(err));
   }
 
   // 2.13 Compound Unique: KitBundleItem [bundleId, itemId]
@@ -353,15 +354,15 @@ async function runEmpiricalStressSuite() {
         data: { bundleId: kbi.bundleId, itemId: kbi.itemId, quantity: 5 },
       });
       recordFail("KitBundleItem compound unique", "Allowed duplicate kit bundle item");
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         recordPass("KitBundleItem compound unique", "Prevented duplicate item in same kit bundle");
       } else {
-        recordFail("KitBundleItem compound unique", err.message);
+        recordFail("KitBundleItem compound unique", errorMessageOf(err));
       }
     }
-  } catch (err: any) {
-    recordFail("KitBundleItem compound unique test", err.message);
+  } catch (err) {
+    recordFail("KitBundleItem compound unique test", errorMessageOf(err));
   }
 
   // 2.14 1-to-1 Unique: InspectionLog.reservationId
@@ -374,15 +375,15 @@ async function runEmpiricalStressSuite() {
         data: { reservationId: log.reservationId, inspectorName: "Duplicate", checkoutCondition: "EXCELLENT" },
       });
       recordFail("InspectionLog.reservationId 1-to-1 unique", "Allowed multiple inspection logs for same reservation");
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         recordPass("InspectionLog.reservationId 1-to-1 unique", "Prevented multiple inspection logs for same reservation (P2002)");
       } else {
-        recordFail("InspectionLog.reservationId 1-to-1 unique", err.message);
+        recordFail("InspectionLog.reservationId 1-to-1 unique", errorMessageOf(err));
       }
     }
-  } catch (err: any) {
-    recordFail("InspectionLog 1-to-1 unique test", err.message);
+  } catch (err) {
+    recordFail("InspectionLog 1-to-1 unique test", errorMessageOf(err));
   }
 
   // ==============================================================================
@@ -390,15 +391,15 @@ async function runEmpiricalStressSuite() {
   // ==============================================================================
   console.log("\n▶ 3. Foreign Key Constraint Enforcement");
 
-  async function testFk(testName: string, op: () => Promise<any>) {
+  async function testFk(testName: string, op: () => Promise<unknown>) {
     try {
       await op();
       recordFail(testName, "Operation unexpectedly succeeded despite non-existent foreign key");
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && (err.code === "P2003" || err.code === "P2025")) {
         recordPass(testName, `Caught expected ${err.code} (Foreign key violation)`);
       } else {
-        recordFail(testName, `Expected P2003/P2025 but got: ${err.message}`);
+        recordFail(testName, `Expected P2003/P2025 but got: ${errorMessageOf(err)}`);
       }
     }
   }
@@ -521,8 +522,8 @@ async function runEmpiricalStressSuite() {
 
     // Clean up temporary tenant
     await prisma.tenant.delete({ where: { id: pTenant.id } });
-  } catch (err: any) {
-    recordFail("Project deletion cascade", err.message);
+  } catch (err) {
+    recordFail("Project deletion cascade", errorMessageOf(err));
   }
 
   // 4.2 Project Deletion with MilestoneInvoice Reference
@@ -546,8 +547,8 @@ async function runEmpiricalStressSuite() {
     }
 
     await prisma.tenant.delete({ where: { id: piTenant.id } });
-  } catch (err: any) {
-    recordFail("Project deletion with invoice", err.message);
+  } catch (err) {
+    recordFail("Project deletion with invoice", errorMessageOf(err));
   }
 
   // 4.3 Full Tenant Deletion Cascade (Adversarial Stress Test)
@@ -581,7 +582,7 @@ async function runEmpiricalStressSuite() {
     try {
       await prisma.tenant.delete({ where: { id: tUniverse.id } });
       recordPass("Full Tenant cascade deletion", "All 24 models cascaded cleanly without orphaned rows");
-    } catch (err: any) {
+    } catch (err) {
       recordFail(
         "Full Tenant cascade deletion",
         `Foreign key constraint violated on EquipmentReservation.itemId -> InventoryItem.id (Code 1811: FOREIGN KEY constraint failed)`,
@@ -593,8 +594,8 @@ async function runEmpiricalStressSuite() {
       await prisma.equipmentReservation.deleteMany({ where: { project: { tenantId: tUniverse.id } } });
       await prisma.tenant.delete({ where: { id: tUniverse.id } });
     }
-  } catch (err: any) {
-    recordFail("Full Tenant cascade setup", err.message);
+  } catch (err) {
+    recordFail("Full Tenant cascade setup", errorMessageOf(err));
   }
 
   // ==============================================================================

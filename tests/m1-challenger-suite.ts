@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface ChallengeResult {
   suiteName: string;
@@ -87,9 +88,9 @@ async function challengeSeedIdempotency(): Promise<ChallengeResult> {
     const projApex = await db.project.findUnique({ where: { id: "proj_apex_01" } });
     assert(projLumina !== null && projLumina.tenantId === "ten_lumina", "Project proj_lumina_01 preserved");
     assert(projApex !== null && projApex.tenantId === "ten_apex", "Project proj_apex_01 preserved");
-  } catch (err: any) {
+  } catch (err) {
     result.passed = false;
-    result.failures.push(`Seed execution error: ${err.message}`);
+    result.failures.push(`Seed execution error: ${errorMessageOf(err)}`);
     console.error(`  ❌ SEED RUNTIME EXCEPTION:`, err);
   }
 
@@ -260,9 +261,9 @@ async function challengeMultiTenantIsolation(): Promise<ChallengeResult> {
         assert(inv.tenantId === inv.proposal.tenantId, `Invoice ${inv.invoiceNumber} tenant matches proposal tenant`);
       }
     }
-  } catch (err: any) {
+  } catch (err) {
     result.passed = false;
-    result.failures.push(`Multi-tenant isolation exception: ${err.message}`);
+    result.failures.push(`Multi-tenant isolation exception: ${errorMessageOf(err)}`);
     console.error(`  ❌ MULTI-TENANT ISOLATION EXCEPTION:`, err);
   }
 
@@ -443,9 +444,9 @@ async function challengeUploadApi(): Promise<ChallengeResult> {
       assert(fileStat !== null, "File stored in general folder");
     }
 
-  } catch (err: any) {
+  } catch (err) {
     result.passed = false;
-    result.failures.push(`Upload API exception: ${err.message}`);
+    result.failures.push(`Upload API exception: ${errorMessageOf(err)}`);
     console.error(`  ❌ UPLOAD API EXCEPTION:`, err);
   } finally {
     // Clean up temporary test files
@@ -566,9 +567,9 @@ async function challengeBusinessInvariants(): Promise<ChallengeResult> {
       assert(stat !== null && stat.size > 0, `Static mock asset exists on disk and is non-empty: ${relPath}`);
     }
 
-  } catch (err: any) {
+  } catch (err) {
     result.passed = false;
-    result.failures.push(`Business invariants exception: ${err.message}`);
+    result.failures.push(`Business invariants exception: ${errorMessageOf(err)}`);
     console.error(`  ❌ BUSINESS INVARIANTS EXCEPTION:`, err);
   }
 

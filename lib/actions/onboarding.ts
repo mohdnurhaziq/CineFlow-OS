@@ -9,6 +9,7 @@ import {
   RESERVED_SLUGS,
   type OnboardStudioInput,
 } from "@/lib/validations/onboarding";
+import { errorMessageOf } from "@/lib/action-error";
 
 export async function checkSlugAvailability(rawSlug: string): Promise<{ available: boolean; error?: string }> {
   const parsed = CheckSlugSchema.safeParse({ slug: rawSlug });
@@ -288,15 +289,15 @@ export async function onboardStudio(formData: OnboardStudioInput) {
       slug: result.slug,
       redirectUrl: `/${result.slug}/admin`,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Onboarding transaction error:", error);
-    if (error.message === "RESERVED_SLUG") {
+    if (errorMessageOf(error) === "RESERVED_SLUG") {
       return { success: false, error: "Studio URL slug is reserved for platform operations." };
     }
-    if (error.message === "SLUG_ALREADY_TAKEN") {
+    if (errorMessageOf(error) === "SLUG_ALREADY_TAKEN") {
       return { success: false, error: "Studio URL slug is already taken. Please choose another." };
     }
-    if (error.message === "EMAIL_ALREADY_TAKEN") {
+    if (errorMessageOf(error) === "EMAIL_ALREADY_TAKEN") {
       return { success: false, error: "An account with this email already exists." };
     }
     return { success: false, error: "Failed to create studio workspace. Please try again." };

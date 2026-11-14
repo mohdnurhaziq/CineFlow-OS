@@ -15,6 +15,7 @@ import {
 } from "@/lib/actions/gear";
 import { createPrintOrder } from "@/lib/actions/visualizer";
 import { createFrameDesign, toggleFrameAvailability, createPrintSize } from "@/lib/actions/admin-frames";
+import { invalid } from "../result-helpers";
 
 export async function runLogisticsGearWallTests(harness: TestHarness) {
   harness.setSuite("Tier 1", "Module 4: Production Logistics, Gear Inventory & Wall Visualizer (Features 28-39)");
@@ -162,7 +163,7 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
     });
     harness.assert(callSheet !== null, "Call sheet resolved");
 
-    const result = generateWhatsAppCallSheetUrl(callSheet as any, "+1 (555) 019-2831", "https://cineflow.preview");
+    const result = generateWhatsAppCallSheetUrl(callSheet!, "+1 (555) 019-2831", "https://cineflow.preview");
     harness.assert(result.url.startsWith("https://wa.me/15550192831?text="), "WhatsApp URL formatted with clean phone number");
   });
 
@@ -171,8 +172,8 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       where: { project: { tenantId: luminaTenant!.id } },
       include: { project: { include: { tenant: true } } },
     });
-    const res1 = generateWhatsAppCallSheetUrl(callSheet as any, "+1-555-888-9999");
-    const res2 = generateWhatsAppCallSheetUrl(callSheet as any, "  (555) 777-6666  ");
+    const res1 = generateWhatsAppCallSheetUrl(callSheet!, "+1-555-888-9999");
+    const res2 = generateWhatsAppCallSheetUrl(callSheet!, "  (555) 777-6666  ");
 
     harness.assert(res1.url.includes("wa.me/15558889999"), "Sanitized dashes and plus sign");
     harness.assert(res2.url.includes("wa.me/5557776666"), "Sanitized parentheses and whitespace");
@@ -183,7 +184,7 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       where: { project: { tenantId: luminaTenant!.id } },
       include: { project: { include: { tenant: true } } },
     });
-    const result = generateWhatsAppCallSheetUrl(callSheet as any, "+15551234567");
+    const result = generateWhatsAppCallSheetUrl(callSheet!, "+15551234567");
 
     harness.assert(result.previewText.includes("OFFICIAL CALL SHEET"), "previewText contains OFFICIAL CALL SHEET header");
     harness.assert(result.previewText.includes(callSheet!.generalCallTime), "previewText contains generalCallTime");
@@ -195,7 +196,7 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       where: { project: { tenantId: luminaTenant!.id } },
       include: { project: { include: { tenant: true } } },
     });
-    const result = generateWhatsAppCallSheetUrl(callSheet as any, "+15551234567");
+    const result = generateWhatsAppCallSheetUrl(callSheet!, "+15551234567");
 
     harness.assert(result.previewText.includes("Solar & Golden Hour Schedule"), "Solar schedule section present");
     harness.assert(result.previewText.includes("Sunrise:"), "Sunrise mentioned in message");
@@ -207,7 +208,7 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
       where: { project: { tenantId: luminaTenant!.id } },
       include: { project: { include: { tenant: true } } },
     });
-    const result = generateWhatsAppCallSheetUrl(callSheet as any, "+15551234567", "http://localhost:3000");
+    const result = generateWhatsAppCallSheetUrl(callSheet!, "+15551234567", "http://localhost:3000");
 
     const expectedLink = `http://localhost:3000/lumina-cine/set-hud/${callSheet!.id}`;
     harness.assert(result.previewText.includes(expectedLink), "previewText contains live companion HUD link");
@@ -403,7 +404,7 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
     const res = await submitDigitalRelease({
       projectId: project!.id,
       tenantSlug: "lumina-cine",
-      releaseType: "VEHICLE" as any,
+      releaseType: invalid("VEHICLE"),
       signerName: "Elena",
       signerEmail: "elena@test.com",
       termsContent: "Terms content exceeding ten chars.",
@@ -806,15 +807,15 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
     });
     const base = { tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", reservationId };
 
-    const early: any = await logPreShootInspection({ ...base, condition: "GOOD" });
+    const early = await logPreShootInspection({ ...base, condition: "GOOD" });
     harness.assertEqual(early.error, "TOO_EARLY", "Ten days out: too early to check out");
-    const checkinFirst: any = await logPostShootInspection({ ...base, condition: "GOOD", damageFlag: false });
+    const checkinFirst = await logPostShootInspection({ ...base, condition: "GOOD", damageFlag: false });
     harness.assertEqual(checkinFirst.error, "NOT_CHECKED_OUT", "Can't check in gear that was never checked out");
 
     await db.equipmentReservation.update({ where: { id: reservationId }, data: { startDate: new Date(Date.now() + 86400000), endDate: new Date(Date.now() + 86400000 * 2) } });
-    const prep: any = await logPreShootInspection({ ...base, condition: "GOOD" });
+    const prep = await logPreShootInspection({ ...base, condition: "GOOD" });
     harness.assert(prep.success === true, "A day before the shoot: check-out allowed (prep)");
-    const again: any = await logPreShootInspection({ ...base, condition: "GOOD" });
+    const again = await logPreShootInspection({ ...base, condition: "GOOD" });
     harness.assertEqual(again.error, "NOT_RESERVED", "Can't check the same reservation out twice");
   });
 

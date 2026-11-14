@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { settleToyyibpayBill } from "@/lib/payments/settle";
+import { errorMessageOf } from "@/lib/action-error";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,8 @@ export async function POST(req: Request) {
       }
     }
     return NextResponse.json({ ok: true, status: outcome.status });
-  } catch (err: any) {
-    console.error("Toyyibpay callback failed:", err?.message || err);
+  } catch (err) {
+    console.error("Toyyibpay callback failed:", errorMessageOf(err) || err);
     // 500 makes the gateway retry later.
     return NextResponse.json({ ok: false }, { status: 500 });
   }

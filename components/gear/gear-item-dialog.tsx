@@ -6,6 +6,8 @@ import { createGearItem, updateGearItem } from "@/lib/actions/gear";
 import { useDialog } from "@/lib/use-dialog";
 import { conditionLabel } from "@/lib/labels";
 import { disciplineLabel } from "@/lib/labels";
+import { errorMessageOf } from "@/lib/action-error";
+import type { CreateGearItemInput } from "@/lib/validations/gear";
 
 export interface InventoryItemRow {
   id: string;
@@ -90,9 +92,9 @@ export function GearItemDialog({
           sku,
           serialNumber: serialNumber || null,
           category,
-          discipline: discipline as any,
-          condition: condition as any,
-          status: status as any,
+          discipline: discipline as CreateGearItemInput["discipline"],
+          condition: condition as CreateGearItemInput["condition"],
+          status: status as CreateGearItemInput["status"],
           dailyRate: parsedRate,
           location: location || null,
         });
@@ -110,9 +112,9 @@ export function GearItemDialog({
           sku,
           serialNumber: serialNumber || null,
           category,
-          discipline: discipline as any,
-          condition: condition as any,
-          status: status as any,
+          discipline: discipline as CreateGearItemInput["discipline"],
+          condition: condition as CreateGearItemInput["condition"],
+          status: status as CreateGearItemInput["status"],
           dailyRate: parsedRate,
           location: location || null,
         });
@@ -126,8 +128,8 @@ export function GearItemDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

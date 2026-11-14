@@ -32,6 +32,7 @@ import {
 } from "./showcase-item-dialog";
 import { disciplineLabel } from "@/lib/labels";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface CmsManagerProps {
   tenantId: string;
@@ -83,8 +84,8 @@ export function CmsManager({
       } else {
         handleSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setDeletingId(null);
     }
@@ -99,8 +100,8 @@ export function CmsManager({
         isFeatured: !item.isFeatured,
       });
       handleSuccess();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to toggle featured status.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "Failed to toggle featured status.");
     }
   };
 

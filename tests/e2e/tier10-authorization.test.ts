@@ -28,6 +28,8 @@ import { processInvoicePayment } from "@/lib/actions/checkout";
 import { issueClientInvite } from "@/lib/auth/invite";
 import { GET as downloadHandler } from "@/app/api/download/route";
 import { NextRequest } from "next/server";
+import { loose } from "./result-helpers";
+import type { UpdateStudioSettingsInput } from "@/lib/validations/admin-settings";
 
 /** Actions that are intentionally callable by clients or the public, with the reason. */
 const PUBLIC_ACTIONS: Record<string, string> = {
@@ -66,7 +68,8 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     await db.user.deleteMany({ where: { email: { startsWith: "t10-" } } });
   });
 
-  const as = (u: any, slug: string | null): Who =>
+  type UserRow = { id: string; email: string; name: string; role: string; tenantId: string | null };
+  const as = (u: UserRow | null, slug: string | null): Who =>
     u ? { id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenantId, tenantSlug: slug } : null;
   const luminaOwner = as(await db.user.findFirst({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } }), "lumina-cine");
   const apexOwner = as(await db.user.findFirst({ where: { tenantId: apex.id, role: "STUDIO_OWNER" } }), "apex-media");
@@ -90,8 +93,12 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     ["a signed-in client", client],
     ["another studio's owner", apexOwner],
   ];
-  const denied = (res: any) =>
-    res === null || (res && res.success === false && /UNAUTHENTICATED|FORBIDDEN/.test(String(res.message ?? res.error)));
+  // A refused action returns null (guard throws are caught as null by some callers) or a failure result.
+  const denied = (res: unknown) => {
+    if (res === null) return true;
+    const r = res as { success?: boolean; message?: unknown; error?: unknown } | undefined;
+    return !!r && r.success === false && /UNAUTHENTICATED|FORBIDDEN/.test(String(r.message ?? r.error));
+  };
 
   // ---- Static: every server action is guarded or explicitly public ------------------
   await harness.test("T10-STATIC-01: every exported server action is guarded or on the public allowlist", async () => {
@@ -205,8 +212,8 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
       data: { tenantId: lumina.id, date: new Date(Date.now() + 86400000 * 201), startTime: "09:00 AM", endTime: "10:00 AM", category: "EDITORIAL", price: 100, depositRequired: 50, status: "AVAILABLE" },
     });
     try {
-      const base = { tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, newClient: { name: "T10 Walk-in", email: `t10-walkin-${run}@example.test`, phone: "0123456789" }, discipline: "PHOTOGRAPHY", serviceTier: "STANDARD", paymentMethod: "CASH" } as any;
-      const paid: any = await withSession(luminaCrew, () => createBookingForCustomer({ ...base, paymentStatus: "PAID" }));
+      const base: Parameters<typeof createBookingForCustomer>[0] = { tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, newClient: { name: "T10 Walk-in", email: `t10-walkin-${run}@example.test`, phone: "0123456789" }, discipline: "PHOTOGRAPHY", paymentMethod: "CASH" };
+      const paid = await withSession(luminaCrew, () => createBookingForCustomer({ ...base, paymentStatus: "PAID" }));
       harness.assertEqual(paid.success, false, "Crew cannot record a payment as received");
       harness.assertEqual((await db.bookingSlot.findUnique({ where: { id: slot.id } }))?.status, "AVAILABLE", "Slot untouched");
     } finally {
@@ -233,18 +240,18 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
 
   // ---- Studio settings (bank details, slug, branding) ----------------------------------
   await harness.test("T10-SET-01: only the owner can change studio settings; crew and outsiders cannot", async () => {
-    const payload: any = {
+    const payload: Parameters<typeof updateStudioSettings>[0] = {
       tenantId: lumina.id,
       tenantSlug: "lumina-cine",
       name: lumina.name,
       newSlug: lumina.slug,
       customDomain: lumina.customDomain,
-      discipline: lumina.discipline,
+      discipline: lumina.discipline as UpdateStudioSettingsInput["discipline"],
       tagline: lumina.tagline,
       bio: lumina.bio,
       logoUrl: lumina.logoUrl,
       brandColor: lumina.brandColor ?? "#f59e0b",
-      currency: lumina.currency,
+      currency: lumina.currency as UpdateStudioSettingsInput["currency"],
       qrCodeUrl: lumina.qrCodeUrl,
       bankDetails: "ATTACKER BANK 0000",
     };
@@ -292,13 +299,13 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     }
     const target = shot.status === "COMPLETED" ? "PENDING" : "COMPLETED";
     for (const [label, who] of outsiders) {
-      const res = await withSession(who, () => toggleShotCompletion({ shotId: shot.id, status: target as any }));
+      const res = await withSession(who, () => toggleShotCompletion({ shotId: shot.id, status: target }));
       harness.assert(denied(res), `Shot toggle denied for ${label}`, JSON.stringify(res));
     }
     harness.assertEqual((await db.shotItem.findUnique({ where: { id: shot.id } }))?.status, shot.status, "Shot unchanged");
-    const ok = await withSession(luminaCrew, () => toggleShotCompletion({ shotId: shot.id, status: target as any }));
+    const ok = await withSession(luminaCrew, () => toggleShotCompletion({ shotId: shot.id, status: target }));
     harness.assertEqual(ok.success, true, "Studio crew can toggle", JSON.stringify(ok));
-    await withSession(luminaCrew, () => toggleShotCompletion({ shotId: shot.id, status: shot.status as any }));
+    await withSession(luminaCrew, () => toggleShotCompletion({ shotId: shot.id, status: shot.status as Parameters<typeof toggleShotCompletion>[0]["status"] }));
   });
 
   // ---- Client records: proposals, vault, releases, downloads need a signed-in owner ------
@@ -315,18 +322,18 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
         finalBalanceAmount: 500, contractTerms: "Standard terms for the T10 test proposal.", status: "SENT",
       },
     });
-  const signInput = (proposalId: string) => ({
+  const signInput = (proposalId: string): Parameters<typeof acceptProposal>[0] => ({
     proposalId, tenantSlug: "lumina-cine", signatureDataUrl: sig, signerName: "T10 Record Client", consentAccepted: true, selectedAddOnIds: [],
   });
 
   await harness.test("T10-REC-01: only the addressed client, signed in, can sign a proposal", async () => {
     const prop = await newProposal(1);
     for (const [label, who] of [...outsiders, ["the studio owner", luminaOwner] as [string, Who], ["studio crew", luminaCrew] as [string, Who]]) {
-      const res: any = await withSession(who, () => acceptProposal(signInput(prop.id) as any));
+      const res = await withSession(who, () => acceptProposal(signInput(prop.id)));
       harness.assert(denied(res), `Signing denied for ${label}`, JSON.stringify(res));
     }
     harness.assertEqual((await db.proposal.findUnique({ where: { id: prop.id } }))?.status, "SENT", "Proposal still unsigned");
-    const ok: any = await withSession(recordClient, () => acceptProposal(signInput(prop.id) as any));
+    const ok = await withSession(recordClient, () => acceptProposal(signInput(prop.id)));
     harness.assertEqual(ok.success, true, "The proposal's client signs it", JSON.stringify(ok));
   });
 
@@ -336,7 +343,7 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     for (const [label, who] of outsiders) {
       const read = await withSession(who, () => getProposalBySlugAndId("lumina-cine", prop.proposalNumber));
       harness.assert(read === null, `Proposal hidden from ${label}`);
-      const t: any = await withSession(who, () => toggleProposalAddOn({ proposalId: prop.id, addOnId: addOn.id, isSelected: true }));
+      const t = await withSession(who, () => toggleProposalAddOn({ proposalId: prop.id, addOnId: addOn.id, isSelected: true }));
       harness.assert(denied(t), `Add-on change denied for ${label}`, JSON.stringify(t));
     }
     const read = await withSession(recordClient, () => getProposalBySlugAndId("lumina-cine", prop.id));
@@ -358,27 +365,27 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
 
   await harness.test("T10-REC-03: vault favourites and retouch notes need the project's client or staff", async () => {
     for (const [label, who] of outsiders) {
-      const f: any = await withSession(who, () => toggleClientFavorite({ itemId, isFav: true }));
+      const f = await withSession(who, () => toggleClientFavorite({ itemId, isFav: true }));
       harness.assert(denied(f), `Favourite denied for ${label}`, JSON.stringify(f));
-      const n: any = await withSession(who, () => submitRetouchNote({ itemId, note: "Brighten" }));
+      const n = await withSession(who, () => submitRetouchNote({ itemId, note: "Brighten" }));
       harness.assert(denied(n), `Retouch note denied for ${label}`, JSON.stringify(n));
     }
     const item = await db.deliverableItem.findUnique({ where: { id: itemId } });
     harness.assertEqual(item?.isClientFav, false, "Item untouched");
-    const ok: any = await withSession(recordClient, () => toggleClientFavorite({ itemId, isFav: true }));
+    const ok = await withSession(recordClient, () => toggleClientFavorite({ itemId, isFav: true }));
     harness.assertEqual(ok.success, true, "Project client can favourite", JSON.stringify(ok));
   });
 
   await harness.test("T10-REC-04: releases need a signed-in client or staff, and record who collected them", async () => {
-    const input = {
+    const input: Parameters<typeof submitDigitalRelease>[0] = {
       projectId: project.id, tenantSlug: "lumina-cine", releaseType: "TALENT", signerName: "Talent", signerEmail: "talent@example.test",
       termsContent: "Standard likeness release terms for the T10 test.", signatureDataUrl: sig,
-    } as any;
+    };
     for (const [label, who] of outsiders) {
-      const r: any = await withSession(who, () => submitDigitalRelease(input));
+      const r = await withSession(who, () => submitDigitalRelease(input));
       harness.assert(denied(r), `Release denied for ${label}`, JSON.stringify(r));
     }
-    const ok: any = await withSession(luminaCrew, () => submitDigitalRelease(input));
+    const ok = await withSession(luminaCrew, () => submitDigitalRelease(input));
     harness.assertEqual(ok.success, true, "Studio crew collects a release", JSON.stringify(ok));
     const row = await db.digitalRelease.findUnique({ where: { id: ok.releaseId } });
     harness.assertEqual(row?.collectedById, luminaCrew!.id, "Collector id recorded");
@@ -403,15 +410,15 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     });
     const token = await issueClientInvite(invited.id);
     const base = { tenantSlug: "lumina-cine", name: "Invited Client", email: invited.email, phone: "+60123456789", password: "a-strong-pass" };
-    const none: any = await withSession(null, () => registerClient(base));
+    const none = loose(await withSession(null, () => registerClient(base)));
     harness.assertEqual(none.error, "CLAIM_REQUIRED", "No proof: refused");
-    const wrong: any = await withSession(null, () => registerClient({ ...base, inviteToken: "not-the-token" }));
+    const wrong = loose(await withSession(null, () => registerClient({ ...base, inviteToken: "not-the-token" })));
     harness.assertEqual(wrong.error, "CLAIM_INVALID", "Wrong invite: refused");
-    const ok: any = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
+    const ok = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
     harness.assertEqual(ok.success, true, "Correct invite: password set", JSON.stringify(ok));
     const after = await db.user.findUnique({ where: { id: invited.id } });
     harness.assert(!!after?.passwordHash && after.inviteToken === null, "Invite used up");
-    const again: any = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
+    const again = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
     harness.assertEqual(again.success, false, "Invite can't be reused");
   });
 
@@ -422,29 +429,30 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
       harness.assert(true, "No seeded print catalog (skipped)");
       return;
     }
-    const order = (extra: Record<string, unknown> = {}) => ({
+    type PrintOrderInput = Parameters<typeof createPrintOrder>[0];
+    const order = (extra: Partial<PrintOrderInput> = {}): PrintOrderInput => ({
       tenantId: lumina.id, tenantSlug: "lumina-cine", printSizeId: size.id, frameDesignId: frame.id,
       matBoardType: "NONE", orientation: "PORTRAIT", photoUrl: "/x.jpg",
       clientName: "Someone Else", clientEmail: `t10-victim-${run}@example.test`, ...extra,
-    }) as any;
-    const anon: any = await withSession(null, () => createPrintOrder(order()));
+    });
+    const anon = await withSession(null, () => createPrintOrder(order()));
     harness.assert(denied(anon), "Signed out: refused", JSON.stringify(anon));
-    const cross: any = await withSession(apexOwner, () => createPrintOrder(order()));
+    const cross = await withSession(apexOwner, () => createPrintOrder(order()));
     harness.assert(denied(cross), "Another studio's owner: refused", JSON.stringify(cross));
-    const peek: any = await withSession(client, () => createPrintOrder(order({ projectId: project.id })));
+    const peek = await withSession(client, () => createPrintOrder(order({ projectId: project.id })));
     harness.assert(denied(peek), "A client can't attach another client's project", JSON.stringify(peek));
 
-    const mine: any = await withSession(recordClient, () => createPrintOrder(order({ projectId: project.id })));
+    const mine = await withSession(recordClient, () => createPrintOrder(order({ projectId: project.id })));
     harness.assertEqual(mine.success, true, "Client orders for themselves", JSON.stringify(mine));
     const inv = await db.milestoneInvoice.findUnique({ where: { id: mine.invoiceId } });
     harness.assertEqual(inv?.clientId, recordClientRow.id, "Billed to the signed-in client, not the typed email");
     harness.assert(!(await db.user.findFirst({ where: { email: `t10-victim-${run}@example.test` } })), "No account made for the typed email");
 
-    const counter: any = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: `t10-counter-${run}@example.test` })));
+    const counter = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: `t10-counter-${run}@example.test` })));
     harness.assertEqual(counter.success, true, "Staff can order for a client", JSON.stringify(counter));
-    const staffEmail: any = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: luminaOwner!.email })));
+    const staffEmail = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: luminaOwner!.email })));
     harness.assertEqual(staffEmail.success, false, "Staff can't bill a team member");
-    await db.milestoneInvoice.deleteMany({ where: { id: { in: [mine.invoiceId, counter.invoiceId].filter(Boolean) } } });
+    await db.milestoneInvoice.deleteMany({ where: { id: { in: [mine.invoiceId, counter.invoiceId].filter((id): id is string => !!id) } } });
   });
 
   await harness.test("T10-REC-08: only the invoice's client or studio staff can pay it", async () => {
@@ -454,13 +462,13 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
         amount: 80, status: "PENDING", dueDate: new Date(Date.now() + 86400000),
       },
     });
-    const pay = { tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: inv.id, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t10.jpg" } as any;
+    const pay: Parameters<typeof processInvoicePayment>[0] = { tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: inv.id, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t10.jpg" };
     for (const [label, who] of outsiders) {
-      const r: any = await withSession(who, () => processInvoicePayment(pay));
+      const r = await withSession(who, () => processInvoicePayment(pay));
       harness.assert(denied(r), `Payment denied for ${label}`, JSON.stringify(r));
     }
     harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: inv.id } }))?.status, "PENDING", "Invoice untouched");
-    const ok: any = await withSession(recordClient, () => processInvoicePayment(pay));
+    const ok = await withSession(recordClient, () => processInvoicePayment(pay));
     harness.assertEqual(ok.success, true, "Its client sends a slip", JSON.stringify(ok));
   });
 }

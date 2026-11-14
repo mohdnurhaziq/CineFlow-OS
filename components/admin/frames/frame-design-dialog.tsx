@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2, Sparkles, Image as ImageIcon } from "lucide-react";
 import { createFrameDesign, updateFrameDesign } from "@/lib/actions/admin-frames";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface FrameDesignRow {
   id: string;
@@ -137,8 +138,8 @@ export function FrameDesignDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

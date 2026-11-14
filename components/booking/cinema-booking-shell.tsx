@@ -116,7 +116,7 @@ export function CinemaBookingShell({
 
     if (res.success && res.slot && res.heldUntil) {
       toast.success(`Slot locked for 10 minutes! (${slot.startTime})`);
-      setHeldSlot(res.slot as any);
+      setHeldSlot(res.slot);
       setHeldUntil(res.heldUntil);
 
       // Update local slots list

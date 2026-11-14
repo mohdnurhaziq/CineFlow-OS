@@ -14,6 +14,7 @@ import {
   type DeleteShowcaseItemInput,
   type ToggleShowcaseFeaturedInput,
 } from "@/lib/validations/admin-cms";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -67,11 +68,11 @@ export async function createShowcaseItem(input: CreateShowcaseItemInput) {
     safeRevalidate(`/${tenantSlug}`);
 
     return { success: true, item };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "CREATE_SHOWCASE_FAILED",
-      message: error.message || "Failed to create showcase item.",
+      message: errorMessageOf(error) || "Failed to create showcase item.",
     };
   }
 }
@@ -123,11 +124,11 @@ export async function updateShowcaseItem(input: UpdateShowcaseItemInput) {
     safeRevalidate(`/${tenantSlug}`);
 
     return { success: true, item: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_SHOWCASE_FAILED",
-      message: error.message || "Failed to update showcase item.",
+      message: errorMessageOf(error) || "Failed to update showcase item.",
     };
   }
 }
@@ -153,11 +154,11 @@ export async function deleteShowcaseItem(input: DeleteShowcaseItemInput) {
     safeRevalidate(`/${tenantSlug}`);
 
     return { success: true, deletedId: id };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "DELETE_SHOWCASE_FAILED",
-      message: error.message || "Failed to delete showcase item.",
+      message: errorMessageOf(error) || "Failed to delete showcase item.",
     };
   }
 }
@@ -184,11 +185,11 @@ export async function toggleShowcaseFeatured(input: ToggleShowcaseFeaturedInput)
     safeRevalidate(`/${tenantSlug}`);
 
     return { success: true, item: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "TOGGLE_FEATURED_FAILED",
-      message: error.message || "Failed to toggle featured status.",
+      message: errorMessageOf(error) || "Failed to toggle featured status.",
     };
   }
 }

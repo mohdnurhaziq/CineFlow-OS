@@ -21,6 +21,7 @@ import { quarantineGearItem, releaseGearFromMaintenance } from "@/lib/actions/ge
 import { toast } from "sonner";
 import type { InventoryItemRow } from "./gear-item-dialog";
 import type { ReservationWithDetails } from "./inspection-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface GearScannerConsoleProps {
   isOpen: boolean;
@@ -113,8 +114,8 @@ export function GearScannerConsole({
         toast.warning(res.message);
         setMatchedItem((prev) => (prev ? { ...prev, status: "MAINTENANCE", condition } : null));
         onItemUpdated?.();
-      } catch (err: any) {
-        toast.error(err.message || "Quarantine error.");
+      } catch (err) {
+        toast.error(errorMessageOf(err) || "Quarantine error.");
       }
     });
   };
@@ -136,8 +137,8 @@ export function GearScannerConsole({
         toast.success(res.message);
         setMatchedItem((prev) => (prev ? { ...prev, status: "AVAILABLE", condition: "EXCELLENT" } : null));
         onItemUpdated?.();
-      } catch (err: any) {
-        toast.error(err.message || "Release error.");
+      } catch (err) {
+        toast.error(errorMessageOf(err) || "Release error.");
       }
     });
   };

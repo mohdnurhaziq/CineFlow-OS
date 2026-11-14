@@ -17,6 +17,7 @@ import { acceptProposalAsClient } from "../proposal-helpers";
 import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";
 import { GET as downloadHandler } from "@/app/api/download/route";
 import { TestHarness } from "../test-harness";
+import { invalid } from "../result-helpers";
 
 export async function runCheckoutVaultTests(harness: TestHarness) {
   harness.setSuite("Tier 1", "Module 3: Checkout, Proposals & Delivery Vault (Features 15-27)");
@@ -760,7 +761,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
       clientName: "Invalid Method Client",
       clientEmail: "invalid@test.com",
       clientPhone: "+15554445555",
-      paymentMethod: "BITCOIN" as any,
+      paymentMethod: invalid("BITCOIN"),
     });
     harness.assert(res.success === false, "Rejected unsupported payment method 'BITCOIN'");
   });
@@ -960,7 +961,7 @@ export async function runCheckoutVaultTests(harness: TestHarness) {
     harness.assertEqual(updatedSlot?.status, "PENDING_VERIFICATION", "Slot stays reserved");
 
     // The client sends a new slip: back in the studio's review queue.
-    const resend: any = await processInvoicePayment({
+    const resend = await processInvoicePayment({
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       invoiceId: checkoutRes.invoiceId!,

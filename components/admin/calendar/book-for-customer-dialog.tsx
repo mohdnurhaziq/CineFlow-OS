@@ -6,6 +6,7 @@ import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import type { BookingSlotRow } from "./single-slot-dialog";
 import { PackagePicker, packagesFor, type BookingPackageOption } from "@/components/booking/package-picker";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface ClientOption {
   id: string;
@@ -138,8 +139,8 @@ export function BookForCustomerDialog({
         setIsSubmitting(false);
         onClose();
       }, 1200);
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
       setIsSubmitting(false);
     }
   };

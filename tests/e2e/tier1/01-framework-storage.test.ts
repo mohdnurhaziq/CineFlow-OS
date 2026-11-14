@@ -10,6 +10,10 @@ import { db } from "@/lib/db";
 import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "../test-harness";
 import { withSession } from "../mocks/session";
+import { errorMessageOf } from "@/lib/action-error";
+
+// Prisma model delegates looked up by model name (`db[model]`), for checks that loop over models.
+const modelDelegates = db as unknown as Record<string, { findMany?: unknown; count: () => Promise<number> }>;
 
 export async function runFrameworkStorageTests(harness: TestHarness) {
   harness.setSuite("Tier 1", "Module 1: Framework, Tooling, Database & Storage (Features 1-5)");
@@ -21,7 +25,7 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
     const owner = await db.user.findFirst({ where: { role: "STUDIO_OWNER" }, include: { tenant: { select: { slug: true } } } });
     if (!owner) throw new Error("Seed studio owner required");
     return withSession(
-      { id: owner.id, email: owner.email, name: owner.name, role: owner.role, tenantId: owner.tenantId, tenantSlug: owner.tenant?.slug ?? null } as any,
+      { id: owner.id, email: owner.email, name: owner.name, role: owner.role, tenantId: owner.tenantId, tenantSlug: owner.tenant?.slug ?? null },
       () => uploadHandler(req)
     );
   };
@@ -106,7 +110,7 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
     ];
     for (const model of models) {
       harness.assert(
-        typeof (db as any)[model]?.findMany === "function",
+        typeof modelDelegates[model]?.findMany === "function",
         `db.${model} is accessible as a Prisma model delegate`
       );
     }
@@ -326,8 +330,8 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
         // Intentionally throw inside transaction
         throw new Error("FORCED_TRANSACTION_ABORT");
       });
-    } catch (err: any) {
-      if (err.message === "FORCED_TRANSACTION_ABORT") {
+    } catch (err) {
+      if (errorMessageOf(err) === "FORCED_TRANSACTION_ABORT") {
         threw = true;
       }
     }
@@ -411,7 +415,7 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
     ];
 
     for (const model of models) {
-      const count = await (db as any)[model].count();
+      const count = (await modelDelegates[model]?.count()) ?? 0;
       harness.assert(count > 0, `Model '${model}' has ${count} records (non-zero)`);
     }
   });

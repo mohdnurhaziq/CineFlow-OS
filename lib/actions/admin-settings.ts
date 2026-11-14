@@ -107,7 +107,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
       newSlug,
       tenant: publicTenant,
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_SETTINGS_FAILED",

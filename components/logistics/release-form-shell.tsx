@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ReleaseSignaturePad } from "./release-signature-pad";
 import { submitDigitalRelease } from "@/lib/actions/logistics";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface ExistingRelease {
   id: string;
@@ -135,8 +136,8 @@ export function ReleaseFormShell({
         } else {
           setErrorMessage(res.message || "Failed to submit digital release.");
         }
-      } catch (err: any) {
-        setErrorMessage(err.message || "An unexpected error occurred.");
+      } catch (err) {
+        setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
       }
     });
   };

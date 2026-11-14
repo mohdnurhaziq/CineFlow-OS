@@ -569,7 +569,7 @@ async function runSecuritySuite() {
 
       // 4.6 Concurrency Stress Test: 30 Simultaneous Rapid Toggles
       console.log("  ... Launching 30 simultaneous concurrent favorite toggles ...");
-      const togglePromises: Promise<any>[] = [];
+      const togglePromises: ReturnType<typeof toggleClientFavorite>[] = [];
       for (let i = 0; i < 30; i++) {
         const isFav = i % 2 === 0;
         togglePromises.push(toggleClientFavorite({ itemId: photoItem.id, isFav }));

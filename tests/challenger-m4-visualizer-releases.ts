@@ -16,7 +16,7 @@ import { processInvoicePayment } from "../lib/actions/checkout";
 let testCount = 0;
 let passedCount = 0;
 
-function assert(condition: boolean, testName: string, details?: any) {
+function assert(condition: boolean, testName: string, details?: unknown) {
   testCount++;
   if (!condition) {
     console.error(`❌ FAIL [${testCount}]: ${testName}`);

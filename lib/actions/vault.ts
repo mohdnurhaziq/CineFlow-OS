@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireRecordAccess } from "@/lib/auth/project-access";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -57,9 +58,9 @@ export async function toggleClientFavorite(input: z.infer<typeof ToggleFavoriteS
     safeRevalidate(`/${tenantSlug}/vault/${projectId}`);
 
     return { success: true, isClientFav: item.isClientFav };
-  } catch (error: any) {
+  } catch (error) {
     console.error("toggleClientFavorite error:", error);
-    return { success: false, error: error.message || "Failed to update favorite status" };
+    return { success: false, error: errorMessageOf(error) || "Failed to update favorite status" };
   }
 }
 
@@ -86,8 +87,8 @@ export async function submitRetouchNote(input: z.infer<typeof SubmitRetouchNoteS
     safeRevalidate(`/${tenantSlug}/vault/${projectId}`);
 
     return { success: true, clientNotes: item.clientNotes };
-  } catch (error: any) {
+  } catch (error) {
     console.error("submitRetouchNote error:", error);
-    return { success: false, error: error.message || "Failed to save retouch note" };
+    return { success: false, error: errorMessageOf(error) || "Failed to save retouch note" };
   }
 }

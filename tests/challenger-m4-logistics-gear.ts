@@ -44,6 +44,7 @@ import {
   logPostShootInspection,
 } from "../lib/actions/gear";
 import { createPrintOrder } from "../lib/actions/visualizer";
+import { invalid } from "./e2e/result-helpers";
 
 let assertionsPassed = 0;
 let assertionsFailed = 0;
@@ -286,7 +287,7 @@ async function runChallengerSuite() {
   const invalidShot = await toggleShotCompletion({ shotId: "non_existent_shot_id_999", status: "COMPLETED" });
   assert(!invalidShot.success && invalidShot.error === "SHOT_NOT_FOUND", "Non-existent shotId rejected with SHOT_NOT_FOUND");
 
-  const invalidStatus = await toggleShotCompletion({ shotId: "shot_lum_1", status: "INVALID_STATUS" as any });
+  const invalidStatus = await toggleShotCompletion({ shotId: "shot_lum_1", status: invalid("INVALID_STATUS") });
   assert(!invalidStatus.success && invalidStatus.error === "UPDATE_FAILED", "Invalid status enum value rejected by validation");
 
 

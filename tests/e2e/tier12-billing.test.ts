@@ -14,6 +14,7 @@ import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/che
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { expireUnpaidDeposits, DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
+import { expectSuccess } from "./result-helpers";
 
 const DAY_MS = 86_400_000;
 
@@ -91,10 +92,17 @@ export async function runTier12BillingTests(harness: TestHarness) {
         packageId: extra.packageId,
         paymentProofUrl: extra.paymentProofUrl,
       })
-    ) as Promise<any>;
+    );
+
+  // For checkouts the test expects to go through: narrowed to the success result.
+  const checkoutOk = async (...args: Parameters<typeof checkout>) => {
+    const res = await checkout(...args);
+    expectSuccess(res, "checkout");
+    return res;
+  };
 
   const approve = (invoiceId: string, tenantId = lumina.id, slug = "lumina-cine") =>
-    withSession(staff, () => approvePaymentVerification({ invoiceId, tenantId, tenantSlug: slug })) as Promise<any>;
+    withSession(staff, () => approvePaymentVerification({ invoiceId, tenantId, tenantSlug: slug }));
 
   const balanceFor = (bookingId: string) =>
     db.milestoneInvoice.findMany({ where: { bookingId, milestoneType: "BOOKING_BALANCE" } });
@@ -125,6 +133,7 @@ export async function runTier12BillingTests(harness: TestHarness) {
     const slot = await makeSlot();
     const res = await checkout(slot.id, "QR_CODE", { packageId: pkg.id });
     harness.assert(res.success === true, `Checkout succeeds (${res.message ?? "ok"})`);
+    expectSuccess(res, "checkout");
     const booking = await db.clientBooking.findUnique({ where: { id: res.bookingId } });
     const invoice = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
     harness.assertEqual(invoice?.amount, pkg.depositPrice, "Deposit invoice = package deposit (not the slot's RM 100)");
@@ -141,7 +150,7 @@ export async function runTier12BillingTests(harness: TestHarness) {
   // ============================================================================
   await harness.test("T12-BAL-01: approving the deposit issues one balance invoice, due after the session", async () => {
     const slot = await makeSlot("commercial", 20);
-    const res = await checkout(slot.id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
+    const res = await checkoutOk(slot.id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
     const ok = await approve(res.invoiceId);
     harness.assert(ok.success === true, `Deposit approved (${ok.message ?? "ok"})`);
 
@@ -163,7 +172,7 @@ export async function runTier12BillingTests(harness: TestHarness) {
     process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "true";
     try {
       const slot = await makeSlot();
-      const res = await checkout(slot.id, "CARD", { packageId: pkg.id });
+      const res = await checkoutOk(slot.id, "CARD", { packageId: pkg.id });
       harness.assertEqual(res.status, "PAID", "Simulated card deposit is PAID");
       const balances = await balanceFor(res.bookingId);
       harness.assertEqual(balances.length, 1, "Balance invoice issued");
@@ -174,7 +183,7 @@ export async function runTier12BillingTests(harness: TestHarness) {
   });
 
   await harness.test("T12-BAL-03: staff bookings: paid with a package issues the balance; no package issues none", async () => {
-    const paid: any = await withSession(staff, async () =>
+    const paid = await withSession(staff, async () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -185,11 +194,12 @@ export async function runTier12BillingTests(harness: TestHarness) {
       })
     );
     harness.assert(paid.success === true, `Staff booking created (${paid.error ?? "ok"})`);
+    expectSuccess(paid, "paid");
     const bal = await balanceFor(paid.bookingId);
     harness.assertEqual(bal.length, 1, "Balance issued for a paid package booking");
     harness.assertEqual(bal[0]?.amount, balanceOf(pkg), "Balance amount correct");
 
-    const noPkg: any = await withSession(staff, async () =>
+    const noPkg = await withSession(staff, async () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -199,16 +209,17 @@ export async function runTier12BillingTests(harness: TestHarness) {
       })
     );
     harness.assert(noPkg.success === true, "Staff may book without a package");
+    expectSuccess(noPkg, "noPkg");
     harness.assertEqual((await balanceFor(noPkg.bookingId)).length, 0, "No price known, so no balance invoice");
   });
 
   await harness.test("T12-BAL-04: the balance is paid like any invoice and leaves the booking confirmed", async () => {
     const slot = await makeSlot();
-    const res = await checkout(slot.id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
+    const res = await checkoutOk(slot.id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
     await approve(res.invoiceId);
     const [bal] = await balanceFor(res.bookingId);
 
-    const pay: any = await (
+    const pay = await (
       payAsInvoiceClient({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -236,9 +247,9 @@ export async function runTier12BillingTests(harness: TestHarness) {
 
   await harness.test("T12-EXP-01: unpaid QR (no slip) and cash deposits are released after 24 hours", async () => {
     const qrSlot = await makeSlot();
-    const qr = await checkout(qrSlot.id, "QR_CODE", { packageId: pkg.id });
+    const qr = await checkoutOk(qrSlot.id, "QR_CODE", { packageId: pkg.id });
     const cashSlot = await makeSlot();
-    const cash = await checkout(cashSlot.id, "CASH", { packageId: pkg.id });
+    const cash = await checkoutOk(cashSlot.id, "CASH", { packageId: pkg.id });
     await ageBooking(qr.bookingId, 25);
     await ageBooking(cash.bookingId, 25);
 
@@ -255,11 +266,11 @@ export async function runTier12BillingTests(harness: TestHarness) {
   });
 
   await harness.test("T12-EXP-02: recent bookings, uploaded slips and paid deposits are kept", async () => {
-    const recent = await checkout((await makeSlot()).id, "QR_CODE", { packageId: pkg.id });
+    const recent = await checkoutOk((await makeSlot()).id, "QR_CODE", { packageId: pkg.id });
     await ageBooking(recent.bookingId, 23);
-    const withSlip = await checkout((await makeSlot()).id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
+    const withSlip = await checkoutOk((await makeSlot()).id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
     await ageBooking(withSlip.bookingId, 30);
-    const paid = await checkout((await makeSlot()).id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
+    const paid = await checkoutOk((await makeSlot()).id, "QR_CODE", { packageId: pkg.id, paymentProofUrl: "/uploads/receipts/t12.jpg" });
     await approve(paid.invoiceId);
     await ageBooking(paid.bookingId, 30);
 
@@ -271,11 +282,11 @@ export async function runTier12BillingTests(harness: TestHarness) {
   });
 
   await harness.test("T12-EXP-03: a voided deposit invoice can't be paid or approved", async () => {
-    const res = await checkout((await makeSlot()).id, "QR_CODE", { packageId: pkg.id });
+    const res = await checkoutOk((await makeSlot()).id, "QR_CODE", { packageId: pkg.id });
     await ageBooking(res.bookingId, 25);
     await expireUnpaidDeposits(lumina.id);
 
-    const pay: any = await (
+    const pay = await (
       payAsInvoiceClient({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -333,7 +344,7 @@ export async function runTier12BillingTests(harness: TestHarness) {
     harness.assertEqual(finals[0]?.amount, 1000, "Final balance = budget - retainer");
     harness.assertEqual(finals[0]?.status, "PENDING", "Final balance awaits payment");
 
-    const pay: any = await (
+    const pay = await (
       payAsInvoiceClient({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",

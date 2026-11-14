@@ -42,6 +42,8 @@ import { GET as downloadHandler } from "@/app/api/download/route";
 import { masterFilePath } from "@/lib/deliverables/storage";
 import { DEFAULT_CONTRACT_TERMS } from "@/lib/projects/constants";
 import path from "node:path";
+import { expectSuccess } from "./result-helpers";
+import type { SessionUser } from "@/lib/auth/token";
 
 export async function runTier15ProjectTests(harness: TestHarness) {
   harness.setSuite("Tier 15", "Proposals, Projects & Deliverables");
@@ -90,10 +92,11 @@ export async function runTier15ProjectTests(harness: TestHarness) {
 
   let proposalId = "";
   await harness.test("T15-PROP-01: the owner creates a numbered proposal for a new client; crew can't", async () => {
-    const byCrew: any = await withSession(crew, () => createProposal(input));
+    const byCrew = await withSession(crew, () => createProposal(input));
     harness.assertEqual(byCrew.success, false, "Crew can't send proposals");
-    const res: any = await withSession(owner, () => createProposal(input));
+    const res = await withSession(owner, () => createProposal(input));
     harness.assert(res.success === true, "Owner creates it", JSON.stringify(res));
+    expectSuccess(res, "res");
     proposalId = res.proposalId;
     harness.assert(/^PR-\d{4}-\d{3,}$/.test(res.proposalNumber), `Numbered (${res.proposalNumber})`);
     harness.assertEqual(res.shareUrl, `/lumina-cine/proposals/${res.proposalId}`, "Share link to the signing page");
@@ -106,7 +109,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
 
   let projectId = "";
   await harness.test("T15-PROP-02: when the client signs, the project and its retainer invoice appear", async () => {
-    const res: any = await acceptProposalAsClient({
+    const res = await acceptProposalAsClient({
       proposalId,
       tenantSlug: "lumina-cine",
       signatureDataUrl: `data:image/png;base64,${"A".repeat(80)}`,
@@ -115,6 +118,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
       consentAccepted: true,
     });
     harness.assert(res.success === true, "Signed", JSON.stringify(res));
+    expectSuccess(res, "res");
     projectId = res.projectId;
     const project = await db.project.findUnique({ where: { id: projectId } });
     harness.assertEqual(project?.budget, 2000, "Budget = base price with no extras");
@@ -123,11 +127,11 @@ export async function runTier15ProjectTests(harness: TestHarness) {
   });
 
   await harness.test("T15-PROJ-01: stage changes and call sheets", async () => {
-    const stage: any = await withSession(crew, () => updateProjectStatus({ tenantId: lumina.id, projectId, status: "PRODUCTION" }));
+    const stage = await withSession(crew, () => updateProjectStatus({ tenantId: lumina.id, projectId, status: "PRODUCTION" }));
     harness.assert(stage.success === true, "Crew moves the stage");
     harness.assertEqual((await db.project.findUnique({ where: { id: projectId } }))?.status, "PRODUCTION", "Stage saved");
 
-    const sheet: any = await withSession(crew, () =>
+    const sheet = await withSession(crew, () =>
       createCallSheet({
         tenantId: lumina.id,
         projectId,
@@ -140,12 +144,13 @@ export async function runTier15ProjectTests(harness: TestHarness) {
       })
     );
     harness.assert(sheet.success === true, "Call sheet created", JSON.stringify(sheet));
+    expectSuccess(sheet, "sheet");
     const stored = await db.callSheet.findUnique({ where: { id: sheet.callSheetId } });
     harness.assertEqual(JSON.parse(stored!.crewJson!)[0].name, "Aina", "Crew list stored");
     const outsider = await db.user.findFirst({ where: { role: "STUDIO_OWNER", tenantId: { not: lumina.id } } });
-    const cross: any = await withSession({ ...as(outsider!), tenantSlug: "apex-media" }, () => deleteCallSheet({ tenantId: outsider!.tenantId!, callSheetId: sheet.callSheetId }));
+    const cross = await withSession({ ...as(outsider!), tenantSlug: "apex-media" }, () => deleteCallSheet({ tenantId: outsider!.tenantId!, callSheetId: sheet.callSheetId }));
     harness.assertEqual(cross.success, false, "Another studio can't delete it");
-    const del: any = await withSession(crew, () => deleteCallSheet({ tenantId: lumina.id, callSheetId: sheet.callSheetId }));
+    const del = await withSession(crew, () => deleteCallSheet({ tenantId: lumina.id, callSheetId: sheet.callSheetId }));
     harness.assert(del.success === true, "Deleted by its studio");
   });
 
@@ -154,7 +159,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     const outsiderUser = { ...as(outsider!), tenantSlug: "apex-media" };
 
     // 1. Cross-tenant attempt is rejected
-    const crossCreate: any = await withSession(outsiderUser, () =>
+    const crossCreate = await withSession(outsiderUser, () =>
       createShotItem({
         projectId,
         tenantSlug: "apex-media",
@@ -169,7 +174,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(crossCreate.success, false, "Outside studio cannot create shots on Lumina project");
 
     // 2. Lumina crew creates Shot 1
-    const s1Res: any = await withSession(crew, () =>
+    const s1Res = await withSession(crew, () =>
       createShotItem({
         projectId,
         tenantSlug: "lumina-cine",
@@ -182,11 +187,12 @@ export async function runTier15ProjectTests(harness: TestHarness) {
       })
     );
     harness.assert(s1Res.success === true, "Crew creates Shot 1", JSON.stringify(s1Res));
+    expectSuccess(s1Res, "s1Res");
     harness.assertEqual(s1Res.shot?.framing, "Wide (WS)", "Shot 1 framing is Wide");
     harness.assertEqual(s1Res.shot?.status, "PENDING", "Shot 1 starts as PENDING");
 
     // 3. Crew creates Shot 2
-    const s2Res: any = await withSession(crew, () =>
+    const s2Res = await withSession(crew, () =>
       createShotItem({
         projectId,
         tenantSlug: "lumina-cine",
@@ -199,9 +205,10 @@ export async function runTier15ProjectTests(harness: TestHarness) {
       })
     );
     harness.assert(s2Res.success === true, "Crew creates Shot 2");
+    expectSuccess(s2Res, "s2Res");
 
     // 4. Update Shot 2 specs
-    const updateRes: any = await withSession(crew, () =>
+    const updateRes = await withSession(crew, () =>
       updateShotItem({
         shotId: s2Res.shot.id,
         tenantSlug: "lumina-cine",
@@ -214,7 +221,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
 
     // 5. Toggle Shot status & verify progress metrics
     // Mark Shot 1 IN_PROGRESS (Rolling)
-    const toggle1: any = await withSession(crew, () =>
+    const toggle1 = await withSession(crew, () =>
       toggleShotCompletion({
         shotId: s1Res.shot.id,
         status: "IN_PROGRESS",
@@ -226,7 +233,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(toggle1.percentage, 0, "0% completed while in progress");
 
     // Mark Shot 1 COMPLETED (Done)
-    const toggle2: any = await withSession(crew, () =>
+    const toggle2 = await withSession(crew, () =>
       toggleShotCompletion({
         shotId: s1Res.shot.id,
         status: "COMPLETED",
@@ -238,7 +245,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(toggle2.percentage, 50, "50% progress calculated");
 
     // 6. Cross-tenant delete is rejected
-    const crossDelete: any = await withSession(outsiderUser, () =>
+    const crossDelete = await withSession(outsiderUser, () =>
       deleteShotItem({
         shotId: s2Res.shot.id,
         tenantSlug: "apex-media",
@@ -247,7 +254,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(crossDelete.success, false, "Outside studio cannot delete Lumina shot");
 
     // 7. Delete Shot 2
-    const delRes: any = await withSession(crew, () =>
+    const delRes = await withSession(crew, () =>
       deleteShotItem({
         shotId: s2Res.shot.id,
         tenantSlug: "lumina-cine",
@@ -268,7 +275,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
       data: { tenantId: lumina.id, name: "T15 Light", sku: `T15-${run}`, category: "Lighting", discipline: "UNIVERSAL", status: "AVAILABLE" },
     });
     try {
-      const res: any = await withSession(crew, () =>
+      const res = await withSession(crew, () =>
         createEquipmentReservation({
           tenantId: lumina.id,
           tenantSlug: "lumina-cine",
@@ -279,7 +286,8 @@ export async function runTier15ProjectTests(harness: TestHarness) {
         })
       );
       harness.assert(res.success === true, "Reserved", JSON.stringify(res));
-      const released: any = await withSession(crew, () => cancelEquipmentReservation({ tenantId: lumina.id, reservationId: res.reservation.id }));
+      expectSuccess(res, "res");
+      const released = await withSession(crew, () => cancelEquipmentReservation({ tenantId: lumina.id, reservationId: res.reservation.id }));
       harness.assert(released.success === true, "Released", JSON.stringify(released));
       harness.assertEqual(await db.equipmentReservation.count({ where: { itemId: item.id } }), 0, "Reservation gone");
     } finally {
@@ -395,7 +403,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     form.append("gallery", "Final selects");
     form.append("files", new File([new Uint8Array(png)], "hero_shot.png", { type: "image/png" }));
     form.append("files", new File(["not an image"], "notes.png", { type: "image/png" }));
-    const send = (user: any) =>
+    const send = (user: SessionUser | null) =>
       withSession(user, () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
 
     const anon = await send(null);
@@ -425,16 +433,16 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(Buffer.from(await open.arrayBuffer()).length, png.length, "The original file, full size");
 
     // Client proofing: favorite and retouch note
-    const favRes: any = await toggleClientFavorite({ itemId: item!.id, isFav: true });
+    const favRes = await toggleClientFavorite({ itemId: item!.id, isFav: true });
     harness.assert(favRes.success === true, "Client favorited photo");
     harness.assertEqual(favRes.isClientFav, true, "isClientFav is true");
 
-    const noteRes: any = await submitRetouchNote({
+    const noteRes = await submitRetouchNote({
       itemId: item!.id,
       note: "Please warm skin tones by +5% and soften background glare",
     });
     harness.assert(noteRes.success === true, "Retouch note saved");
-    harness.assert(noteRes.clientNotes?.includes("warm skin tones"), "Note content saved");
+    harness.assert(noteRes.clientNotes?.includes("warm skin tones") === true, "Note content saved");
 
     // Batch ZIP downloads (Favorites vs All)
     const favZip = await downloadHandler(new NextRequest(`http://localhost:3000/api/download?projectId=${projectId}&type=photo_zip&favoritesOnly=true`));
@@ -446,7 +454,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual(allZip.status, 200, "All Masters ZIP download 200 OK");
     harness.assert(!!allZip.headers.get("Content-Disposition")?.includes("Master_Deliverables.zip"), "Master_Deliverables in zip filename");
 
-    const del: any = await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
+    const del = await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
     harness.assert(del.success === true, "File removed");
     harness.assert(!(await fs.stat(masterPath).catch(() => null)), "Master file deleted from storage");
   });

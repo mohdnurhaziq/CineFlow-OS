@@ -13,6 +13,7 @@ import { processBookingCheckout } from "@/lib/actions/checkout";
 import BookingPage from "@/app/[tenantSlug]/book/page";
 import { withSession } from "./mocks/session";
 import { packageRangeFor } from "@/lib/bookings/package-range";
+import { findProp, provideReactGlobal } from "./react-tree";
 
 const DAY_MS = 86_400_000;
 
@@ -22,18 +23,6 @@ function shiftDay(key: string, days: number): string {
 }
 
 /** Walks a server-component element tree and returns the first props object that has `key`. */
-function findProp(node: any, key: string): any {
-  if (!node || typeof node !== "object") return undefined;
-  if (Array.isArray(node)) {
-    for (const child of node) {
-      const found = findProp(child, key);
-      if (found !== undefined) return found;
-    }
-    return undefined;
-  }
-  if (node.props && key in node.props) return node.props[key];
-  return findProp(node.props?.children, key);
-}
 
 export async function runTier11BookingCalendarTests(harness: TestHarness) {
   harness.setSuite("Tier 11", "Public Booking Calendar");
@@ -130,7 +119,7 @@ export async function runTier11BookingCalendarTests(harness: TestHarness) {
 
   await harness.test("T11-PAST-01: a past slot cannot be held", async () => {
     const slot = await makeSlot(yesterday, "10:00 AM", "10:30 AM");
-    const res: any = await withSession(null, () =>
+    const res = await withSession(null, () =>
       holdBookingSlot({ tenantId: lumina.id, slotId: slot.id, sessionId: `t11-hold-${run}` })
     );
     harness.assert(res.success === false, "Hold refused");
@@ -142,7 +131,7 @@ export async function runTier11BookingCalendarTests(harness: TestHarness) {
   await harness.test("T11-PAST-02: a past slot cannot be checked out", async () => {
     const slot = await makeSlot(yesterday, "11:00 AM", "11:30 AM");
     const email = `t11-checkout-${run}@example.test`;
-    const res: any = await withSession(null, () =>
+    const res = await withSession(null, () =>
       processBookingCheckout({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -164,7 +153,7 @@ export async function runTier11BookingCalendarTests(harness: TestHarness) {
 
   await harness.test("T11-PAST-03: an upcoming slot can still be held", async () => {
     const slot = await makeSlot(future, "10:00 AM", "10:30 AM");
-    const res: any = await withSession(null, () =>
+    const res = await withSession(null, () =>
       holdBookingSlot({ tenantId: lumina.id, slotId: slot.id, sessionId: `t11-future-${run}` })
     );
     harness.assert(res.success === true, `Hold succeeds (${res.message ?? "ok"})`);
@@ -177,11 +166,11 @@ export async function runTier11BookingCalendarTests(harness: TestHarness) {
     const past = await makeSlot(yesterday, "02:00 PM", "02:30 PM");
     const upcoming = await makeSlot(future, "02:00 PM", "02:30 PM");
     // tsx compiles the page's JSX to React.createElement; Next normally supplies React itself.
-    (globalThis as any).React ??= await import("react");
+    await provideReactGlobal();
     const tree = await withSession(null, () =>
       BookingPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }), searchParams: Promise.resolve({}) })
     );
-    const slots: Array<{ id: string; date: Date; startTime: string }> = findProp(tree, "initialSlots") ?? [];
+    const slots = findProp<Array<{ id: string; date: Date; startTime: string }>>(tree, "initialSlots") ?? [];
     harness.assert(slots.length > 0, "Booking page passes slots to the calendar");
     harness.assert(!slots.some((s) => s.id === past.id), "Yesterday's slot is not offered");
     harness.assert(slots.some((s) => s.id === upcoming.id), "Upcoming slot is offered");

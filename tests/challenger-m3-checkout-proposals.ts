@@ -37,6 +37,7 @@ import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/che
 import { approvePaymentVerification, rejectPaymentVerification } from "@/lib/actions/admin-verification";
 import { acceptProposal, toggleProposalAddOn } from "@/lib/actions/proposals";
 import { holdBookingSlot } from "@/lib/actions/booking";
+import { invalid } from "./e2e/result-helpers";
 
 async function runChallengerM3Suite() {
   console.log("==================================================================");
@@ -885,8 +886,8 @@ async function runChallengerM3Suite() {
     assert(retainerInvDbCheck(retainerInvoice, 3000.0), "Retainer invoice generated with exact 3000.0 amount");
   }
 
-  function retainerInvDbCheck(inv: any, expectedAmount: number) {
-    return (
+  function retainerInvDbCheck(inv: { milestoneType: string; amount: number; status: string } | null | undefined, expectedAmount: number) {
+    return !!(
       inv &&
       inv.milestoneType === "RETAINER_50" &&
       inv.amount === expectedAmount &&
@@ -991,7 +992,7 @@ async function runChallengerM3Suite() {
       signatureDataUrl: validSignature,
       signerName: "Arthur Pendelton",
       selectedAddOnIds: [],
-      consentAccepted: false as any,
+      consentAccepted: invalid(false),
     });
 
     assert(

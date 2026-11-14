@@ -6,6 +6,7 @@ import { middleware } from "@/middleware";
 import { NextRequest } from "next/server";
 import { APP_BASE_DOMAIN } from "@/lib/domain-name";
 import bcrypt from "bcryptjs";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface TestResult {
   suite: string;
@@ -311,8 +312,8 @@ export async function runChallengerM2Suite() {
       // 5. Simulate catastrophic failure before package creation
       throw new Error("SIMULATED_ATOMIC_FAILURE_BEFORE_COMMIT");
     });
-  } catch (err: any) {
-    if (err.message === "SIMULATED_ATOMIC_FAILURE_BEFORE_COMMIT") {
+  } catch (err) {
+    if (errorMessageOf(err) === "SIMULATED_ATOMIC_FAILURE_BEFORE_COMMIT") {
       rollbackErrorCaught = true;
     }
   }

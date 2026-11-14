@@ -1,6 +1,7 @@
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { onInvoicePaid } from "@/lib/bookings/billing";
 import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
+import type { BookingSlot, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
@@ -12,6 +13,8 @@ import { findSuccessfulPayment, toSen, type ToyyibpayCredentials } from "@/lib/p
  * callback only tell us WHICH bill to look at; whether it is paid is always
  * decided by a server-to-server lookup with the studio's own credentials.
  */
+
+type BookingWithSlot = Prisma.ClientBookingGetPayload<{ include: { slot: true } }>;
 
 export const ONLINE_HOLD_MINUTES = 30;
 
@@ -87,12 +90,12 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       where: { id: invoice.id, status: { not: "PAID" } },
       data: { status: "PAID", paymentMethod: "CARD", paymentReference: gatewayRef, verifiedBy: "Toyyibpay", paidAt: new Date() },
     });
-    if (won.count === 0) return { alreadySettled: true, refundRequired: false, unlockedDownloads: false, booking: null as any, slot: null as any };
+    if (won.count === 0) return { alreadySettled: true, refundRequired: false, unlockedDownloads: false, booking: null as BookingWithSlot | null, slot: null as BookingSlot | null };
 
     let refundRequired = false;
     let unlockedDownloads = false;
-    let booking: any = null;
-    let slot: any = null;
+    let booking: BookingWithSlot | null = null;
+    let slot: BookingSlot | null = null;
 
     if (invoice.milestoneType === "FINAL_BALANCE_50" && invoice.projectId) {
       await tx.project.update({ where: { id: invoice.projectId }, data: { isFinalBalancePaid: true } });

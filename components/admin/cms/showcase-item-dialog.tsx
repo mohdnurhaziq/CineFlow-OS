@@ -5,6 +5,7 @@ import { X, Plus, Edit2, AlertCircle, Loader2, Sparkles, Upload, Image as ImageI
 import { createShowcaseItem, updateShowcaseItem } from "@/lib/actions/admin-cms";
 import { useDialog } from "@/lib/use-dialog";
 import { disciplineLabel } from "@/lib/labels";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface ShowcaseItemRow {
   id: string;
@@ -31,6 +32,8 @@ export interface PackageOption {
   id: string;
   name: string;
 }
+
+type ShowcaseDiscipline = "PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID";
 
 interface ShowcaseItemDialogProps {
   isOpen: boolean;
@@ -60,8 +63,8 @@ export function ShowcaseItemDialog({
   const [title, setTitle] = useState(itemToEdit?.title || "");
   const [clientName, setClientName] = useState(itemToEdit?.clientName || "");
   const [category, setCategory] = useState(itemToEdit?.category || categories[0]?.slug || "STUDIO_PORTRAIT");
-  const [discipline, setDiscipline] = useState<"PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID">(
-    (itemToEdit?.discipline as any) || "PHOTOGRAPHY"
+  const [discipline, setDiscipline] = useState<ShowcaseDiscipline>(
+    (itemToEdit?.discipline as ShowcaseDiscipline | undefined) || "PHOTOGRAPHY"
   );
   const [coverImageUrl, setCoverImageUrl] = useState(itemToEdit?.coverImageUrl || "");
   const [videoEmbedUrl, setVideoEmbedUrl] = useState(itemToEdit?.videoEmbedUrl || "");
@@ -78,7 +81,7 @@ export function ShowcaseItemDialog({
       setTitle(itemToEdit.title);
       setClientName(itemToEdit.clientName);
       setCategory(itemToEdit.category);
-      setDiscipline((itemToEdit.discipline as any) || "PHOTOGRAPHY");
+      setDiscipline((itemToEdit.discipline as ShowcaseDiscipline | undefined) || "PHOTOGRAPHY");
       setCoverImageUrl(itemToEdit.coverImageUrl);
       setVideoEmbedUrl(itemToEdit.videoEmbedUrl || "");
       setGalleryImages(itemToEdit.galleryImages || "");
@@ -158,8 +161,8 @@ export function ShowcaseItemDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }
@@ -234,7 +237,7 @@ export function ShowcaseItemDialog({
               </label>
               <select
                 value={discipline}
-                onChange={(e) => setDiscipline(e.target.value as any)}
+                onChange={(e) => setDiscipline(e.target.value as ShowcaseDiscipline)}
                 className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors"
               >
                 {DISCIPLINES.map((d) => (

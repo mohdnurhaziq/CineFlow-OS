@@ -6,6 +6,7 @@ import { useDialog } from "@/lib/use-dialog";
 import { createShotItem, updateShotItem } from "@/lib/actions/logistics";
 import { toast } from "sonner";
 import type { ShotItemData } from "./shot-list-hud";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface ShotDialogProps {
   isOpen: boolean;
@@ -142,9 +143,9 @@ export function ShotDialog({
           onSaved(res.shot as unknown as ShotItemData, false);
           onClose();
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Save shot error:", err);
-        toast.error(err.message || "An unexpected error occurred.");
+        toast.error(errorMessageOf(err) || "An unexpected error occurred.");
       }
     });
   };

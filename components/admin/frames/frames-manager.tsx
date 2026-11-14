@@ -31,6 +31,7 @@ import {
   type PrintSizeRow,
 } from "./print-size-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface FramesManagerProps {
   tenantId: string;
@@ -84,8 +85,8 @@ export function FramesManager({
       } else {
         handleSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setDeletingId(null);
     }
@@ -100,8 +101,8 @@ export function FramesManager({
         isAvailable: !frame.isAvailable,
       });
       handleSuccess();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to toggle frame availability.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "Failed to toggle frame availability.");
     }
   };
 
@@ -123,8 +124,8 @@ export function FramesManager({
       } else {
         handleSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setDeletingId(null);
     }

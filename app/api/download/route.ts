@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ error: `Unsupported download type: ${type}` }, { status: 400 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Secure download error:", error);
     return NextResponse.json({ error: "Failed to process master download" }, { status: 500 });
   }

@@ -9,6 +9,7 @@ import { PackagePricingNote } from "./package-pricing-note";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface BookingSlotRow {
   id: string;
@@ -180,8 +181,8 @@ export function SingleSlotDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

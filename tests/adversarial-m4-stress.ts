@@ -22,6 +22,7 @@ import {
   logPreShootInspection,
   logPostShootInspection,
 } from "../lib/actions/gear";
+import { invalid } from "./e2e/result-helpers";
 
 let totalTests = 0;
 let passedTests = 0;
@@ -132,7 +133,7 @@ async function runAdversarialTests() {
   // 3.2 Invalid status enum
   const invalidStatusRes = await toggleShotCompletion({
     shotId: "shot_lum_1",
-    status: "INVALID_STATUS" as any,
+    status: invalid("INVALID_STATUS"),
   });
   assert(invalidStatusRes.success === false, "toggleShotCompletion rejects invalid status enum");
 

@@ -59,6 +59,7 @@ import {
   toggleAddOnTemplateDefault,
   toggleAddOnTemplateActive,
 } from "../lib/actions/admin-proposals";
+import { invalid } from "./e2e/result-helpers";
 
 let assertionsPassed = 0;
 let assertionsFailed = 0;
@@ -411,7 +412,7 @@ async function runChallengerSuite() {
     tenantSlug: lumina.slug,
     name: "Bad Discipline Pkg",
     category: "commercial",
-    discipline: "AERIAL_STUNT" as any, // Invalid
+    discipline: invalid("AERIAL_STUNT"), // Invalid
     price: 500,
     depositPrice: 50,
     turnaround: "3 days",
@@ -1205,7 +1206,7 @@ async function runChallengerSuite() {
     name: "Invalid Unit Add-On",
     description: "Testing unsupported unit string",
     price: 100.0,
-    unit: "per_kilometer" as any,
+    unit: invalid("per_kilometer"),
     isDefault: false,
     isActive: true,
   });

@@ -1,9 +1,11 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { processBookingCheckout } from "@/lib/actions/checkout";
 import { isSlotInPast } from "@/lib/slot-time";
+import { errorMessageOf } from "@/lib/action-error";
 
 const HoldSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -125,12 +127,12 @@ export async function holdBookingSlot(input: z.infer<typeof HoldSlotSchema>) {
       heldUntil: heldUntil.toISOString(),
       slot: updatedSlot,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error holding booking slot:", err);
     return {
       success: false,
       error: "INTERNAL_ERROR",
-      message: err.message || "Failed to hold slot",
+      message: errorMessageOf(err) || "Failed to hold slot",
     };
   }
 }
@@ -154,9 +156,9 @@ export async function releaseBookingSlot(input: z.infer<typeof ReleaseSlotSchema
     });
 
     return { success: result.count > 0 };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error releasing slot:", err);
-    return { success: false, error: err.message };
+    return { success: false, error: errorMessageOf(err) };
   }
 }
 
@@ -191,7 +193,7 @@ export async function getTenantBookingSlots(params: {
       },
     });
 
-    const whereClause: any = { tenantId: tenant.id };
+    const whereClause: Prisma.BookingSlotWhereInput = { tenantId: tenant.id };
     if (params.category && params.category !== "all") {
       whereClause.category = params.category;
     }
@@ -207,9 +209,9 @@ export async function getTenantBookingSlots(params: {
     });
 
     return { success: true, slots };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error fetching slots:", err);
-    return { success: false, error: err.message, slots: [] };
+    return { success: false, error: errorMessageOf(err), slots: [] };
   }
 }
 
@@ -259,8 +261,8 @@ export async function createClientBooking(input: CreateBookingInput) {
       // Present only when the client must finish paying on the gateway's page.
       paymentUrl: "paymentUrl" in result ? result.paymentUrl : undefined,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error creating booking:", err);
-    return { success: false, error: err.message || "Failed to create booking" };
+    return { success: false, error: errorMessageOf(err) || "Failed to create booking" };
   }
 }

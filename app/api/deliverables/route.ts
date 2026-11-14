@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { STAFF_ROLES } from "@/lib/auth/guard";
 import { storeDeliverablePhoto, storeDeliverableVideoMaster, storeVideoReviewCopy } from "@/lib/deliverables/storage";
+import { errorMessageOf } from "@/lib/action-error";
 
 /**
  * Uploads a project's deliverables (studio staff only).
@@ -122,8 +123,8 @@ export async function POST(request: NextRequest) {
       }
     }
     return NextResponse.json({ created: created.length, skipped });
-  } catch (err: any) {
-    console.error("Deliverable upload failed:", err?.message || err);
+  } catch (err) {
+    console.error("Deliverable upload failed:", errorMessageOf(err) || err);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

@@ -159,7 +159,7 @@ async function runMasterTestSuite() {
     // Tier 17: Admin Clients section (directory, profile, edits, notes, CSV)
     // --------------------------------------------------------------------------
     await runTier17ClientsTests(harness);
-  } catch (err: any) {
+  } catch (err) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {
     await harness.runTeardown();

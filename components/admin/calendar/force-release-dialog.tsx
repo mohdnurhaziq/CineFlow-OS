@@ -5,6 +5,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { forceReleaseHeldSlot } from "@/lib/actions/admin-calendar";
 import type { BookingSlotRow } from "./single-slot-dialog";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface ForceReleaseDialogProps {
   isOpen: boolean;
@@ -50,8 +51,8 @@ export function ForceReleaseDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

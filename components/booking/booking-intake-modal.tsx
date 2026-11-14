@@ -296,7 +296,7 @@ export function BookingIntakeModal({
                           type="button"
                           key={p.id}
                           aria-pressed={formData.paymentMethod === p.id}
-                          onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: p.id as any }))}
+                          onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: p.id as typeof prev.paymentMethod }))}
                           className={`py-2 px-2 rounded-lg border text-[11px] font-mono font-bold transition-all ${
                             formData.paymentMethod === p.id
                               ? "bg-amber-500 text-black border-amber-500"

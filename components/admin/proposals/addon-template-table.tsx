@@ -17,6 +17,7 @@ import {
 } from "@/lib/actions/admin-proposals";
 import type { ProposalAddOnTemplateRow } from "./addon-template-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface AddOnTemplateTableProps {
   templates: ProposalAddOnTemplateRow[];
@@ -57,8 +58,8 @@ export function AddOnTemplateTable({
       } else {
         onSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setDeletingId(null);
     }
@@ -73,8 +74,8 @@ export function AddOnTemplateTable({
         isDefault: !t.isDefault,
       });
       onSuccess();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to toggle default.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "Failed to toggle default.");
     }
   };
 
@@ -87,8 +88,8 @@ export function AddOnTemplateTable({
         isActive: !t.isActive,
       });
       onSuccess();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to toggle active.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "Failed to toggle active.");
     }
   };
 

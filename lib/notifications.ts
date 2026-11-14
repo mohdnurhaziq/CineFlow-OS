@@ -1,3 +1,4 @@
+import { errorMessageOf } from "./action-error";
 /**
  * CineFlow OS Multi-Channel Transactional Notification Engine
  * Supports Responsive HTML Email and WhatsApp Dispatch
@@ -200,9 +201,9 @@ async function deliverEmail(input: {
       return { delivery: "FAILED", error: resendRefusalReason(res.status, detail) };
     }
     return { delivery: "SENT" };
-  } catch (err: any) {
-    console.error("Resend request failed:", err?.message || err);
-    return { delivery: "FAILED", error: err?.name === "TimeoutError" ? "Resend request timed out" : "Resend request failed" };
+  } catch (err) {
+    console.error("Resend request failed:", errorMessageOf(err) || err);
+    return { delivery: "FAILED", error: err instanceof Error && err.name === "TimeoutError" ? "Resend request timed out" : "Resend request failed" };
   }
 }
 

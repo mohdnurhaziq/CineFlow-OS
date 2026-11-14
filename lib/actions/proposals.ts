@@ -12,6 +12,7 @@ import {
   ToggleAddOnSchema,
   type ToggleAddOnInput,
 } from "@/lib/validations/proposals";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -259,12 +260,12 @@ export async function acceptProposal(input: SignProposalInput) {
       amount: depositAmount,
       checkoutUrl: `/${tenantSlug}/checkout?invoiceId=${result.invoice.id}`,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error accepting proposal:", error);
     return {
       success: false,
       error: "ACCEPT_FAILED",
-      message: error.message || "Failed to accept proposal.",
+      message: errorMessageOf(error) || "Failed to accept proposal.",
     };
   }
 }
@@ -298,8 +299,8 @@ export async function toggleProposalAddOn(input: ToggleAddOnInput) {
 
     safeRevalidate(`/${addOn.proposal.tenant.slug}/proposals/${proposalId}`);
     return { success: true, isSelected: addOn.isSelected };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error toggling add-on:", error);
-    return { success: false, error: error.message || "Failed to toggle add-on." };
+    return { success: false, error: errorMessageOf(error) || "Failed to toggle add-on." };
   }
 }

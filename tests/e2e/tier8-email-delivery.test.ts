@@ -29,7 +29,7 @@ export async function runTier8EmailDeliveryTests(harness: TestHarness) {
 
   const stubFetch = (respond: (call: FetchCall) => Response | Promise<Response>) => {
     const calls: FetchCall[] = [];
-    globalThis.fetch = (async (url: any, init: any) => {
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       const call = { url: String(url), init: init ?? {} };
       calls.push(call);
       return respond(call);

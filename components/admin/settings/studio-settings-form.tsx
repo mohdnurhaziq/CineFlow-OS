@@ -22,6 +22,7 @@ import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { saveGatewayCredentials, removeGatewayCredentials } from "@/lib/actions/admin-payments";
 import { disciplineLabel } from "@/lib/labels";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
+import { errorMessageOf } from "@/lib/action-error";
 
 function GatewaySettings({
   tenantId,
@@ -181,6 +182,9 @@ export interface StudioTenantData {
   gatewayCategoryCode?: string | null;
 }
 
+type StudioDiscipline = "PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID";
+type StudioCurrency = "USD" | "MYR" | "SGD" | "EUR" | "GBP";
+
 interface StudioSettingsFormProps {
   tenant: StudioTenantData;
 }
@@ -313,15 +317,15 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
   const [name, setName] = useState(tenant.name);
   const [slug, setSlug] = useState(tenant.slug);
   const [customDomain, setCustomDomain] = useState(tenant.customDomain || "");
-  const [discipline, setDiscipline] = useState<"PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID">(
-    (tenant.discipline as any) || "HYBRID"
+  const [discipline, setDiscipline] = useState<StudioDiscipline>(
+    (tenant.discipline as StudioDiscipline | null) || "HYBRID"
   );
   const [tagline, setTagline] = useState(tenant.tagline || "");
   const [bio, setBio] = useState(tenant.bio || "");
   const [logoUrl, setLogoUrl] = useState(tenant.logoUrl || "");
   const [brandColor, setBrandColor] = useState(tenant.brandColor || "#f59e0b");
-  const [currency, setCurrency] = useState<"USD" | "MYR" | "SGD" | "EUR" | "GBP">(
-    (tenant.currency as any) || "USD"
+  const [currency, setCurrency] = useState<StudioCurrency>(
+    (tenant.currency as StudioCurrency | null) || "USD"
   );
   const [qrCodeUrl, setQrCodeUrl] = useState(tenant.qrCodeUrl || "");
   const [bankDetails, setBankDetails] = useState(tenant.bankDetails || "");
@@ -376,8 +380,8 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
       } else {
         router.refresh();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }
@@ -478,7 +482,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
             </label>
             <select
               value={discipline}
-              onChange={(e) => setDiscipline(e.target.value as any)}
+              onChange={(e) => setDiscipline(e.target.value as StudioDiscipline)}
               className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors"
             >
               {DISCIPLINES.map((d) => (
@@ -495,7 +499,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
             </label>
             <select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value as any)}
+              onChange={(e) => setCurrency(e.target.value as StudioCurrency)}
               className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors font-mono"
             >
               {CURRENCIES.map((c) => (

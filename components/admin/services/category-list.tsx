@@ -5,6 +5,7 @@ import { Edit2, Trash2, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucid
 import { deleteCampaignCategory, toggleCategoryActive } from "@/lib/actions/admin-services";
 import type { CategoryRow } from "./category-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface CategoryListProps {
   categories: CategoryRow[];
@@ -46,8 +47,8 @@ export function CategoryList({
       } else {
         onSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setDeletingId(null);
     }
@@ -62,8 +63,8 @@ export function CategoryList({
         isActive: !cat.isActive,
       });
       onSuccess();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to toggle active status.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "Failed to toggle active status.");
     }
   };
 

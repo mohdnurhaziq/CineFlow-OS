@@ -71,6 +71,8 @@ import {
   approvePaymentVerification,
   rejectPaymentVerification,
 } from "../lib/actions/admin-verification";
+import type { UpdateStudioSettingsInput } from "../lib/validations/admin-settings";
+import type { UpdateServicePackageInput } from "../lib/validations/services";
 
 let passedCount = 0;
 let failedCount = 0;
@@ -745,12 +747,12 @@ async function runChallengerSuite() {
     name: originalLumina.name,
     newSlug: originalLumina.slug,
     customDomain: originalLumina.customDomain,
-    discipline: originalLumina.discipline as any,
+    discipline: originalLumina.discipline as UpdateStudioSettingsInput["discipline"],
     tagline: originalLumina.tagline,
     bio: originalLumina.bio,
     logoUrl: originalLumina.logoUrl,
     brandColor: originalLumina.brandColor || "#f59e0b",
-    currency: originalLumina.currency as any,
+    currency: originalLumina.currency as UpdateStudioSettingsInput["currency"],
     qrCodeUrl: originalLumina.qrCodeUrl,
     bankDetails: originalLumina.bankDetails,
   });
@@ -774,7 +776,7 @@ async function runChallengerSuite() {
     tenantSlug: lumina.slug,
     name: "Hostile Package Renamed",
     category: apexPackage!.category,
-    discipline: apexPackage!.discipline as any,
+    discipline: apexPackage!.discipline as UpdateServicePackageInput["discipline"],
     price: 1,
     depositPrice: 1,
     turnaround: "1 day",

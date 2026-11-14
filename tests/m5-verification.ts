@@ -53,6 +53,7 @@ import {
   toggleShowcaseFeatured,
 } from "../lib/actions/admin-cms";
 import { updateStudioSettings } from "../lib/actions/admin-settings";
+import type { UpdateStudioSettingsInput } from "../lib/validations/admin-settings";
 
 let testsPassed = 0;
 let testsFailed = 0;
@@ -438,12 +439,12 @@ async function runM5Verification() {
     name: lumina.name,
     newSlug: lumina.slug,
     customDomain: lumina.customDomain,
-    discipline: lumina.discipline as any,
+    discipline: lumina.discipline as UpdateStudioSettingsInput["discipline"],
     tagline: "Verified M5 Boutique Studio Tagline",
     bio: lumina.bio,
     logoUrl: lumina.logoUrl,
     brandColor: lumina.brandColor || "#f59e0b",
-    currency: lumina.currency as any,
+    currency: lumina.currency as UpdateStudioSettingsInput["currency"],
     qrCodeUrl: lumina.qrCodeUrl,
     bankDetails: "JPMorgan Chase / M5 Verified / Acct: 1234567890",
   });
@@ -456,12 +457,12 @@ async function runM5Verification() {
     name: lumina.name,
     newSlug: lumina.slug,
     customDomain: lumina.customDomain,
-    discipline: lumina.discipline as any,
+    discipline: lumina.discipline as UpdateStudioSettingsInput["discipline"],
     tagline: originalTagline,
     bio: lumina.bio,
     logoUrl: lumina.logoUrl,
     brandColor: lumina.brandColor || "#f59e0b",
-    currency: lumina.currency as any,
+    currency: lumina.currency as UpdateStudioSettingsInput["currency"],
     qrCodeUrl: lumina.qrCodeUrl,
     bankDetails: originalBankDetails,
   });

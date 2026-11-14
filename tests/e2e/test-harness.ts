@@ -5,6 +5,7 @@
  */
 
 import assert from "node:assert/strict";
+import { errorMessageOf } from "../../lib/action-error";
 
 export interface TestResult {
   tier: string;
@@ -53,8 +54,8 @@ export class TestHarness {
       if (fn) {
         try {
           await fn();
-        } catch (err: any) {
-          console.warn(`\x1b[33m[Teardown Warning]\x1b[0m Failed cleanup hook:`, err?.message || err);
+        } catch (err) {
+          console.warn(`\x1b[33m[Teardown Warning]\x1b[0m Failed cleanup hook:`, errorMessageOf(err) || err);
         }
       }
     }
@@ -88,8 +89,8 @@ export class TestHarness {
     try {
       assert.equal(actual, expected, detail);
       this.assert(true, name);
-    } catch (err: any) {
-      this.assert(false, name, `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}: ${err.message}`);
+    } catch (err) {
+      this.assert(false, name, `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}: ${errorMessageOf(err)}`);
     }
   }
 
@@ -97,8 +98,8 @@ export class TestHarness {
     try {
       assert.notEqual(actual, expected, detail);
       this.assert(true, name);
-    } catch (err: any) {
-      this.assert(false, name, `Expected not to equal ${JSON.stringify(expected)}: ${err.message}`);
+    } catch (err) {
+      this.assert(false, name, `Expected not to equal ${JSON.stringify(expected)}: ${errorMessageOf(err)}`);
     }
   }
 
@@ -106,17 +107,17 @@ export class TestHarness {
     try {
       assert.deepEqual(actual, expected, detail);
       this.assert(true, name);
-    } catch (err: any) {
-      this.assert(false, name, `Deep equality mismatch: ${err.message}`);
+    } catch (err) {
+      this.assert(false, name, `Deep equality mismatch: ${errorMessageOf(err)}`);
     }
   }
 
-  async assertRejects(fn: () => Promise<any>, expectedErrorSubstring: string, name: string) {
+  async assertRejects(fn: () => Promise<unknown>, expectedErrorSubstring: string, name: string) {
     try {
       await fn();
       this.assert(false, name, `Expected function to reject with substring "${expectedErrorSubstring}", but it resolved`);
-    } catch (err: any) {
-      const msg = err?.message || String(err);
+    } catch (err) {
+      const msg = errorMessageOf(err) || String(err);
       if (msg.includes(expectedErrorSubstring)) {
         this.assert(true, name);
       } else {
@@ -143,12 +144,12 @@ export class TestHarness {
         passed: true,
         durationMs,
       });
-    } catch (err: any) {
+    } catch (err) {
       const durationMs = Date.now() - t0;
-      const errorMsg = err?.message || String(err);
+      const errorMsg = errorMessageOf(err) || String(err);
       console.error(`  \x1b[31m✗ FAIL:\x1b[0m ${name} \x1b[90m(${durationMs}ms)\x1b[0m`);
       console.error(`     ↳ \x1b[31m${errorMsg}\x1b[0m`);
-      if (err.stack) {
+      if (err instanceof Error && err.stack) {
         console.error(`     \x1b[90m${err.stack.split("\n").slice(1, 4).join("\n     ")}\x1b[0m`);
       }
       this.results.push({

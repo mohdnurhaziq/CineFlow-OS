@@ -21,6 +21,7 @@ import {
   type LogPostShootInspectionInput,
 } from "@/lib/validations/gear";
 import { checkoutWindow } from "@/lib/gear/checkout-window";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -66,12 +67,12 @@ export async function createGearItem(input: CreateGearItemInput) {
       success: true,
       item,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("createGearItem error:", err);
     return {
       success: false,
       error: "CREATE_FAILED",
-      message: err.message || "Failed to create inventory item.",
+      message: errorMessageOf(err) || "Failed to create inventory item.",
     };
   }
 }
@@ -121,12 +122,12 @@ export async function updateGearItem(input: UpdateGearItemInput) {
       success: true,
       item: updated,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("updateGearItem error:", err);
     return {
       success: false,
       error: "UPDATE_FAILED",
-      message: err.message || "Failed to update inventory item.",
+      message: errorMessageOf(err) || "Failed to update inventory item.",
     };
   }
 }
@@ -174,12 +175,12 @@ export async function deleteGearItem(input: {
     safeRevalidate(`/${tenantSlug}/admin/inventory`);
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err) {
     console.error("deleteGearItem error:", err);
     return {
       success: false,
       error: "DELETE_FAILED",
-      message: err.message || "Failed to delete gear item.",
+      message: errorMessageOf(err) || "Failed to delete gear item.",
     };
   }
 }
@@ -214,8 +215,8 @@ export async function updateGearConditionStatus(input: {
 
     safeRevalidate(`/${tenantSlug}/admin/inventory`);
     return { success: true, item: updated };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (err) {
+    return { success: false, error: errorMessageOf(err) };
   }
 }
 
@@ -252,12 +253,12 @@ export async function quarantineGearItem(input: {
       item: updated,
       message: `${existing.name} (${existing.sku}) quarantined for maintenance.`,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("quarantineGearItem error:", err);
     return {
       success: false,
       error: "QUARANTINE_FAILED",
-      message: err.message || "Failed to quarantine item.",
+      message: errorMessageOf(err) || "Failed to quarantine item.",
     };
   }
 }
@@ -294,12 +295,12 @@ export async function releaseGearFromMaintenance(input: {
       item: updated,
       message: `${existing.name} (${existing.sku}) returned to active fleet.`,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("releaseGearFromMaintenance error:", err);
     return {
       success: false,
       error: "RELEASE_FAILED",
-      message: err.message || "Failed to return item to service.",
+      message: errorMessageOf(err) || "Failed to return item to service.",
     };
   }
 }
@@ -363,12 +364,12 @@ export async function createKitBundle(input: CreateKitBundleInput) {
       success: true,
       bundle,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("createKitBundle error:", err);
     return {
       success: false,
       error: "CREATE_BUNDLE_FAILED",
-      message: err.message || "Failed to create kit bundle.",
+      message: errorMessageOf(err) || "Failed to create kit bundle.",
     };
   }
 }
@@ -443,12 +444,12 @@ export async function updateKitBundle(input: UpdateKitBundleInput) {
     safeRevalidate(`/${tenantSlug}/admin/inventory`);
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err) {
     console.error("updateKitBundle error:", err);
     return {
       success: false,
       error: "UPDATE_BUNDLE_FAILED",
-      message: err.message || "Failed to update kit bundle.",
+      message: errorMessageOf(err) || "Failed to update kit bundle.",
     };
   }
 }
@@ -474,8 +475,8 @@ export async function deleteKitBundle(input: {
 
     safeRevalidate(`/${tenantSlug}/admin/inventory`);
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (err) {
+    return { success: false, error: errorMessageOf(err) };
   }
 }
 
@@ -550,7 +551,7 @@ export async function checkBundleAvailability(bundleId: string, tenantId: string
       conflictingItems,
       aggregateDailyRate: bundle.dailyRate || aggregateDailyRate,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("checkBundleAvailability error:", err);
     return {
       success: false,
@@ -646,12 +647,12 @@ export async function createEquipmentReservation(input: CreateReservationInput) 
       success: true,
       reservation,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("createEquipmentReservation error:", err);
     return {
       success: false,
       error: "RESERVATION_FAILED",
-      message: err.message || "Failed to create gear reservation.",
+      message: errorMessageOf(err) || "Failed to create gear reservation.",
     };
   }
 }
@@ -748,12 +749,12 @@ export async function logPreShootInspection(input: LogPreShootInspectionInput) {
       success: true,
       message: "Pre-shoot checkout inspection logged and gear marked ON_SHOOT.",
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("logPreShootInspection error:", err);
     return {
       success: false,
       error: "PRE_INSPECTION_FAILED",
-      message: err.message || "Failed to log pre-shoot inspection.",
+      message: errorMessageOf(err) || "Failed to log pre-shoot inspection.",
     };
   }
 }
@@ -864,12 +865,12 @@ export async function logPostShootInspection(input: LogPostShootInspectionInput)
       nextItemStatus,
       message: `Gear check-in complete. Status set to ${nextItemStatus}.`,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("logPostShootInspection error:", err);
     return {
       success: false,
       error: "POST_INSPECTION_FAILED",
-      message: err.message || "Failed to log post-shoot inspection.",
+      message: errorMessageOf(err) || "Failed to log post-shoot inspection.",
     };
   }
 }

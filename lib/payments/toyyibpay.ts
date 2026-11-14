@@ -1,3 +1,4 @@
+import { errorMessageOf } from "../action-error";
 /**
  * Toyyibpay (Malaysian FPX / card gateway) client.
  * API reference: https://toyyibpay.com/apireference/
@@ -90,8 +91,8 @@ export async function createBill(creds: ToyyibpayCredentials, input: CreateBillI
       return { ok: false, error: "The payment gateway rejected the request. Please check the studio's Toyyibpay settings." };
     }
     return { ok: true, billCode, paymentUrl: `${toyyibpayBaseUrl()}/${billCode}` };
-  } catch (err: any) {
-    console.error("Toyyibpay createBill request failed:", err?.message || err);
+  } catch (err) {
+    console.error("Toyyibpay createBill request failed:", errorMessageOf(err) || err);
     return { ok: false, error: "Could not reach the payment gateway. Please try again." };
   }
 }
@@ -128,8 +129,8 @@ export async function findSuccessfulPayment(creds: ToyyibpayCredentials, billCod
       invoiceNo: paid.billpaymentInvoiceNo ? String(paid.billpaymentInvoiceNo) : null,
       externalReference: paid.billExternalReferenceNo ? String(paid.billExternalReferenceNo) : null,
     };
-  } catch (err: any) {
-    console.error("Toyyibpay getBillTransactions failed:", err?.message || err);
+  } catch (err) {
+    console.error("Toyyibpay getBillTransactions failed:", errorMessageOf(err) || err);
     return null;
   }
 }

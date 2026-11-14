@@ -102,21 +102,21 @@ export async function runTier16OnboardingGuideTests(harness: TestHarness) {
 
   // ── Close the checklist ─────────────────────────────────────────────────────
   await harness.test("T16-DISMISS-01: only this studio's owner can close the checklist", async () => {
-    const byNobody: any = await withSession(null, () => dismissSetupChecklist(slug));
+    const byNobody = await withSession(null, () => dismissSetupChecklist(slug));
     harness.assertEqual(byNobody.success, false, "Signed-out caller refused");
 
-    const byCrew: any = await withSession(crew, () => dismissSetupChecklist(slug));
+    const byCrew = await withSession(crew, () => dismissSetupChecklist(slug));
     harness.assertEqual(byCrew.success, false, "Crew refused");
     const crewAfter = await db.user.findUnique({ where: { id: crewRow.id } });
     harness.assertEqual(crewAfter?.onboardingChecklistDismissedAt ?? null, null, "Crew row unchanged");
 
-    const byOther: any = await withSession(otherOwner, () => dismissSetupChecklist(slug));
+    const byOther = await withSession(otherOwner, () => dismissSetupChecklist(slug));
     harness.assertEqual(byOther.success, false, "Another studio's owner refused");
 
-    const bySuper: any = await withSession(superAdmin, () => dismissSetupChecklist(slug));
+    const bySuper = await withSession(superAdmin, () => dismissSetupChecklist(slug));
     harness.assertEqual(bySuper.success, false, "Super admin has no checklist to close");
 
-    const byOwner: any = await withSession(owner, () => dismissSetupChecklist(slug));
+    const byOwner = await withSession(owner, () => dismissSetupChecklist(slug));
     harness.assertEqual(byOwner.success, true, "Owner can close it");
     const ownerAfter = await db.user.findUnique({ where: { id: ownerRow.id } });
     harness.assert(ownerAfter?.onboardingChecklistDismissedAt instanceof Date, "Owner row records the close");
@@ -124,13 +124,13 @@ export async function runTier16OnboardingGuideTests(harness: TestHarness) {
 
   // ── Tour seen ───────────────────────────────────────────────────────────────
   await harness.test("T16-TOUR-01: any staff member marks the tour seen on their own account only", async () => {
-    const byNobody: any = await withSession(null, () => markTourSeen(slug));
+    const byNobody = await withSession(null, () => markTourSeen(slug));
     harness.assertEqual(byNobody.success, false, "Signed-out caller refused");
 
-    const byOther: any = await withSession(otherOwner, () => markTourSeen(slug));
+    const byOther = await withSession(otherOwner, () => markTourSeen(slug));
     harness.assertEqual(byOther.success, false, "Another studio's owner refused");
 
-    const byCrew: any = await withSession(crew, () => markTourSeen(slug));
+    const byCrew = await withSession(crew, () => markTourSeen(slug));
     harness.assertEqual(byCrew.success, true, "Crew can mark the tour seen");
     const crewAfter = await db.user.findUnique({ where: { id: crewRow.id } });
     harness.assert(crewAfter?.onboardingTourSeenAt instanceof Date, "Crew row records the tour");
@@ -138,7 +138,7 @@ export async function runTier16OnboardingGuideTests(harness: TestHarness) {
     harness.assertEqual(ownerAfter?.onboardingTourSeenAt ?? null, null, "Owner row untouched by crew's call");
 
     const superBefore = superRow.onboardingTourSeenAt;
-    const bySuper: any = await withSession(superAdmin, () => markTourSeen(slug));
+    const bySuper = await withSession(superAdmin, () => markTourSeen(slug));
     harness.assertEqual(bySuper.success, true, "Super admin can mark the tour seen");
     const superAfter = await db.user.findUnique({ where: { id: superRow.id } });
     harness.assert(superAfter?.onboardingTourSeenAt instanceof Date, "Super admin row records the tour");

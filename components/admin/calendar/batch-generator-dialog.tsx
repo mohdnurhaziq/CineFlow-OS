@@ -11,6 +11,7 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { parseTimeToMinutes } from "@/lib/utils/time";
 import type { CategoryOption } from "./single-slot-dialog";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface BatchGeneratorDialogProps {
   isOpen: boolean;
@@ -178,8 +179,8 @@ export function BatchGeneratorDialog({
         onSuccess?.();
         onClose();
       }, 1200);
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
       setIsSubmitting(false);
     }
   };

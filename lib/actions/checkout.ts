@@ -20,6 +20,7 @@ import {
   ProcessInvoicePaymentSchema,
   type ProcessInvoicePaymentInput,
 } from "@/lib/validations/checkout";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -264,12 +265,12 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       paymentMethod,
       amount: deposit,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error in processBookingCheckout:", err);
     return {
       success: false,
       error: "CHECKOUT_FAILED",
-      message: err.message || "Failed to process checkout",
+      message: errorMessageOf(err) || "Failed to process checkout",
     };
   }
 }
@@ -425,8 +426,8 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
       unlockedDownloads,
       paymentMethod,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error in processInvoicePayment:", err);
-    return { success: false, error: "PAYMENT_FAILED", message: err.message || "Failed to process invoice payment." };
+    return { success: false, error: "PAYMENT_FAILED", message: errorMessageOf(err) || "Failed to process invoice payment." };
   }
 }

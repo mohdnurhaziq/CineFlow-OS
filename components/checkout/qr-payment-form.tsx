@@ -4,6 +4,7 @@ import { useState } from "react";
 import { QrCode, Copy, Check, Upload, Image as ImageIcon, X, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { errorMessageOf } from "../../lib/action-error";
 interface QrPaymentFormProps {
   amount: number;
   currency: string;
@@ -69,10 +70,10 @@ export function QrPaymentForm({
       } else {
         throw new Error(data.error || "Failed to upload receipt.");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Upload error:", err);
-      setUploadError(err.message || "Failed to upload receipt slip.");
-      toast.error(err.message || "Failed to upload receipt.");
+      setUploadError(errorMessageOf(err) || "Failed to upload receipt slip.");
+      toast.error(errorMessageOf(err) || "Failed to upload receipt.");
     } finally {
       setIsUploading(false);
     }

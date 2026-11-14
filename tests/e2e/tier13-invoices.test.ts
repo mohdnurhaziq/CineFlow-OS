@@ -10,40 +10,30 @@ import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
 import { processBookingCheckout } from "@/lib/actions/checkout";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
-import { loadInvoiceDocument } from "@/lib/invoices/document";
+import { loadInvoiceDocument, type InvoiceDocument } from "@/lib/invoices/document";
 import ClientInvoicePage from "@/app/[tenantSlug]/account/invoices/[invoiceId]/page";
 import AdminInvoicePage from "@/app/[tenantSlug]/admin/invoices/[invoiceId]/page";
+import { expectSuccess } from "./result-helpers";
+import { findProp, provideReactGlobal } from "./react-tree";
 
 const DAY_MS = 86_400_000;
 
 /** Next's notFound()/redirect() throw errors tagged with a digest. */
-async function outcome(fn: () => Promise<unknown>): Promise<{ kind: "ok"; tree: any } | { kind: "notFound" } | { kind: "redirect"; to: string }> {
+async function outcome(fn: () => Promise<unknown>): Promise<{ kind: "ok"; tree: unknown } | { kind: "notFound" } | { kind: "redirect"; to: string }> {
   try {
     return { kind: "ok", tree: await fn() };
-  } catch (err: any) {
-    const digest: string = err?.digest ?? "";
+  } catch (err) {
+    const digest = String((err as { digest?: unknown } | null)?.digest ?? "");
     if (digest.startsWith("NEXT_HTTP_ERROR_FALLBACK;404")) return { kind: "notFound" };
     if (digest.startsWith("NEXT_REDIRECT")) return { kind: "redirect", to: digest.split(";")[2] ?? "" };
     throw err;
   }
 }
 
-function findProp(node: any, key: string): any {
-  if (!node || typeof node !== "object") return undefined;
-  if (Array.isArray(node)) {
-    for (const child of node) {
-      const found = findProp(child, key);
-      if (found !== undefined) return found;
-    }
-    return undefined;
-  }
-  if (node.props && key in node.props) return node.props[key];
-  return findProp(node.props?.children, key);
-}
 
 export async function runTier13InvoiceTests(harness: TestHarness) {
   harness.setSuite("Tier 13", "Invoice Documents & Access");
-  (globalThis as any).React ??= await import("react");
+  await provideReactGlobal();
 
   const lumina = await db.tenant.findUnique({ where: { slug: "lumina-cine" } });
   const apex = await db.tenant.findUnique({ where: { slug: "apex-media" } });
@@ -86,7 +76,7 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
     },
   });
   slotIds.push(slot.id);
-  const booked: any = await withSession(null, () =>
+  const booked = await withSession(null, () =>
     processBookingCheckout({
       tenantId: lumina.id,
       tenantSlug: "lumina-cine",
@@ -100,6 +90,7 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
       packageId: pkg.id,
     })
   );
+  expectSuccess(booked, "booked");
   if (!booked.success) throw new Error(`T13 setup booking failed: ${booked.message}`);
   await withSession(as(owner, "lumina-cine"), () =>
     approvePaymentVerification({ invoiceId: booked.invoiceId, tenantId: lumina.id, tenantSlug: "lumina-cine" })
@@ -145,7 +136,7 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
   await harness.test("T13-ACC-01: the client sees their own invoice and receipt", async () => {
     const res = await withSession(as(client!, "lumina-cine"), () => outcome(clientPage(balance!.id)));
     harness.assertEqual(res.kind, "ok", "Own invoice renders");
-    const doc = res.kind === "ok" ? findProp(res.tree, "doc") : null;
+    const doc = res.kind === "ok" ? findProp<InvoiceDocument>(res.tree, "doc") : null;
     harness.assertEqual(doc?.id, balance!.id, "Renders the requested invoice");
     const receipt = await withSession(as(client!, "lumina-cine"), () => outcome(clientPage(booked.invoiceId)));
     harness.assertEqual(receipt.kind, "ok", "Own receipt renders");

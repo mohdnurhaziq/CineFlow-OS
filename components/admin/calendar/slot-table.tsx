@@ -23,6 +23,7 @@ import {
 import type { BookingSlotRow, CategoryOption } from "./single-slot-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { isSlotInPast } from "@/lib/slot-time";
+import { errorMessageOf } from "@/lib/action-error";
 
 interface SlotTableProps {
   slots: BookingSlotRow[];
@@ -92,8 +93,8 @@ export function SlotTable({
         setSelectedIds(selectedIds.filter((id) => id !== slot.id));
         onSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setDeletingId(null);
     }
@@ -119,8 +120,8 @@ export function SlotTable({
         setSelectedIds([]);
         onSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsBatchDeleting(false);
     }
@@ -142,8 +143,8 @@ export function SlotTable({
       } else {
         onSuccess();
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setTogglingBlockId(null);
     }

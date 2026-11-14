@@ -7,6 +7,7 @@ import {
   updateProposalAddOnTemplate,
 } from "@/lib/actions/admin-proposals";
 import { useDialog } from "@/lib/use-dialog";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface ProposalAddOnTemplateRow {
   id: string;
@@ -17,6 +18,8 @@ export interface ProposalAddOnTemplateRow {
   isDefault: boolean;
   isActive: boolean;
 }
+
+type AddOnUnit = "fixed" | "per_hour" | "per_day";
 
 interface AddOnTemplateDialogProps {
   isOpen: boolean;
@@ -48,8 +51,8 @@ export function AddOnTemplateDialog({
   const [name, setName] = useState(templateToEdit?.name || "");
   const [description, setDescription] = useState(templateToEdit?.description || "");
   const [price, setPrice] = useState(templateToEdit?.price?.toString() || "");
-  const [unit, setUnit] = useState<"fixed" | "per_hour" | "per_day">(
-    (templateToEdit?.unit as any) || "fixed"
+  const [unit, setUnit] = useState<AddOnUnit>(
+    (templateToEdit?.unit as AddOnUnit | undefined) || "fixed"
   );
   const [isDefault, setIsDefault] = useState(templateToEdit?.isDefault || false);
   const [isActive, setIsActive] = useState(templateToEdit?.isActive ?? true);
@@ -62,7 +65,7 @@ export function AddOnTemplateDialog({
       setName(templateToEdit.name);
       setDescription(templateToEdit.description);
       setPrice(templateToEdit.price.toString());
-      setUnit((templateToEdit.unit as any) || "fixed");
+      setUnit((templateToEdit.unit as AddOnUnit | undefined) || "fixed");
       setIsDefault(templateToEdit.isDefault);
       setIsActive(templateToEdit.isActive);
     } else {
@@ -131,8 +134,8 @@ export function AddOnTemplateDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }
@@ -191,7 +194,7 @@ export function AddOnTemplateDialog({
               </label>
               <select
                 value={unit}
-                onChange={(e) => setUnit(e.target.value as any)}
+                onChange={(e) => setUnit(e.target.value as AddOnUnit)}
                 className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors"
               >
                 {UNITS.map((u) => (

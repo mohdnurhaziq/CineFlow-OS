@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -137,8 +138,8 @@ export async function createProposal(
             },
           },
         });
-      } catch (err: any) {
-        if (err?.code !== "P2002") throw err; // number taken by a concurrent proposal: try the next one
+      } catch (err) {
+        if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) throw err; // number taken by a concurrent proposal: try the next one
       }
     }
     if (!proposal) return fail("NUMBER_CONFLICT", "Could not number the proposal. Try again.");

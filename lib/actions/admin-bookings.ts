@@ -11,6 +11,7 @@ import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
 import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
+import { errorMessageOf } from "@/lib/action-error";
 
 
 const AdminCreateBookingSchema = z
@@ -198,8 +199,8 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
       trackingCode: result.booking.trackingCode,
       customerName: result.customerName,
     };
-  } catch (err: any) {
-    return { success: false, error: err.message || "Failed to create booking" };
+  } catch (err) {
+    return { success: false, error: errorMessageOf(err) || "Failed to create booking" };
   }
 }
 
@@ -210,8 +211,8 @@ export async function getBookingDetails(input: { tenantId: string; bookingId: st
     const [booking] = await loadBookingDetails(input.tenantId, { bookingId: input.bookingId });
     if (!booking) return { success: false as const, error: "Booking not found" };
     return { success: true as const, booking };
-  } catch (err: any) {
-    return { success: false as const, error: err.message || "Failed to load booking" };
+  } catch (err) {
+    return { success: false as const, error: errorMessageOf(err) || "Failed to load booking" };
   }
 }
 
@@ -248,7 +249,7 @@ export async function promoteBookingToProjectAction(input: {
         ? `Linked project ${result.project.projectNumber} is already active.`
         : `Created Project ${result.project.projectNumber} successfully.`,
     };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Failed to promote booking to project" };
+  } catch (err) {
+    return { success: false, message: errorMessageOf(err) || "Failed to promote booking to project" };
   }
 }

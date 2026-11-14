@@ -5,6 +5,7 @@ import { X, Plus, Edit2, AlertCircle, Sparkles, Loader2 } from "lucide-react";
 import { createServicePackage, updateServicePackage } from "@/lib/actions/admin-services";
 import { useDialog } from "@/lib/use-dialog";
 import { disciplineLabel } from "@/lib/labels";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface PackageRow {
   id: string;
@@ -164,8 +165,8 @@ export function PackageDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }

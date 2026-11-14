@@ -302,7 +302,7 @@ export default function CreateStudioPage() {
                             onClick={() =>
                               setFormData((prev) => ({
                                 ...prev,
-                                discipline: item.id as any,
+                                discipline: item.id as OnboardStudioInput["discipline"],
                               }))
                             }
                             className={`p-3 rounded-lg border text-left flex flex-col items-center justify-center gap-1.5 transition-all ${
@@ -329,7 +329,7 @@ export default function CreateStudioPage() {
                         <button
                           type="button"
                           key={curr}
-                          onClick={() => setFormData((prev) => ({ ...prev, currency: curr as any }))}
+                          onClick={() => setFormData((prev) => ({ ...prev, currency: curr as OnboardStudioInput["currency"] }))}
                           className={`py-2 rounded-lg border text-xs font-mono font-bold transition-all ${
                             formData.currency === curr
                               ? "bg-amber-500 text-black border-amber-500"
@@ -621,7 +621,7 @@ export default function CreateStudioPage() {
                       onClick={() =>
                         setFormData((prev) => ({
                           ...prev,
-                          subscriptionTier: tier.id as any,
+                          subscriptionTier: tier.id as OnboardStudioInput["subscriptionTier"],
                         }))
                       }
                       className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${

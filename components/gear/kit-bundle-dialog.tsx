@@ -6,6 +6,7 @@ import { createKitBundle, updateKitBundle } from "@/lib/actions/gear";
 import type { InventoryItemRow } from "./gear-item-dialog";
 import { useDialog } from "@/lib/use-dialog";
 import { gearStatusLabel } from "@/lib/labels";
+import { errorMessageOf } from "@/lib/action-error";
 
 export interface KitBundleRow {
   id: string;
@@ -20,6 +21,8 @@ export interface KitBundleRow {
     item: InventoryItemRow;
   }>;
 }
+
+type KitDiscipline = "PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID";
 
 interface KitBundleDialogProps {
   isOpen: boolean;
@@ -44,8 +47,8 @@ export function KitBundleDialog({
 
   const [name, setName] = useState(bundleToEdit?.name || "");
   const [description, setDescription] = useState(bundleToEdit?.description || "");
-  const [discipline, setDiscipline] = useState<"PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID">(
-    (bundleToEdit?.discipline as any) || "VIDEOGRAPHY"
+  const [discipline, setDiscipline] = useState<KitDiscipline>(
+    (bundleToEdit?.discipline as KitDiscipline | undefined) || "VIDEOGRAPHY"
   );
   const [dailyRate, setDailyRate] = useState<string>(
     bundleToEdit?.dailyRate !== undefined && bundleToEdit?.dailyRate !== null
@@ -141,8 +144,8 @@ export function KitBundleDialog({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }
@@ -213,7 +216,7 @@ export function KitBundleDialog({
               </label>
               <select
                 value={discipline}
-                onChange={(e) => setDiscipline(e.target.value as any)}
+                onChange={(e) => setDiscipline(e.target.value as KitDiscipline)}
                 className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-amber-500"
               >
                 <option value="VIDEOGRAPHY">Videography</option>

@@ -8,7 +8,8 @@ import { onInvoicePaid } from "@/lib/bookings/billing";
 import { shouldAutoProvisionProject, provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { sendNotification } from "@/lib/notifications";
+import { sendNotification, type NotificationResult } from "@/lib/notifications";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -143,7 +144,7 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
     }
 
     // Dispatch automated transactional notifications
-    let notifResult: any = null;
+    let notifResult: NotificationResult | null = null;
     if (invoice.client?.email) {
       const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
       const receiptUrl = `${appUrl}/${tenantSlug}/account/invoices/${invoice.id}`;
@@ -227,12 +228,12 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
       clientName: invoice.client?.name,
       clientPhone: invoice.client?.phone,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error approving payment:", err);
     return {
       success: false,
       error: "APPROVE_FAILED",
-      message: err.message || "Failed to approve payment verification.",
+      message: errorMessageOf(err) || "Failed to approve payment verification.",
     };
   }
 }
@@ -305,7 +306,7 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
     safeRevalidate(`/${tenantSlug}/book`);
 
     // Dispatch rejection notification
-    let notifResult: any = null;
+    let notifResult: NotificationResult | null = null;
     if (invoice.client?.email) {
       const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
       const reuploadUrl = `${appUrl}/${tenantSlug}/checkout?invoiceId=${invoice.id}`;
@@ -339,12 +340,12 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
       clientName: invoice.client?.name,
       clientPhone: invoice.client?.phone,
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error rejecting payment:", err);
     return {
       success: false,
       error: "REJECT_FAILED",
-      message: err.message || "Failed to reject payment verification.",
+      message: errorMessageOf(err) || "Failed to reject payment verification.",
     };
   }
 }

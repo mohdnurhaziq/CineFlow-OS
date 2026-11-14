@@ -26,6 +26,9 @@ import { approvePaymentVerification, rejectPaymentVerification } from "@/lib/act
 import { loginWithCredentials, getCurrentUser, logoutAction } from "@/lib/auth/session";
 import { getSessionClient } from "@/lib/clients";
 import { withSession, withRequest, COOKIE_NAME } from "./mocks/session";
+import { expectSuccess, invalid, loose } from "./result-helpers";
+import { findProp, provideReactGlobal } from "./react-tree";
+import type { SessionUser } from "@/lib/auth/token";
 
 export async function runTier7ClientAccountsTests(harness: TestHarness) {
   harness.setSuite("Tier 7", "Client Accounts & Admin Booking on Behalf");
@@ -228,7 +231,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       })
     );
     harness.assert(res.success === false, "Rejected without a session");
-    harness.assert(String((res as any).error).includes("not allowed"), "Error is the authorization message");
+    harness.assert(String(loose(res).error).includes("not allowed"), "Error is the authorization message");
     const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });
     harness.assertEqual(after?.status, "AVAILABLE", "Slot remains AVAILABLE");
     const leaked = await db.user.findFirst({ where: { tenantId: lumina.id, email: email("walkin") } });
@@ -236,8 +239,8 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   });
 
   // --- Signed-in scenarios (simulated request via the next/headers stub) ---------
-  const asUser = (u: { id: string; email: string; name: string; role: string; tenantId: string | null }, slug: string) =>
-    ({ id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenantId, tenantSlug: slug }) as any;
+  const asUser = (u: { id: string; email: string; name: string; role: string; tenantId: string | null }, slug: string): SessionUser =>
+    ({ id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenantId, tenantSlug: slug });
 
   const luminaOwner = await db.user.findFirst({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } });
   const apexOwner = await db.user.findFirst({ where: { tenantId: apex.id, role: "STUDIO_OWNER" } });
@@ -274,7 +277,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const slot = await makeSlot(lumina.id);
     const e = email("onbehalf");
     createdUserEmails.push(e);
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -304,12 +307,12 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const savedKey = process.env.RESEND_API_KEY;
     const sent: { to: string[]; subject: string; html: string; text: string }[] = [];
     process.env.RESEND_API_KEY = "re_test_key";
-    globalThis.fetch = (async (url: any, init: any) => {
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).includes("api.resend.com")) sent.push(JSON.parse(String(init?.body ?? "{}")));
       return new Response(JSON.stringify({ id: "email_test" }), { status: 200 });
     }) as typeof fetch;
     try {
-      const res: any = await withSession(luminaStaff, () =>
+      const res = await withSession(luminaStaff, () =>
         createBookingForCustomer({
           tenantId: lumina.id,
           tenantSlug: "lumina-cine",
@@ -318,6 +321,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
         })
       );
       harness.assert(res.success === true, `Booking created (${res.error ?? "ok"})`);
+      expectSuccess(res, "res");
       const mail = sent.find((m) => m.to?.includes(e));
       harness.assert(!!mail, "A confirmation email is sent to the customer");
       harness.assert(!!mail?.subject?.includes("Confirmed"), "Subject says the booking is confirmed");
@@ -334,9 +338,9 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       harness.assert(!!mail?.html?.includes("Set your password"), "Button says to set a password");
       const token = link.searchParams.get("invite") ?? "";
       harness.assert(token.length > 20, "Link carries a one-time invite");
-      const claimed: any = await withRequest(() =>
+      const claimed = loose(await withRequest(() =>
         registerClient({ tenantSlug: "lumina-cine", name: "Email Walk In", email: e, phone: "0123456789", password: "Sup3r-secret!", inviteToken: token })
-      );
+      ));
       harness.assertEqual(claimed.success, true, `The invite lets the customer set a password (${claimed.message ?? "ok"})`);
       const account = await db.user.findFirst({ where: { tenantId: lumina.id, email: e } });
       harness.assert(!!account?.passwordHash, "The account now has a password");
@@ -351,19 +355,19 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   await harness.test("T7-ADM-EMAIL-02: a customer who already has a password gets a plain account link", async () => {
     const slot = await makeSlot(lumina.id);
     const input = validInput("emailexisting");
-    const reg: any = await withRequest(() => registerClient(input));
+    const reg = await withRequest(() => registerClient(input));
     harness.assert(reg.success === true, "Customer registered with a password");
     const customer = await db.user.findFirst({ where: { tenantId: lumina.id, email: input.email.toLowerCase() } });
     const realFetch = globalThis.fetch;
     const savedKey = process.env.RESEND_API_KEY;
     const sent: { to: string[]; html: string }[] = [];
     process.env.RESEND_API_KEY = "re_test_key";
-    globalThis.fetch = (async (url: any, init: any) => {
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).includes("api.resend.com")) sent.push(JSON.parse(String(init?.body ?? "{}")));
       return new Response(JSON.stringify({ id: "email_test" }), { status: 200 });
     }) as typeof fetch;
     try {
-      const res: any = await withSession(luminaStaff, () =>
+      const res = await withSession(luminaStaff, () =>
         createBookingForCustomer({ tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, clientId: customer!.id })
       );
       harness.assert(res.success === true, `Booking created (${res.error ?? "ok"})`);
@@ -388,7 +392,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const savedKey = process.env.RESEND_API_KEY;
     let reply: () => Response = () => new Response(JSON.stringify({ id: "email_test" }), { status: 200 });
     const sent: { to: string[]; html: string }[] = [];
-    globalThis.fetch = (async (url: any, init: any) => {
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).includes("api.resend.com")) sent.push(JSON.parse(String(init?.body ?? "{}")));
       return reply();
     }) as typeof fetch;
@@ -396,35 +400,36 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     console.error = () => {}; // the 403 case logs the provider's refusal on purpose
     try {
       delete process.env.RESEND_API_KEY; // made before email was set up: nothing sent
-      const made: any = await withSession(luminaStaff, () =>
+      const made = await withSession(luminaStaff, () =>
         createBookingForCustomer({ tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, newClient: { name: "Resend Me", email: e, phone: "0123456789" } })
       );
       harness.assert(made.success === true, "Booking created");
+      expectSuccess(made, "made");
       const input = { tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: made.bookingId };
 
-      const notSetUp: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      const notSetUp = loose(await withSession(luminaStaff, () => resendBookingConfirmation(input)));
       harness.assertEqual(notSetUp.success, false, "Without an email key the resend reports failure");
       harness.assertEqual(notSetUp.error, "EMAIL_NOT_CONFIGURED", "and says email isn't set up");
 
       process.env.RESEND_API_KEY = "re_test_key";
-      const ok: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      const ok = loose(await withSession(luminaStaff, () => resendBookingConfirmation(input)));
       harness.assertEqual(ok.success, true, `Resend succeeds (${ok.message ?? "ok"})`);
       harness.assertEqual(ok.sentTo, e, "and reports who it went to");
       const mail = sent.filter((m) => m.to?.includes(e)).at(-1);
       harness.assert(!!mail?.html?.includes("/lumina-cine/register?invite="), "The resent email carries a set-password link");
 
       reply = () => new Response(JSON.stringify({ statusCode: 403, message: "You can only send testing emails to your own email address. To send emails to other recipients, please verify a domain at resend.com/domains" }), { status: 403 });
-      const refused: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      const refused = loose(await withSession(luminaStaff, () => resendBookingConfirmation(input)));
       harness.assertEqual(refused.success, false, "A provider refusal is reported");
       harness.assert(/verify (your|a) domain/i.test(refused.message ?? ""), `with the reason in plain words (${refused.message})`);
 
-      const byOther: any = await withSession(asUser(apexOwner, "apex-media"), () => resendBookingConfirmation(input));
+      const byOther = await withSession(asUser(apexOwner, "apex-media"), () => resendBookingConfirmation(input));
       harness.assertEqual(byOther.success, false, "Another studio's owner is refused");
-      const byNobody: any = await withSession(null, () => resendBookingConfirmation(input));
+      const byNobody = await withSession(null, () => resendBookingConfirmation(input));
       harness.assertEqual(byNobody.success, false, "A signed-out caller is refused");
 
       await db.clientBooking.update({ where: { id: made.bookingId }, data: { status: "CANCELLED" } });
-      const cancelled: any = await withSession(luminaStaff, () => resendBookingConfirmation(input));
+      const cancelled = loose(await withSession(luminaStaff, () => resendBookingConfirmation(input)));
       harness.assertEqual(cancelled.error, "BOOKING_CANCELLED", "A cancelled booking can't be 'confirmed' again");
     } finally {
       console.error = originalError;
@@ -435,29 +440,14 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   });
 
   await harness.test("T7-INVITE-02: an invite opened while signed in as someone else asks to sign out", async () => {
-    // Walks a server-component tree for the first props object that has `key`.
-    const findProp = (node: any, key: string): any => {
-      if (!node || typeof node !== "object") return undefined;
-      if (Array.isArray(node)) {
-        for (const n of node) {
-          const hit = findProp(n, key);
-          if (hit !== undefined) return hit;
-        }
-        return undefined;
-      }
-      const props = node.props;
-      if (props && key in props) return props[key];
-      return props ? findProp(props.children, key) : undefined;
-    };
-    // The test runner compiles JSX to React.createElement; pages don't import React themselves.
-    (globalThis as { React?: unknown }).React ??= await import("react");
+    await provideReactGlobal();
     const other = validInput("invite-other");
-    const regOther: any = await withRequest(() => registerClient(other));
+    const regOther = await withRequest(() => registerClient(other));
     harness.assert(regOther.success === true, "Another customer is registered and signed in");
     const otherUser = await db.user.findFirst({ where: { tenantId: lumina.id, email: other.email.toLowerCase() } });
     const invitee = email("invite-target");
     createdUserEmails.push(invitee);
-    const render = (session: any) =>
+    const render = (session: SessionUser | null) =>
       withSession(session, async () =>
         ClientRegisterPage({
           params: Promise.resolve({ tenantSlug: "lumina-cine" }),
@@ -470,7 +460,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assertEqual(findProp(asOther, "signedInEmail"), other.email.toLowerCase(), "and who is signed in");
     harness.assertEqual(findProp(asOther, "href"), undefined, "and does not redirect to the wrong account");
 
-    const regInvitee: any = await withRequest(() =>
+    const regInvitee = await withRequest(() =>
       registerClient({ tenantSlug: "lumina-cine", name: "Invite Target", email: invitee, phone: "0123456789", password: "supersecret1" })
     );
     harness.assert(regInvitee.success === true, "The invited customer has signed up");
@@ -489,7 +479,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const reg = await registerClient(input);
     harness.assert(reg.success === true, "Customer registered");
     const customerId = reg.success ? reg.user.id : "";
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -510,11 +500,11 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   await harness.test("T7-ADM-05: wrong-studio staff and CLIENT sessions are rejected", async () => {
     const slot = await makeSlot(lumina.id);
     const base = { tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, newClient: { name: "Nope", email: email("denied"), phone: "0123456789" } };
-    const crossTenant: any = await withSession(asUser(apexOwner, "apex-media"), () => createBookingForCustomer(base));
+    const crossTenant = await withSession(asUser(apexOwner, "apex-media"), () => createBookingForCustomer(base));
     harness.assert(crossTenant.success === false, "Apex owner cannot book into Lumina");
     const clientUser = await db.user.findFirst({ where: { tenantId: lumina.id, role: "CLIENT" } });
     harness.assert(!!clientUser, "Seed has a Lumina client");
-    const asClient: any = await withSession(asUser(clientUser!, "lumina-cine"), () => createBookingForCustomer(base));
+    const asClient = await withSession(asUser(clientUser!, "lumina-cine"), () => createBookingForCustomer(base));
     harness.assert(asClient.success === false, "CLIENT role cannot book on behalf of others");
     const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });
     harness.assertEqual(after?.status, "AVAILABLE", "Slot untouched");
@@ -536,7 +526,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       )
     );
     createdUserEmails.push(...Array.from({ length: 5 }, (_, i) => email(`racer${i}`)));
-    const wins = (attempts as any[]).filter((r) => r.success).length;
+    const wins = attempts.filter((r) => r.success).length;
     harness.assertEqual(wins, 1, "Exactly one booking wins the slot");
     const bookings = await db.clientBooking.count({ where: { slotId: slot.id } });
     harness.assertEqual(bookings, 1, "Exactly one booking row exists for the slot");
@@ -544,7 +534,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
 
   await harness.test("T7-ADM-07: a staff email cannot be reused as a customer; slot stays available", async () => {
     const slot = await makeSlot(lumina.id);
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -559,7 +549,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
 
   await harness.test("T7-ADM-08: booking another studio's slot or an unavailable slot fails", async () => {
     const apexSlot = await makeSlot(apex.id);
-    const crossSlot: any = await withSession(luminaStaff, () =>
+    const crossSlot = await withSession(luminaStaff, () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -570,7 +560,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assert(crossSlot.success === false, "Lumina staff cannot use an Apex slot id");
     const taken = await makeSlot(lumina.id);
     await db.bookingSlot.update({ where: { id: taken.id }, data: { status: "BOOKED" } });
-    const takenRes: any = await withSession(luminaStaff, () =>
+    const takenRes = await withSession(luminaStaff, () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -584,7 +574,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   await harness.test("T7-ADM-02: input validation precedes any side effects", async () => {
     const slot = await makeSlot(lumina.id);
     const noCustomer = await createBookingForCustomer({ tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id });
-    harness.assert(noCustomer.success === false && String((noCustomer as any).error).includes("customer"), "Requires a customer");
+    harness.assert(noCustomer.success === false && String(loose(noCustomer).error).includes("customer"), "Requires a customer");
     const badEmail = await createBookingForCustomer({
       tenantId: lumina.id,
       tenantSlug: "lumina-cine",
@@ -597,7 +587,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       tenantSlug: "lumina-cine",
       slotId: slot.id,
       clientId: "x",
-      paymentStatus: "REFUNDED" as any,
+      paymentStatus: invalid("REFUNDED"),
     });
     harness.assert(badPayment.success === false, "Rejects unknown payment status");
     const after = await db.bookingSlot.findUnique({ where: { id: slot.id } });
@@ -617,7 +607,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const slot = await makeSlot(lumina.id);
     const e = email("popup-qr");
     createdUserEmails.push(e);
-    const res: any = await withSession(null, () =>
+    const res = await withSession(null, () =>
       createClientBooking({
         tenantId: lumina.id,
         slotId: slot.id,
@@ -651,7 +641,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const prev = process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
     process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "false";
     try {
-      const res: any = await withSession(null, () =>
+      const res = await withSession(null, () =>
         createClientBooking({
           tenantId: lumina.id,
           slotId: slot.id,
@@ -678,7 +668,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const slot = await makeSlot(lumina.id);
     const e = email("staff-unpaid");
     createdUserEmails.push(e);
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -693,7 +683,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     harness.assertEqual(invoice?.status, "PENDING_VERIFICATION", "Unpaid staff booking has an invoice to verify");
     harness.assertEqual(invoice?.amount, slot.depositRequired, "Invoice amount equals the slot deposit");
 
-    const approved: any = await withSession(luminaStaff, () =>
+    const approved = await withSession(luminaStaff, () =>
       approvePaymentVerification({
         invoiceId: invoice!.id,
         tenantId: lumina.id,
@@ -712,7 +702,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const slot = await makeSlot(lumina.id);
     const e = email("staff-paid");
     createdUserEmails.push(e);
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -733,7 +723,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     // Two bookings for the same customer: each must get its own invoice, not the other's.
     const e = email("details");
     createdUserEmails.push(e);
-    const first: any = await withSession(luminaStaff, async () =>
+    const first = await withSession(luminaStaff, async () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -744,7 +734,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       })
     );
     const customer = await db.user.findFirst({ where: { tenantId: lumina.id, email: e } });
-    const second: any = await withSession(luminaStaff, async () =>
+    const second = await withSession(luminaStaff, async () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -772,7 +762,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   await harness.test("T7-BKG-06: getBookingDetails is limited to the studio's own staff", async () => {
     const e = email("details-auth");
     createdUserEmails.push(e);
-    const created: any = await withSession(luminaStaff, async () =>
+    const created = await withSession(luminaStaff, async () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -780,17 +770,18 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
         newClient: { name: "Private Client", email: e, phone: "0123456789" },
       })
     );
+    expectSuccess(created, "created");
     const input = { tenantId: lumina.id, bookingId: created.bookingId };
 
-    const staff: any = await withSession(luminaStaff, () => getBookingDetails(input));
+    const staff = await withSession(luminaStaff, () => getBookingDetails(input));
     harness.assert(staff.success === true, "Studio staff can read the booking");
     harness.assertEqual(staff.booking?.clientEmail, e, "Returns the requested booking");
 
-    const anon: any = await withSession(null, () => getBookingDetails(input));
+    const anon = await withSession(null, () => getBookingDetails(input));
     harness.assert(anon.success === false && !anon.booking, "Anonymous caller gets nothing");
-    const otherStudio: any = await withSession(asUser(apexOwner, "apex-media"), () => getBookingDetails(input));
+    const otherStudio = await withSession(asUser(apexOwner, "apex-media"), () => getBookingDetails(input));
     harness.assert(otherStudio.success === false && !otherStudio.booking, "Another studio's owner gets nothing");
-    const otherStudioOwnTenant: any = await withSession(asUser(apexOwner, "apex-media"), () =>
+    const otherStudioOwnTenant = await withSession(asUser(apexOwner, "apex-media"), () =>
       getBookingDetails({ tenantId: apex.id, bookingId: created.bookingId })
     );
     harness.assert(
@@ -798,7 +789,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       "Asking under their own studio id does not expose another studio's booking"
     );
     const clientUser = await db.user.findFirst({ where: { tenantId: lumina.id, role: "CLIENT" } });
-    const asClient: any = await withSession(asUser(clientUser!, "lumina-cine"), () => getBookingDetails(input));
+    const asClient = await withSession(asUser(clientUser!, "lumina-cine"), () => getBookingDetails(input));
     harness.assert(asClient.success === false && !asClient.booking, "CLIENT accounts cannot read studio bookings");
   });
 
@@ -806,7 +797,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   const twoPendingBookings = async (tag: string) => {
     const e = email(tag);
     createdUserEmails.push(e);
-    const older: any = await withSession(luminaStaff, async () =>
+    const older = await withSession(luminaStaff, async () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -816,7 +807,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       })
     );
     const customer = await db.user.findFirst({ where: { tenantId: lumina.id, email: e } });
-    const newer: any = await withSession(luminaStaff, async () =>
+    const newer = await withSession(luminaStaff, async () =>
       createBookingForCustomer({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -838,7 +829,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const slot = await makeSlot(lumina.id);
     const e = email("linked-popup");
     createdUserEmails.push(e);
-    const popup: any = await withSession(null, () =>
+    const popup = await withSession(null, () =>
       createClientBooking({
         tenantId: lumina.id,
         slotId: slot.id,
@@ -861,7 +852,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   await harness.test("T7-BKG-08: approving one deposit confirms only its own booking", async () => {
     const { older, newer, olderInvoice } = await twoPendingBookings("approve-own");
     // Approve the OLDER booking's invoice: the newer pending booking must stay untouched.
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
     );
     harness.assert(res.success === true, `Approval succeeds (${res.message ?? "ok"})`);
@@ -877,7 +868,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
   await harness.test("T7-BKG-09: a rejected deposit that expires releases only its own booking", async () => {
     const { older, newer, olderInvoice } = await twoPendingBookings("reject-own");
     const olderSlotId = (await db.clientBooking.findUnique({ where: { id: older.bookingId } }))?.slotId;
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       rejectPaymentVerification({
         invoiceId: olderInvoice!.id,
         tenantId: lumina.id,
@@ -907,7 +898,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       data: { bookingId: null, paymentReference: "QR_SLIP_UPLOAD" },
     });
     await db.milestoneInvoice.updateMany({ where: { bookingId: newer.bookingId }, data: { bookingId: null } });
-    const res: any = await withSession(luminaStaff, () =>
+    const res = await withSession(luminaStaff, () =>
       approvePaymentVerification({ invoiceId: olderInvoice!.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
     );
     harness.assert(res.success === true, "Invoice itself is marked paid");
@@ -931,7 +922,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     name?: string;
     bytes?: BlobPart;
     ip?: string;
-    user?: any;
+    user?: SessionUser | null;
   }) => {
     const form = new FormData();
     form.append("file", new File([opts.bytes ?? "x"], opts.name ?? "a.png", { type: opts.type ?? "image/png" }));
@@ -942,7 +933,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       headers: { "x-forwarded-for": opts.ip ?? `10.7.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` },
     });
     const res = await withSession(opts.user ?? null, () => uploadHandler(req));
-    const body: any = await res.json();
+    const body = await res.json();
     if (body.url) uploadedFiles.push(body.url);
     return { status: res.status, body };
   };

@@ -20,6 +20,7 @@ import {
   rescheduleBooking,
 } from "@/lib/actions/admin-booking-lifecycle";
 import { createInvoice, recordInvoicePayment, sendInvoiceReminder, voidInvoice } from "@/lib/actions/admin-invoices";
+import { expectSuccess, loose, required } from "./result-helpers";
 
 const DAY_MS = 86_400_000;
 
@@ -74,7 +75,7 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
   let seq = 0;
   const book = async (slotId: string, paid: boolean) => {
     seq += 1;
-    const res: any = await withSession(null, () =>
+    const res = await withSession(null, () =>
       processBookingCheckout({
         tenantId: lumina.id,
         tenantSlug: "lumina-cine",
@@ -87,6 +88,7 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
         paymentProofUrl: "/uploads/receipts/t14.jpg",
       })
     );
+    expectSuccess(res, "res");
     if (!res.success) throw new Error(`T14 booking failed: ${res.message}`);
     if (paid) {
       await withSession(owner, () => approvePaymentVerification({ invoiceId: res.invoiceId, tenantId: lumina.id, tenantSlug: "lumina-cine" }));
@@ -101,14 +103,15 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     const other = await makeSlot(22, "commercial");
     const bookingId = await book(from.id, true);
 
-    const options: any = await withSession(crew, () => listRescheduleOptions(ids(bookingId)));
-    harness.assert(options.success && options.slots.some((s: any) => s.id === to.id), "The open slot is offered");
-    harness.assert(!options.slots.some((s: any) => s.id === other.id), "Slots in another category are not offered");
+    const options = await withSession(crew, () => listRescheduleOptions(ids(bookingId)));
+    expectSuccess(options, "options");
+    harness.assert(options.success && options.slots.some((s) => s.id === to.id), "The open slot is offered");
+    harness.assert(!options.slots.some((s) => s.id === other.id), "Slots in another category are not offered");
 
-    const wrong: any = await withSession(crew, () => rescheduleBooking({ ...ids(bookingId), newSlotId: other.id }));
+    const wrong = loose(await withSession(crew, () => rescheduleBooking({ ...ids(bookingId), newSlotId: other.id })));
     harness.assertEqual(wrong.error, "CATEGORY_MISMATCH", "Other category refused");
 
-    const res: any = await withSession(crew, () => rescheduleBooking({ ...ids(bookingId), newSlotId: to.id }));
+    const res = await withSession(crew, () => rescheduleBooking({ ...ids(bookingId), newSlotId: to.id }));
     harness.assert(res.success === true, "Moved by crew", JSON.stringify(res));
     const booking = await db.clientBooking.findUnique({ where: { id: bookingId } });
     harness.assertEqual(booking?.slotId, to.id, "Booking points at the new slot");
@@ -125,9 +128,9 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
   await harness.test("T14-CANCEL-01: cancelling reopens the slot and voids what is unpaid", async () => {
     const slot = await makeSlot(23);
     const bookingId = await book(slot.id, false);
-    const tooShort: any = await withSession(crew, () => cancelBooking({ ...ids(bookingId), reason: "x" }));
+    const tooShort = await withSession(crew, () => cancelBooking({ ...ids(bookingId), reason: "x" }));
     harness.assertEqual(tooShort.success, false, "A reason is required");
-    const res: any = await withSession(crew, () => cancelBooking({ ...ids(bookingId), reason: "Client asked to cancel" }));
+    const res = await withSession(crew, () => cancelBooking({ ...ids(bookingId), reason: "Client asked to cancel" }));
     harness.assert(res.success === true, "Unpaid booking cancelled by crew", JSON.stringify(res));
     const booking = await db.clientBooking.findUnique({ where: { id: bookingId } });
     harness.assertEqual(booking?.status, "CANCELLED", "Booking cancelled");
@@ -141,9 +144,9 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
   await harness.test("T14-CANCEL-02: a paid booking can only be cancelled by the owner; the paid deposit stays paid", async () => {
     const slot = await makeSlot(24);
     const bookingId = await book(slot.id, true);
-    const byCrew: any = await withSession(crew, () => cancelBooking({ ...ids(bookingId), reason: "Weather" }));
+    const byCrew = loose(await withSession(crew, () => cancelBooking({ ...ids(bookingId), reason: "Weather" })));
     harness.assertEqual(byCrew.error, "OWNER_ONLY", "Crew refused");
-    const byOwner: any = await withSession(owner, () => cancelBooking({ ...ids(bookingId), reason: "Weather" }));
+    const byOwner = await withSession(owner, () => cancelBooking({ ...ids(bookingId), reason: "Weather" }));
     harness.assert(byOwner.success === true, "Owner cancels", JSON.stringify(byOwner));
     const deposit = await db.milestoneInvoice.findFirst({ where: { bookingId, milestoneType: "BOOKING_DEPOSIT" } });
     const balance = await db.milestoneInvoice.findFirst({ where: { bookingId, milestoneType: "BOOKING_BALANCE" } });
@@ -154,20 +157,20 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
   await harness.test("T14-DONE-01: done / no-show only after the session starts; delivery needs a done session", async () => {
     const future = await makeSlot(25);
     const futureBooking = await book(future.id, true);
-    const early: any = await withSession(crew, () => recordSessionOutcome({ ...ids(futureBooking), outcome: "COMPLETED" }));
+    const early = loose(await withSession(crew, () => recordSessionOutcome({ ...ids(futureBooking), outcome: "COMPLETED" })));
     harness.assertEqual(early.error, "NOT_STARTED", "Can't mark a future session done");
-    const deliverEarly: any = await withSession(crew, () => markBookingDelivered(ids(futureBooking)));
+    const deliverEarly = loose(await withSession(crew, () => markBookingDelivered(ids(futureBooking))));
     harness.assertEqual(deliverEarly.error, "NOT_COMPLETED", "Can't deliver before the session is done");
 
     // The session day comes.
     await db.bookingSlot.update({ where: { id: future.id }, data: { date: new Date(Date.now() - 2 * DAY_MS) } });
-    const done: any = await withSession(crew, () => recordSessionOutcome({ ...ids(futureBooking), outcome: "COMPLETED" }));
+    const done = await withSession(crew, () => recordSessionOutcome({ ...ids(futureBooking), outcome: "COMPLETED" }));
     harness.assert(done.success === true, "Marked done", JSON.stringify(done));
     harness.assertEqual((await db.clientBooking.findUnique({ where: { id: futureBooking } }))?.status, "COMPLETED", "Status COMPLETED");
 
-    const badLink: any = await withSession(crew, () => markBookingDelivered({ ...ids(futureBooking), deliveryUrl: "not a link" }));
+    const badLink = await withSession(crew, () => markBookingDelivered({ ...ids(futureBooking), deliveryUrl: "not a link" }));
     harness.assertEqual(badLink.success, false, "A delivery link must be a web address");
-    const delivered: any = await withSession(crew, () =>
+    const delivered = await withSession(crew, () =>
       markBookingDelivered({ ...ids(futureBooking), deliveryUrl: "https://gallery.example.test/t14" })
     );
     harness.assert(delivered.success === true, "Delivered", JSON.stringify(delivered));
@@ -176,7 +179,7 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     harness.assertEqual(after?.deliveryUrl, "https://gallery.example.test/t14", "Gallery link stored for the client");
     harness.assert(after?.deliveredAt instanceof Date, "Delivery time recorded");
 
-    const cancelDelivered: any = await withSession(owner, () => cancelBooking({ ...ids(futureBooking), reason: "Too late" }));
+    const cancelDelivered = loose(await withSession(owner, () => cancelBooking({ ...ids(futureBooking), reason: "Too late" })));
     harness.assertEqual(cancelDelivered.error, "NOT_CANCELLABLE", "Delivered bookings can't be cancelled");
   });
 
@@ -184,7 +187,7 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     const slot = await makeSlot(26);
     const bookingId = await book(slot.id, true);
     await db.bookingSlot.update({ where: { id: slot.id }, data: { date: new Date(Date.now() - 2 * DAY_MS) } });
-    const res: any = await withSession(crew, () => recordSessionOutcome({ ...ids(bookingId), outcome: "NO_SHOW" }));
+    const res = await withSession(crew, () => recordSessionOutcome({ ...ids(bookingId), outcome: "NO_SHOW" }));
     harness.assert(res.success === true, "No-show recorded", JSON.stringify(res));
     harness.assertEqual((await db.clientBooking.findUnique({ where: { id: bookingId } }))?.status, "NO_SHOW", "Status NO_SHOW");
   });
@@ -194,7 +197,7 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     const bookingId = await book(slot.id, false);
     const apexOwnerRow = await db.user.findFirst({ where: { role: "STUDIO_OWNER", tenantId: { not: lumina.id } } });
     const outsider = { ...as(apexOwnerRow!), tenantSlug: "apex-media" };
-    const res: any = await withSession(outsider, () => cancelBooking({ ...ids(bookingId), reason: "Not mine" }));
+    const res = await withSession(outsider, () => cancelBooking({ ...ids(bookingId), reason: "Not mine" }));
     harness.assertEqual(res.success, false, "Another studio's owner refused");
     harness.assertEqual((await db.clientBooking.findUnique({ where: { id: bookingId } }))?.status, "PENDING", "Booking untouched");
   });
@@ -207,44 +210,47 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
 
   await harness.test("T14-INV-01: the owner issues a custom invoice with the next studio number; crew can't", async () => {
     const input = { tenantId: lumina.id, tenantSlug: "lumina-cine", clientId: invoiceClient.id, description: "Extra hour of coverage", amount: 150, dueDate: inTwoWeeks, notifyClient: false };
-    const byCrew: any = await withSession(crew, () => createInvoice(input));
+    const byCrew = await withSession(crew, () => createInvoice(input));
     harness.assertEqual(byCrew.success, false, "Crew can't issue invoices");
-    const res: any = await withSession(owner, () => createInvoice(input));
+    const res = loose(await withSession(owner, () => createInvoice(input)));
     harness.assert(res.success === true, "Owner issues it", JSON.stringify(res));
     const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
     harness.assertEqual(inv?.milestoneType, "CUSTOM", "Custom invoice");
     harness.assertEqual(inv?.description, "Extra hour of coverage", "Description stored");
     harness.assert(/^INV-\d{4}-\d{4,}$/.test(inv!.invoiceNumber), `Sequential studio number (${inv?.invoiceNumber})`);
-    const past: any = await withSession(owner, () => createInvoice({ ...input, dueDate: "2020-01-01" }));
+    const past = loose(await withSession(owner, () => createInvoice({ ...input, dueDate: "2020-01-01" })));
     harness.assertEqual(past.error, "DUE_IN_PAST", "Due date can't be in the past");
   });
 
   await harness.test("T14-INV-02: record a cash payment, remind, and cancel unpaid invoices", async () => {
-    const mk = async (description: string) =>
-      (await withSession(owner, () =>
+    const mk = async (description: string) => {
+      const made = await withSession(owner, () =>
         createInvoice({ tenantId: lumina.id, tenantSlug: "lumina-cine", clientId: invoiceClient.id, description, amount: 80, dueDate: inTwoWeeks, notifyClient: false })
-      )) as any;
+      );
+      expectSuccess(made, `createInvoice(${description})`);
+      return { ...made, invoiceId: required(made.invoiceId, "invoiceId") };
+    };
     const a = await mk("Print order");
     const ids = { tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: a.invoiceId };
 
-    const reminder: any = await withSession(crew, () => sendInvoiceReminder(ids));
+    const reminder = await withSession(crew, () => sendInvoiceReminder(ids));
     harness.assert(reminder.success === true, "Crew can send a reminder", JSON.stringify(reminder));
 
-    const crewPay: any = await withSession(crew, () => recordInvoicePayment({ ...ids, method: "CASH" }));
+    const crewPay = await withSession(crew, () => recordInvoicePayment({ ...ids, method: "CASH" }));
     harness.assertEqual(crewPay.success, false, "Crew can't record a payment");
-    const pay: any = await withSession(owner, () => recordInvoicePayment({ ...ids, method: "CASH", reference: "Till #42" }));
+    const pay = await withSession(owner, () => recordInvoicePayment({ ...ids, method: "CASH", reference: "Till #42" }));
     harness.assert(pay.success === true, "Owner records cash", JSON.stringify(pay));
     const paid = await db.milestoneInvoice.findUnique({ where: { id: a.invoiceId } });
     harness.assertEqual(paid?.status, "PAID", "Invoice paid");
     harness.assertEqual(paid?.paymentMethod, "CASH", "Method recorded");
     harness.assertEqual(paid?.verifiedBy, owner.name, "Recorded under the owner");
-    const again: any = await withSession(owner, () => recordInvoicePayment({ ...ids, method: "CASH" }));
+    const again = loose(await withSession(owner, () => recordInvoicePayment({ ...ids, method: "CASH" })));
     harness.assertEqual(again.error, "NOT_UNPAID", "Can't record a payment twice");
-    const voidPaid: any = await withSession(owner, () => voidInvoice({ ...ids, reason: "Mistake" }));
+    const voidPaid = loose(await withSession(owner, () => voidInvoice({ ...ids, reason: "Mistake" })));
     harness.assertEqual(voidPaid.error, "NOT_UNPAID", "Can't cancel a paid invoice");
 
     const b = await mk("Duplicate");
-    const v: any = await withSession(owner, () => voidInvoice({ tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: b.invoiceId, reason: "Issued twice" }));
+    const v = await withSession(owner, () => voidInvoice({ tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: b.invoiceId, reason: "Issued twice" }));
     harness.assert(v.success === true, "Owner cancels an unpaid invoice", JSON.stringify(v));
     harness.assertEqual((await db.milestoneInvoice.findUnique({ where: { id: b.invoiceId } }))?.status, "VOID", "Invoice cancelled");
   });
@@ -253,7 +259,7 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     const slot = await makeSlot(28);
     const bookingId = await book(slot.id, false);
     const deposit = await db.milestoneInvoice.findFirst({ where: { bookingId, milestoneType: "BOOKING_DEPOSIT" } });
-    const res: any = await withSession(owner, () => voidInvoice({ tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: deposit!.id, reason: "Test" }));
+    const res = loose(await withSession(owner, () => voidInvoice({ tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: deposit!.id, reason: "Test" })));
     harness.assertEqual(res.error, "BOOKING_ACTIVE", "Refused: cancel the booking instead");
   });
 

@@ -20,6 +20,7 @@ import {
   type UpdatePrintSizeInput,
   type DeletePrintSizeInput,
 } from "@/lib/validations/admin-frames";
+import { errorMessageOf } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
   try {
@@ -61,11 +62,11 @@ export async function createFrameDesign(input: CreateFrameDesignInput) {
     safeRevalidate(`/${tenantSlug}/visualizer`);
 
     return { success: true, frame };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "CREATE_FRAME_FAILED",
-      message: error.message || "Failed to create frame design.",
+      message: errorMessageOf(error) || "Failed to create frame design.",
     };
   }
 }
@@ -100,11 +101,11 @@ export async function updateFrameDesign(input: UpdateFrameDesignInput) {
     safeRevalidate(`/${tenantSlug}/visualizer`);
 
     return { success: true, frame: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_FRAME_FAILED",
-      message: error.message || "Failed to update frame design.",
+      message: errorMessageOf(error) || "Failed to update frame design.",
     };
   }
 }
@@ -130,11 +131,11 @@ export async function deleteFrameDesign(input: DeleteFrameDesignInput) {
     safeRevalidate(`/${tenantSlug}/visualizer`);
 
     return { success: true, deletedId: id };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "DELETE_FRAME_FAILED",
-      message: error.message || "Failed to delete frame design.",
+      message: errorMessageOf(error) || "Failed to delete frame design.",
     };
   }
 }
@@ -161,11 +162,11 @@ export async function toggleFrameAvailability(input: ToggleFrameAvailabilityInpu
     safeRevalidate(`/${tenantSlug}/visualizer`);
 
     return { success: true, frame: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "TOGGLE_FRAME_FAILED",
-      message: error.message || "Failed to toggle frame availability.",
+      message: errorMessageOf(error) || "Failed to toggle frame availability.",
     };
   }
 }
@@ -209,11 +210,11 @@ export async function createPrintSize(input: CreatePrintSizeInput) {
     safeRevalidate(`/${tenantSlug}/visualizer`);
 
     return { success: true, printSize };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "CREATE_PRINT_SIZE_FAILED",
-      message: error.message || "Failed to create print size.",
+      message: errorMessageOf(error) || "Failed to create print size.",
     };
   }
 }
@@ -260,11 +261,11 @@ export async function updatePrintSize(input: UpdatePrintSizeInput) {
     safeRevalidate(`/${tenantSlug}/visualizer`);
 
     return { success: true, printSize: updated };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "UPDATE_PRINT_SIZE_FAILED",
-      message: error.message || "Failed to update print size.",
+      message: errorMessageOf(error) || "Failed to update print size.",
     };
   }
 }
@@ -290,11 +291,11 @@ export async function deletePrintSize(input: DeletePrintSizeInput) {
     safeRevalidate(`/${tenantSlug}/visualizer`);
 
     return { success: true, deletedId: id };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
       error: "DELETE_PRINT_SIZE_FAILED",
-      message: error.message || "Failed to delete print size.",
+      message: errorMessageOf(error) || "Failed to delete print size.",
     };
   }
 }

@@ -80,7 +80,7 @@ export async function loginWithCredentials(
     await setSessionCookie(sessionUser);
 
     return { success: true, user: sessionUser };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Login authentication error:", err);
     return { success: false, error: "INTERNAL_ERROR" };
   }

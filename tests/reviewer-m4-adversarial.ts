@@ -22,6 +22,7 @@
 import { db } from "../lib/db";
 import { createPrintOrder } from "../lib/actions/visualizer";
 import { processInvoicePayment } from "../lib/actions/checkout";
+import { errorMessageOf } from "../lib/action-error";
 
 let passed = 0;
 let failed = 0;
@@ -201,11 +202,19 @@ async function runReviewerAdversarialTests() {
 
   // Verify paymentReference serialization
   check("paymentReference is non-empty string", typeof invoice?.paymentReference === "string");
-  let parsedMetadata: any = null;
+  // What a print order stores in paymentReference (JSON); every field optional until checked.
+  let parsedMetadata: {
+    orderType?: string;
+    photoTitle?: string;
+    printSize?: { code?: string };
+    frameDesign?: { name?: string };
+    matBoard?: { type?: string };
+    financialBreakdown?: { totalAmount?: number };
+  } | null = null;
   try {
     parsedMetadata = JSON.parse(invoice!.paymentReference!);
-  } catch (err: any) {
-    findings.push(`JSON parse error on paymentReference: ${err.message}`);
+  } catch (err) {
+    findings.push(`JSON parse error on paymentReference: ${errorMessageOf(err)}`);
   }
 
   check("paymentReference parsed as valid JSON", parsedMetadata !== null);
