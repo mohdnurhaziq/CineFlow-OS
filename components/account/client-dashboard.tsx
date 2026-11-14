@@ -410,7 +410,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
         <div className="border-b border-zinc-800 flex items-center gap-1 overflow-x-auto scrollbar-none pb-px">
           {[
             { id: "overview" as const, label: "Overview", icon: LayoutDashboard },
-            { id: "projects" as const, label: `Shoots & Vault (${projects.length})`, icon: FolderLock },
+            { id: "projects" as const, label: `Galleries & Vault (${projects.length})`, icon: FolderLock },
             { id: "bookings" as const, label: `Bookings (${bookings.length})`, icon: CalendarClock },
             { id: "invoices" as const, label: `Invoices & Receipts (${invoices.length})`, icon: Receipt },
             ...(proposals.length > 0
@@ -461,7 +461,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                       onClick={() => switchTab("projects")}
                       className="text-xs font-mono text-amber-400 hover:underline flex items-center gap-0.5"
                     >
-                      View all {projects.length} shoots <ChevronRight className="size-3" />
+                      View all {projects.length} galleries <ChevronRight className="size-3" />
                     </button>
                   )}
                 </div>
@@ -710,10 +710,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <FolderLock className="size-4 text-amber-400" />
-                  Your Production Projects & Deliverables Vault ({projects.length})
+                  Your Galleries & Deliverables Vault ({projects.length})
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Follow production stages from planning to final retouch selects and high-resolution master downloads.
+                  Follow stages from shoot to retouching selects and high-resolution gallery downloads.
                 </p>
               </div>
             </div>
@@ -721,9 +721,9 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             {projects.length === 0 ? (
               <div className="p-8 rounded-2xl bg-[#121215] border border-zinc-800 text-center space-y-2">
                 <Camera className="size-8 text-zinc-600 mx-auto" />
-                <h3 className="text-sm font-bold text-zinc-300">No active projects yet</h3>
+                <h3 className="text-sm font-bold text-zinc-300">No active galleries yet</h3>
                 <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                  When you book a production session (like a Wedding, Commercial, or Brand film), your project cockpit and deliverables vault activate here.
+                  When you book a session or production, your gallery and deliverables vault activate here.
                 </p>
                 <Link
                   href={`/${tenant.slug}/book`}

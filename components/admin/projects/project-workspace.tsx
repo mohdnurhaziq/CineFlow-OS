@@ -175,7 +175,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
         <AdminBreadcrumb
           items={[
             { label: "Production" },
-            { label: "Projects", href: `/${tenantSlug}/admin/projects` },
+            { label: "Galleries", href: `/${tenantSlug}/admin/projects` },
             { label: project.title },
           ]}
         />
@@ -197,204 +197,204 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
       {/* Planning tools: productions only. A session hides them; nothing is deleted. */}
       {!isSession && (
         <>
-      {/* Shoot days */}
-      <Section
-        icon={CalendarDays}
-        title="Shoot days"
-        aside={
-          !sheetOpen && (
-            <button type="button" className={primary} onClick={() => setSheetOpen(true)}>
-              Add shoot day
-            </button>
-          )
-        }
-      >
-        {project.callSheets.length === 0 && !sheetOpen && <p className={small}>No shoot days yet. Add one to share a call sheet with the crew.</p>}
-        <ul className="divide-y divide-zinc-800">
-          {project.callSheets.map((c) => (
-            <li key={c.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div>
-                <div className="text-white font-medium">{c.title}</div>
-                <div className="text-xs text-zinc-400">
-                  {day(c.shootDate)} · call {c.generalCallTime} · {c.locationName}
+          {/* Shoot days */}
+          <Section
+            icon={CalendarDays}
+            title="Shoot days"
+            aside={
+              !sheetOpen && (
+                <button type="button" className={primary} onClick={() => setSheetOpen(true)}>
+                  Add shoot day
+                </button>
+              )
+            }
+          >
+            {project.callSheets.length === 0 && !sheetOpen && <p className={small}>No shoot days yet. Add one to share a call sheet with the crew.</p>}
+            <ul className="divide-y divide-zinc-800">
+              {project.callSheets.map((c) => (
+                <li key={c.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <div>
+                    <div className="text-white font-medium">{c.title}</div>
+                    <div className="text-xs text-zinc-400">
+                      {day(c.shootDate)} · call {c.generalCallTime} · {c.locationName}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/${tenantSlug}/set-hud/${c.id}`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+                      Call sheet <ExternalLink className="size-3" />
+                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${c.title}`}
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
+                      onClick={async () => {
+                        if (!(await confirm({ title: `Delete "${c.title}"?`, message: "The call sheet link stops working.", confirmLabel: "Delete" }))) return;
+                        run(() => deleteCallSheet({ tenantId, callSheetId: c.id }), "Shoot day deleted.");
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {sheetOpen && (
+              <form
+                className="space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  run(
+                    () => createCallSheet({ tenantId, projectId: project.id, ...sheet, crew }),
+                    "Shoot day added.",
+                    () => {
+                      setSheetOpen(false);
+                      setSheet({ title: "", shootDate: "", generalCallTime: "07:00 AM", locationName: "", locationAddress: "", locationPinUrl: "", notes: "" });
+                      setCrewText("");
+                    }
+                  );
+                }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label className="sm:col-span-3 space-y-1 block">
+                    <span className={small}>Title</span>
+                    <input required value={sheet.title} onChange={(e) => setSheet({ ...sheet, title: e.target.value })} placeholder="Day 1: Studio portraits" className={field} />
+                  </label>
+                  <label className="space-y-1 block">
+                    <span className={small}>Date</span>
+                    <input required type="date" value={sheet.shootDate} onChange={(e) => setSheet({ ...sheet, shootDate: e.target.value })} className={field} />
+                  </label>
+                  <label className="space-y-1 block">
+                    <span className={small}>Crew call time</span>
+                    <input required value={sheet.generalCallTime} onChange={(e) => setSheet({ ...sheet, generalCallTime: e.target.value })} className={field} />
+                  </label>
+                  <label className="space-y-1 block">
+                    <span className={small}>Location name</span>
+                    <input required value={sheet.locationName} onChange={(e) => setSheet({ ...sheet, locationName: e.target.value })} className={field} />
+                  </label>
+                  <label className="sm:col-span-2 space-y-1 block">
+                    <span className={small}>Address</span>
+                    <input required value={sheet.locationAddress} onChange={(e) => setSheet({ ...sheet, locationAddress: e.target.value })} className={field} />
+                  </label>
+                  <label className="space-y-1 block">
+                    <span className={small}>Map link (optional)</span>
+                    <input type="url" value={sheet.locationPinUrl} onChange={(e) => setSheet({ ...sheet, locationPinUrl: e.target.value })} placeholder="https://maps.google.com/…" className={field} />
+                  </label>
+                  <label className="sm:col-span-3 space-y-1 block">
+                    <span className={small}>Crew, one per line: name, role, call time, phone</span>
+                    <textarea rows={3} value={crewText} onChange={(e) => setCrewText(e.target.value)} placeholder={"Aina, Photographer, 07:00 AM, +60 12-345 6789"} className={`${field} font-mono text-xs`} />
+                  </label>
+                  <label className="sm:col-span-3 space-y-1 block">
+                    <span className={small}>Notes (optional)</span>
+                    <textarea rows={2} value={sheet.notes} onChange={(e) => setSheet({ ...sheet, notes: e.target.value })} className={field} />
+                  </label>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link href={`/${tenantSlug}/set-hud/${c.id}`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
-                  Call sheet <ExternalLink className="size-3" />
-                </Link>
-                <button
-                  type="button"
-                  aria-label={`Delete ${c.title}`}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
-                  onClick={async () => {
-                    if (!(await confirm({ title: `Delete "${c.title}"?`, message: "The call sheet link stops working.", confirmLabel: "Delete" }))) return;
-                    run(() => deleteCallSheet({ tenantId, callSheetId: c.id }), "Shoot day deleted.");
-                  }}
-                >
-                  <Trash2 className="size-3.5" />
+                <div className="flex gap-2">
+                  <button type="button" className="px-3.5 py-2 rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800" onClick={() => setSheetOpen(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={pending} className={primary}>
+                    {pending && <Loader2 className="size-3.5 animate-spin" />} Save shoot day
+                  </button>
+                </div>
+              </form>
+            )}
+          </Section>
+
+          {/* Visual Shot List HUD & Planning */}
+          <ShotListHud
+            initialShots={project.shotItems}
+            projectId={project.id}
+            tenantSlug={tenantSlug}
+            allowManage={true}
+          />
+
+          {/* Gear */}
+          <Section
+            icon={Layers}
+            title="Gear"
+            aside={
+              <Link href={`/${tenantSlug}/admin/inventory`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+                Fleet &amp; Inspections <ExternalLink className="size-3" />
+              </Link>
+            }
+          >
+            {project.reservations.length === 0 && <p className={small}>No gear reserved for this project.</p>}
+            <ul className="divide-y divide-zinc-800">
+              {project.reservations.map((r) => (
+                <li key={r.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <div>
+                    <div className="text-white">
+                      {r.itemName} <span className="text-[11px] font-mono text-zinc-500">{r.sku}</span>
+                    </div>
+                    <div className="text-xs text-zinc-400">
+                      {day(r.startDate)} – {day(r.endDate)} · {reservationStatusLabel(r.status)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/${tenantSlug}/admin/inventory`}
+                      className="text-xs text-amber-400 hover:underline font-mono text-[11px]"
+                    >
+                      {r.status === "RESERVED" ? "Check-out →" : r.status === "CHECKED_OUT" ? "Check-in return →" : "View audit →"}
+                    </Link>
+                    {r.status === "RESERVED" && (
+                      <button
+                        type="button"
+                        className="text-xs text-zinc-400 hover:text-red-400"
+                        onClick={() => run(() => cancelEquipmentReservation({ tenantId, reservationId: r.id }), "Gear released.")}
+                      >
+                        Release
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <form
+              className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end"
+              onSubmit={(e) => {
+                e.preventDefault();
+                run(
+                  () =>
+                    createEquipmentReservation({
+                      tenantId,
+                      tenantSlug,
+                      projectId: project.id,
+                      itemId: gearForm.itemId,
+                      startDate: new Date(`${gearForm.startDate}T00:00:00.000Z`).toISOString(),
+                      endDate: new Date(`${gearForm.endDate}T23:59:00.000Z`).toISOString(),
+                    }) as Promise<{ success: boolean; message?: string }>,
+                  "Gear reserved.",
+                  () => setGearForm({ itemId: "", startDate: "", endDate: "" })
+                );
+              }}
+            >
+              <label className="sm:col-span-2 space-y-1 block">
+                <span className={small}>Reserve</span>
+                <select required value={gearForm.itemId} onChange={(e) => setGearForm({ ...gearForm, itemId: e.target.value })} className={field}>
+                  <option value="">Choose an item…</option>
+                  {gear.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.sku})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1 block">
+                <span className={small}>From</span>
+                <input required type="date" value={gearForm.startDate} onChange={(e) => setGearForm({ ...gearForm, startDate: e.target.value })} className={field} />
+              </label>
+              <label className="space-y-1 block">
+                <span className={small}>To</span>
+                <input required type="date" min={gearForm.startDate || undefined} value={gearForm.endDate} onChange={(e) => setGearForm({ ...gearForm, endDate: e.target.value })} className={field} />
+              </label>
+              <div className="sm:col-span-4">
+                <button type="submit" disabled={pending} className={primary}>
+                  Reserve gear
                 </button>
               </div>
-            </li>
-          ))}
-        </ul>
-        {sheetOpen && (
-          <form
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              run(
-                () => createCallSheet({ tenantId, projectId: project.id, ...sheet, crew }),
-                "Shoot day added.",
-                () => {
-                  setSheetOpen(false);
-                  setSheet({ title: "", shootDate: "", generalCallTime: "07:00 AM", locationName: "", locationAddress: "", locationPinUrl: "", notes: "" });
-                  setCrewText("");
-                }
-              );
-            }}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <label className="sm:col-span-3 space-y-1 block">
-                <span className={small}>Title</span>
-                <input required value={sheet.title} onChange={(e) => setSheet({ ...sheet, title: e.target.value })} placeholder="Day 1: Studio portraits" className={field} />
-              </label>
-              <label className="space-y-1 block">
-                <span className={small}>Date</span>
-                <input required type="date" value={sheet.shootDate} onChange={(e) => setSheet({ ...sheet, shootDate: e.target.value })} className={field} />
-              </label>
-              <label className="space-y-1 block">
-                <span className={small}>Crew call time</span>
-                <input required value={sheet.generalCallTime} onChange={(e) => setSheet({ ...sheet, generalCallTime: e.target.value })} className={field} />
-              </label>
-              <label className="space-y-1 block">
-                <span className={small}>Location name</span>
-                <input required value={sheet.locationName} onChange={(e) => setSheet({ ...sheet, locationName: e.target.value })} className={field} />
-              </label>
-              <label className="sm:col-span-2 space-y-1 block">
-                <span className={small}>Address</span>
-                <input required value={sheet.locationAddress} onChange={(e) => setSheet({ ...sheet, locationAddress: e.target.value })} className={field} />
-              </label>
-              <label className="space-y-1 block">
-                <span className={small}>Map link (optional)</span>
-                <input type="url" value={sheet.locationPinUrl} onChange={(e) => setSheet({ ...sheet, locationPinUrl: e.target.value })} placeholder="https://maps.google.com/…" className={field} />
-              </label>
-              <label className="sm:col-span-3 space-y-1 block">
-                <span className={small}>Crew, one per line: name, role, call time, phone</span>
-                <textarea rows={3} value={crewText} onChange={(e) => setCrewText(e.target.value)} placeholder={"Aina, Photographer, 07:00 AM, +60 12-345 6789"} className={`${field} font-mono text-xs`} />
-              </label>
-              <label className="sm:col-span-3 space-y-1 block">
-                <span className={small}>Notes (optional)</span>
-                <textarea rows={2} value={sheet.notes} onChange={(e) => setSheet({ ...sheet, notes: e.target.value })} className={field} />
-              </label>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" className="px-3.5 py-2 rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800" onClick={() => setSheetOpen(false)}>
-                Cancel
-              </button>
-              <button type="submit" disabled={pending} className={primary}>
-                {pending && <Loader2 className="size-3.5 animate-spin" />} Save shoot day
-              </button>
-            </div>
-          </form>
-        )}
-      </Section>
-
-      {/* Visual Shot List HUD & Planning */}
-      <ShotListHud
-        initialShots={project.shotItems}
-        projectId={project.id}
-        tenantSlug={tenantSlug}
-        allowManage={true}
-      />
-
-      {/* Gear */}
-      <Section
-        icon={Layers}
-        title="Gear"
-        aside={
-          <Link href={`/${tenantSlug}/admin/inventory`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
-            Fleet &amp; Inspections <ExternalLink className="size-3" />
-          </Link>
-        }
-      >
-        {project.reservations.length === 0 && <p className={small}>No gear reserved for this project.</p>}
-        <ul className="divide-y divide-zinc-800">
-          {project.reservations.map((r) => (
-            <li key={r.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div>
-                <div className="text-white">
-                  {r.itemName} <span className="text-[11px] font-mono text-zinc-500">{r.sku}</span>
-                </div>
-                <div className="text-xs text-zinc-400">
-                  {day(r.startDate)} – {day(r.endDate)} · {reservationStatusLabel(r.status)}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Link
-                  href={`/${tenantSlug}/admin/inventory`}
-                  className="text-xs text-amber-400 hover:underline font-mono text-[11px]"
-                >
-                  {r.status === "RESERVED" ? "Check-out →" : r.status === "CHECKED_OUT" ? "Check-in return →" : "View audit →"}
-                </Link>
-                {r.status === "RESERVED" && (
-                  <button
-                    type="button"
-                    className="text-xs text-zinc-400 hover:text-red-400"
-                    onClick={() => run(() => cancelEquipmentReservation({ tenantId, reservationId: r.id }), "Gear released.")}
-                  >
-                    Release
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-        <form
-          className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end"
-          onSubmit={(e) => {
-            e.preventDefault();
-            run(
-              () =>
-                createEquipmentReservation({
-                  tenantId,
-                  tenantSlug,
-                  projectId: project.id,
-                  itemId: gearForm.itemId,
-                  startDate: new Date(`${gearForm.startDate}T00:00:00.000Z`).toISOString(),
-                  endDate: new Date(`${gearForm.endDate}T23:59:00.000Z`).toISOString(),
-                }) as Promise<{ success: boolean; message?: string }>,
-              "Gear reserved.",
-              () => setGearForm({ itemId: "", startDate: "", endDate: "" })
-            );
-          }}
-        >
-          <label className="sm:col-span-2 space-y-1 block">
-            <span className={small}>Reserve</span>
-            <select required value={gearForm.itemId} onChange={(e) => setGearForm({ ...gearForm, itemId: e.target.value })} className={field}>
-              <option value="">Choose an item…</option>
-              {gear.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name} ({g.sku})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1 block">
-            <span className={small}>From</span>
-            <input required type="date" value={gearForm.startDate} onChange={(e) => setGearForm({ ...gearForm, startDate: e.target.value })} className={field} />
-          </label>
-          <label className="space-y-1 block">
-            <span className={small}>To</span>
-            <input required type="date" min={gearForm.startDate || undefined} value={gearForm.endDate} onChange={(e) => setGearForm({ ...gearForm, endDate: e.target.value })} className={field} />
-          </label>
-          <div className="sm:col-span-4">
-            <button type="submit" disabled={pending} className={primary}>
-              Reserve gear
-            </button>
-          </div>
-        </form>
-      </Section>
+            </form>
+          </Section>
         </>
       )}
 

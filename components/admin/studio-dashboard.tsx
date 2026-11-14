@@ -476,7 +476,7 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
             href={`/${tenant.slug}/admin/projects`}
             className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1"
           >
-            Projects <ChevronRight className="size-3" />
+            Galleries <ChevronRight className="size-3" />
           </Link>
         </div>
 

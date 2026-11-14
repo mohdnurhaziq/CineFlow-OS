@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Clapperboard, Inbox } from "lucide-react";
+import { Inbox, Images } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
@@ -19,7 +19,7 @@ const TAB_LABELS: Record<ProjectListTab, string> = { productions: "Productions",
 export async function generateMetadata({ params }: ProjectsPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Projects | ${tenant.name} Studio Admin` : "Projects" };
+  return { title: tenant ? `Galleries | ${tenant.name} Studio Admin` : "Galleries" };
 }
 
 // Access is enforced by the admin layout (studio staff or super-admin only).
@@ -53,11 +53,11 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
       <div className="space-y-1">
         <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Clapperboard className="size-6 text-amber-400" />
-          Projects
+          <Images className="size-6 text-amber-400" />
+          Galleries
         </h1>
         <p className="text-xs text-zinc-400">
-          Every confirmed booking and signed proposal has a project: upload the client&apos;s photos here. Productions also get shoot-day planning.
+          Every confirmed booking and signed proposal has a gallery: upload the client&apos;s photos here. Productions also get shoot-day planning.
         </p>
       </div>
 
@@ -79,9 +79,9 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
       {projects.length === 0 ? (
         <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-10 text-center space-y-2">
           <Inbox className="size-8 text-zinc-600 mx-auto" />
-          <p className="text-sm text-zinc-300">No {tab === "all" ? "projects" : TAB_LABELS[tab].toLowerCase()} yet.</p>
+          <p className="text-sm text-zinc-300">No {tab === "all" ? "galleries" : TAB_LABELS[tab].toLowerCase()} yet.</p>
           <p className="text-xs text-zinc-500">
-            Every confirmed booking gets a project automatically: sessions (convocation, portrait, Raya) under Sessions, productions
+            Every confirmed booking gets a gallery automatically: sessions (convocation, portrait, Raya) under Sessions, productions
             (weddings, commercial, events) here. Signed{" "}
             <Link href={`/${tenant.slug}/admin/proposals`} className="text-amber-400 hover:underline">
               proposals

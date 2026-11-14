@@ -1,7 +1,7 @@
 # Graph Report - CineFlow-OS  (2026-11-14)
 
 ## Corpus Check
-- 595 files · ~1,136,950 words
+- 521 files · ~1,105,072 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 16 file(s) not represented in the graph (top: .css 10, (none) 4, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `40ef4534`
+- Built from commit: `cd21821b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -301,16 +301,16 @@
 10. `cn()` - 47 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Global Constraints` --references--> `isProjectCategorySlug()`  [INFERRED]
-  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/bookings/project-promotion.ts
-- `BUG-20261105-08: Modals ignored Escape and weren't announced as dialogs` --references--> `useDialog()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/use-dialog.ts
+- `Task 4: Projects page tabs` --references--> `projectListWhere()`  [INFERRED]
+  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/projects/list.ts
 - `BUG-20261106-12: Dead-end pages and inconsistent layout` --references--> `PortalTopBar()`  [INFERRED]
   docs/BUG_FIX_LOG.md → components/portal/portal-top-bar.tsx
-- `BUG-20261106-04: Releases and call sheets were public, and releases didn't record who took them` --references--> `submitDigitalRelease()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/actions/logistics.ts
-- `BUG-20261105-20: Staff could approve payments and change prices` --references--> `requireOwner()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/auth/guard.ts
+- `Global Constraints` --references--> `createBookingForCustomer()`  [INFERRED]
+  docs/superpowers/plans/2026-11-14-new-booking-from-bookings.md → lib/actions/admin-bookings.ts
+- `BUG-20261105-07: Invoice numbers were random and inconsistent` --references--> `nextInvoiceNumber()`  [INFERRED]
+  docs/BUG_FIX_LOG.md → lib/bookings/billing.ts
+- `Global Constraints` --references--> `isProjectCategorySlug()`  [INFERRED]
+  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/bookings/project-promotion.ts
 
 ## Import Cycles
 - None detected.
@@ -1354,18 +1354,18 @@ Nodes (4): Global Constraints, New Booking from Bookings Implementation Plan, Re
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `cn` to `[clientId]/page.tsx`, `Skeleton`, `Critical Rules`, `project-workspace.tsx`, `admin/layout.tsx`, `Step 4: Map Tokens to the Theme`, `next`, `Critical Rules`, `tier17-clients.test.ts`, `.agents/skills/shadcn/assets/showcase/color-pair.tsx`, `Styling & Customization`, `Styling & Customization`, `formatMoney`, `.claude/skills/shadcn/assets/showcase/color-pair.tsx`, `clients-directory.tsx`, `Step 4: Map Tokens to the Theme`?**
-  _High betweenness centrality (0.110) - this node is a cross-community bridge._
+- **Why does `next` connect `next` to `actions/admin-cms.ts`, `requireStaff`, `projects/[projectId]/page.tsx`, `labels.ts`, `labels.ts`, `checkout/page.tsx`, `utils.ts`, `settings-ui.tsx`, `call-sheet-shell.tsx`, `visualizer-shell.tsx`, `admin-bookings.ts`, `useConfirm`, `actions/password-reset.ts`, `cinema-booking-shell.tsx`, `clients-directory.tsx`, `showcase-shell.tsx`, `formatMoney`, `booking-details-dialog.tsx`, `admin-projects.ts`, `admin-services.ts`, `checkout-shell.tsx`, `admin/page.tsx`, `addon-template-dialog.tsx`, `upload/route.ts`, `app/layout.tsx`, `booking.ts`, `admin-booking-lifecycle.ts`, `actions/logistics.ts`, `admin-proposals.ts`, `admin-calendar.ts`, `package.json`, `db.ts`, `tier17-clients.test.ts`, `requirePageAccess`, `my-booking.ts`, `lucide-react`, `actions/gear.ts`, `actions/admin-frames.ts`, `tier9-toyyibpay-gateway.test.ts`, `dependencies`, `lucide-react`, `currentUserIsOwner`, `disciplineLabel`, `[clientId]/page.tsx`, `project-workspace.tsx`, `tier15-projects.test.ts`, `ref_node_path`, `proposal-viewer.tsx`, `admin/layout.tsx`, `admin-invoices.ts`, `runner.ts`, `tier4-real-world-scenarios.test.ts`, `storage.ts`, `projects/page.tsx`, `account/invoices/[invoiceId]/page.tsx`, `auth/session.ts`, `photo-uploader.tsx`?**
+  _High betweenness centrality (0.106) - this node is a cross-community bridge._
 - **What connects `RFC-4180`, `Multi-Tenant Seed Script (prisma/seed.ts)`, `Local File Upload Route (app/api/upload/route.ts)` to the rest of the system?**
   _25 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.agents/skills/design-taste-frontend/scripts/assets.mjs` be split into smaller, more focused modules?**
   _Cohesion score 0.06648426812585499 - nodes in this community are weakly interconnected._
-- **Why does `next` connect `next` to `actions/admin-cms.ts`, `requireStaff`, `projects/[projectId]/page.tsx`, `labels.ts`, `labels.ts`, `checkout/page.tsx`, `utils.ts`, `settings-ui.tsx`, `call-sheet-shell.tsx`, `visualizer-shell.tsx`, `admin-bookings.ts`, `useConfirm`, `actions/password-reset.ts`, `cinema-booking-shell.tsx`, `clients-directory.tsx`, `showcase-shell.tsx`, `formatMoney`, `booking-details-dialog.tsx`, `admin-projects.ts`, `admin-services.ts`, `checkout-shell.tsx`, `admin/page.tsx`, `addon-template-dialog.tsx`, `upload/route.ts`, `app/layout.tsx`, `booking.ts`, `admin-booking-lifecycle.ts`, `actions/logistics.ts`, `admin-proposals.ts`, `admin-calendar.ts`, `package.json`, `db.ts`, `tier17-clients.test.ts`, `requirePageAccess`, `my-booking.ts`, `lucide-react`, `actions/gear.ts`, `actions/admin-frames.ts`, `tier9-toyyibpay-gateway.test.ts`, `dependencies`, `lucide-react`, `currentUserIsOwner`, `disciplineLabel`, `[clientId]/page.tsx`, `project-workspace.tsx`, `tier15-projects.test.ts`, `ref_node_path`, `proposal-viewer.tsx`, `admin/layout.tsx`, `admin-invoices.ts`, `runner.ts`, `tier4-real-world-scenarios.test.ts`, `storage.ts`, `projects/page.tsx`, `account/invoices/[invoiceId]/page.tsx`, `auth/session.ts`, `photo-uploader.tsx`?**
-  _High betweenness centrality (0.106) - this node is a cross-community bridge._
+- **Why does `cn()` connect `cn` to `[clientId]/page.tsx`, `Skeleton`, `Critical Rules`, `project-workspace.tsx`, `admin/layout.tsx`, `Step 4: Map Tokens to the Theme`, `next`, `Critical Rules`, `tier17-clients.test.ts`, `.agents/skills/shadcn/assets/showcase/color-pair.tsx`, `Styling & Customization`, `Styling & Customization`, `formatMoney`, `.claude/skills/shadcn/assets/showcase/color-pair.tsx`, `clients-directory.tsx`, `Step 4: Map Tokens to the Theme`?**
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
 - **Should `notifications.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.10483870967741936 - nodes in this community are weakly interconnected._
-- **Why does `Styling & Customization` connect `Styling & Customization` to `shadcn/SKILL.md`?**
-  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+- **Why does `react` connect `lucide-react` to `actions/admin-cms.ts`, `labels.ts`, `package.json`, `labels.ts`, `call-sheet-shell.tsx`, `utils.ts`, `settings-ui.tsx`, `visualizer-shell.tsx`, `useConfirm`, `actions/password-reset.ts`, `cinema-booking-shell.tsx`, `clients-directory.tsx`, `showcase-shell.tsx`, `formatMoney`, `booking-details-dialog.tsx`, `checkout-shell.tsx`, `admin/page.tsx`, `addon-template-dialog.tsx`, `app/layout.tsx`, `booking.ts`, `admin-booking-lifecycle.ts`, `admin-calendar.ts`, `tier17-clients.test.ts`, `requirePageAccess`, `my-booking.ts`, `lucide-react`, `actions/gear.ts`, `dependencies`, `[clientId]/page.tsx`, `project-workspace.tsx`, `proposal-viewer.tsx`, `admin/layout.tsx`, `admin-invoices.ts`, `.agents/skills/shadcn/assets/showcase/color-pair.tsx`, `cn`, `runner.ts`, `account/invoices/[invoiceId]/page.tsx`, `.claude/skills/shadcn/assets/showcase/color-pair.tsx`, `auth/session.ts`, `photo-uploader.tsx`?**
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._

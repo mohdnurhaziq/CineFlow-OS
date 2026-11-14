@@ -287,7 +287,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
           {booking.projects.length > 0 && (
             <section className="p-5 rounded-2xl bg-[#121215] border border-zinc-800 space-y-3">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <FolderLock className="size-4 text-amber-400" /> Projects &amp; Delivery Vault
+                <FolderLock className="size-4 text-amber-400" /> Galleries &amp; Delivery Vault
               </h2>
               <ul className="divide-y divide-zinc-800/80">
                 {booking.projects.map((p) => (

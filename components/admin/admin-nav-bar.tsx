@@ -19,6 +19,7 @@ import {
   Settings,
   ChevronDown,
   Users,
+  Images,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -56,9 +57,9 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
         items: [
           {
             href: `/${tenantSlug}/admin/projects`,
-            label: "Projects",
-            description: "Cockpit, shot lists, Set HUD & vault deliverables",
-            icon: Clapperboard,
+            label: "Galleries",
+            description: "Client photo galleries, uploads & deliverables",
+            icon: Images,
           },
           {
             href: `/${tenantSlug}/admin/bookings`,
