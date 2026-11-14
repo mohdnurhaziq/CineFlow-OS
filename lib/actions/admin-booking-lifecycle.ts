@@ -200,6 +200,8 @@ export async function rescheduleBooking(input: z.input<typeof RescheduleSchema>)
         where: { id: booking.id },
         data: { slotId: target.id, targetDate: slotDateKey(target.date) },
       });
+      // The booking's gallery shows the shoot date too.
+      await tx.project.updateMany({ where: { bookingId: booking.id }, data: { shootDates: slotDateKey(target.date) } });
       // An unpaid balance stays due a week after the (new) session.
       const newDue = new Date(new Date(`${slotDateKey(target.date)}T00:00:00.000Z`).getTime() + BALANCE_DUE_AFTER_SESSION_DAYS * DAY_MS);
       await tx.milestoneInvoice.updateMany({

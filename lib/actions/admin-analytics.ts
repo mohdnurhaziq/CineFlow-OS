@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { liveProjectWhere } from "@/lib/projects/list";
 import { requireStaffBySlug } from "@/lib/auth/guard";
 
 export interface StudioAnalyticsData {
@@ -104,13 +105,14 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
         },
         orderBy: { createdAt: "desc" },
       }),
+      // A cancelled booking's gallery is not a project in play.
       db.project.findMany({
-        where: { tenantId },
+        where: { tenantId, ...liveProjectWhere },
         select: { id: true, status: true, budget: true },
       }),
       db.clientBooking.findMany({
         where: { tenantId },
-        select: { id: true, status: true },
+        select: { id: true, status: true, project: { select: { id: true } } },
       }),
       db.bookingSlot.findMany({
         where: { tenantId },
@@ -164,9 +166,11 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
     const activeProjectsCount = projects.filter(
       (p) => p.status !== "DELIVERED" && p.status !== "ARCHIVED"
     ).length;
-    // "Delivered" covers finished projects and bookings whose files have gone to the client.
+    // "Delivered" covers finished projects, plus delivered bookings that have no project
+    // (older ones); a booking and its own project are one job and count once.
     const completedProjectsCount =
-      projects.filter((p) => p.status === "DELIVERED").length + bookings.filter((b) => b.status === "DELIVERED").length;
+      projects.filter((p) => p.status === "DELIVERED").length +
+      bookings.filter((b) => b.status === "DELIVERED" && !b.project).length;
 
     // Booking KPIs
     const confirmedBookingsCount = bookings.filter(

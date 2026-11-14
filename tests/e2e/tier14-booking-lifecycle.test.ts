@@ -124,6 +124,8 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
       new Date(to.date.getTime() + 7 * DAY_MS).toISOString().slice(0, 10),
       "Balance is due a week after the new session"
     );
+    const project = await db.project.findFirst({ where: { bookingId } });
+    harness.assertEqual(project?.shootDates, to.date.toISOString().slice(0, 10), "The booking's gallery shows the new shoot date");
   });
 
   await harness.test("T14-CANCEL-01: cancelling reopens the slot and voids what is unpaid", async () => {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, CalendarClock, CheckCircle2, ImageUp, Loader2, Mail, UserX, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { BookingDetails } from "@/lib/bookings/details";
+import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
 import {
   cancelBooking,
   listRescheduleOptions,
@@ -118,7 +119,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
               </button>
             </>
           )}
-          {booking.project && (
+          {booking.project ? (
             <Link
               href={`/${tenantSlug}/admin/projects/${booking.project.id}#files`}
               className={`${btn} bg-amber-500 border-amber-500 text-black hover:bg-amber-400`}
@@ -126,6 +127,18 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
               <ImageUp className="size-3.5" /> Upload photos
               <ArrowUpRight className="size-3 ml-0.5" />
             </Link>
+          ) : (
+            booking.status !== "PENDING" && (
+              // Confirmed before every booking got a gallery: create it here.
+              <button
+                type="button"
+                disabled={pending}
+                className={`${btn} bg-amber-500 border-amber-500 text-black hover:bg-amber-400`}
+                onClick={() => run(() => promoteBookingToProjectAction(ids), "Gallery created. You can upload the photos now.")}
+              >
+                {pending ? <Loader2 className="size-3.5 animate-spin" /> : <ImageUp className="size-3.5" />} Create gallery
+              </button>
+            )
           )}
           {upcoming &&
             (canCancel ? (

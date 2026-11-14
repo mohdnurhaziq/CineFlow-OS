@@ -49,8 +49,9 @@ export type ProjectKind = "SESSION" | "PRODUCTION";
 
 /**
  * Every confirmed booking gets a project (its gallery); the category decides which kind.
- * The studio's category setting wins when it says Production; otherwise category keywords decide
- * (wedding, commercial, event... -> Production; convocation, portrait, Raya... -> Session).
+ * A category the studio has set up decides by its Session / Production choice. A booking whose
+ * category has no row falls back to keywords (wedding, commercial, event... -> Production;
+ * convocation, portrait, Raya... -> Session).
  */
 export async function projectKindForBooking(
   tx: Tx,
@@ -58,11 +59,9 @@ export async function projectKindForBooking(
 ): Promise<ProjectKind> {
   const category = await tx.campaignCategory.findFirst({
     where: { tenantId: booking.tenantId, slug: booking.category },
-    select: { isProduction: true, slug: true, name: true },
+    select: { isProduction: true },
   });
-  const production = category
-    ? category.isProduction || isProjectCategorySlug(category.slug) || isProjectCategorySlug(category.name)
-    : isProjectCategorySlug(booking.category);
+  const production = category ? category.isProduction : isProjectCategorySlug(booking.category);
   return production ? "PRODUCTION" : "SESSION";
 }
 

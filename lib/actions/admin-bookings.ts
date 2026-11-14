@@ -215,7 +215,10 @@ export async function getBookingDetails(input: { tenantId: string; bookingId: st
   }
 }
 
-/** Escalate or promote any confirmed/completed booking into a full production project. */
+/**
+ * Creates the gallery (project) for one of this studio's confirmed bookings that doesn't have
+ * one yet, e.g. a booking confirmed before every booking got a gallery. Idempotent.
+ */
 export async function promoteBookingToProjectAction(input: {
   tenantId: string;
   tenantSlug: string;
@@ -225,12 +228,21 @@ export async function promoteBookingToProjectAction(input: {
     await requireStaff(input.tenantId);
     const session = await getCurrentUser();
 
+    const booking = await db.clientBooking.findFirst({
+      where: { id: input.bookingId, tenantId: input.tenantId },
+      select: { id: true, status: true },
+    });
+    if (!booking) return { success: false, message: "Booking not found." };
+    if (!["CONFIRMED", "COMPLETED", "DELIVERED"].includes(booking.status)) {
+      return { success: false, message: "The booking gets its gallery once it is confirmed." };
+    }
+
     const result = await db.$transaction(async (tx) => {
-      return provisionProjectForBooking(tx, input.bookingId, { studioLeadId: session?.id });
+      return provisionProjectForBooking(tx, booking.id, { studioLeadId: session?.id });
     });
 
     if (!result) {
-      return { success: false, message: "Could not provision project for booking." };
+      return { success: false, message: "Could not create the gallery: the studio has no owner or staff to lead it." };
     }
 
     try {
@@ -245,10 +257,10 @@ export async function promoteBookingToProjectAction(input: {
       projectId: result.project.id,
       projectNumber: result.project.projectNumber,
       message: result.alreadyExists
-        ? `Linked project ${result.project.projectNumber} is already active.`
-        : `Created Project ${result.project.projectNumber} successfully.`,
+        ? `This booking already has its gallery (${result.project.projectNumber}).`
+        : `Gallery created (${result.project.projectNumber}).`,
     };
   } catch (err) {
-    return { success: false, message: errorMessageOf(err) || "Failed to promote booking to project" };
+    return { success: false, message: errorMessageOf(err) || "Could not create the gallery." };
   }
 }

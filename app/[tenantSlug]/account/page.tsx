@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { liveProjectWhere } from "@/lib/projects/list";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ClientDashboard } from "@/components/account/client-dashboard";
@@ -77,8 +78,9 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
       where: { tenantId: tenant.id, clientId: client.id },
       orderBy: { createdAt: "desc" },
     }),
+    // A cancelled or missed booking's gallery isn't shown to the client.
     db.project.findMany({
-      where: { tenantId: tenant.id, clientId: client.id },
+      where: { tenantId: tenant.id, clientId: client.id, ...liveProjectWhere },
       orderBy: { createdAt: "desc" },
       include: {
         deliverables: {

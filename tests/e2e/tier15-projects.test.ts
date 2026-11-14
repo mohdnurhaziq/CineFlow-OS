@@ -22,7 +22,11 @@ import {
   updateProjectStatus,
 } from "@/lib/actions/admin-projects";
 import { getNotificationHistory } from "@/lib/notifications";
-import { projectListWhere } from "@/lib/projects/list";
+import { liveProjectWhere, projectListWhere } from "@/lib/projects/list";
+import { projectKindForBooking } from "@/lib/bookings/project-promotion";
+import { backfillBookingProjects } from "@/lib/bookings/backfill-projects";
+import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
+import { getStudioAnalytics } from "@/lib/actions/admin-analytics";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import {
   createShotItem,
@@ -738,6 +742,129 @@ export async function runTier15ProjectTests(harness: TestHarness) {
       await db.clientBooking.delete({ where: { id: cancelled.id } });
       await db.user.delete({ where: { id: listClient.id } });
     }
+  });
+
+  // ---- Review fixes: every booking owning a gallery ----------------------------------------
+  const reviewClient = await db.user.create({
+    data: { tenantId: lumina.id, email: `t15-review-${run}@example.test`, name: "Review Client", role: "CLIENT" },
+  });
+  let reviewSeq = 0;
+  const reviewBooking = (status: string, category = "studio-portrait") => {
+    reviewSeq += 1;
+    return db.clientBooking.create({
+      data: {
+        tenantId: lumina.id,
+        trackingCode: `BK-RVW${reviewSeq}-${run.toUpperCase()}`,
+        category,
+        clientName: reviewClient.name,
+        clientEmail: reviewClient.email,
+        clientPhone: "0123000000",
+        serviceTier: "Portrait",
+        discipline: "PHOTOGRAPHY",
+        status,
+        depositAmount: 0,
+        userId: reviewClient.id,
+        targetDate: "2026-12-12",
+      },
+    });
+  };
+  const reviewProject = (bookingId: string, status: string) => {
+    reviewSeq += 1;
+    return db.project.create({
+      data: {
+        tenantId: lumina.id,
+        projectNumber: `PJ-RVW-${run}-${reviewSeq}`,
+        title: `Review ${reviewSeq}`,
+        clientId: reviewClient.id,
+        studioLeadId: ownerRow.id,
+        discipline: "PHOTOGRAPHY",
+        budget: 100,
+        kind: "SESSION",
+        status,
+        bookingId,
+      },
+    });
+  };
+  harness.registerTeardown(async () => {
+    await db.project.deleteMany({ where: { clientId: reviewClient.id } });
+    await db.milestoneInvoice.deleteMany({ where: { clientId: reviewClient.id } });
+    await db.clientBooking.deleteMany({ where: { clientEmail: reviewClient.email } });
+    await db.campaignCategory.deleteMany({ where: { tenantId: lumina.id, slug: { startsWith: `t15-cat-${run}` } } });
+    await db.user.deleteMany({ where: { id: reviewClient.id } });
+  });
+
+  await harness.test("T15-KIND-02: a category saved as Session stays a session, even with a production-sounding name", async () => {
+    await db.campaignCategory.create({
+      data: { tenantId: lumina.id, name: "Event Coverage", slug: `t15-cat-${run}-event`, isProduction: false, sortOrder: 90 },
+    });
+    await db.campaignCategory.create({
+      data: { tenantId: lumina.id, name: "Mini Shoot", slug: `t15-cat-${run}-mini`, isProduction: true, sortOrder: 91 },
+    });
+    harness.assertEqual(await projectKindForBooking(db, { tenantId: lumina.id, category: `t15-cat-${run}-event` }), "SESSION", "Session choice wins over the word event");
+    harness.assertEqual(await projectKindForBooking(db, { tenantId: lumina.id, category: `t15-cat-${run}-mini` }), "PRODUCTION", "Production choice wins over the word mini");
+    harness.assertEqual(await projectKindForBooking(db, { tenantId: lumina.id, category: "wedding-showcase-nocat" }), "PRODUCTION", "No category row: keywords decide (wedding)");
+    harness.assertEqual(await projectKindForBooking(db, { tenantId: lumina.id, category: "convocation-nocat" }), "SESSION", "No category row: keywords decide (convocation)");
+  });
+
+  await harness.test("T15-LIVE-01: a cancelled booking's gallery leaves the client's list and the studio's stats; delivered jobs count once", async () => {
+    const before = await withSession(owner, () => getStudioAnalytics("lumina-cine"));
+    const cancelled = await reviewBooking("CANCELLED");
+    await reviewProject(cancelled.id, "PRE_PRODUCTION");
+    const delivered = await reviewBooking("DELIVERED");
+    await reviewProject(delivered.id, "DELIVERED");
+    const after = await withSession(owner, () => getStudioAnalytics("lumina-cine"));
+    harness.assertEqual(after!.kpis.activeProjectsCount - before!.kpis.activeProjectsCount, 0, "A cancelled booking's project is not an active project");
+    harness.assertEqual(after!.kpis.completedProjectsCount - before!.kpis.completedProjectsCount, 1, "A delivered booking with its project counts once");
+    harness.assertEqual(
+      await db.project.count({ where: { AND: [liveProjectWhere, { clientId: reviewClient.id }] } }),
+      1,
+      "The client's list keeps the delivered job and drops the cancelled one"
+    );
+  });
+
+  await harness.test("T15-GALLERY-01: a confirmed booking without a gallery can get one, only in its own studio", async () => {
+    const confirmed = await reviewBooking("CONFIRMED");
+    const pending = await reviewBooking("PENDING");
+    const otherTenant = await db.tenant.findFirst({ where: { NOT: { id: lumina.id } } });
+    const outsiderRow = await db.user.findFirst({ where: { tenantId: otherTenant!.id, role: "STUDIO_OWNER" } });
+    const cross = await withSession({ ...as(outsiderRow!), tenantSlug: otherTenant!.slug }, () =>
+      promoteBookingToProjectAction({ tenantId: otherTenant!.id, tenantSlug: otherTenant!.slug, bookingId: confirmed.id })
+    );
+    harness.assert(!cross.success, "Another studio can't create a gallery for this booking");
+    harness.assertEqual(await db.project.count({ where: { bookingId: confirmed.id } }), 0, "Nothing was created");
+
+    const early = await withSession(crew, () => promoteBookingToProjectAction({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: pending.id }));
+    harness.assert(!early.success, "An unconfirmed booking gets no gallery yet");
+
+    const made = await withSession(crew, () => promoteBookingToProjectAction({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: confirmed.id }));
+    harness.assert(made.success === true, "Crew creates the missing gallery");
+    const project = await db.project.findFirst({ where: { bookingId: confirmed.id } });
+    harness.assertEqual(project?.kind, "SESSION", "Labelled by its category");
+  });
+
+  await harness.test("T15-BACKFILL-01: the backfill starts old jobs at the stage they reached, and carries category choices over", async () => {
+    const delivered = await reviewBooking("DELIVERED");
+    const completed = await reviewBooking("COMPLETED");
+    const legacy = await db.campaignCategory.create({
+      data: { tenantId: lumina.id, name: "Corporate Day", slug: `t15-cat-${run}-corp`, isProduction: false, sortOrder: 92 },
+    });
+
+    const dry = await backfillBookingProjects(db, { dryRun: true, carryOverCategories: true });
+    harness.assert(dry.categories.some((c) => c.slug === legacy.slug), "Dry run lists the category to carry over");
+    harness.assertEqual((await db.campaignCategory.findUnique({ where: { id: legacy.id } }))?.isProduction, false, "Dry run changes nothing");
+    harness.assertEqual(await db.project.count({ where: { bookingId: delivered.id } }), 0, "Dry run creates nothing");
+
+    const res = await backfillBookingProjects(db, { dryRun: false, carryOverCategories: true });
+    harness.assertEqual((await db.campaignCategory.findUnique({ where: { id: legacy.id } }))?.isProduction, true, "A keyword category that used to auto-create stays a production");
+    harness.assertEqual((await db.project.findFirst({ where: { bookingId: delivered.id } }))?.status, "DELIVERED", "Already delivered: the gallery starts as delivered");
+    harness.assertEqual((await db.project.findFirst({ where: { bookingId: completed.id } }))?.status, "POST_PRODUCTION", "Shoot done: the gallery starts in editing");
+    harness.assert(res.created.length >= 2, "Reports what it created");
+
+    const again = await backfillBookingProjects(db, { dryRun: false, carryOverCategories: false });
+    harness.assertEqual(again.created.length, 0, "Running it again creates nothing");
+    await db.campaignCategory.update({ where: { id: legacy.id }, data: { isProduction: false } });
+    await backfillBookingProjects(db, { dryRun: false, carryOverCategories: false });
+    harness.assertEqual((await db.campaignCategory.findUnique({ where: { id: legacy.id } }))?.isProduction, false, "Without the flag, a later Session choice is left alone");
   });
 
   await harness.test("T15-BOOKING-PROJ-01: every confirmed booking gets a project, labelled session or production by category", async () => {

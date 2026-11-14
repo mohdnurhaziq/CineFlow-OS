@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { filesReleased } from "@/lib/deliverables/access";
+import { liveProjectWhere } from "@/lib/projects/list";
 import { z } from "zod";
 
 /**
@@ -153,7 +154,7 @@ export async function lookupMyBooking(input: {
           orderBy: { createdAt: "desc" },
         }),
         db.project.findMany({
-          where: { tenantId: tenant.id, clientId: booking.userId },
+          where: { tenantId: tenant.id, clientId: booking.userId, ...liveProjectWhere },
           orderBy: { createdAt: "desc" },
         }),
         db.proposal.findMany({
