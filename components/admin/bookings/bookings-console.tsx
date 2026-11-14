@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
-import { Search, CalendarCheck, Inbox } from "lucide-react";
+import { Search, CalendarCheck, Inbox, Plus } from "lucide-react";
+import { NewBookingDialog } from "./new-booking-dialog";
 import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
 import {
@@ -24,6 +25,8 @@ interface BookingsConsoleProps {
   tenantId: string;
   /** Studio owner: may cancel paid bookings. */
   isOwner: boolean;
+  /** Data for "New booking" (book a customer into an open session). */
+  newBooking: Omit<ComponentProps<typeof NewBookingDialog>, "isOpen" | "onClose" | "onBooked" | "tenantId" | "tenantSlug" | "currency" | "isOwner">;
 }
 
 /** "09:00 AM" -> minutes since midnight, for ordering sessions within a day. */
@@ -40,7 +43,8 @@ function sessionKey(b: BookingDetails): string {
   return `${b.sessionDate ?? "0000-00-00"} ${String(minutesOf(b.slot?.startTime)).padStart(4, "0")}`;
 }
 
-export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantId, isOwner }: BookingsConsoleProps) {
+export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantId, isOwner, newBooking }: BookingsConsoleProps) {
+  const [newBookingOpen, setNewBookingOpen] = useState(false);
   // Open on whatever needs the owner's attention first.
   const [filter, setFilter] = useState<FilterId>(() =>
     bookings.some((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b))) ? "verify" : "upcoming"
@@ -102,6 +106,15 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
           </p>
         </div>
 
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <button
+          type="button"
+          onClick={() => setNewBookingOpen(true)}
+          className="inline-flex shrink-0 items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs tracking-tight transition-colors"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          New booking
+        </button>
         <label className="relative block w-full sm:w-72">
           <span className="sr-only">Search bookings</span>
           <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -113,7 +126,19 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
             className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
           />
         </label>
+        </div>
       </div>
+
+      <NewBookingDialog
+        isOpen={newBookingOpen}
+        onClose={() => setNewBookingOpen(false)}
+        onBooked={() => router.refresh()}
+        tenantId={tenantId}
+        tenantSlug={tenantSlug}
+        currency={currency}
+        isOwner={isOwner}
+        {...newBooking}
+      />
 
       <div role="tablist" aria-label="Filter bookings" className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
         {tabs.map((t) => {

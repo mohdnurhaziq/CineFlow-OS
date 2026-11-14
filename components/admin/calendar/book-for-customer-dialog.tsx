@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, UserPlus, Users, Search, Loader2, AlertCircle, Check, CalendarCheck } from "lucide-react";
+import { X, UserPlus, Users, Search, Loader2, AlertCircle, Check, CalendarCheck, ArrowLeft } from "lucide-react";
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import type { BookingSlotRow } from "./single-slot-dialog";
 import { PackagePicker, packagesFor, type BookingPackageOption } from "@/components/booking/package-picker";
@@ -27,6 +27,8 @@ interface BookForCustomerDialogProps {
   onSuccess: () => void;
   /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
   isOwner?: boolean;
+  /** Shows a Back button (used when this form is step 2 of "New booking" on the Bookings page). */
+  onBack?: () => void;
 }
 
 const inputClass =
@@ -44,6 +46,7 @@ export function BookForCustomerDialog({
   packages = [],
   currency = "MYR",
   onSuccess,
+  onBack,
 }: BookForCustomerDialogProps) {
   const [mode, setMode] = useState<"EXISTING" | "NEW">("EXISTING");
   const [search, setSearch] = useState("");
@@ -361,6 +364,17 @@ export function BookForCustomerDialog({
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                disabled={isSubmitting || !!successMessage}
+                className="mr-auto inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono text-zinc-400 hover:text-white disabled:opacity-50"
+              >
+                <ArrowLeft className="size-3.5" />
+                Back
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
