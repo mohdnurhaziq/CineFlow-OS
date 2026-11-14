@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { STAFF_ROLES } from "@/lib/auth/guard";
 import { storeDeliverablePhoto, storeDeliverableVideoMaster, storeVideoReviewCopy } from "@/lib/deliverables/storage";
 import { errorMessageOf } from "@/lib/action-error";
+import { advanceProjectStage } from "@/lib/projects/stage";
 
 /**
  * Uploads a project's deliverables (studio staff only).
@@ -28,6 +29,22 @@ const MAX_PHOTO = 50 * MB;
 const MAX_VIDEO = 200 * MB;
 const MAX_REQUEST = 500 * MB;
 
+/**
+ * The project's album with this name, created if new. Photos are uploaded several at a time, so
+ * two requests can both find no album and both create one: each then settles on the oldest album
+ * of that name and removes its own, still empty, duplicate.
+ */
+async function findOrCreateAlbum(projectId: string, title: string, discipline: string) {
+  const oldest = () =>
+    db.clientDeliverable.findFirst({ where: { projectId, title }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+  const existing = await oldest();
+  if (existing) return existing;
+  const mine = await db.clientDeliverable.create({ data: { projectId, title, discipline } });
+  const keep = (await oldest()) ?? mine;
+  if (keep.id !== mine.id) await db.clientDeliverable.deleteMany({ where: { id: mine.id, items: { none: {} } } });
+  return keep;
+}
+
 const titleFrom = (name: string) => name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 120) || "Untitled";
 
 export async function POST(request: NextRequest) {
@@ -49,11 +66,7 @@ export async function POST(request: NextRequest) {
 
     const galleryName = String(form.get("gallery") ?? "").trim().slice(0, 80) || "Final selects";
     const kind = form.get("kind") === "VIDEO" ? "VIDEO" : "PHOTO";
-    const gallery =
-      (await db.clientDeliverable.findFirst({ where: { projectId: project.id, title: galleryName } })) ??
-      (await db.clientDeliverable.create({
-        data: { projectId: project.id, title: galleryName, discipline: kind === "VIDEO" ? "VIDEOGRAPHY" : "PHOTOGRAPHY" },
-      }));
+    const gallery = await findOrCreateAlbum(project.id, galleryName, kind === "VIDEO" ? "VIDEOGRAPHY" : "PHOTOGRAPHY");
 
     const created: string[] = [];
     const skipped: string[] = [];
@@ -114,6 +127,9 @@ export async function POST(request: NextRequest) {
       });
       created.push(item.id);
     }
+
+    // The first files in: the job is being edited.
+    if (created.length > 0) await advanceProjectStage(db, project.id, "POST_PRODUCTION");
 
     for (const path of [`/${project.tenant.slug}/admin/projects/${project.id}`, `/${project.tenant.slug}/vault/${project.id}`]) {
       try {

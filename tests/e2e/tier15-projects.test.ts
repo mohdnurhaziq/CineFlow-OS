@@ -24,6 +24,7 @@ import {
 import { getNotificationHistory } from "@/lib/notifications";
 import { liveProjectWhere, projectListWhere } from "@/lib/projects/list";
 import { projectKindForBooking } from "@/lib/bookings/project-promotion";
+import { advanceProjectStage, catchUpShotStages } from "@/lib/projects/stage";
 import { backfillBookingProjects } from "@/lib/bookings/backfill-projects";
 import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
 import { getStudioAnalytics } from "@/lib/actions/admin-analytics";
@@ -867,6 +868,68 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     harness.assertEqual((await db.campaignCategory.findUnique({ where: { id: legacy.id } }))?.isProduction, false, "Without the flag, a later Session choice is left alone");
   });
 
+  await harness.test("T15-FILES-05: photos uploaded at the same time into a new album land in one album", async () => {
+    const project = await reviewProject((await reviewBooking("CONFIRMED")).id, "PRE_PRODUCTION");
+    const png = await sharp({ create: { width: 300, height: 200, channels: 3, background: { r: 20, g: 120, b: 200 } } }).png().toBuffer();
+    const send = (n: number) => {
+      const form = new FormData();
+      form.append("projectId", project.id);
+      form.append("gallery", "Parallel album");
+      form.append("files", new File([new Uint8Array(png)], `p${n}.png`, { type: "image/png" }));
+      return withSession(crew, () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
+    };
+    const results = await Promise.all([send(1), send(2), send(3)]);
+    harness.assert(results.every((r) => r.status === 200), "All three uploaded");
+    const albums = await db.clientDeliverable.findMany({ where: { projectId: project.id }, include: { items: true } });
+    for (const item of albums.flatMap((a) => a.items)) {
+      createdFiles.push(masterFilePath(item.downloadUrl), ...(item.viewUrl ? [masterFilePath(item.viewUrl)] : []), path.join(process.cwd(), "public", item.previewUrl));
+    }
+    harness.assertEqual(albums.length, 1, "One album, not one per upload");
+    harness.assertEqual(albums[0]?.items.length, 3, "Holding all three photos");
+  });
+
+  await harness.test("T15-STAGE-01: a job moves forward on its own: shot after the session time, editing on the first upload", async () => {
+    const day = (offset: number) => new Date(`${new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)}T00:00:00.000Z`);
+    const slotFor = (offset: number) =>
+      db.bookingSlot.create({ data: { tenantId: lumina.id, category: "studio-portrait", date: day(offset), startTime: "09:00 AM", endTime: "10:00 AM", status: "BOOKED" } });
+    const pastSlot = await slotFor(-1);
+    const futureSlot = await slotFor(3);
+    const past = await reviewBooking("CONFIRMED");
+    const future = await reviewBooking("CONFIRMED");
+    await db.clientBooking.update({ where: { id: past.id }, data: { slotId: pastSlot.id } });
+    await db.clientBooking.update({ where: { id: future.id }, data: { slotId: futureSlot.id } });
+    const pastProject = await reviewProject(past.id, "PRE_PRODUCTION");
+    const futureProject = await reviewProject(future.id, "PRE_PRODUCTION");
+    try {
+      await catchUpShotStages(lumina.id);
+      harness.assertEqual((await db.project.findUnique({ where: { id: pastProject.id } }))?.status, "PRODUCTION", "Session time passed: Shot");
+      harness.assertEqual((await db.project.findUnique({ where: { id: futureProject.id } }))?.status, "PRE_PRODUCTION", "Session still to come: Booked");
+
+      const png = await sharp({ create: { width: 400, height: 300, channels: 3, background: { r: 90, g: 40, b: 160 } } }).png().toBuffer();
+      const upload = async (projectId: string) => {
+        const form = new FormData();
+        form.append("projectId", projectId);
+        form.append("files", new File([new Uint8Array(png)], "edit.png", { type: "image/png" }));
+        const res = await withSession(crew, () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
+        const item = await db.deliverableItem.findFirst({ where: { deliverable: { projectId } }, orderBy: { id: "desc" } });
+        if (item) createdFiles.push(masterFilePath(item.downloadUrl), ...(item.viewUrl ? [masterFilePath(item.viewUrl)] : []), path.join(process.cwd(), "public", item.previewUrl));
+        return res;
+      };
+      await upload(pastProject.id);
+      harness.assertEqual((await db.project.findUnique({ where: { id: pastProject.id } }))?.status, "POST_PRODUCTION", "First upload: Editing");
+
+      await db.project.update({ where: { id: futureProject.id }, data: { status: "DELIVERED" } });
+      await upload(futureProject.id);
+      harness.assertEqual((await db.project.findUnique({ where: { id: futureProject.id } }))?.status, "DELIVERED", "An upload never moves a delivered job back");
+
+      await advanceProjectStage(db, pastProject.id, "PRE_PRODUCTION");
+      harness.assertEqual((await db.project.findUnique({ where: { id: pastProject.id } }))?.status, "POST_PRODUCTION", "Stages only move forward on their own");
+    } finally {
+      await db.clientBooking.updateMany({ where: { id: { in: [past.id, future.id] } }, data: { slotId: null } });
+      await db.bookingSlot.deleteMany({ where: { id: { in: [pastSlot.id, futureSlot.id] } } });
+    }
+  });
+
   await harness.test("T15-BOOKING-PROJ-01: every confirmed booking gets a project, labelled session or production by category", async () => {
     // 1. Wedding booking: a Production category
     const weddingSlot = await db.bookingSlot.create({
@@ -1012,6 +1075,7 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     const convoProject = await db.project.findFirst({ where: { bookingId: convoBooking.id }, include: { callSheets: true } });
     harness.assert(convoProject !== null, "Convocation booking gets a gallery too");
     harness.assertEqual(convoProject?.kind, "SESSION", "Convocation -> Session project");
+    harness.assert(!/[A-Z]{4,}/.test(convoProject?.title ?? ""), `Title uses the category in words, not capitals (${convoProject?.title})`);
     harness.assertEqual(convoProject?.callSheets.length, 0, "Sessions get no call sheet");
 
     // Approving the same deposit again keeps one project per booking.

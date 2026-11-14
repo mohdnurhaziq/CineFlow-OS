@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BellRing, CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Heart, MessageSquare } from "lucide-react";
+import { CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Heart, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import {
   createCallSheet,
@@ -15,7 +15,9 @@ import {
   updateProjectStatus,
 } from "@/lib/actions/admin-projects";
 import { createEquipmentReservation } from "@/lib/actions/gear";
-import { PROJECT_STAGES, PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
+import { JobHeader, type JobBooking, type JobPayment } from "./job-header";
+import { PhotoUploader } from "./photo-uploader";
+import { DeliverPanel } from "./deliver-panel";
 import { formatMoney } from "@/lib/money";
 import { invoiceStatusLabel, milestoneLabel, reservationStatusLabel } from "@/lib/labels";
 import { formatSlotDate } from "@/lib/slot-time";
@@ -58,6 +60,9 @@ interface ProjectWorkspaceProps {
     invoices: Array<{ id: string; invoiceNumber: string; milestoneType: string; amount: number; status: string }>;
     shotItems: ShotItemData[];
   };
+  /** The booking this project came from, if any. */
+  booking: JobBooking | null;
+  payment: JobPayment;
 }
 
 const field =
@@ -80,7 +85,7 @@ function Section({
   id?: string;
 }) {
   return (
-    <section id={id} className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-5 space-y-4 scroll-mt-24">
+    <section id={id} className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-5 space-y-4 scroll-mt-44">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Icon className="size-4 text-amber-400" /> {title}
@@ -93,7 +98,7 @@ function Section({
 }
 
 /** One project's working page: stage, shoot days, gear, files for the client, and payments. */
-export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project }: ProjectWorkspaceProps) {
+export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project, booking, payment }: ProjectWorkspaceProps) {
   const router = useRouter();
   const { confirm, confirmDialog } = useConfirm();
   const [pending, start] = useTransition();
@@ -123,36 +128,20 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
   // ---- Gear form
   const [gearForm, setGearForm] = useState({ itemId: "", startDate: "", endDate: "" });
 
-  // ---- Upload form
-  const [kind, setKind] = useState<"PHOTO" | "VIDEO">("PHOTO");
-  const [gallery, setGallery] = useState(project.galleries[0]?.title ?? "Final selects");
-  const [uploading, setUploading] = useState(false);
-
-  const upload = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    form.set("projectId", project.id);
-    form.set("gallery", gallery);
-    form.set("kind", kind);
-    setUploading(true);
-    try {
-      const res = await fetch("/api/deliverables", { method: "POST", body: form });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(body.error ?? "Upload failed.");
-        return;
-      }
-      toast.success(`${body.created} file${body.created === 1 ? "" : "s"} added.`);
-      if (body.skipped?.length) toast.warning(`Skipped: ${body.skipped.join(", ")}`);
-      (e.target as HTMLFormElement).reset();
-      router.refresh();
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const fileCount = project.galleries.reduce((n, g) => n + g.items.length, 0);
   const isSession = project.kind === "SESSION";
+  // Albums with photos, one per name (older uploads could create the same album twice).
+  const albums = Object.values(
+    project.galleries.reduce<Record<string, (typeof project.galleries)[number]>>((acc, g) => {
+      if (!g.items.length) return acc;
+      acc[g.title] = acc[g.title] ? { ...acc[g.title]!, items: [...acc[g.title]!.items, ...g.items] } : g;
+      return acc;
+    }, {})
+  );
+  // Without a booking, the header shows the next planned shoot day (or the last one, once all have passed).
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const nextSheet = project.callSheets.find((c) => c.shootDate.slice(0, 10) >= todayKey) ?? project.callSheets.at(-1);
+  const nextShootDay = nextSheet ? { date: nextSheet.shootDate, time: nextSheet.generalCallTime } : null;
 
   // ---- Tell the client the gallery is ready (once every batch is uploaded)
   const notifyPhotosReady = async () => {
@@ -190,51 +179,19 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
             { label: project.title },
           ]}
         />
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{project.title}</h1>
-            <p className="text-xs text-zinc-400 mt-1">
-              {project.projectNumber} · {project.client.name} · {project.client.email}
-              {project.client.phone ? ` · ${project.client.phone}` : ""}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <label className="space-y-1">
-              <span className={small}>Kind</span>
-              <select
-                value={isSession ? "SESSION" : "PRODUCTION"}
-                disabled={pending}
-                onChange={(e) =>
-                  run(
-                    () => updateProjectKind({ tenantId, projectId: project.id, kind: e.target.value as "SESSION" | "PRODUCTION" }),
-                    e.target.value === "SESSION" ? "Now a session: planning tools hidden." : "Now a production: planning tools shown."
-                  )
-                }
-                className={field}
-              >
-                <option value="SESSION">Session</option>
-                <option value="PRODUCTION">Production</option>
-              </select>
-            </label>
-          <label className="space-y-1">
-            <span className={small}>Stage</span>
-            <select
-              value={project.status}
-              disabled={pending}
-              onChange={(e) =>
-                run(() => updateProjectStatus({ tenantId, projectId: project.id, status: e.target.value as (typeof PROJECT_STAGES)[number] }), "Stage updated.")
-              }
-              className={field}
-            >
-              {PROJECT_STAGES.map((s) => (
-                <option key={s} value={s}>
-                  {PROJECT_STAGE_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-          </div>
-        </div>
+        <JobHeader
+          tenantSlug={tenantSlug}
+          title={project.title}
+          projectNumber={project.projectNumber}
+          status={project.status}
+          isSession={isSession}
+          client={project.client}
+          booking={booking}
+          plannedShoot={nextShootDay}
+          payment={payment}
+          pending={pending}
+          onStageChange={(status) => run(() => updateProjectStatus({ tenantId, projectId: project.id, status }), "Stage updated.")}
+        />
       </div>
 
       {/* Planning tools: productions only. A session hides them; nothing is deleted. */}
@@ -445,49 +402,30 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
       <Section
         id="files"
         icon={ImagePlus}
-        title={`Files for the client (${fileCount})`}
+        title={`Photos for ${project.client.name.split(/\s+/)[0]} (${fileCount})`}
         aside={
-          <div className="flex items-center gap-3">
-            <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
-              Client view <ExternalLink className="size-3" />
-            </Link>
-            <button
-              type="button"
-              onClick={notifyPhotosReady}
-              disabled={pending || fileCount === 0}
-              title={fileCount === 0 ? "Upload the photos first" : "Send once every batch is uploaded"}
-              className={primary}
-            >
-              <BellRing className="size-3.5" /> Notify client: photos ready
-            </button>
-          </div>
+          <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
+            See what the client sees <ExternalLink className="size-3.5" />
+          </Link>
         }
       >
-        <p className={small}>
-          {project.isFinalBalancePaid
-            ? "Balance paid: the client can download the full-resolution files."
-            : project.filesReleased
-              ? "Your studio releases photos before payment: the client can download the full-resolution files now, and the balance stays due."
-              : "The client sees watermarked previews until the balance is paid. You can change this in Settings → Photo delivery."}
-        </p>
-        {project.galleries.map((g) => (
+        <PhotoUploader projectId={project.id} albums={project.galleries.map((g) => g.title)} />
+        {albums.map((g) => (
           <div key={g.id} className="space-y-2">
-            <div className="text-xs font-semibold text-zinc-300">{g.title}</div>
-            {g.items.length === 0 ? (
-              <p className={small}>Empty.</p>
-            ) : (
-              <ul className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {albums.length > 1 && <div className="text-sm font-semibold text-zinc-300">{g.title}</div>}
+            {(
+              <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {g.items.map((i) => (
                   <li key={i.id} className="relative rounded-lg border border-zinc-800 overflow-hidden bg-black">
                     {/* Floating Client Badges */}
                     {i.isClientFav && (
-                      <span className="absolute top-1.5 left-1.5 z-10 p-1 rounded-md bg-black/70 border border-red-500/30 text-red-400" title="Client Favorite Select">
-                        <Heart className="size-3 fill-red-500 text-red-500" />
+                      <span className="absolute top-2 left-2 z-10 p-1.5 rounded-md bg-black/70 text-red-400" title="The client's favourite">
+                        <Heart className="size-3.5 fill-red-500 text-red-500" aria-label="Client favourite" />
                       </span>
                     )}
                     {i.clientNotes && (
-                      <span className="absolute top-1.5 right-8 z-10 p-1 rounded-md bg-black/70 border border-amber-500/30 text-amber-300" title={`Client Retouch Note: ${i.clientNotes}`}>
-                        <MessageSquare className="size-3" />
+                      <span className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-black/70 text-amber-300" title={`Retouch note: ${i.clientNotes}`}>
+                        <MessageSquare className="size-3.5" aria-label="Has a retouch note" />
                       </span>
                     )}
 
@@ -499,8 +437,8 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                         <Film className="size-6" />
                       </div>
                     )}
-                    <div className="p-1.5 flex items-center justify-between gap-1">
-                      <span className="text-[11px] text-zinc-300 truncate">{i.title}</span>
+                    <div className="px-2.5 py-2 flex items-center justify-between gap-1">
+                      <span className="text-sm text-zinc-300 truncate">{i.title}</span>
                       <button
                         type="button"
                         aria-label={`Remove ${i.title}`}
@@ -510,14 +448,9 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                           run(() => deleteDeliverableItem({ tenantId, itemId: i.id }), "File removed.");
                         }}
                       >
-                        <Trash2 className="size-3" />
+                        <Trash2 className="size-4" />
                       </button>
                     </div>
-                    {i.clientNotes && (
-                      <div className="px-1.5 pb-1.5 text-[10px] text-amber-300 font-mono truncate" title={i.clientNotes}>
-                        Note: {i.clientNotes}
-                      </div>
-                    )}
                   </li>
                 ))}
               </ul>
@@ -525,56 +458,15 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
           </div>
         ))}
 
-        <form onSubmit={upload} className="space-y-3 rounded-xl border border-zinc-800 p-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <label className="space-y-1 block">
-              <span className={small}>Gallery</span>
-              <input value={gallery} onChange={(e) => setGallery(e.target.value)} list="project-galleries" className={field} />
-              <datalist id="project-galleries">
-                {project.galleries.map((g) => (
-                  <option key={g.id} value={g.title} />
-                ))}
-              </datalist>
-            </label>
-            <div className="flex gap-2 text-xs" role="group" aria-label="File type">
-              {(["PHOTO", "VIDEO"] as const).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={kind === k}
-                  onClick={() => setKind(k)}
-                  className={`px-3 py-2 rounded-lg border ${kind === k ? "border-amber-500 text-amber-300 bg-amber-500/10" : "border-zinc-700 text-zinc-300"}`}
-                >
-                  {k === "PHOTO" ? "Photos" : "Video"}
-                </button>
-              ))}
-            </div>
-          </div>
-          {kind === "PHOTO" ? (
-            <label className="space-y-1 block">
-              <span className={small}>Photos (JPG, PNG, WebP or TIFF, up to 50 MB each)</span>
-              <input name="files" type="file" multiple required accept="image/jpeg,image/png,image/webp,image/tiff" className="block text-xs text-zinc-300" />
-            </label>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <label className="space-y-1 block">
-                <span className={small}>Title</span>
-                <input name="title" placeholder="Highlight film" className={field} />
-              </label>
-              <label className="space-y-1 block">
-                <span className={small}>Review copy (clients stream this)</span>
-                <input name="review" type="file" required accept="video/mp4,video/quicktime" className="block text-xs text-zinc-300" />
-              </label>
-              <label className="space-y-1 block">
-                <span className={small}>Master (released when paid)</span>
-                <input name="master" type="file" required accept="video/mp4,video/quicktime" className="block text-xs text-zinc-300" />
-              </label>
-            </div>
-          )}
-          <button type="submit" disabled={uploading} className={primary}>
-            {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />} {uploading ? "Uploading…" : "Upload"}
-          </button>
-        </form>
+        <DeliverPanel
+          clientName={project.client.name}
+          items={project.galleries.flatMap((g) => g.items)}
+          filesReleased={project.filesReleased}
+          isFinalBalancePaid={project.isFinalBalancePaid}
+          status={project.status}
+          pending={pending}
+          onNotify={notifyPhotosReady}
+        />
       </Section>
 
       {/* Payments */}
@@ -597,6 +489,26 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
           </ul>
         )}
       </Section>
+      {/* Rarely changed, so it lives at the foot of the page. */}
+      <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-400 border-t border-zinc-800 pt-5">
+        <label htmlFor="project-kind">Project type</label>
+        <select
+          id="project-kind"
+          value={isSession ? "SESSION" : "PRODUCTION"}
+          disabled={pending}
+          onChange={(e) =>
+            run(
+              () => updateProjectKind({ tenantId, projectId: project.id, kind: e.target.value as "SESSION" | "PRODUCTION" }),
+              e.target.value === "SESSION" ? "Now a session: planning tools hidden." : "Now a production: planning tools shown."
+            )
+          }
+          className="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white focus:outline-none focus:border-amber-500"
+        >
+          <option value="SESSION">Session: photos and payments</option>
+          <option value="PRODUCTION">Production: adds shoot days, shot list and gear</option>
+        </select>
+        <span className="text-zinc-500">{project.projectNumber}</span>
+      </div>
       {confirmDialog}
     </div>
   );

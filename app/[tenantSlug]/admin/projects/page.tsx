@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/money";
 import { PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
 import { formatSlotDate } from "@/lib/slot-time";
 import { PROJECT_LIST_TABS, projectListWhere, type ProjectListTab } from "@/lib/projects/list";
+import { catchUpShotStages } from "@/lib/projects/stage";
 
 interface ProjectsPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -28,6 +29,9 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
   const tab: ProjectListTab = PROJECT_LIST_TABS.includes(tabParam as ProjectListTab) ? (tabParam as ProjectListTab) : "productions";
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
   if (!tenant) notFound();
+
+  // A session whose time has passed counts as shot.
+  await catchUpShotStages(tenant.id);
 
   const counts = Object.fromEntries(
     await Promise.all(PROJECT_LIST_TABS.map(async (t) => [t, await db.project.count({ where: projectListWhere(tenant.id, t) })] as const))

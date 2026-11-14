@@ -168,6 +168,7 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     const done = await withSession(crew, () => recordSessionOutcome({ ...ids(futureBooking), outcome: "COMPLETED" }));
     harness.assert(done.success === true, "Marked done", JSON.stringify(done));
     harness.assertEqual((await db.clientBooking.findUnique({ where: { id: futureBooking } }))?.status, "COMPLETED", "Status COMPLETED");
+    harness.assertEqual((await db.project.findFirst({ where: { bookingId: futureBooking } }))?.status, "PRODUCTION", "Its gallery moves to Shot");
 
     // Photos handed over ("Notify client: photos ready", covered in tier 15).
     await db.clientBooking.update({ where: { id: futureBooking }, data: { status: "DELIVERED", deliveredAt: new Date() } });

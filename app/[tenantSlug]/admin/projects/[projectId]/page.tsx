@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { filesReleased } from "@/lib/deliverables/access";
+import { catchUpShotStages } from "@/lib/projects/stage";
+import { formatMoney } from "@/lib/money";
+import type { JobBooking, JobPayment } from "@/components/admin/projects/job-header";
 import { ProjectWorkspace } from "@/components/admin/projects/project-workspace";
 
 interface ProjectPageProps {
@@ -23,10 +26,23 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true, releaseFilesBeforePayment: true } });
   if (!tenant) notFound();
 
+  // A session whose time has passed counts as shot.
+  await catchUpShotStages(tenant.id);
+
   const project = await db.project.findFirst({
     where: { id: projectId, tenantId: tenant.id },
     include: {
       client: { select: { name: true, email: true, phone: true } },
+      booking: {
+        select: {
+          id: true,
+          trackingCode: true,
+          packageName: true,
+          serviceTier: true,
+          targetDate: true,
+          slot: { select: { date: true, startTime: true, endTime: true } },
+        },
+      },
       callSheets: { orderBy: { shootDate: "asc" } },
       reservations: { include: { item: { select: { name: true, sku: true } } }, orderBy: { startDate: "asc" } },
       deliverables: { include: { items: { orderBy: { id: "asc" } } }, orderBy: { createdAt: "asc" } },
@@ -42,6 +58,31 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
     orderBy: { name: "asc" },
   });
 
+  // One line for the header: paid in full, or what is still owed.
+  const open = project.invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE");
+  const checking = project.invoices.filter((i) => i.status === "PENDING_VERIFICATION");
+  const sum = (rows: { amount: number }[]) => rows.reduce((n, i) => n + i.amount, 0);
+  const payment: JobPayment =
+    open.length > 0
+      ? { label: `${formatMoney(tenant.currency, sum(open))} due`, tone: "due" }
+      : checking.length > 0
+        ? { label: `${formatMoney(tenant.currency, sum(checking))} being checked`, tone: "due" }
+        : project.invoices.some((i) => i.status === "PAID")
+          ? { label: "Paid in full", tone: "paid" }
+          : { label: "No invoices yet", tone: "neutral" };
+
+  const b = project.booking;
+  const booking: JobBooking | null = b
+    ? {
+        id: b.id,
+        trackingCode: b.trackingCode,
+        packageName: b.packageName ?? b.serviceTier ?? null,
+        date: b.slot ? b.slot.date.toISOString() : b.targetDate ? `${b.targetDate}T00:00:00.000Z` : null,
+        startTime: b.slot?.startTime ?? null,
+        endTime: b.slot?.endTime ?? null,
+      }
+    : null;
+
   return (
     <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
       <ProjectWorkspace
@@ -49,6 +90,8 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
         tenantSlug={tenant.slug}
         currency={tenant.currency}
         gear={gear}
+        booking={booking}
+        payment={payment}
         project={{
           id: project.id,
           title: project.title,

@@ -188,7 +188,8 @@ export async function provisionProjectForBooking(
   // 5. Determine Project Attributes
   const year = new Date().getFullYear();
   const projectNumber = await generateProjectNumber(tx, year);
-  const categoryLabel = booking.packageName || booking.category.replace(/[-_]/g, " ").toUpperCase();
+  const words = booking.category.replace(/[-_]+/g, " ").trim();
+  const categoryLabel = booking.packageName || words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
   const title = `${booking.clientName} - ${categoryLabel}`;
   const budget = booking.sessionPrice ?? (booking.depositAmount > 0 ? booking.depositAmount : 0);
   const shootDates = booking.slot

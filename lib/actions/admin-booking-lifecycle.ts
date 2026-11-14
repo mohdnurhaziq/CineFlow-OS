@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { advanceProjectStage } from "@/lib/projects/stage";
 import { env } from "@/lib/env";
 import { OWNER_ROLES, requireStaff } from "@/lib/auth/guard";
 import { actionErrorMessage } from "@/lib/action-error";
@@ -238,6 +239,10 @@ export async function recordSessionOutcome(input: z.input<typeof OutcomeSchema>)
     if (booking.slot && !isSlotInPast(booking.slot)) return fail("NOT_STARTED", "The session hasn't started yet.");
 
     await db.clientBooking.update({ where: { id: booking.id }, data: { status: data.outcome, completedAt: new Date() } });
+    if (data.outcome === "COMPLETED") {
+      const project = await db.project.findFirst({ where: { bookingId: booking.id }, select: { id: true } });
+      if (project) await advanceProjectStage(db, project.id, "PRODUCTION");
+    }
     revalidate(data.tenantSlug);
     return { success: true };
   } catch (err) {
