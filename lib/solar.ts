@@ -78,7 +78,7 @@ function getJulianDay(year: number, month: number, day: number): number {
  * Formats fractional hours (0-24) into "hh:mm AM/PM" string.
  */
 function formatTime12h(hours: number): string {
-  let normalizedHours = ((hours % 24) + 24) % 24;
+  const normalizedHours = ((hours % 24) + 24) % 24;
   let h = Math.floor(normalizedHours);
   const m = Math.round((normalizedHours - h) * 60);
 

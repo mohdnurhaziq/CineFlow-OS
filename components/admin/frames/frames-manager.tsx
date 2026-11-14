@@ -334,7 +334,7 @@ export function FramesManager({
                           {frame.material}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-zinc-300">
-                          {frame.moldingWidth}"
+                          {frame.moldingWidth}&quot;
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-amber-400">
                           {frame.priceOffset > 0 ? `+${formatPrice(frame.priceOffset)}` : "Included"}
@@ -427,7 +427,7 @@ export function FramesManager({
                           {size.name}
                         </td>
                         <td className="px-4 py-3 text-zinc-300">
-                          {size.widthInches}" × {size.heightInches}"
+                          {size.widthInches}&quot; × {size.heightInches}&quot;
                         </td>
                         <td className="px-4 py-3 font-bold text-white">
                           {formatPrice(size.basePrice)}

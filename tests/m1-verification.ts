@@ -32,7 +32,7 @@ async function runM1Verification() {
   ] as const;
 
   for (const key of modelKeys) {
-    // @ts-ignore
+    // @ts-expect-error -- dynamic model delegate lookup by name
     const count = await db[key].count();
     assert(count > 0, `Model '${key}' has ${count} records (non-zero)`);
   }

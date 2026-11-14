@@ -111,7 +111,7 @@ export function FeaturesGrid() {
                 </div>
 
                 <div className="pt-4 mt-4 border-t border-zinc-800/60 text-[10px] font-mono text-zinc-400">
-                  PILLAR 0{idx + 1} // PRODUCTION
+                  PILLAR 0{idx + 1} {"//"} PRODUCTION
                 </div>
               </div>
             );

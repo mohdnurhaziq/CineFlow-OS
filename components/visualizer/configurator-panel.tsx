@@ -251,7 +251,7 @@ export function ConfiguratorPanel({
                         )}
                       </div>
                       <div className="text-xs text-zinc-400 font-mono mt-0.5">
-                        {size.widthInches}" × {size.heightInches}" Archival Cotton Rag
+                        {size.widthInches}&quot; × {size.heightInches}&quot; Archival Cotton Rag
                       </div>
                     </div>
 
@@ -298,7 +298,7 @@ export function ConfiguratorPanel({
                       <div>
                         <div className="font-bold text-sm text-white">{frame.name}</div>
                         <div className="text-xs text-zinc-400 font-mono mt-0.5">
-                          {frame.material} • {frame.moldingWidth}" Profile
+                          {frame.material} • {frame.moldingWidth}&quot; Profile
                         </div>
                       </div>
                     </div>
@@ -358,9 +358,9 @@ export function ConfiguratorPanel({
                 <div className="flex items-center gap-3">
                   <div className="size-8 rounded-lg bg-white border border-zinc-300 shadow-sm shrink-0" />
                   <div>
-                    <div className="font-bold text-sm text-white">2" Pure Archival White</div>
+                    <div className="font-bold text-sm text-white">2&quot; Pure Archival White</div>
                     <div className="text-xs text-zinc-400 mt-0.5">
-                      45° beveled acid-free core (+4" total frame size)
+                      45° beveled acid-free core (+4&quot; total frame size)
                     </div>
                   </div>
                 </div>
@@ -382,9 +382,9 @@ export function ConfiguratorPanel({
                 <div className="flex items-center gap-3">
                   <div className="size-8 rounded-lg bg-[#f6f4eb] border border-zinc-300 shadow-sm shrink-0" />
                   <div>
-                    <div className="font-bold text-sm text-white">2" Warm Gallery Off-White</div>
+                    <div className="font-bold text-sm text-white">2&quot; Warm Gallery Off-White</div>
                     <div className="text-xs text-zinc-400 mt-0.5">
-                      Warm museum matting (+4" total frame size)
+                      Warm museum matting (+4&quot; total frame size)
                     </div>
                   </div>
                 </div>
@@ -414,7 +414,7 @@ export function ConfiguratorPanel({
               Exterior Frame Footprint
             </div>
             <div className="text-xs font-mono font-bold text-amber-400">
-              {totalW.toFixed(1)}" × {totalH.toFixed(1)}"
+              {totalW.toFixed(1)}&quot; × {totalH.toFixed(1)}&quot;
             </div>
           </div>
         </div>

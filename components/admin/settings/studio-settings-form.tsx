@@ -639,7 +639,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
         </div>
 
         <p className="text-xs text-zinc-400">
-          Upload or link your studio's payment QR code (DuitNow, PromptPay, Venmo, CashApp, or direct banking QR).
+          Upload or link your studio&apos;s payment QR code (DuitNow, PromptPay, Venmo, CashApp, or direct banking QR).
         </p>
 
         <ImageUploadField
@@ -657,12 +657,13 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
               QR Code Preview
             </span>
             <div className="size-36 rounded-xl border border-zinc-700 bg-white p-2 flex items-center justify-center overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element -- any URL the owner pastes; next/image needs allow-listed hosts */}
               <img
                 src={qrCodeUrl}
                 alt="Studio QR Code"
                 className="w-full h-full object-contain"
                 onError={(e) => {
-                  (e.target as any).style.display = "none";
+                  e.currentTarget.style.display = "none";
                 }}
               />
             </div>

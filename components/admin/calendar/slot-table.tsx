@@ -160,7 +160,7 @@ export function SlotTable({
     return (
       <div className="p-8 text-center rounded-2xl border border-zinc-800 bg-[#0d0d10]">
         <p className="text-sm text-zinc-400">No calendar booking slots found matching filters.</p>
-        <p className="text-xs text-zinc-400 mt-1">Use "New Slot" or "Batch Generate" to populate studio availability.</p>
+        <p className="text-xs text-zinc-400 mt-1">Use &quot;New Slot&quot; or &quot;Batch Generate&quot; to populate studio availability.</p>
       </div>
     );
   }

@@ -24,7 +24,7 @@ const modelKeys = [
 async function getModelCounts(): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
   for (const key of modelKeys) {
-    // @ts-ignore
+    // @ts-expect-error -- dynamic model delegate lookup by name
     counts[key] = await db[key].count();
   }
   return counts;
