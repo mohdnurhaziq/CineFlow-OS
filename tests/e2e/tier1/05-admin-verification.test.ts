@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { TestHarness } from "../test-harness";
 import {
   createCampaignCategory,
+  updateCampaignCategory,
   deleteCampaignCategory,
   createServicePackage,
   deleteServicePackage,
@@ -77,6 +78,22 @@ export async function runAdminVerificationTests(harness: TestHarness) {
         await db.campaignCategory.delete({ where: { id: res.category.id } }).catch(() => null);
       }
     });
+  });
+
+  await harness.test("T1-F40-01b: a category is saved as a Production or a Session", async () => {
+    const slug = `kind-${Date.now()}`;
+    const base = { tenantId: luminaTenant!.id, tenantSlug: "lumina-cine", name: "Graduation Day", slug, sortOrder: 11, isActive: true };
+    const res = await createCampaignCategory({ ...base, isProduction: true });
+    harness.assert(res.success === true && Boolean(res.category?.id), "Category created");
+    const id = res.category!.id;
+    harness.registerTeardown(async () => {
+      await db.campaignCategory.delete({ where: { id } }).catch(() => null);
+    });
+    harness.assertEqual((await db.campaignCategory.findUnique({ where: { id } }))?.isProduction, true, "Category saved as Production");
+
+    const upd = await updateCampaignCategory({ ...base, id, isProduction: false });
+    harness.assert(upd.success === true, "Category updated");
+    harness.assertEqual((await db.campaignCategory.findUnique({ where: { id } }))?.isProduction, false, "Category saved as Session");
   });
 
   await harness.test("T1-F40-02: createServicePackage creates package linked to category with price, turnaround, and deliverables", async () => {

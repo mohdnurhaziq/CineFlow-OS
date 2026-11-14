@@ -267,20 +267,35 @@ export function CategoryDialog({
           </div>
 
           <div>
-            <label className="flex items-start gap-2.5 p-3 rounded-lg bg-zinc-900 border border-zinc-700 cursor-pointer hover:border-zinc-600 transition-colors">
-              <input
-                type="checkbox"
-                checked={isProduction}
-                onChange={(e) => setIsProduction(e.target.checked)}
-                className="mt-0.5 rounded border-zinc-600 text-amber-500 focus:ring-0"
-              />
-              <div className="text-xs">
-                <span className="font-semibold text-white block">Auto-Provision Production Project</span>
-                <span className="text-zinc-400 text-[11px] block mt-0.5">
-                  When a booking in this category is approved, automatically create a linked Project with Call Sheets, Gear BOM, and Deliverables Vault (recommended for Weddings, Events, and Commercial shoots).
-                </span>
+            <fieldset className="space-y-1.5">
+              <legend className="text-xs font-mono text-zinc-400 mb-1">Kind of job</legend>
+              <p className="text-[11px] text-zinc-500">Every confirmed booking gets a gallery for its photos. This decides how it is listed.</p>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {[
+                  { value: false, title: "Session", body: "Quick shoots: convocation, portrait, Raya. Listed under Sessions." },
+                  { value: true, title: "Production", body: "Weddings, commercial, events. Gets shoot-day planning tools." },
+                ].map((opt) => (
+                  <label
+                    key={opt.title}
+                    className={`flex items-start gap-2.5 p-3 rounded-lg bg-zinc-900 border cursor-pointer transition-colors ${
+                      isProduction === opt.value ? "border-amber-500" : "border-zinc-700 hover:border-zinc-600"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="jobKind"
+                      checked={isProduction === opt.value}
+                      onChange={() => setIsProduction(opt.value)}
+                      className="mt-0.5 accent-amber-500"
+                    />
+                    <span className="text-xs">
+                      <span className="font-semibold text-white block">{opt.title}</span>
+                      <span className="text-zinc-400 text-[11px] block mt-0.5">{opt.body}</span>
+                    </span>
+                  </label>
+                ))}
               </div>
-            </label>
+            </fieldset>
           </div>
 
           <div>
