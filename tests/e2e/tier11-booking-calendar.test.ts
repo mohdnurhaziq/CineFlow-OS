@@ -12,6 +12,7 @@ import { holdBookingSlot } from "@/lib/actions/booking";
 import { processBookingCheckout } from "@/lib/actions/checkout";
 import BookingPage from "@/app/[tenantSlug]/book/page";
 import { withSession } from "./mocks/session";
+import { packageRangeFor } from "@/lib/bookings/package-range";
 
 const DAY_MS = 86_400_000;
 
@@ -185,5 +186,26 @@ export async function runTier11BookingCalendarTests(harness: TestHarness) {
     harness.assert(!slots.some((s) => s.id === past.id), "Yesterday's slot is not offered");
     harness.assert(slots.some((s) => s.id === upcoming.id), "Upcoming slot is offered");
     harness.assert(!slots.some((s) => isSlotInPast(s)), "No offered slot has already started");
+  });
+
+  await harness.test("T11-PRICING-01: a category's package range drives the slot dialogs", async () => {
+    const packages = [
+      { category: "STUDIO_PORTRAIT", price: 300, depositPrice: 100 },
+      { category: "studio-portrait", price: 1200, depositPrice: 250 },
+      { category: "WEDDING", price: 5000, depositPrice: 1000 },
+    ];
+    const portrait = packageRangeFor(packages, "studio_portrait");
+    harness.assertDeepEqual(
+      portrait,
+      { count: 2, minPrice: 300, maxPrice: 1200, minDeposit: 100 },
+      "Matches categories loosely and spans every package in the category",
+    );
+    harness.assertDeepEqual(
+      packageRangeFor(packages, "WEDDING"),
+      { count: 1, minPrice: 5000, maxPrice: 5000, minDeposit: 1000 },
+      "A single package gives a one-price range",
+    );
+    harness.assertEqual(packageRangeFor(packages, "CONVOCATION"), null, "No packages: null, so the slot fee fields show");
+    harness.assertEqual(packageRangeFor([], "WEDDING"), null, "Empty package list: null");
   });
 }

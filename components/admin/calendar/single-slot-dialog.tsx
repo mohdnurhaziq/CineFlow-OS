@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2, Calendar } from "lucide-react";
 import { createSingleBookingSlot, updateBookingSlot } from "@/lib/actions/admin-calendar";
 import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
+import { packageRangeFor } from "@/lib/bookings/package-range";
+import { PackagePricingNote } from "./package-pricing-note";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useDialog } from "@/lib/use-dialog";
@@ -52,6 +54,8 @@ interface SingleSlotDialogProps {
   onSuccess?: () => void;
   /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
   isOwner?: boolean;
+  /** Service packages; a category that has some is priced by them, so no slot fee is asked for. */
+  packages?: { category: string; price: number; depositPrice: number }[];
 }
 
 export function SingleSlotDialog({
@@ -64,6 +68,7 @@ export function SingleSlotDialog({
   categories,
   slotToEdit,
   onSuccess,
+  packages = [],
 }: SingleSlotDialogProps) {
   const isEditing = !!slotToEdit;
 
@@ -109,13 +114,16 @@ export function SingleSlotDialog({
   const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
+  const packageRange = packageRangeFor(packages, category);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const parsedPrice = parseFloat(price);
-    const parsedDeposit = parseFloat(depositRequired);
+    // A category priced by packages stores fee 0 and the lowest package deposit (as staff-opened slots do).
+    const parsedPrice = packageRange ? 0 : parseFloat(price);
+    const parsedDeposit = packageRange ? packageRange.minDeposit : parseFloat(depositRequired);
 
     if (isNaN(parsedDeposit) || parsedDeposit < 0) {
       setErrorMessage("Enter the deposit clients pay to book this slot (0 for no deposit).");
@@ -266,7 +274,9 @@ export function SingleSlotDialog({
             </div>
           </div>
 
-          {isOwner ? (
+          {packageRange ? (
+            <PackagePricingNote range={packageRange} currency={currency} />
+          ) : isOwner ? (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-mono text-zinc-400 block mb-1">
@@ -281,7 +291,6 @@ export function SingleSlotDialog({
                   placeholder="0"
                   className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
                 />
-                <p className="text-[11px] text-zinc-500 mt-1">0 = priced by the package the client picks.</p>
               </div>
 
               <div>

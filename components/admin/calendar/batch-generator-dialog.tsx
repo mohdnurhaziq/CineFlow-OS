@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { X, Calendar, Layers, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
 import { batchGenerateBookingSlots } from "@/lib/actions/admin-calendar";
 import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
+import { packageRangeFor } from "@/lib/bookings/package-range";
+import { PackagePricingNote } from "./package-pricing-note";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { parseTimeToMinutes } from "@/lib/utils/time";
@@ -20,6 +22,8 @@ interface BatchGeneratorDialogProps {
   onSuccess?: () => void;
   /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
   isOwner?: boolean;
+  /** Service packages; a category that has some is priced by them, so no slot fee is asked for. */
+  packages?: { category: string; price: number; depositPrice: number }[];
 }
 
 const DAYS = [
@@ -41,6 +45,7 @@ export function BatchGeneratorDialog({
   currency,
   categories,
   onSuccess,
+  packages = [],
 }: BatchGeneratorDialogProps) {
   // Dates default: tomorrow to 7 days ahead
   const defaultStart: string = useMemo(() => {
@@ -122,14 +127,17 @@ export function BatchGeneratorDialog({
     else if (type === "WEEKENDS") setDaysOfWeek([0, 6]);
   };
 
+  const packageRange = packageRangeFor(packages, category);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage(null);
     setResultMessage(null);
 
-    const parsedPrice = parseFloat(price);
-    const parsedDeposit = parseFloat(depositRequired);
+    // A category priced by packages stores fee 0 and the lowest package deposit (as staff-opened slots do).
+    const parsedPrice = packageRange ? 0 : parseFloat(price);
+    const parsedDeposit = packageRange ? packageRange.minDeposit : parseFloat(depositRequired);
 
     if (isNaN(parsedDeposit) || parsedDeposit < 0) {
       setErrorMessage("Enter the deposit clients pay to book these slots (0 for no deposit).");
@@ -382,7 +390,9 @@ export function BatchGeneratorDialog({
           </div>
 
           {/* Pricing */}
-          {isOwner ? (
+          {packageRange ? (
+            <PackagePricingNote range={packageRange} currency={currency} />
+          ) : isOwner ? (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-mono text-zinc-400 block mb-1">

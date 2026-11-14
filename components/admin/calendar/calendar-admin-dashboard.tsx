@@ -400,6 +400,7 @@ export function CalendarAdminDashboard({
         currency={currency}
         categories={categories}
         slotToEdit={slotToEdit}
+        packages={packages}
         onSuccess={handleSuccess}
       />
 
@@ -411,6 +412,7 @@ export function CalendarAdminDashboard({
         tenantSlug={tenantSlug}
         currency={currency}
         categories={categories}
+        packages={packages}
         onSuccess={handleSuccess}
       />
 
