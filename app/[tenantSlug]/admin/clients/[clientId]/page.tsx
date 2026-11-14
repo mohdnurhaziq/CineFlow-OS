@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -129,7 +130,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
 
   const stats = [
     { label: "Bookings", value: String(bookings.length) },
-    { label: "Projects", value: String(projects.length) },
+    { label: "Galleries", value: String(projects.length) },
     { label: "Paid", value: formatMoney(tenant.currency, money.paid) },
     {
       label: "Balance due",
@@ -139,7 +140,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
   ];
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 max-w-4xl mx-auto space-y-5">
+    <PageShell width="detail" className="space-y-5">
       <AdminBreadcrumb items={[{ label: "Clients", href: `${base}/clients` }, { label: client.name }]} />
 
       <ClientContactCard
@@ -186,7 +187,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
         ))}
       </Section>
 
-      <Section title="Projects" icon={Clapperboard} count={projects.length} empty="No projects yet.">
+      <Section title="Galleries" icon={Clapperboard} count={projects.length} empty="No galleries yet.">
         {projects.map((p) => (
           <Row
             key={p.id}
@@ -238,6 +239,6 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
           />
         ))}
       </Section>
-    </div>
+    </PageShell>
   );
 }

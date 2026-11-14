@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
+import { buttonVariants } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -153,24 +155,17 @@ export function CalendarAdminDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Calendar className="size-6 text-amber-400" />
-            <span>Calendar</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Open time slots for clients to book, block out days, and see who has booked. A slot is held for 10 minutes while a client checks out.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
+      <PageHeader
+        icon={Calendar}
+        title="Calendar"
+        description="Open time slots for clients to book, block out days, and see who has booked. A slot is held for 10 minutes while a client checks out."
+        actions={
+          <>
           <button
             type="button"
             onClick={handleCleanup}
             disabled={isCleaning}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono text-zinc-300 bg-zinc-900 border border-zinc-700 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            className={buttonVariants({ variant: "secondary" })}
             title="Release any slots whose 10-minute hold window expired"
           >
             <RefreshCw className={`size-3.5 ${isCleaning ? "animate-spin" : ""}`} />
@@ -180,7 +175,7 @@ export function CalendarAdminDashboard({
           <button
             type="button"
             onClick={() => setIsBatchDialogOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-zinc-900 text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors"
+            className={buttonVariants({ variant: "secondary" })}
           >
             <Sparkles className="size-4" />
             <span>Batch Generate</span>
@@ -192,13 +187,14 @@ export function CalendarAdminDashboard({
               setSlotToEdit(null);
               setIsSingleDialogOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/10"
+            className={buttonVariants()}
           >
             <Plus className="size-4" />
             <span>New Slot</span>
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Status KPI Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

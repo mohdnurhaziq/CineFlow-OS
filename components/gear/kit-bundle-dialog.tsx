@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { X, Plus, Trash2, PackagePlus, AlertCircle } from "lucide-react";
 import { createKitBundle, updateKitBundle } from "@/lib/actions/gear";
@@ -309,7 +310,7 @@ export function KitBundleDialog({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+              className={buttonVariants()}
             >
               {isSubmitting ? "Saving..." : isEditing ? "Save Bundle" : "Assemble Kit"}
             </button>

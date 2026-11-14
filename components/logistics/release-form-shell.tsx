@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import {
   FileCheck2,
@@ -347,7 +349,7 @@ export function ReleaseFormShell({
             <button
               type="submit"
               disabled={isPending}
-              className="w-full min-h-[48px] px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 select-none active:scale-[0.99]"
+              className={cn(buttonVariants({ size: "lg" }), "w-full min-h-12")}
             >
               <FileCheck2 className="size-4" />
               <span>

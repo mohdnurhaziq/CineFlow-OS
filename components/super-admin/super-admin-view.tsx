@@ -76,7 +76,7 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
               <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                 <ShieldCheck className="size-5" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 Platform Operations &amp; Macro Telemetry
               </h1>
             </div>

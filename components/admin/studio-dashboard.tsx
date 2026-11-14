@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
+import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import {
   DollarSign,
@@ -15,6 +17,7 @@ import {
   CheckCircle2,
   MapPin,
   ChevronRight,
+  LayoutDashboard,
 } from "lucide-react";
 import type { StudioAnalyticsData } from "@/lib/actions/admin-analytics";
 import { conditionLabel, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
@@ -74,31 +77,16 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Top Welcome & Mission Control Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Overview
-            </span>
-            <span className="text-xs text-zinc-500 font-mono">
-              /{tenant.slug}
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1">
-            {tenant.name}
-          </h1>
-          <p className="text-sm text-zinc-400 mt-1 max-w-2xl">
-            Money in and waiting, gear on hand, upcoming shoots and open proposals at a glance.
-          </p>
-        </div>
-
-        {/* Fast Action Quick Jump Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        icon={LayoutDashboard}
+        title="Overview"
+        description="Money in and waiting, gear on hand, upcoming shoots and open proposals at a glance."
+        actions={
+          <>
           {kpis.pendingVerificationCount > 0 && (
             <Link
               href={`/${tenant.slug}/admin/verification`}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500 text-black font-semibold text-xs tracking-wide hover:bg-amber-400 transition-colors shadow-sm shadow-amber-500/20"
+              className={buttonVariants()}
             >
               <ShieldAlert className="size-4" />
               <span>Verify {kpis.pendingVerificationCount} {kpis.pendingVerificationCount === 1 ? "Payment" : "Payments"}</span>
@@ -106,20 +94,21 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
           )}
           <Link
             href={`/${tenant.slug}/admin/calendar`}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-mono transition-colors"
+            className={buttonVariants({ variant: "secondary" })}
           >
             <Calendar className="size-3.5 text-amber-400" />
             <span>Open Calendar</span>
           </Link>
           <Link
             href={`/${tenant.slug}/admin/inventory`}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-mono transition-colors"
+            className={buttonVariants({ variant: "secondary" })}
           >
             <Layers className="size-3.5 text-amber-400" />
             <span>Gear</span>
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {guide}
 
@@ -314,7 +303,7 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
                           {inv.status === "PENDING_VERIFICATION" ? (
                             <Link
                               href={`/${tenant.slug}/admin/verification`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-[11px] font-sans transition-colors whitespace-nowrap"
+                              className={buttonVariants({ size: "sm" })}
                             >
                               Verify
                               <ChevronRight className="size-3" />

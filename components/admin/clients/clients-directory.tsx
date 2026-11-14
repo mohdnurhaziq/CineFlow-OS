@@ -1,5 +1,7 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, Users, ChevronRight, Download } from "lucide-react";
@@ -86,14 +88,12 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Clients</span>
-          <h1 className="text-2xl font-black tracking-tight text-white">Client directory</h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Everyone with an account at your studio, with their bookings, projects and balance.
-          </p>
-        </div>
+      <PageHeader
+        icon={Users}
+        title="Clients"
+        description="Everyone with an account at your studio, with their bookings, galleries and balance."
+        actions={
+          <>
         <label className="relative w-full sm:w-80">
           <span className="sr-only">Search clients</span>
           <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -105,7 +105,9 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
             className="w-full pl-9 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors"
           />
         </label>
-      </div>
+          </>
+        }
+      />
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Filter clients">
@@ -131,7 +133,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
           type="button"
           onClick={exportCsv}
           disabled={visible.length === 0}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 text-xs font-mono text-zinc-300 hover:text-white disabled:opacity-40 transition-colors"
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           <Download className="size-3.5 text-amber-400" aria-hidden="true" />
           Export CSV
@@ -155,7 +157,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
             <span>Client</span>
             <span>Phone</span>
             <span className="text-right">Bookings</span>
-            <span className="text-right">Projects</span>
+            <span className="text-right">Galleries</span>
             <span className="text-right">Paid</span>
             <span className="text-right">Balance due</span>
             <span className="text-right">Last active</span>

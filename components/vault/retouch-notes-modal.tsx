@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import { X, MessageSquare, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -131,14 +132,14 @@ export function RetouchNotesModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white text-xs font-medium"
+              className={buttonVariants({ variant: "secondary" })}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+              className={buttonVariants()}
             >
               {isPending ? (
                 <Loader2 className="size-3.5 animate-spin" />

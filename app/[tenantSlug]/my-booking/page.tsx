@@ -1,3 +1,4 @@
+import { buttonVariants } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -47,7 +48,7 @@ export default async function MyBookingPage({ params, searchParams }: MyBookingP
           </div>
           <Link
             href={`/${tenant.slug}/account`}
-            className="inline-flex items-center justify-center min-h-11 sm:min-h-0 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold whitespace-nowrap transition-colors"
+            className={buttonVariants()}
           >
             Go to My Account
           </Link>

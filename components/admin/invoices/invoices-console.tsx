@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Receipt, Search, Inbox } from "lucide-react";
@@ -97,18 +98,16 @@ export function InvoicesConsole({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Receipt className="size-6 text-amber-400" />
-            Invoices
-          </h1>
-          <p className="text-xs text-zinc-400">
-            Every invoice the studio has issued. Open one to record a payment, send a reminder, or print it.
-          </p>
-        </div>
+      <PageHeader
+        icon={Receipt}
+        title="Invoices"
+        description="Every invoice the studio has issued. Open one to record a payment, send a reminder, or print it."
+        actions={
+          <>
         {actions}
-      </div>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[

@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Settings } from "lucide-react";
+import { PageHeader } from "@/components/ui/page";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { DirtyContext, type StudioTenantData } from "./settings-ui";
 import { StudioTab } from "./studio-tab";
@@ -44,11 +46,8 @@ export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData;
 
   return (
     <DirtyContext.Provider value={report}>
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
-          <p className="text-sm text-zinc-400 mt-1">Your studio, how clients pay you, and how their photos are delivered.</p>
-        </div>
+      <div className="space-y-6">
+        <PageHeader icon={Settings} title="Settings" description="Your studio, how clients pay you, and how their photos are delivered." className="[&>div]:border-b-0 [&>div]:pb-0" />
 
         {/* The grey base line is an inset shadow, so the active tab's underline covers it without
             spilling outside the bar (which made the browser show a scrollbar). The bar still scrolls
@@ -77,10 +76,12 @@ export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData;
         </nav>
 
         <h2 className="sr-only">{current.label}</h2>
+        <div className="max-w-4xl space-y-6">
         {tab === "studio" && <StudioTab tenant={tenant} host={host} />}
         {tab === "payments" && <PaymentsTab tenant={tenant} />}
         {tab === "delivery" && <DeliveryTab tenant={tenant} />}
         {tab === "plan" && <PlanTab tenant={tenant} />}
+        </div>
       </div>
       {confirmDialog}
     </DirtyContext.Provider>

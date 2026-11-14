@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createCampaignCategory, updateCampaignCategory } from "@/lib/actions/admin-services";
@@ -324,7 +325,7 @@ export function CategoryDialog({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors disabled:opacity-50"
+              className={buttonVariants()}
             >
               {isSubmitting ? (
                 <>

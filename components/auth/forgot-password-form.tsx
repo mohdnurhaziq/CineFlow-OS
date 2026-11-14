@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import Link from "next/link";
 import { KeyRound, Mail, ArrowRight, AlertCircle, MailCheck } from "lucide-react";
@@ -39,7 +41,7 @@ export function ForgotPasswordForm({ tenantSlug, tenantName, initialEmail = "" }
           {sentMessage ? <MailCheck className="size-6" aria-hidden="true" /> : <KeyRound className="size-6" aria-hidden="true" />}
         </div>
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">{sentMessage ? "Check your email" : "Forgot password"}</span>
-        <h1 className="text-2xl font-black tracking-tight text-white">{tenantName}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         {!sentMessage && (
           <p className="text-xs text-zinc-400">Enter the email you use for {tenantName} and we&apos;ll send you a link to choose a new password.</p>
         )}
@@ -85,7 +87,7 @@ export function ForgotPasswordForm({ tenantSlug, tenantName, initialEmail = "" }
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-wide uppercase transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className={cn(buttonVariants({ size: "lg" }), "w-full")}
           >
             {loading ? (
               <span>Sending…</span>

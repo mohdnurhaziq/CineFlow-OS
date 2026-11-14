@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarPlus, X } from "lucide-react";
@@ -139,7 +140,7 @@ export function NewBookingDialog({
               </p>
               <Link
                 href={`/${tenantSlug}/admin/calendar`}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs tracking-tight transition-colors"
+                className={buttonVariants()}
               >
                 Add a session time <ArrowRight className="size-3.5" aria-hidden="true" />
               </Link>
@@ -224,7 +225,7 @@ export function NewBookingDialog({
                 type="button"
                 disabled={!selected}
                 onClick={() => setStep("details")}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs tracking-tight transition-all"
+                className={buttonVariants({ size: "lg" })}
               >
                 Next
                 <ArrowRight className="size-3.5" aria-hidden="true" />

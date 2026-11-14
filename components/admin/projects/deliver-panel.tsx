@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { BellRing, Heart, MessageSquare } from "lucide-react";
 
 interface DeliverItem {
@@ -91,7 +92,7 @@ export function DeliverPanel({
               type="button"
               onClick={onNotify}
               disabled={pending}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-50"
+              className={buttonVariants({ size: "lg" })}
             >
               <BellRing className="size-4" /> {sent ? `Notify ${firstName} again` : `Notify ${firstName}: photos ready`}
             </button>

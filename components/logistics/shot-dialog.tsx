@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect, useTransition } from "react";
 import { X, Video, Loader2, Camera, Sun, Film } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
@@ -395,14 +396,14 @@ export function ShotDialog({
               type="button"
               onClick={onClose}
               disabled={isPending}
-              className="px-4 py-2.5 rounded-xl border border-zinc-800 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              className={buttonVariants({ variant: "secondary" })}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="px-5 py-2.5 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 active:scale-95 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+              className={buttonVariants({ size: "lg" })}
             >
               {isPending && <Loader2 className="size-3.5 animate-spin" />}
               <span>{isEdit ? "Save Changes" : "Add to Shot List"}</span>

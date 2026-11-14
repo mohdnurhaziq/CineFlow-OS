@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowUpRight, CalendarClock, CheckCircle2, ImageUp, Loader2, Mail, UserX, XCircle } from "lucide-react";
@@ -28,8 +30,7 @@ interface BookingActionsProps {
 
 type Mode = null | "cancel" | "reschedule";
 
-const btn = "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50";
-const quiet = `${btn} border-zinc-700 text-zinc-200 hover:bg-zinc-800`;
+const quiet = buttonVariants({ variant: "secondary" });
 const input =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 
@@ -103,7 +104,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
             <>
               <button
                 type="button"
-                className={`${btn} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
+                className={cn(buttonVariants({ variant: "secondary" }), "border-emerald-500/40 text-emerald-300 hover:border-emerald-500/60 hover:bg-emerald-500/10 hover:text-emerald-200")}
                 disabled={pending}
                 onClick={() => run(() => recordSessionOutcome({ ...ids, outcome: "COMPLETED" }), "Session marked as done.")}
               >
@@ -122,7 +123,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
           {booking.project ? (
             <Link
               href={`/${tenantSlug}/admin/projects/${booking.project.id}#files`}
-              className={`${btn} bg-amber-500 border-amber-500 text-black hover:bg-amber-400`}
+              className={buttonVariants()}
             >
               <ImageUp className="size-3.5" /> Upload photos
               <ArrowUpRight className="size-3 ml-0.5" />
@@ -133,7 +134,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
               <button
                 type="button"
                 disabled={pending}
-                className={`${btn} bg-amber-500 border-amber-500 text-black hover:bg-amber-400`}
+                className={buttonVariants()}
                 onClick={() => run(() => promoteBookingToProjectAction(ids), "Gallery created. You can upload the photos now.")}
               >
                 {pending ? <Loader2 className="size-3.5 animate-spin" /> : <ImageUp className="size-3.5" />} Create gallery
@@ -142,7 +143,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
           )}
           {upcoming &&
             (canCancel ? (
-              <button type="button" className={`${btn} border-red-500/40 text-red-300 hover:bg-red-500/10`} onClick={() => setMode("cancel")}>
+              <button type="button" className={buttonVariants({ variant: "danger" })} onClick={() => setMode("cancel")}>
                 <XCircle className="size-3.5" /> Cancel booking
               </button>
             ) : (
@@ -168,7 +169,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
             <button
               type="button"
               disabled={pending}
-              className={`${btn} bg-red-600 border-red-600 text-white hover:bg-red-500`}
+              className={buttonVariants({ variant: "destructive" })}
               onClick={() => run(() => cancelBooking({ ...ids, reason }), "Booking cancelled.")}
             >
               {pending && <Loader2 className="size-3.5 animate-spin" />} Cancel booking
@@ -205,7 +206,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
             <button
               type="button"
               disabled={pending || !target}
-              className={`${btn} bg-amber-500 border-amber-500 text-black hover:bg-amber-400`}
+              className={buttonVariants()}
               onClick={() => run(() => rescheduleBooking({ ...ids, newSlotId: target }), "Booking moved. The client has been told.")}
             >
               {pending && <Loader2 className="size-3.5 animate-spin" />} Move booking

@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X } from "lucide-react";
@@ -64,7 +65,7 @@ export function NewInvoiceButton({ tenantId, tenantSlug, currency, clients }: Ne
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400"
+        className={buttonVariants()}
       >
         <Plus className="size-4" /> New invoice
       </button>
@@ -117,10 +118,10 @@ export function NewInvoiceButton({ tenantId, tenantSlug, currency, clients }: Ne
               </label>
               {error && <p className="text-xs text-red-400">{error}</p>}
               <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={() => setOpen(false)} className="px-3.5 py-2 rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800">
+                <button type="button" onClick={() => setOpen(false)} className={buttonVariants({ variant: "secondary" })}>
                   Cancel
                 </button>
-                <button type="submit" disabled={pending} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 disabled:opacity-50">
+                <button type="submit" disabled={pending} className={buttonVariants()}>
                   {pending && <Loader2 className="size-3.5 animate-spin" />} Create invoice
                 </button>
               </div>

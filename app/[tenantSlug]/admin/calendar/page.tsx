@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -98,7 +99,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
   });
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <PageShell>
       <CalendarAdminDashboard
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
@@ -109,6 +110,6 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         packages={packages}
         isOwner={await currentUserIsOwner()}
       />
-    </div>
+    </PageShell>
   );
 }

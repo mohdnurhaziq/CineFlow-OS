@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useCallback, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
@@ -77,16 +78,14 @@ function ConfirmDialog({ options, onSettle }: { options: ConfirmOptions | null; 
           <button
             type="button"
             onClick={() => onSettle(false)}
-            className="px-3.5 py-2 rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800"
+            className={buttonVariants({ variant: "secondary" })}
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onSettle(true)}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold ${
-              destructive ? "bg-red-600 hover:bg-red-500 text-white" : "bg-amber-500 hover:bg-amber-400 text-black"
-            }`}
+            className={buttonVariants({ variant: destructive ? "destructive" : "primary" })}
           >
             {options.confirmLabel ?? "Confirm"}
           </button>

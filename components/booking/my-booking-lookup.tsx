@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -98,7 +100,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
           Client Booking Lookup
         </span>
-        <h1 className="text-2xl font-black tracking-tight text-white">{tenantName}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400">
           Enter the email you booked with and your tracking code to see your booking, invoices,
           proposals and delivery vault.
@@ -158,7 +160,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-wide uppercase transition-colors flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
+          className={cn(buttonVariants({ size: "lg" }), "w-full")}
         >
           {loading ? (
             <>
@@ -244,7 +246,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
                       {inv.payUrl && (
                         <Link
                           href={inv.payUrl}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500 text-black font-semibold hover:bg-amber-400"
+                          className={buttonVariants({ size: "sm" })}
                         >
                           Pay <ArrowRight className="size-3" />
                         </Link>

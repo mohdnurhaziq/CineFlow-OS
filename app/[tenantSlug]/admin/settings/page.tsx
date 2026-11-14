@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -49,9 +50,9 @@ export default async function AdminSettingsPage({ params, searchParams }: Settin
   };
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <PageShell>
       {/* key: a tab starts from the saved values each time it opens */}
       <SettingsShell key={tab} tenant={data as unknown as StudioTenantData} tab={tab} host={host} />
-    </div>
+    </PageShell>
   );
 }

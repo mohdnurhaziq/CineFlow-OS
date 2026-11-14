@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useRef, useEffect, useTransition } from "react";
 import {
   Scan,
@@ -273,7 +274,7 @@ export function GearScannerConsole({
                     onOpenCheckOut(activeRes);
                     onClose();
                   }}
-                  className="px-4 py-2 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 active:scale-95 transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer"
+                  className={buttonVariants()}
                 >
                   <PackageCheck className="size-4" />
                   <span>Log Pre-Shoot Check-Out</span>
@@ -312,7 +313,7 @@ export function GearScannerConsole({
                     type="button"
                     disabled={isPending}
                     onClick={() => handleQuarantine("MAINTENANCE_NEEDED")}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-amber-500 text-zinc-300 hover:text-amber-400 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
                   >
                     Flag Needs Service
                   </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { NotebookPen, Lock } from "lucide-react";
@@ -81,7 +82,7 @@ export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes }: Clien
               type="button"
               onClick={save}
               disabled={!dirty || isPending}
-              className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold uppercase tracking-wide disabled:opacity-40 transition-colors"
+              className={buttonVariants()}
             >
               {isPending ? "Saving…" : "Save notes"}
             </button>

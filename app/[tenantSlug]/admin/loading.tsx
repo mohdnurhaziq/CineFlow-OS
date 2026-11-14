@@ -1,8 +1,9 @@
+import { PageShell } from "@/components/ui/page";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminLoading() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <PageShell className="space-y-8">
       {/* Top Banner Skeleton */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
         <div className="space-y-2">
@@ -59,6 +60,6 @@ export default function AdminLoading() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

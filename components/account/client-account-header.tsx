@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { CalendarPlus, ArrowUpRight } from "lucide-react";
 import { ClientNavBar } from "./client-nav-bar";
@@ -69,7 +70,7 @@ export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHea
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Link
               href={`/${tenant.slug}/book`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono tracking-wide transition-all shadow-sm shadow-amber-500/10"
+              className={buttonVariants({ size: "sm" })}
             >
               <CalendarPlus className="size-3.5" />
               <span className="hidden sm:inline">Book Session</span>

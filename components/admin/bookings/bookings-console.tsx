@@ -1,10 +1,12 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
+import { buttonVariants } from "@/components/ui/button";
 import { useMemo, useState, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { Search, CalendarCheck, Inbox, Plus } from "lucide-react";
 import { NewBookingDialog } from "./new-booking-dialog";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
 import {
   BookingDetailsDialog,
@@ -95,22 +97,16 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <CalendarCheck className="size-6 text-amber-400" />
-            Bookings
-          </h1>
-          <p className="text-xs text-zinc-400">
-            Every client booking with contact details, brief and deposit status. Select a booking to see everything.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+      <PageHeader
+        icon={CalendarCheck}
+        title="Bookings"
+        description="Every client booking with contact details, brief and deposit status. Select a booking to see everything."
+        actions={
+          <>
         <button
           type="button"
           onClick={() => setNewBookingOpen(true)}
-          className="inline-flex shrink-0 items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs tracking-tight transition-colors"
+          className={cn(buttonVariants(), "shrink-0")}
         >
           <Plus className="size-3.5" aria-hidden="true" />
           New booking
@@ -126,8 +122,9 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
             className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
           />
         </label>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <NewBookingDialog
         isOpen={newBookingOpen}

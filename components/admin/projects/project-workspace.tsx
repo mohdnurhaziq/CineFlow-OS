@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,7 +69,7 @@ interface ProjectWorkspaceProps {
 const field =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 const small = "text-xs text-zinc-400";
-const primary = "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 disabled:opacity-50";
+const primary = buttonVariants();
 const day = (iso: string) => formatSlotDate(iso, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
 function Section({
@@ -289,7 +290,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                   </label>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" className="px-3.5 py-2 rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800" onClick={() => setSheetOpen(false)}>
+                  <button type="button" className={buttonVariants({ variant: "secondary" })} onClick={() => setSheetOpen(false)}>
                     Cancel
                   </button>
                   <button type="submit" disabled={pending} className={primary}>

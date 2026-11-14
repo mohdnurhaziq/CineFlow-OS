@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -69,7 +70,7 @@ export default async function AdminInvoicesPage({ params }: InvoicesPageProps) {
   }));
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <PageShell>
       <InvoicesConsole
         tenantSlug={tenant.slug}
         currency={tenant.currency}
@@ -80,6 +81,6 @@ export default async function AdminInvoicesPage({ params }: InvoicesPageProps) {
           ) : null
         }
       />
-    </div>
+    </PageShell>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
@@ -20,7 +21,7 @@ export function LogoutButton({ redirectTo }: { redirectTo: string }) {
         router.push(signedOutHref(redirectTo));
         router.refresh();
       }}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 bg-[#121215] text-zinc-300 hover:text-white hover:border-zinc-700 text-xs font-semibold transition-colors disabled:opacity-50"
+      className={buttonVariants({ variant: "secondary", size: "sm" })}
     >
       <LogOut className="size-3.5" />
       Sign out

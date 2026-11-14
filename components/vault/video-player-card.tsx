@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { Film, Download, Lock, MessageSquare } from "lucide-react";
 import { RetouchNotesModal } from "./retouch-notes-modal";
@@ -109,7 +110,7 @@ export function VideoPlayerCard({ items, projectId, filesReleased }: VideoPlayer
                 <button
                   type="button"
                   onClick={() => setRetouchTarget(video)}
-                  className="px-3.5 py-2.5 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className={buttonVariants({ variant: "secondary" })}
                 >
                   <MessageSquare className="size-4 text-amber-400" />
                   <span>Revision Note</span>
@@ -120,7 +121,7 @@ export function VideoPlayerCard({ items, projectId, filesReleased }: VideoPlayer
                   <a
                     href={`/api/download?projectId=${projectId}&assetId=${video.id}&type=video_master`}
                     download
-                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+                    className={buttonVariants({ size: "lg" })}
                   >
                     <Download className="size-4" />
                     <span>Download 4K ProRes Master</span>

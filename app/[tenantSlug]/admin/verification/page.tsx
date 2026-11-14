@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
@@ -93,7 +94,7 @@ export default async function AdminVerificationPage({ params }: VerificationPage
   const categories = await db.campaignCategory.findMany({ where: { tenantId: tenant.id }, select: { slug: true, name: true } });
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <PageShell>
     <AdminVerificationConsole
       tenant={tenant}
       verifierName={user?.name ?? "Studio staff"}
@@ -102,6 +103,6 @@ export default async function AdminVerificationPage({ params }: VerificationPage
       pendingInvoices={enrichedPending}
       historyInvoices={historyInvoices}
     />
-    </div>
+    </PageShell>
   );
 }

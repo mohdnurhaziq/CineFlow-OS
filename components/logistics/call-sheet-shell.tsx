@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -117,7 +118,7 @@ export function CallSheetShell({
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               {callSheet.title}
             </h1>
             <p className="text-xs sm:text-sm text-zinc-300 mt-1 flex flex-wrap items-center gap-3">
@@ -149,7 +150,7 @@ export function CallSheetShell({
             <button
               type="button"
               onClick={handleCopySummary}
-              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+              className={buttonVariants({ variant: "secondary" })}
             >
               {copied ? (
                 <>
@@ -167,7 +168,7 @@ export function CallSheetShell({
             {/* Digital Releases Link */}
             <Link
               href={`/${tenantSlug}/releases/${projectId}`}
-              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-amber-400 hover:border-amber-500/40 text-xs font-mono flex items-center gap-1.5 transition-colors"
+              className={buttonVariants({ variant: "secondary" })}
             >
               <FileSignature className="size-3.5" />
               <span>Digital Releases</span>

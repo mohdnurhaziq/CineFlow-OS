@@ -66,7 +66,7 @@ export function JobHeader({
   return (
     <header className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">{title}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{title}</h1>
         <p className="text-sm text-zinc-400 mt-1">
           {client.name} · <a href={`mailto:${client.email}`} className="hover:text-white">{client.email}</a>
           {client.phone ? (

@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -91,7 +93,7 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
           Sign in
         </span>
-        <h1 className="text-2xl font-black tracking-tight text-white">{tenantName}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400">
           Clients: see your bookings, photos and invoices. Studio team: open the admin suite.
         </p>
@@ -157,7 +159,7 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-wide uppercase transition-colors shadow-sm shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
+          className={cn(buttonVariants({ size: "lg" }), "w-full")}
         >
           {loading ? (
             <span>Authenticating...</span>

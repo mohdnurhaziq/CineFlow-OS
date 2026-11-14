@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { RotateCcw, Trash2, CheckCircle2, ShieldCheck } from "lucide-react";
 
@@ -232,7 +233,7 @@ export function ReleaseSignaturePad({
             type="button"
             onClick={handleUndo}
             disabled={!hasSignature || disabled}
-            className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 text-xs flex items-center gap-1 transition-colors disabled:opacity-40 cursor-pointer"
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             <RotateCcw className="size-3" />
             <span>Undo</span>
@@ -242,7 +243,7 @@ export function ReleaseSignaturePad({
             type="button"
             onClick={handleClear}
             disabled={!hasSignature || disabled}
-            className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-red-400 hover:bg-red-950/20 text-xs flex items-center gap-1 transition-colors disabled:opacity-40 cursor-pointer"
+            className={buttonVariants({ variant: "danger", size: "sm" })}
           >
             <Trash2 className="size-3" />
             <span>Clear</span>

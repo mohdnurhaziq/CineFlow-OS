@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -342,7 +343,7 @@ export default function CreateStudioPage() {
                     type="button"
                     disabled={!isStep1Valid}
                     onClick={() => setCurrentStep(2)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs tracking-tight transition-all"
+                    className={buttonVariants({ size: "lg" })}
                   >
                     Continue to Brand
                     <ArrowRight className="size-3.5" />
@@ -440,7 +441,7 @@ export default function CreateStudioPage() {
                         type="button"
                         disabled={logoUploading}
                         onClick={() => logoInputRef.current?.click()}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] hover:border-amber-500 text-xs font-semibold text-white disabled:opacity-50 transition-colors"
+                        className={buttonVariants({ variant: "secondary" })}
                       >
                         {logoUploading ? (
                           <Loader2 className="size-3.5 animate-spin" />
@@ -482,7 +483,7 @@ export default function CreateStudioPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-xs tracking-tight transition-all"
+                    className={buttonVariants({ size: "lg" })}
                   >
                     Continue to Owner Credentials
                     <ArrowRight className="size-3.5" />
@@ -586,7 +587,7 @@ export default function CreateStudioPage() {
                     type="button"
                     disabled={!isStep3Valid}
                     onClick={() => setCurrentStep(4)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs tracking-tight transition-all"
+                    className={buttonVariants({ size: "lg" })}
                   >
                     Continue to Plan
                     <ArrowRight className="size-3.5" />
@@ -669,7 +670,7 @@ export default function CreateStudioPage() {
                     type="button"
                     disabled={isPending}
                     onClick={handleSubmit}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-sm tracking-tight shadow-xl shadow-amber-500/20 disabled:opacity-50 transition-all"
+                    className={buttonVariants({ size: "lg" })}
                   >
                     {isPending ? (
                       <>

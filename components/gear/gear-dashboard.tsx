@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import {
   Layers,
@@ -188,23 +190,16 @@ export function GearDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Layers className="size-6 text-amber-400" />
-            <span>Gear</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Your equipment, kits, and the checks before and after each shoot.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
+      <PageHeader
+        icon={Layers}
+        title="Gear"
+        description="Your equipment, kits, and the checks before and after each shoot."
+        actions={
+          <>
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-amber-500 text-zinc-300 hover:text-amber-400 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+            className={buttonVariants({ variant: "secondary" })}
           >
             <Scan className="size-4 text-amber-400" />
             <span>Scan Asset / SKU</span>
@@ -217,7 +212,7 @@ export function GearDashboard({
                 setItemToEdit(null);
                 setIsItemDialogOpen(true);
               }}
-              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+              className={buttonVariants()}
             >
               <Plus className="size-4" />
               <span>Add Equipment</span>
@@ -231,14 +226,15 @@ export function GearDashboard({
                 setBundleToEdit(null);
                 setIsBundleDialogOpen(true);
               }}
-              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+              className={buttonVariants()}
             >
               <Plus className="size-4" />
               <span>Create Kit Bundle</span>
             </button>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* KPI Overview Metrics */}
       <GearKpiSummary
@@ -250,7 +246,7 @@ export function GearDashboard({
       />
 
       {/* Main Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-zinc-800 pb-px text-xs font-mono font-medium">
+      <div className="flex items-center gap-2 border-b border-zinc-800 pb-px text-xs font-mono font-medium overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0">
         <button
           type="button"
           onClick={() => setActiveTab("ITEMS")}

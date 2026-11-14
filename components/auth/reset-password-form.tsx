@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import Link from "next/link";
 import { KeyRound, Lock, ArrowRight, AlertCircle } from "lucide-react";
@@ -51,7 +53,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token }: Rese
           <KeyRound className="size-6" aria-hidden="true" />
         </div>
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Choose a new password</span>
-        <h1 className="text-2xl font-black tracking-tight text-white">{tenantName}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400 break-all">for {email}</p>
       </div>
 
@@ -108,7 +110,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token }: Rese
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-wide uppercase transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          className={cn(buttonVariants({ size: "lg" }), "w-full")}
         >
           {loading ? (
             <span>Saving…</span>

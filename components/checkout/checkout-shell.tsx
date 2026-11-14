@@ -300,7 +300,7 @@ export function CheckoutShell({
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
           SECURE ESCROW CHECKOUT // {tenant.name.toUpperCase()}
         </span>
-        <h1 className="text-3xl font-bold tracking-tight text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
           {slot ? "Complete Studio Session Reservation" : "Settle Milestone Invoice"}
         </h1>
       </div>

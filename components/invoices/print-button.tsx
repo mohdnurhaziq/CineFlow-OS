@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { Printer, Copy, Check, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
@@ -51,7 +52,7 @@ export function PrintButton({ doc }: PrintButtonProps) {
       <button
         type="button"
         onClick={() => window.print()}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-xs font-semibold text-zinc-200 hover:bg-zinc-800 transition-colors shadow-sm"
+        className={buttonVariants({ variant: "secondary" })}
         title="Print document or save to PDF"
       >
         <Printer className="size-3.5" />
@@ -71,7 +72,7 @@ export function PrintButton({ doc }: PrintButtonProps) {
       <button
         type="button"
         onClick={handleCopyLink}
-        className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-zinc-700 bg-zinc-900 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
+        className={buttonVariants({ variant: "secondary" })}
         title="Copy document link"
       >
         {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}

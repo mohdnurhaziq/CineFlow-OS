@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -30,7 +31,7 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
   if (!doc) notFound();
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 max-w-3xl mx-auto print:p-0 print:max-w-none space-y-4">
+    <PageShell width="document" className="print:p-0 print:max-w-none space-y-4">
       <InvoiceAdminActions
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
@@ -64,6 +65,6 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
           </>
         }
       />
-    </div>
+    </PageShell>
   );
 }

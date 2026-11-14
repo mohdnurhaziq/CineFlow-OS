@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
@@ -42,7 +43,7 @@ export default function GlobalError({
           <div className="pt-2">
             <button
               onClick={() => reset()}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 text-black font-semibold text-sm hover:bg-amber-400 transition-colors shadow-sm shadow-amber-500/20 active:scale-95"
+              className={buttonVariants({ size: "lg" })}
             >
               <RefreshCw className="size-4" />
               Reload Application

@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -84,19 +86,12 @@ export function ProposalAdminDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <FileText className="size-6 text-amber-400" />
-            <span>Proposals</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Quotes for clients, and the optional extras they can add to them.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
+      <PageHeader
+        icon={FileText}
+        title="Proposals"
+        description="Quotes for clients, and the optional extras they can add to them."
+        actions={
+          <>
           {newProposal}
           {activeTab === "templates" && (
             <button
@@ -105,14 +100,15 @@ export function ProposalAdminDashboard({
                 setTemplateToEdit(null);
                 setIsDialogOpen(true);
               }}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/10"
+              className={buttonVariants()}
             >
               <Plus className="size-4" />
               <span>New Add-On Template</span>
             </button>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* KPI Metrics Summary Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">

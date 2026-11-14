@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -35,7 +36,7 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
   if (!booking) notFound();
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 max-w-3xl mx-auto space-y-4">
+    <PageShell width="document" className="space-y-4">
       <AdminBreadcrumb
         items={[
           { label: "Production" },
@@ -50,6 +51,6 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
         currency={tenant.currency}
         isOwner={await currentUserIsOwner()}
       />
-    </div>
+    </PageShell>
   );
 }

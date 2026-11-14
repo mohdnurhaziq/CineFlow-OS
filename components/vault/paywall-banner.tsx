@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { Lock, ArrowRight, Sparkles } from "lucide-react";
 
@@ -66,7 +67,7 @@ export function PaywallBanner({
 
           <Link
             href={checkoutUrl}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+            className={buttonVariants({ size: "lg" })}
           >
             <Sparkles className="size-4" />
             <span>{filesReleased ? "Pay balance" : "Pay balance & unlock"}</span>

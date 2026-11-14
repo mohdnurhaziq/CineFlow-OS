@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Loader2, Plus, X } from "lucide-react";
@@ -85,7 +86,7 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400"
+        className={buttonVariants()}
       >
         <Plus className="size-4" /> New proposal
       </button>
@@ -129,7 +130,7 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
                 </div>
                 <p className="text-xs text-zinc-500">When the client signs, the project appears under Projects and their deposit invoice is issued.</p>
                 <div className="flex justify-end">
-                  <button type="button" onClick={close} className="px-3.5 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold">
+                  <button type="button" onClick={close} className={buttonVariants()}>
                     Done
                   </button>
                 </div>
@@ -239,7 +240,7 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
                     Starts at <strong className="text-white">{formatMoney(currency, total)}</strong> · deposit{" "}
                     {formatMoney(currency, Math.round(total * Number(deposit || 0)) / 100)}
                   </span>
-                  <button type="submit" disabled={pending} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 disabled:opacity-50">
+                  <button type="submit" disabled={pending} className={buttonVariants()}>
                     {pending && <Loader2 className="size-3.5 animate-spin" />} Send proposal
                   </button>
                 </div>

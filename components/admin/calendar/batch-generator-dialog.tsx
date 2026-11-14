@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { X, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
 import { batchGenerateBookingSlots } from "@/lib/actions/admin-calendar";
@@ -456,7 +457,7 @@ export function BatchGeneratorDialog({
             <button
               type="submit"
               disabled={isSubmitting || estimatedCount === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors disabled:opacity-50"
+              className={buttonVariants()}
             >
               {isSubmitting ? (
                 <>

@@ -1,3 +1,4 @@
+import { PageHeader, PageShell } from "@/components/ui/page";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -50,16 +51,12 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
   });
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Images className="size-6 text-amber-400" />
-          Galleries
-        </h1>
-        <p className="text-xs text-zinc-400">
-          Every confirmed booking and signed proposal has a gallery: upload the client&apos;s photos here. Productions also get shoot-day planning.
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={Images}
+        title="Galleries"
+        description="Every confirmed booking and signed proposal has a gallery: upload the client&apos;s photos here. Productions also get shoot-day planning."
+      />
 
       <nav aria-label="Project kinds" className="flex flex-wrap gap-1.5">
         {PROJECT_LIST_TABS.map((t) => (
@@ -148,6 +145,6 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
           </table>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

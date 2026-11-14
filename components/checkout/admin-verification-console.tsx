@@ -1,5 +1,7 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page";
 import { useState, useTransition } from "react";
 import {
   CheckCircle2,
@@ -11,6 +13,7 @@ import {
   User,
   DollarSign,
   Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptLightboxModal } from "./receipt-lightbox-modal";
@@ -202,22 +205,12 @@ export function AdminVerificationConsole({
 
   return (
     <div className="space-y-8">
-      {/* Console Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 block mb-1">
-            {tenant.name}
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            Payment verification
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Check QR transfer slips and cash payments against your bank or till, then approve them to confirm the booking.
-          </p>
-        </div>
-
-        {/* Who approvals are recorded under: always the signed-in user. */}
-        <div className="flex items-center gap-3">
+      <PageHeader
+        icon={ShieldCheck}
+        title="Payment verification"
+        description="Check QR transfer slips and cash payments against your bank or till, then approve them to confirm the booking."
+        actions={
+          <>
           <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center gap-2">
             <User className="size-4 text-amber-400" />
             <div className="text-xs">
@@ -225,8 +218,9 @@ export function AdminVerificationConsole({
               <span className="text-white font-medium">{verifierName}</span>
             </div>
           </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Metric Highlight Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -494,7 +488,7 @@ export function AdminVerificationConsole({
               <button
                 type="button"
                 onClick={() => setRejectModalItem(null)}
-                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white text-xs font-medium"
+                className={buttonVariants({ variant: "secondary" })}
               >
                 Cancel
               </button>

@@ -1,3 +1,4 @@
+import { buttonVariants } from "@/components/ui/button";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -50,12 +51,12 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center px-4 selection:bg-amber-500/20 selection:text-amber-400">
       <div role="status" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#121215] p-8 text-center space-y-4 shadow-2xl">
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Payment</span>
-        <h1 className="text-2xl font-black tracking-tight text-white">Payment status</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Payment status</h1>
         <p className="text-sm text-zinc-300">{message}</p>
         <div className="flex flex-col sm:flex-row justify-center gap-2 pt-2">
           {outcome.status === "NOT_PAID" && (
             <Link
-              className="inline-flex items-center justify-center min-h-11 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors"
+              className={buttonVariants({ size: "lg" })}
               href={`/${tenantSlug}/checkout/payment-return?billcode=${encodeURIComponent(billcode)}`}
             >
               Check again

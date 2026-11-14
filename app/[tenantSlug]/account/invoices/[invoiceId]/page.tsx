@@ -1,3 +1,4 @@
+import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
@@ -74,7 +75,7 @@ export default async function ClientInvoicePage({ params, searchParams }: Client
               {(canPay || needsSlip) && (
                 <Link
                   href={`/${tenant.slug}/checkout?invoiceId=${doc.id}`}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition-colors"
+                  className={buttonVariants()}
                 >
                   {needsSlip ? <Upload className="size-4" /> : <CreditCard className="size-4" />}
                   {status === "REJECTED" ? "Send a new payment slip" : needsSlip ? "Upload payment slip" : "Pay this invoice"}

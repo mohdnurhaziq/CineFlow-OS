@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import {
   Heart,
@@ -149,7 +150,7 @@ export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
                   <a
                     href={`/api/download?projectId=${projectId}&type=photo_zip`}
                     download
-                    className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 text-xs font-mono font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                    className={buttonVariants({ variant: "secondary" })}
                     title="Download all master high-res deliverables as ZIP"
                   >
                     <Download className="size-3.5 text-amber-400" />

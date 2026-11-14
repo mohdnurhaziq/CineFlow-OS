@@ -199,7 +199,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
             </span>
             <span className="text-xs font-mono text-zinc-500">#{proposal.proposalNumber}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">{proposal.title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{proposal.title}</h1>
         </div>
 
         <div className="flex items-center gap-3">

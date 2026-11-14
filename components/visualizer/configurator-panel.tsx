@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import {
   Image as ImageIcon,
@@ -421,7 +423,7 @@ export function ConfiguratorPanel({
         <button
           type="button"
           onClick={onOrderClick}
-          className="w-full min-h-[48px] px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-sm tracking-wide uppercase transition-all shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+          className={cn(buttonVariants({ size: "lg" }), "w-full min-h-12")}
         >
           <ShoppingBag className="size-4" />
           <span>Order Framed Print · {currency} {totalPrice.toFixed(2)}</span>

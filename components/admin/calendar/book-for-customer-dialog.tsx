@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { X, UserPlus, Users, Search, Loader2, AlertCircle, Check, CalendarCheck, ArrowLeft } from "lucide-react";
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
@@ -386,7 +387,7 @@ export function BookForCustomerDialog({
             <button
               type="submit"
               disabled={isSubmitting || !!successMessage}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] disabled:opacity-50 text-black font-bold text-xs tracking-tight transition-all"
+              className={buttonVariants({ size: "lg" })}
             >
               {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : <CalendarCheck className="size-3.5" />}
               {isSubmitting ? "Booking..." : "Create Booking"}

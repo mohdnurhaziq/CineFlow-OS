@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -56,7 +57,7 @@ export default async function AdminBookingsPage({ params }: BookingsPageProps) {
   ]);
 
   return (
-    <div className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <PageShell>
       <BookingsConsole
         tenantSlug={tenant.slug}
         tenantId={tenant.id}
@@ -66,6 +67,6 @@ export default async function AdminBookingsPage({ params }: BookingsPageProps) {
         today={todayIso()}
         newBooking={{ slots, categories, clients, packages }}
       />
-    </div>
+    </PageShell>
   );
 }

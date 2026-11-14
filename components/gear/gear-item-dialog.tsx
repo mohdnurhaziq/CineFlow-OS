@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { X, Plus, Edit2, AlertCircle } from "lucide-react";
 import { createGearItem, updateGearItem } from "@/lib/actions/gear";
@@ -317,7 +318,7 @@ export function GearItemDialog({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+              className={buttonVariants()}
             >
               {isSubmitting ? "Saving..." : isEditing ? "Save Changes" : "Create Asset"}
             </button>

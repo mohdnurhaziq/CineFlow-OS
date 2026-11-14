@@ -1,5 +1,8 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -148,19 +151,12 @@ export function FramesManager({
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Frame className="size-6 text-amber-400" />
-            <span>Frames & prints</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            The print sizes and frame finishes clients can order, and preview on their wall.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
+      <PageHeader
+        icon={Frame}
+        title="Frames &amp; prints"
+        description="The print sizes and frame finishes clients can order, and preview on their wall."
+        actions={
+          <>
           {activeTab === "frames" ? (
             <button
               type="button"
@@ -168,7 +164,7 @@ export function FramesManager({
                 setFrameToEdit(null);
                 setIsFrameDialogOpen(true);
               }}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/10"
+              className={buttonVariants()}
             >
               <Plus className="size-4" />
               <span>Add Frame Molding</span>
@@ -180,14 +176,15 @@ export function FramesManager({
                 setSizeToEdit(null);
                 setIsSizeDialogOpen(true);
               }}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/10"
+              className={buttonVariants()}
             >
               <Plus className="size-4" />
               <span>Add Print Size</span>
             </button>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Live Visualizer Banner */}
       <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -208,7 +205,7 @@ export function FramesManager({
         <Link
           href={`/${tenantSlug}/visualizer`}
           target="_blank"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors shrink-0"
+          className={cn(buttonVariants({ size: "sm" }), "shrink-0")}
         >
           <span>Open Visualizer</span>
           <ExternalLink className="size-3.5" />

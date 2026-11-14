@@ -124,7 +124,7 @@ export function VisualizerShell({
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <span>Living Room Scale & Custom Frame Visualizer</span>
             <Sparkles className="size-5 text-amber-400" />
           </h1>

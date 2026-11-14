@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, ArrowRight } from "lucide-react";
@@ -242,7 +243,7 @@ export function CinemaBookingShell({
             <ArrowLeft className="size-3.5" />
             Back to {tenant.name} Showcase
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Cinema-Style Soundstage Calendar
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400">
@@ -417,7 +418,7 @@ export function CinemaBookingShell({
               <button
                 type="button"
                 onClick={handleRelease}
-                className="px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-mono font-semibold transition-all active:scale-[0.98]"
+                className={buttonVariants({ variant: "secondary" })}
               >
                 Release Slot
               </button>

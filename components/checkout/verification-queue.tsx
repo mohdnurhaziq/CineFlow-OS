@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Banknote, CheckCircle2, Eye, Loader2, MessageSquare, XCircle } from "lucide-react";
@@ -285,7 +286,7 @@ export function VerificationQueue({
                   type="button"
                   disabled={isPending}
                   onClick={() => onReject(selected)}
-                  className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-500/50 text-zinc-300 hover:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  className={buttonVariants({ variant: "danger" })}
                 >
                   <XCircle className="size-3.5" aria-hidden="true" /> Reject
                 </button>

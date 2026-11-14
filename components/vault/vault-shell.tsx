@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import {
   Film,
@@ -101,7 +102,7 @@ export function VaultShell({
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               {project.title}
             </h1>
 
@@ -181,7 +182,7 @@ export function VaultShell({
               <a
                 href={`/api/download?projectId=${project.id}&type=photo_zip`}
                 download
-                className="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                className={buttonVariants({ size: "lg" })}
               >
                 <Download className="size-4" />
                 <span>Download All Photos (ZIP)</span>
@@ -204,7 +205,7 @@ export function VaultShell({
               <a
                 href={`/api/download?projectId=${project.id}&type=video_master`}
                 download
-                className="px-4 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-mono text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer"
+                className={buttonVariants({ variant: "secondary" })}
               >
                 <Film className="size-4 text-amber-400" />
                 <span>Download 4K ProRes Master</span>

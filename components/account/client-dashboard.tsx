@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -401,13 +402,13 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
   return (
     <div className="w-full">
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
         {banner}
 
         {/* Client Welcome Heading */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-800/60">
           <div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
               <span>Welcome back, {client.name.split(" ")[0]}</span>
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
@@ -444,7 +445,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             </div>
             <Link
               href={`/${tenant.slug}/checkout?invoiceId=${unpaidInvoices[0].id}`}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs font-mono tracking-wider transition-all shadow-md shadow-amber-500/20 whitespace-nowrap self-start sm:self-auto"
+              className={cn(buttonVariants({ size: "lg" }), "self-start")}
             >
               <span>Pay Now ({money(outstanding)})</span>
               <ChevronRight className="size-4" />
@@ -644,7 +645,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   </div>
                   <Link
                     href={`/${tenant.slug}/vault/${spotlightProject.id}`}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs font-mono tracking-wide transition-all shadow-sm self-start sm:self-auto"
+                    className={cn(buttonVariants(), "self-start")}
                   >
                     <FolderLock className="size-3.5" />
                     <span>Open Photo Vault</span>
@@ -886,7 +887,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                 </p>
                 <Link
                   href={`/${tenant.slug}/book`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-black text-xs font-bold font-mono mt-2"
+                  className={cn(buttonVariants({ size: "sm" }), "mt-2")}
                 >
                   <CalendarPlus className="size-3.5" /> Book a session
                 </Link>
@@ -1076,7 +1077,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         <div className="flex-shrink-0 flex items-center gap-2">
                           <Link
                             href={`/${tenant.slug}/vault/${p.id}`}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs font-mono tracking-wide transition-all shadow-md shadow-amber-500/10"
+                            className={buttonVariants({ size: "lg" })}
                           >
                             <FolderLock className="size-4" />
                             <span>Open Photo Vault</span>
@@ -1224,7 +1225,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             href={b.deliveryUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 text-black text-xs font-bold font-mono hover:bg-amber-400 transition-colors"
+                            className={buttonVariants({ size: "sm" })}
                           >
                             <span>View Photos</span>
                             <ExternalLink className="size-3" />
@@ -1460,7 +1461,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               {isUnpaid && (
                                 <Link
                                   href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
-                                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono transition-colors shadow-sm"
+                                  className={buttonVariants({ size: "sm" })}
                                 >
                                   Pay Now
                                 </Link>
@@ -1556,7 +1557,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               {isUnpaid && (
                                 <Link
                                   href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
-                                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono transition-colors shadow-sm"
+                                  className={buttonVariants({ size: "sm" })}
                                 >
                                   Pay Now
                                 </Link>

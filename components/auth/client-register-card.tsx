@@ -32,7 +32,7 @@ export function ClientRegisterCard({
     <div className="w-full max-w-md p-8 rounded-2xl bg-[#121215] border border-zinc-800 shadow-2xl space-y-5">
       <div className="space-y-2 text-center">
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Client Account</span>
-        <h1 className="text-2xl font-black tracking-tight text-white">{tenantName}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400">
           {inviteToken
             ? `${tenantName} set up an account for you. Choose a password to continue.`

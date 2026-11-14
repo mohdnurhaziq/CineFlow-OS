@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useTransition } from "react";
 import Link from "next/link";
 import { LogIn, LogOut, ShieldCheck } from "lucide-react";
@@ -71,7 +72,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
       <Link
         href={loginHref}
         aria-label="Sign in"
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-colors"
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         <LogIn className="size-3.5 text-amber-400" />
         <span className="hidden sm:inline">Sign in</span>

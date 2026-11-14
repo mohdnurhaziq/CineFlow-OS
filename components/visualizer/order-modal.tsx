@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -185,7 +187,7 @@ export function OrderModal({
                 href={`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(
                   typeof window !== "undefined" ? window.location.pathname + window.location.search : `/${tenantSlug}/visualizer`
                 )}`}
-                className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors"
+                className={buttonVariants({ size: "lg" })}
               >
                 Sign in
               </Link>
@@ -288,7 +290,7 @@ export function OrderModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 min-h-[46px] px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-mono font-extrabold transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className={cn(buttonVariants({ size: "lg" }), "flex-1")}
             >
               <CreditCard className="size-4" />
               <span>

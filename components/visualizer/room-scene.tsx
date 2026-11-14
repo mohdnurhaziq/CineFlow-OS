@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useMemo } from "react";
 import { ZoomIn, ZoomOut, RotateCcw, Palette } from "lucide-react";
 import { SofaMockup } from "./sofa-mockup";
@@ -101,7 +102,7 @@ export function RoomScene({
           <button
             type="button"
             onClick={onOrientationToggle}
-            className="px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             <RotateCcw className="size-3 text-amber-400" />
             <span>{orientation === "PORTRAIT" ? "Portrait" : "Landscape"}</span>

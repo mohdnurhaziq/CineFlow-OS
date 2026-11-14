@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -124,7 +126,7 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
             </div>
             <Link
               href={`/${tenantSlug}/admin?tour=1`}
-              className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-200 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors"
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "self-start sm:self-auto")}
             >
               <PlayCircle className="size-3.5 text-amber-400" aria-hidden="true" />
               Take the tour

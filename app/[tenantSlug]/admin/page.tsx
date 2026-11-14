@@ -1,3 +1,4 @@
+import { PageShell } from "@/components/ui/page";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -56,7 +57,7 @@ export default async function AdminDashboardPage({ params }: AdminPageProps) {
   const bookingUrl = `${appUrl}/${tenantSlug}`;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <PageShell>
       <StudioDashboard
         data={analytics}
         guide={
@@ -68,6 +69,6 @@ export default async function AdminDashboardPage({ params }: AdminPageProps) {
       <Suspense fallback={null}>
         <DashboardTour tenantSlug={tenantSlug} autoStart={onboarding.autoStartTour} />
       </Suspense>
-    </div>
+    </PageShell>
   );
 }

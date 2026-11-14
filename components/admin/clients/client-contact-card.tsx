@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Phone, MessageSquare, Pencil, AlertCircle } from "lucide-react";
@@ -67,14 +68,14 @@ export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLab
     <div className="rounded-2xl border border-zinc-800 bg-[#121215] p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <h1 className="text-xl font-black tracking-tight text-white break-words">{client.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight break-words">{client.name}</h1>
           <ClientAccountBadge status={client.accountStatus} />
         </div>
         {!editing && (
           <button
             type="button"
             onClick={startEditing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-zinc-800 hover:border-zinc-700 text-xs font-mono text-zinc-300 hover:text-white transition-colors"
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             <Pencil className="size-3.5 text-amber-400" aria-hidden="true" />
             Edit details
@@ -130,7 +131,7 @@ export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLab
             <button
               type="submit"
               disabled={isPending}
-              className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold uppercase tracking-wide disabled:opacity-50 transition-colors"
+              className={buttonVariants()}
             >
               {isPending ? "Saving…" : "Save"}
             </button>
@@ -138,7 +139,7 @@ export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLab
               type="button"
               disabled={isPending}
               onClick={() => setEditing(false)}
-              className="px-4 py-2 rounded-lg border border-zinc-800 text-xs font-mono text-zinc-300 hover:text-white disabled:opacity-50 transition-colors"
+              className={buttonVariants({ variant: "secondary" })}
             >
               Cancel
             </button>

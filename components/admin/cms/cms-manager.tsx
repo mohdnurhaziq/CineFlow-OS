@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -125,23 +127,16 @@ export function CmsManager({
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Sparkles className="size-6 text-amber-400" />
-            <span>Showcase</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            The work shown on your public studio page.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
+      <PageHeader
+        icon={Sparkles}
+        title="Showcase"
+        description="The work shown on your public studio page."
+        actions={
+          <>
           <Link
             href={`/${tenantSlug}`}
             target="_blank"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono text-zinc-300 bg-zinc-900 border border-zinc-700 hover:text-white hover:bg-zinc-800 transition-colors"
+            className={buttonVariants({ variant: "secondary" })}
           >
             <Eye className="size-3.5" />
             <span>View Public Showcase</span>
@@ -154,13 +149,14 @@ export function CmsManager({
               setItemToEdit(null);
               setIsDialogOpen(true);
             }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-medium bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/10"
+            className={buttonVariants()}
           >
             <Plus className="size-4" />
             <span>New Portfolio Item</span>
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* KPI Metrics Summary Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

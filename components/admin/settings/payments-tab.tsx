@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -242,7 +244,7 @@ function OnlinePayments({
               type="button"
               onClick={connect}
               disabled={busy || !categoryCode.trim() || (!configured && !secretKey) || (configured && !dirty)}
-              className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 text-black hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-400 transition-colors"
+              className={cn(buttonVariants(), "ml-auto")}
             >
               {busy && <Loader2 className="size-4 animate-spin" />}
               {configured ? "Save changes" : "Connect Toyyibpay"}

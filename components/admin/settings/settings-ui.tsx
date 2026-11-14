@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Upload, X } from "lucide-react";
@@ -138,7 +139,7 @@ export function SaveBar({ dirty, saving, onDiscard, label = "Save changes" }: { 
       <button
         type="submit"
         disabled={!dirty || saving}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 text-black hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-400 transition-colors"
+        className={buttonVariants()}
       >
         {saving && <Loader2 className="size-4 animate-spin" />}
         {saving ? "Saving…" : label}
