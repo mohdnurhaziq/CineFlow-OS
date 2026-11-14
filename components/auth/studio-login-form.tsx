@@ -25,7 +25,9 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
   const callbackUrl =
     rawCallback && rawCallback.startsWith("/") && !rawCallback.startsWith("//") ? rawCallback : null;
 
-  const [email, setEmail] = useState("");
+  // After a password reset the email comes back filled in.
+  const justReset = searchParams.get("reset") === "1";
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +97,12 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         </p>
       </div>
 
+      {justReset && !error && (
+        <div role="status" className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200">
+          Password updated. Sign in with your new password.
+        </div>
+      )}
+
       {error && (
         <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2.5 text-xs text-rose-300">
           <AlertCircle className="size-4 text-rose-400 flex-shrink-0 mt-0.5" />
@@ -125,6 +133,12 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
               <Lock className="size-3.5 text-amber-400" />
               Password
             </label>
+            <Link
+              href={`/${tenantSlug}/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+              className="text-[11px] font-mono text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              Forgot password?
+            </Link>
           </div>
           <div className="relative">
             <input

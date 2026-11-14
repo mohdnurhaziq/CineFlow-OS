@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
+import { db } from "@/lib/db";
 
 /**
  * Session token primitives.
@@ -21,6 +23,8 @@ export interface SessionUser {
 
 interface TokenPayload extends SessionUser {
   exp: number;
+  /** When the token was issued (ms). Missing on tokens issued before it existed: treated as 0. */
+  iat?: number;
 }
 
 export const COOKIE_NAME = "cineflow_session";
@@ -32,13 +36,19 @@ function createSignature(payloadBase64: string): string {
 
 /** Creates a signed session token. */
 export async function createSessionToken(user: SessionUser): Promise<string> {
-  const payload: TokenPayload = { ...user, exp: Date.now() + SESSION_EXPIRY_MS };
+  const now = Date.now();
+  const payload: TokenPayload = { ...user, iat: now, exp: now + SESSION_EXPIRY_MS };
   const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${payloadBase64}.${createSignature(payloadBase64)}`;
 }
 
 /** Verifies and parses a signed session token. */
 export async function verifySessionToken(token: string): Promise<SessionUser | null> {
+  return (await decodeSessionToken(token))?.user ?? null;
+}
+
+/** Like verifySessionToken, plus when the token was issued (0 for tokens from before `iat`). */
+export async function decodeSessionToken(token: string): Promise<{ user: SessionUser; issuedAt: number } | null> {
   try {
     const parts = token.split(".");
     if (parts.length !== 2) return null;
@@ -55,16 +65,34 @@ export async function verifySessionToken(token: string): Promise<SessionUser | n
     if (Date.now() > payload.exp) return null;
 
     return {
-      id: payload.id,
-      email: payload.email,
-      name: payload.name,
-      role: payload.role,
-      tenantId: payload.tenantId,
-      tenantSlug: payload.tenantSlug,
+      user: {
+        id: payload.id,
+        email: payload.email,
+        name: payload.name,
+        role: payload.role,
+        tenantId: payload.tenantId,
+        tenantSlug: payload.tenantSlug,
+      },
+      issuedAt: typeof payload.iat === "number" ? payload.iat : 0,
     };
   } catch {
     return null;
   }
+}
+
+// One lookup per request, however many times the session is read while rendering it.
+const sessionsValidAfterFor = cache(async (userId: string): Promise<number | null> => {
+  const row = await db.user.findUnique({ where: { id: userId }, select: { sessionsValidAfter: true } });
+  return row?.sessionsValidAfter?.getTime() ?? null;
+});
+
+/**
+ * True when the account was signed out everywhere (password reset) after this token was issued.
+ * Tokens from before `iat` existed count as issued at 0, so they end only on such a reset.
+ */
+export async function isSessionRevoked(userId: string, issuedAt: number): Promise<boolean> {
+  const validAfter = await sessionsValidAfterFor(userId);
+  return validAfter !== null && issuedAt < validAfter;
 }
 
 /** Signs the user in by setting the session cookie. Returns false outside a request context. */

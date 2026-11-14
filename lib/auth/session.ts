@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { isRateLimited } from "@/lib/rate-limit";
-import { COOKIE_NAME, setSessionCookie, verifySessionToken, type SessionUser } from "./token";
+import { COOKIE_NAME, decodeSessionToken, isSessionRevoked, setSessionCookie, type SessionUser } from "./token";
 
 // NOTE: this is a "use server" module, so every export is a public server
 // action. Token minting/verification lives in ./token (not an action module).
@@ -19,7 +19,11 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     const sessionCookie = cookieStore.get(COOKIE_NAME);
     if (!sessionCookie?.value) return null;
 
-    return await verifySessionToken(sessionCookie.value);
+    const decoded = await decodeSessionToken(sessionCookie.value);
+    if (!decoded) return null;
+    // Signed out everywhere (e.g. password reset) after this cookie was issued.
+    if (await isSessionRevoked(decoded.user.id, decoded.issuedAt)) return null;
+    return decoded.user;
   } catch {
     return null;
   }

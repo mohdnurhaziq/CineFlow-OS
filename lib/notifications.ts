@@ -13,7 +13,8 @@ export type NotificationEvent =
   | "PAYMENT_REJECTED"
   | "PROPOSAL_SIGNED"
   | "VAULT_UNLOCKED"
-  | "STUDIO_UPDATE";
+  | "STUDIO_UPDATE"
+  | "PASSWORD_RESET";
 
 export interface BookingConfirmedPayload {
   event: "BOOKING_CONFIRMED";
@@ -109,13 +110,26 @@ export interface StudioUpdatePayload {
   linkLabel?: string;
 }
 
+/** A one-time "reset your password" link. Email only: never put the link in a WhatsApp share. */
+export interface PasswordResetPayload {
+  event: "PASSWORD_RESET";
+  studioName: string;
+  studioSlug: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: undefined;
+  resetUrl: string;
+  expiresMinutes: number;
+}
+
 export type NotificationPayload =
   | BookingConfirmedPayload
   | PaymentApprovedPayload
   | PaymentRejectedPayload
   | ProposalSignedPayload
   | VaultUnlockedPayload
-  | StudioUpdatePayload;
+  | StudioUpdatePayload
+  | PasswordResetPayload;
 
 export interface NotificationResult {
   id: string;
@@ -135,6 +149,8 @@ export interface NotificationResult {
 }
 
 // In-memory audit trail for notifications
+// Bounded, so a long-running server does not keep every email it ever sent in memory.
+const NOTIFICATION_LOG_LIMIT = 200;
 const notificationLog: NotificationResult[] = [];
 
 /** Escapes untrusted text (client names, reviewer notes, ...) for safe use inside email HTML. */
@@ -434,6 +450,23 @@ export async function sendNotification(
       whatsappText = `*${payload.studioName} — ${payload.headline}*\n\nHi ${payload.clientName}, ${payload.message}${payload.linkUrl ? ` ${payload.linkUrl}` : ""}`;
       break;
     }
+    case "PASSWORD_RESET": {
+      emailSubject = `Reset your ${payload.studioName} password`;
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>We received a request to reset the password for your <strong>${esc(payload.studioName)}</strong> account.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${esc(payload.resetUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            Choose a new password
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #a1a1aa;">This link works once and expires in ${esc(payload.expiresMinutes)} minutes. If you didn't ask to reset your password, you can ignore this email: your password stays the same.</p>
+      `;
+      emailText = `Reset your ${payload.studioName} password: ${payload.resetUrl} (works once, expires in ${payload.expiresMinutes} minutes). If you didn't ask for this, ignore this email.`;
+      // Deliberately no WhatsApp text: a reset link must not end up in a share link.
+      whatsappText = "";
+      break;
+    }
   }
 
   const emailHtml = wrapEmailTemplate(payload.studioName, emailSubject, bodyHtml);
@@ -466,7 +499,13 @@ export async function sendNotification(
     emailError: delivery.error,
   };
 
-  notificationLog.push(result);
+  // The log keeps recent sends for auditing; a reset link is a credential, so never keep it.
+  notificationLog.push(
+    payload.event === "PASSWORD_RESET"
+      ? { ...result, emailHtml: "[redacted: password reset]", emailText: "[redacted: password reset]", whatsappMessage: undefined }
+      : result
+  );
+  if (notificationLog.length > NOTIFICATION_LOG_LIMIT) notificationLog.splice(0, notificationLog.length - NOTIFICATION_LOG_LIMIT);
   return result;
 }
 

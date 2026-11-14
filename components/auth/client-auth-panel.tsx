@@ -242,6 +242,16 @@ export function ClientAuthPanel({
           minLength={mode === "register" ? 8 : undefined}
           required
         />
+        {mode === "login" && (
+          <div className="-mt-2 text-right">
+            <a
+              href={`/${tenantSlug}/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+              className="text-[11px] font-mono text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              Forgot password?
+            </a>
+          </div>
+        )}
 
         {mode === "register" && needsClaim && (
           <Field

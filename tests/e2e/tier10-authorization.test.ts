@@ -42,6 +42,8 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "onboarding.onboardStudio": "public studio sign-up",
   "my-booking.lookupMyBooking": "tracking-code lookup",
   "checkout.processBookingCheckout": "client checkout",
+  "password-reset.requestPasswordReset": "forgot password (signed out; rate-limited, same reply for any email)",
+  "password-reset.resetPassword": "forgot password (needs the one-time emailed token; rate-limited)",
 };
 
 const GUARD_RE = /await (requireStaff|requireOwner|requireSuperAdmin|requireStaffBySlug|assertOwner|requireRecordAccess|requireItemAccess)\(|await getCurrentUser\(\)/;
