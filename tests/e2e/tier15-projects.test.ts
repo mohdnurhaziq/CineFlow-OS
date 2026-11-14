@@ -18,6 +18,7 @@ import {
   deleteCallSheet,
   deleteDeliverableItem,
   notifyClientPhotosReady,
+  updateProjectKind,
   updateProjectStatus,
 } from "@/lib/actions/admin-projects";
 import { getNotificationHistory } from "@/lib/notifications";
@@ -45,7 +46,7 @@ import { GET as downloadHandler } from "@/app/api/download/route";
 import { masterFilePath } from "@/lib/deliverables/storage";
 import { DEFAULT_CONTRACT_TERMS } from "@/lib/projects/constants";
 import path from "node:path";
-import { expectSuccess } from "./result-helpers";
+import { expectSuccess, invalid } from "./result-helpers";
 import type { SessionUser } from "@/lib/auth/token";
 
 export async function runTier15ProjectTests(harness: TestHarness) {
@@ -595,6 +596,95 @@ export async function runTier15ProjectTests(harness: TestHarness) {
 
     await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
     harness.assert(!(await fs.stat(masterFilePath(item!.viewUrl!)).catch(() => null)), "Removing the photo deletes its viewing copy too");
+  });
+
+  await harness.test("T15-KIND-01: staff switch a project between session and production without losing its plans", async () => {
+    const sheet = await db.callSheet.create({
+      data: { projectId, title: "Kind switch day", shootDate: new Date("2026-12-01T00:00:00.000Z"), generalCallTime: "08:00 AM", locationName: "Studio", locationAddress: "Main St" },
+    });
+    try {
+      const toSession = await withSession(crew, () => updateProjectKind({ tenantId: lumina.id, projectId, kind: "SESSION" }));
+      harness.assert(toSession.success === true, "Crew switches the project to Session");
+      harness.assertEqual((await db.project.findUnique({ where: { id: projectId } }))?.kind, "SESSION", "Saved as Session");
+      harness.assertEqual(await db.callSheet.count({ where: { projectId } }), 1, "Its call sheet is kept (hidden, not deleted)");
+
+      const back = await withSession(crew, () => updateProjectKind({ tenantId: lumina.id, projectId, kind: "PRODUCTION" }));
+      harness.assert(back.success === true, "Switched back to Production");
+      harness.assertEqual((await db.project.findUnique({ where: { id: projectId } }))?.kind, "PRODUCTION", "Saved as Production");
+
+      const bogus = await withSession(crew, () => updateProjectKind({ tenantId: lumina.id, projectId, kind: invalid<"SESSION">("OTHER") }));
+      harness.assert(!bogus.success, "Unknown kinds are refused");
+
+      const otherTenant = await db.tenant.findFirst({ where: { NOT: { id: lumina.id } } });
+      const outsiderRow = await db.user.findFirst({ where: { tenantId: otherTenant!.id, role: "STUDIO_OWNER" } });
+      const cross = await withSession({ ...as(outsiderRow!), tenantSlug: otherTenant!.slug }, () =>
+        updateProjectKind({ tenantId: otherTenant!.id, projectId, kind: "SESSION" })
+      );
+      harness.assert(!cross.success, "Another studio can't change it");
+      harness.assertEqual((await db.project.findUnique({ where: { id: projectId } }))?.kind, "PRODUCTION", "Still Production");
+    } finally {
+      await db.callSheet.delete({ where: { id: sheet.id } });
+    }
+  });
+
+  await harness.test("T15-FILES-04: telling the client their photos are ready marks the booking delivered", async () => {
+    const deliverClient = await db.user.create({
+      data: { tenantId: lumina.id, email: `t15-deliver-${run}@example.test`, name: "Deliver Client", role: "CLIENT" },
+    });
+    const booking = (status: string, n: number) =>
+      db.clientBooking.create({
+        data: {
+          tenantId: lumina.id,
+          trackingCode: `BK-DLV${n}-${run.toUpperCase()}`,
+          category: "studio-portrait",
+          clientName: deliverClient.name,
+          clientEmail: deliverClient.email,
+          clientPhone: "0123000000",
+          serviceTier: "Portrait",
+          discipline: "PHOTOGRAPHY",
+          status,
+          depositAmount: 0,
+          userId: deliverClient.id,
+        },
+      });
+    const withGallery = async (bookingId: string, n: number) => {
+      const p = await db.project.create({
+        data: {
+          tenantId: lumina.id,
+          projectNumber: `PJ-DLV-${run}-${n}`,
+          title: `Deliver ${n}`,
+          clientId: deliverClient.id,
+          studioLeadId: ownerRow.id,
+          discipline: "PHOTOGRAPHY",
+          budget: 100,
+          kind: "SESSION",
+          bookingId,
+        },
+      });
+      const gallery = await db.clientDeliverable.create({ data: { projectId: p.id, title: "Final selects", discipline: "PHOTOGRAPHY" } });
+      await db.deliverableItem.create({
+        data: { deliverableId: gallery.id, itemType: "PHOTO", title: "One", previewUrl: "https://example.test/p.jpg", downloadUrl: "https://example.test/m.jpg" },
+      });
+      return p;
+    };
+    const done = await booking("COMPLETED", 1);
+    const cancelled = await booking("CANCELLED", 2);
+    const doneProject = await withGallery(done.id, 1);
+    const cancelledProject = await withGallery(cancelled.id, 2);
+    try {
+      const sent = await withSession(crew, () => notifyClientPhotosReady({ tenantId: lumina.id, projectId: doneProject.id }));
+      expectSuccess(sent, "Photos-ready sent");
+      const after = await db.clientBooking.findUnique({ where: { id: done.id } });
+      harness.assertEqual(after?.status, "DELIVERED", "The booking is marked delivered");
+      harness.assert(after?.deliveredAt instanceof Date, "Delivery time recorded");
+
+      await withSession(crew, () => notifyClientPhotosReady({ tenantId: lumina.id, projectId: cancelledProject.id }));
+      harness.assertEqual((await db.clientBooking.findUnique({ where: { id: cancelled.id } }))?.status, "CANCELLED", "A cancelled booking stays cancelled");
+    } finally {
+      await db.project.deleteMany({ where: { clientId: deliverClient.id } });
+      await db.clientBooking.deleteMany({ where: { clientEmail: deliverClient.email } });
+      await db.user.delete({ where: { id: deliverClient.id } });
+    }
   });
 
   await harness.test("T15-LIST-01: the Projects page lists productions and sessions apart, hiding cancelled bookings", async () => {

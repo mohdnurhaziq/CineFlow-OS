@@ -54,6 +54,7 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
           title: project.title,
           projectNumber: project.projectNumber,
           status: project.status,
+          kind: project.kind,
           budget: project.budget,
           isFinalBalancePaid: project.isFinalBalancePaid,
           filesReleased: filesReleased(project, tenant),

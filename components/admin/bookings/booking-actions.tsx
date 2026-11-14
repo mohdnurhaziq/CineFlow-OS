@@ -2,14 +2,12 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUpRight, CalendarClock, CheckCircle2, Clapperboard, Loader2, Mail, PackageCheck, UserX, XCircle } from "lucide-react";
+import { ArrowUpRight, CalendarClock, CheckCircle2, ImageUp, Loader2, Mail, UserX, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { BookingDetails } from "@/lib/bookings/details";
-import { promoteBookingToProjectAction } from "@/lib/actions/admin-bookings";
 import {
   cancelBooking,
   listRescheduleOptions,
-  markBookingDelivered,
   recordSessionOutcome,
   rescheduleBooking,
   resendBookingConfirmation,
@@ -27,18 +25,17 @@ interface BookingActionsProps {
   onChanged: () => void;
 }
 
-type Mode = null | "cancel" | "reschedule" | "deliver";
+type Mode = null | "cancel" | "reschedule";
 
 const btn = "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50";
 const quiet = `${btn} border-zinc-700 text-zinc-200 hover:bg-zinc-800`;
 const input =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 
-/** What the studio can do with a booking from here: move, cancel, close out and deliver. */
+/** What the studio can do with a booking from here: move, cancel, close out, and upload the photos. */
 export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChanged }: BookingActionsProps) {
   const [mode, setMode] = useState<Mode>(null);
   const [reason, setReason] = useState("");
-  const [link, setLink] = useState(booking.deliveryUrl ?? "");
   const [options, setOptions] = useState<RescheduleOption[] | null>(null);
   const [target, setTarget] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -121,35 +118,14 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
               </button>
             </>
           )}
-          {(booking.status === "COMPLETED" || booking.status === "DELIVERED") && (
-            <button type="button" className={`${btn} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`} onClick={() => setMode("deliver")}>
-              <PackageCheck className="size-3.5" /> {booking.status === "DELIVERED" ? "Update gallery link" : "Mark delivered"}
-            </button>
-          )}
-          {booking.project ? (
+          {booking.project && (
             <Link
-              href={`/${tenantSlug}/admin/projects/${booking.project.id}`}
-              className={`${btn} border-amber-500/40 text-amber-300 hover:bg-amber-500/10`}
+              href={`/${tenantSlug}/admin/projects/${booking.project.id}#files`}
+              className={`${btn} bg-amber-500 border-amber-500 text-black hover:bg-amber-400`}
             >
-              <Clapperboard className="size-3.5" /> Project {booking.project.projectNumber}
+              <ImageUp className="size-3.5" /> Upload photos
               <ArrowUpRight className="size-3 ml-0.5" />
             </Link>
-          ) : (
-            (booking.status === "CONFIRMED" || booking.status === "COMPLETED") && (
-              <button
-                type="button"
-                className={`${btn} border-amber-500/40 text-amber-300 hover:bg-amber-500/10`}
-                disabled={pending}
-                onClick={() =>
-                  run(
-                    () => promoteBookingToProjectAction({ tenantId, tenantSlug, bookingId: booking.id }),
-                    "Booking promoted to Project."
-                  )
-                }
-              >
-                <Clapperboard className="size-3.5" /> Promote to Project
-              </button>
-            )
           )}
           {upcoming &&
             (canCancel ? (
@@ -220,36 +196,6 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
               onClick={() => run(() => rescheduleBooking({ ...ids, newSlotId: target }), "Booking moved. The client has been told.")}
             >
               {pending && <Loader2 className="size-3.5 animate-spin" />} Move booking
-            </button>
-          </div>
-        </div>
-      )}
-
-      {mode === "deliver" && (
-        <div className="space-y-2">
-          <label htmlFor="delivery-link" className="text-xs text-zinc-300 block">
-            Link to the client&apos;s photos (optional)
-          </label>
-          <input
-            id="delivery-link"
-            type="url"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="https://… (Google Drive, Pixieset, Dropbox)"
-            className={input}
-          />
-          <p className="text-[11px] text-zinc-500">The client is notified and sees the link in their account.</p>
-          <div className="flex gap-2">
-            <button type="button" className={quiet} onClick={() => setMode(null)}>
-              Back
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              className={`${btn} bg-violet-500 border-violet-500 text-white hover:bg-violet-400`}
-              onClick={() => run(() => markBookingDelivered({ ...ids, deliveryUrl: link }), "Marked as delivered.")}
-            >
-              {pending && <Loader2 className="size-3.5 animate-spin" />} Mark delivered
             </button>
           </div>
         </div>

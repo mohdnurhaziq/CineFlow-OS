@@ -196,6 +196,30 @@ export async function updateProjectStatus(input: z.input<typeof StatusSchema>): 
   }
 }
 
+const KindSchema = z.object({
+  tenantId: z.string().min(1),
+  projectId: z.string().min(1),
+  kind: z.enum(["SESSION", "PRODUCTION"]),
+});
+
+/**
+ * Switches a project between Session (files + payments) and Production (adds call sheets,
+ * shot list and gear). Nothing is deleted: a Production's plans are only hidden on a Session.
+ */
+export async function updateProjectKind(input: z.input<typeof KindSchema>): Promise<Result> {
+  try {
+    const data = KindSchema.parse(input);
+    await requireStaff(data.tenantId);
+    const project = await projectOf(data.tenantId, data.projectId);
+    if (!project) return fail("NOT_FOUND", "Project not found.");
+    await db.project.update({ where: { id: project.id }, data: { kind: data.kind } });
+    revalidate([`/${project.tenant.slug}/admin/projects`, `/${project.tenant.slug}/admin/projects/${project.id}`]);
+    return { success: true };
+  } catch (err) {
+    return fail("KIND_FAILED", actionErrorMessage(err, "Could not change the kind of project."));
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Call sheets
 // ---------------------------------------------------------------------------
@@ -367,7 +391,19 @@ export async function notifyClientPhotosReady(
       await db.project.update({ where: { id: project.id }, data: { status: target } });
     }
 
-    revalidate([`/${slug}/admin/projects`, `/${slug}/admin/projects/${project.id}`, `/${slug}/account`]);
+    // The photos are handed over: a booking that was on (confirmed, or shoot done) is now delivered.
+    // Cancelled and no-show bookings keep their status.
+    const booking = project.bookingId
+      ? await db.clientBooking.findUnique({ where: { id: project.bookingId }, select: { id: true, status: true, deliveredAt: true } })
+      : null;
+    if (booking && (booking.status === "CONFIRMED" || booking.status === "COMPLETED")) {
+      await db.clientBooking.update({
+        where: { id: booking.id },
+        data: { status: "DELIVERED", deliveredAt: booking.deliveredAt ?? new Date() },
+      });
+    }
+
+    revalidate([`/${slug}/admin/projects`, `/${slug}/admin/projects/${project.id}`, `/${slug}/account`, `/${slug}/admin/bookings`]);
     return { success: true, photoCount, videoCount, emailDelivery: result.emailDelivery, whatsappUrl: result.whatsappUrl };
   } catch (err) {
     return fail("NOTIFY_FAILED", actionErrorMessage(err, "Could not notify the client."));

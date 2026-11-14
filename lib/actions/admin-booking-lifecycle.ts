@@ -243,44 +243,6 @@ export async function recordSessionOutcome(input: z.input<typeof OutcomeSchema>)
   }
 }
 
-const DeliverSchema = Base.extend({
-  deliveryUrl: z
-    .string()
-    .trim()
-    .optional()
-    .transform((v) => (v ? v : undefined))
-    .refine((v) => !v || /^https?:\/\/\S+$/i.test(v), "Enter a full link starting with https://"),
-});
-
-/** Marks the client's photos or files as delivered, with an optional link they'll see in their account. */
-export async function markBookingDelivered(input: z.input<typeof DeliverSchema>): Promise<Result> {
-  try {
-    const data = DeliverSchema.parse(input);
-    await requireStaff(data.tenantId);
-    const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId } });
-    if (!booking) return fail("NOT_FOUND", "Booking not found.");
-    if (booking.status !== "COMPLETED" && booking.status !== "DELIVERED") {
-      return fail("NOT_COMPLETED", "Mark the session as done before delivering.");
-    }
-
-    await db.clientBooking.update({
-      where: { id: booking.id },
-      data: { status: "DELIVERED", deliveredAt: booking.deliveredAt ?? new Date(), deliveryUrl: data.deliveryUrl ?? null },
-    });
-    revalidate(data.tenantSlug);
-    await notifyClient(data.tenantId, booking, {
-      headline: "Your photos are ready",
-      message: data.deliveryUrl
-        ? "Your files from the session are ready. Use the link below to view and download them."
-        : "Your files from the session are ready. The studio will share them with you directly.",
-      ...(data.deliveryUrl ? { linkUrl: data.deliveryUrl, linkLabel: "View my photos" } : {}),
-    });
-    return { success: true };
-  } catch (err) {
-    return fail("DELIVER_FAILED", actionErrorMessage(err, "Could not mark the booking delivered."));
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Resend the booking confirmation email
 // ---------------------------------------------------------------------------

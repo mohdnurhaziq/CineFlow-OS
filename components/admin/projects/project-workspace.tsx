@@ -11,6 +11,7 @@ import {
   deleteDeliverableItem,
   cancelEquipmentReservation,
   notifyClientPhotosReady,
+  updateProjectKind,
   updateProjectStatus,
 } from "@/lib/actions/admin-projects";
 import { createEquipmentReservation } from "@/lib/actions/gear";
@@ -32,6 +33,8 @@ interface ProjectWorkspaceProps {
     title: string;
     projectNumber: string;
     status: string;
+    /** SESSION: files + payments only. PRODUCTION: also shoot days, shot list and gear. */
+    kind: string;
     budget: number;
     isFinalBalancePaid: boolean;
     /** Full-resolution files open to the client: paid, or the studio releases them before payment. */
@@ -63,9 +66,21 @@ const small = "text-xs text-zinc-400";
 const primary = "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 disabled:opacity-50";
 const day = (iso: string) => formatSlotDate(iso, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
-function Section({ icon: Icon, title, children, aside }: { icon: typeof Film; title: string; children: React.ReactNode; aside?: React.ReactNode }) {
+function Section({
+  icon: Icon,
+  title,
+  children,
+  aside,
+  id,
+}: {
+  icon: typeof Film;
+  title: string;
+  children: React.ReactNode;
+  aside?: React.ReactNode;
+  id?: string;
+}) {
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-5 space-y-4">
+    <section id={id} className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-5 space-y-4 scroll-mt-24">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Icon className="size-4 text-amber-400" /> {title}
@@ -137,6 +152,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
   };
 
   const fileCount = project.galleries.reduce((n, g) => n + g.items.length, 0);
+  const isSession = project.kind === "SESSION";
 
   // ---- Tell the client the gallery is ready (once every batch is uploaded)
   const notifyPhotosReady = async () => {
@@ -182,6 +198,24 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
               {project.client.phone ? ` · ${project.client.phone}` : ""}
             </p>
           </div>
+          <div className="flex flex-wrap gap-3">
+            <label className="space-y-1">
+              <span className={small}>Kind</span>
+              <select
+                value={isSession ? "SESSION" : "PRODUCTION"}
+                disabled={pending}
+                onChange={(e) =>
+                  run(
+                    () => updateProjectKind({ tenantId, projectId: project.id, kind: e.target.value as "SESSION" | "PRODUCTION" }),
+                    e.target.value === "SESSION" ? "Now a session: planning tools hidden." : "Now a production: planning tools shown."
+                  )
+                }
+                className={field}
+              >
+                <option value="SESSION">Session</option>
+                <option value="PRODUCTION">Production</option>
+              </select>
+            </label>
           <label className="space-y-1">
             <span className={small}>Stage</span>
             <select
@@ -199,9 +233,13 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
               ))}
             </select>
           </label>
+          </div>
         </div>
       </div>
 
+      {/* Planning tools: productions only. A session hides them; nothing is deleted. */}
+      {!isSession && (
+        <>
       {/* Shoot days */}
       <Section
         icon={CalendarDays}
@@ -400,9 +438,12 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
           </div>
         </form>
       </Section>
+        </>
+      )}
 
       {/* Files for the client */}
       <Section
+        id="files"
         icon={ImagePlus}
         title={`Files for the client (${fileCount})`}
         aside={

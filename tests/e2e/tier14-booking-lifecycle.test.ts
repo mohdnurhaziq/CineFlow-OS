@@ -15,7 +15,6 @@ import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import {
   cancelBooking,
   listRescheduleOptions,
-  markBookingDelivered,
   recordSessionOutcome,
   rescheduleBooking,
 } from "@/lib/actions/admin-booking-lifecycle";
@@ -156,13 +155,11 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     harness.assertEqual(balance?.status, "VOID", "Unpaid balance voided");
   });
 
-  await harness.test("T14-DONE-01: done / no-show only after the session starts; delivery needs a done session", async () => {
+  await harness.test("T14-DONE-01: done / no-show only after the session starts; delivered bookings stay closed", async () => {
     const future = await makeSlot(25);
     const futureBooking = await book(future.id, true);
     const early = loose(await withSession(crew, () => recordSessionOutcome({ ...ids(futureBooking), outcome: "COMPLETED" })));
     harness.assertEqual(early.error, "NOT_STARTED", "Can't mark a future session done");
-    const deliverEarly = loose(await withSession(crew, () => markBookingDelivered(ids(futureBooking))));
-    harness.assertEqual(deliverEarly.error, "NOT_COMPLETED", "Can't deliver before the session is done");
 
     // The session day comes.
     await db.bookingSlot.update({ where: { id: future.id }, data: { date: new Date(Date.now() - 2 * DAY_MS) } });
@@ -170,17 +167,8 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     harness.assert(done.success === true, "Marked done", JSON.stringify(done));
     harness.assertEqual((await db.clientBooking.findUnique({ where: { id: futureBooking } }))?.status, "COMPLETED", "Status COMPLETED");
 
-    const badLink = await withSession(crew, () => markBookingDelivered({ ...ids(futureBooking), deliveryUrl: "not a link" }));
-    harness.assertEqual(badLink.success, false, "A delivery link must be a web address");
-    const delivered = await withSession(crew, () =>
-      markBookingDelivered({ ...ids(futureBooking), deliveryUrl: "https://gallery.example.test/t14" })
-    );
-    harness.assert(delivered.success === true, "Delivered", JSON.stringify(delivered));
-    const after = await db.clientBooking.findUnique({ where: { id: futureBooking } });
-    harness.assertEqual(after?.status, "DELIVERED", "Status DELIVERED");
-    harness.assertEqual(after?.deliveryUrl, "https://gallery.example.test/t14", "Gallery link stored for the client");
-    harness.assert(after?.deliveredAt instanceof Date, "Delivery time recorded");
-
+    // Photos handed over ("Notify client: photos ready", covered in tier 15).
+    await db.clientBooking.update({ where: { id: futureBooking }, data: { status: "DELIVERED", deliveredAt: new Date() } });
     const cancelDelivered = loose(await withSession(owner, () => cancelBooking({ ...ids(futureBooking), reason: "Too late" })));
     harness.assertEqual(cancelDelivered.error, "NOT_CANCELLABLE", "Delivered bookings can't be cancelled");
   });
