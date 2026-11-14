@@ -26,7 +26,7 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
 
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
-    select: { id: true, name: true, slug: true, currency: true },
+    select: { id: true, name: true, slug: true, currency: true, releaseFilesBeforePayment: true },
   });
   if (!tenant) notFound();
 

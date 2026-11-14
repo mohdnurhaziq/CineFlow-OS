@@ -3,9 +3,16 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Heart, MessageSquare } from "lucide-react";
+import { BellRing, CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Upload, Heart, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { createCallSheet, deleteCallSheet, deleteDeliverableItem, cancelEquipmentReservation, updateProjectStatus } from "@/lib/actions/admin-projects";
+import {
+  createCallSheet,
+  deleteCallSheet,
+  deleteDeliverableItem,
+  cancelEquipmentReservation,
+  notifyClientPhotosReady,
+  updateProjectStatus,
+} from "@/lib/actions/admin-projects";
 import { createEquipmentReservation } from "@/lib/actions/gear";
 import { PROJECT_STAGES, PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
 import { formatMoney } from "@/lib/money";
@@ -27,6 +34,8 @@ interface ProjectWorkspaceProps {
     status: string;
     budget: number;
     isFinalBalancePaid: boolean;
+    /** Full-resolution files open to the client: paid, or the studio releases them before payment. */
+    filesReleased: boolean;
     client: { name: string; email: string; phone: string | null };
     callSheets: Array<{ id: string; title: string; shootDate: string; generalCallTime: string; locationName: string }>;
     reservations: Array<{ id: string; itemName: string; sku: string; startDate: string; endDate: string; status: string }>;
@@ -128,6 +137,32 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
   };
 
   const fileCount = project.galleries.reduce((n, g) => n + g.items.length, 0);
+
+  // ---- Tell the client the gallery is ready (once every batch is uploaded)
+  const notifyPhotosReady = async () => {
+    const ok = await confirm({
+      title: `Tell ${project.client.name} their photos are ready?`,
+      message: project.filesReleased
+        ? `They'll get an email with a link to download all ${fileCount} file${fileCount === 1 ? "" : "s"}${project.isFinalBalancePaid ? "" : ", and a reminder that the balance is due"}.`
+        : `They'll get an email with a link to view the ${fileCount} watermarked preview${fileCount === 1 ? "" : "s"} and pay the balance to unlock full resolution.`,
+      confirmLabel: "Send",
+    });
+    if (!ok) return;
+    start(async () => {
+      const res = await notifyClientPhotosReady({ tenantId, projectId: project.id });
+      if (!res.success) {
+        toast.error(res.message);
+        return;
+      }
+      const whatsapp = res.whatsappUrl
+        ? { action: { label: "Send on WhatsApp", onClick: () => window.open(res.whatsappUrl, "_blank", "noopener") } }
+        : {};
+      if (res.emailDelivery === "SENT") toast.success(`Emailed ${project.client.email}.`, whatsapp);
+      else if (res.emailDelivery === "SKIPPED") toast.warning("Email isn't set up for this studio, so nothing was emailed.", whatsapp);
+      else toast.error("The email couldn't be sent. Try again, or message the client on WhatsApp.", whatsapp);
+      router.refresh();
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -371,14 +406,28 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
         icon={ImagePlus}
         title={`Files for the client (${fileCount})`}
         aside={
-          <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
-            Client view <ExternalLink className="size-3" />
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+              Client view <ExternalLink className="size-3" />
+            </Link>
+            <button
+              type="button"
+              onClick={notifyPhotosReady}
+              disabled={pending || fileCount === 0}
+              title={fileCount === 0 ? "Upload the photos first" : "Send once every batch is uploaded"}
+              className={primary}
+            >
+              <BellRing className="size-3.5" /> Notify client: photos ready
+            </button>
+          </div>
         }
       >
         <p className={small}>
-          Clients see watermarked previews. Full-resolution files unlock when the final balance is paid
-          {project.isFinalBalancePaid ? " (paid: unlocked now)." : "."}
+          {project.isFinalBalancePaid
+            ? "Balance paid: the client can download the full-resolution files."
+            : project.filesReleased
+              ? "Your studio releases photos before payment: the client can download the full-resolution files now, and the balance stays due."
+              : "The client sees watermarked previews until the balance is paid. You can change this in Settings → Photo delivery."}
         </p>
         {project.galleries.map((g) => (
           <div key={g.id} className="space-y-2">

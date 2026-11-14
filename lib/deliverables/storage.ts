@@ -50,8 +50,9 @@ function escapeXml(text: string): string {
 }
 
 /**
- * Stores a photo: the original privately, plus a public preview at most PREVIEW_MAX_PX on
- * its long side with the studio name tiled across it. Throws if the file isn't an image.
+ * Stores a photo: the original privately, a public preview at most PREVIEW_MAX_PX on its
+ * long side with the studio name tiled across it, and a private clean copy of the same size
+ * (viewUrl) that the vault shows once the files are released. Throws if the file isn't an image.
  */
 export async function storeDeliverablePhoto(opts: {
   tenantId: string;
@@ -59,7 +60,7 @@ export async function storeDeliverablePhoto(opts: {
   data: Buffer;
   ext: string;
   watermark: string;
-}): Promise<{ downloadUrl: string; previewUrl: string; resolution: string; fileSize: string }> {
+}): Promise<{ downloadUrl: string; previewUrl: string; viewUrl: string; resolution: string; fileSize: string }> {
   const meta = await sharp(opts.data).metadata();
   if (!meta.width || !meta.height) throw new Error("Not a readable image");
 
@@ -86,10 +87,12 @@ export async function storeDeliverablePhoto(opts: {
   await fs.mkdir(PREVIEW_DIR, { recursive: true });
   const previewName = `${crypto.randomUUID()}.jpg`;
   await fs.writeFile(path.join(PREVIEW_DIR, previewName), preview);
+  const clean = await sharp(resized.data).jpeg({ quality: 82 }).toBuffer();
 
   return {
     downloadUrl: await saveMaster(opts.tenantId, opts.projectId, opts.data, opts.ext),
     previewUrl: `/uploads/deliverables/previews/${previewName}`,
+    viewUrl: await saveMaster(opts.tenantId, opts.projectId, clean, ".jpg"),
     resolution: `${meta.width} × ${meta.height}`,
     fileSize: humanSize(opts.data.length),
   };
@@ -113,9 +116,9 @@ export async function storeVideoReviewCopy(data: Buffer, ext: string): Promise<s
   return `/uploads/deliverables/previews/${name}`;
 }
 
-/** Deletes a deliverable's files (master and preview). Missing files are ignored. */
-export async function deleteDeliverableFiles(item: { downloadUrl: string; previewUrl: string }) {
-  for (const target of [item.downloadUrl, item.previewUrl]) {
+/** Deletes a deliverable's files (master, preview and clean copy). Missing files are ignored. */
+export async function deleteDeliverableFiles(item: { downloadUrl: string; previewUrl: string; viewUrl?: string | null }) {
+  for (const target of [item.downloadUrl, item.previewUrl, item.viewUrl ?? ""]) {
     if (!target || /^https?:/i.test(target)) continue;
     try {
       await fs.unlink(masterFilePath(target));

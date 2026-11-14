@@ -17,8 +17,11 @@ import {
   createProposal,
   deleteCallSheet,
   deleteDeliverableItem,
+  notifyClientPhotosReady,
   updateProjectStatus,
 } from "@/lib/actions/admin-projects";
+import { getNotificationHistory } from "@/lib/notifications";
+import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import {
   createShotItem,
   updateShotItem,
@@ -457,6 +460,141 @@ export async function runTier15ProjectTests(harness: TestHarness) {
     const del = await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
     harness.assert(del.success === true, "File removed");
     harness.assert(!(await fs.stat(masterPath).catch(() => null)), "Master file deleted from storage");
+  });
+
+  await harness.test("T15-FILES-02: the studio tells the client their photos are ready, once the upload is done", async () => {
+    await db.project.update({ where: { id: projectId }, data: { isFinalBalancePaid: false, status: "POST_PRODUCTION" } });
+    const notify = (user: SessionUser | null) =>
+      withSession(user, () => notifyClientPhotosReady({ tenantId: lumina.id, projectId }));
+
+    const empty = await notify(crew);
+    harness.assert(!empty.success, "Nothing to send while the project has no files");
+
+    const png = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 10, g: 90, b: 160 } } }).png().toBuffer();
+    const form = new FormData();
+    form.append("projectId", projectId);
+    form.append("files", new File([new Uint8Array(png)], "first_look.png", { type: "image/png" }));
+    const up = await withSession(crew, () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
+    harness.assertEqual(up.status, 200, "Photo uploaded");
+    const item = await db.deliverableItem.findFirst({ where: { deliverable: { projectId } } });
+    createdFiles.push(masterFilePath(item!.downloadUrl), path.join(process.cwd(), "public", item!.previewUrl));
+    harness.assert(
+      !getNotificationHistory(20).some((n) => n.event === "PHOTOS_READY" && n.recipientEmail === clientEmail),
+      "Uploading alone doesn't message the client"
+    );
+
+    const anon = await notify(null);
+    harness.assert(!anon.success, "Signed-out visitors can't send it");
+
+    const unpaid = await notify(crew);
+    expectSuccess(unpaid, "Crew sends 'photos ready'");
+    harness.assertEqual(unpaid.photoCount, 1, "Counts the photos in the vault");
+    const sentUnpaid = getNotificationHistory(20).filter((n) => n.event === "PHOTOS_READY" && n.recipientEmail === clientEmail).at(-1);
+    harness.assert(!!sentUnpaid, "The client is messaged");
+    harness.assert(!!sentUnpaid?.emailText.includes(`/lumina-cine/vault/${projectId}`), "The message links to the vault");
+    harness.assert(!!sentUnpaid?.emailText.toLowerCase().includes("balance"), "Unpaid: the message says full-resolution files unlock with the balance");
+    const project = await db.project.findUnique({ where: { id: projectId } });
+    harness.assertEqual(project?.status, "IN_REVIEW", "The project moves to client review");
+
+    await db.project.update({ where: { id: projectId }, data: { isFinalBalancePaid: true } });
+    const paid = await notify(crew);
+    expectSuccess(paid, "Sent again after the balance is paid");
+    const sentPaid = getNotificationHistory(20).filter((n) => n.event === "PHOTOS_READY" && n.recipientEmail === clientEmail).at(-1);
+    harness.assert(!!sentPaid?.emailText.toLowerCase().includes("download"), "Paid: the message says the files can be downloaded");
+    harness.assert(!sentPaid?.emailText.toLowerCase().includes("balance"), "Paid: no mention of a balance");
+    const delivered = await db.project.findUnique({ where: { id: projectId } });
+    harness.assertEqual(delivered?.status, "DELIVERED", "Paid and sent: the project is delivered");
+
+    const otherTenant = await db.tenant.findFirst({ where: { NOT: { id: lumina.id } } });
+    if (otherTenant) {
+      const outsider = await db.user.create({
+        data: { tenantId: otherTenant.id, email: `t15-outsider-${run}@example.test`, name: "Outsider", role: "STUDIO_OWNER" },
+      });
+      const cross = await withSession({ ...as(outsider), tenantSlug: otherTenant.slug }, () =>
+        notifyClientPhotosReady({ tenantId: otherTenant.id, projectId })
+      );
+      harness.assert(!cross.success, "Another studio can't message this studio's client");
+    }
+
+    await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
+  });
+
+  await harness.test("T15-FILES-03: a studio can release full-resolution photos before the balance is paid", async () => {
+    await db.project.update({ where: { id: projectId }, data: { isFinalBalancePaid: false } });
+    const projectRow = await db.project.findUnique({ where: { id: projectId }, select: { clientId: true } });
+    const clientRow = await db.user.findUnique({ where: { id: projectRow!.clientId } });
+    const client = as(clientRow!);
+
+    const png = await sharp({ create: { width: 2000, height: 1000, channels: 3, background: { r: 30, g: 160, b: 90 } } }).png().toBuffer();
+    const form = new FormData();
+    form.append("projectId", projectId);
+    form.append("files", new File([new Uint8Array(png)], "final_frame.png", { type: "image/png" }));
+    await withSession(crew, () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
+    const item = await db.deliverableItem.findFirst({ where: { deliverable: { projectId } } });
+    harness.assert(!!item?.viewUrl?.startsWith("private:"), "A clean viewing copy is stored privately");
+    createdFiles.push(masterFilePath(item!.downloadUrl), masterFilePath(item!.viewUrl!), path.join(process.cwd(), "public", item!.previewUrl));
+    const view = await sharp(masterFilePath(item!.viewUrl!)).metadata();
+    harness.assert((view.width ?? 0) <= 1600, `The viewing copy is web-sized (${view.width}px wide)`);
+
+    const get = (type: string) =>
+      withSession(client, () =>
+        downloadHandler(new NextRequest(`http://localhost:3000/api/download?projectId=${projectId}&type=${type}&assetId=${item!.id}`))
+      );
+
+    // Default: watermarked until paid.
+    harness.assertEqual((await get("photo_master")).status, 403, "Default setting: the original stays locked until paid");
+    harness.assertEqual((await get("photo_view")).status, 403, "Default setting: the clean copy stays locked too");
+
+    // The owner switches the studio to "full resolution right away".
+    const settings = {
+      tenantId: lumina.id,
+      tenantSlug: "lumina-cine",
+      name: lumina.name,
+      newSlug: lumina.slug,
+      discipline: lumina.discipline as "PHOTOGRAPHY" | "VIDEOGRAPHY" | "HYBRID",
+      brandColor: lumina.brandColor ?? "#f59e0b",
+      currency: lumina.currency as "USD" | "MYR" | "SGD" | "EUR" | "GBP",
+      customDomain: lumina.customDomain,
+      tagline: lumina.tagline,
+      bio: lumina.bio,
+      logoUrl: lumina.logoUrl,
+      qrCodeUrl: lumina.qrCodeUrl,
+      bankDetails: lumina.bankDetails,
+    };
+    const crewTry = await withSession(crew, () => updateStudioSettings({ ...settings, releaseFilesBeforePayment: true }));
+    harness.assert(!crewTry.success, "Crew can't change the delivery setting");
+    try {
+      const saved = await withSession(owner, () => updateStudioSettings({ ...settings, releaseFilesBeforePayment: true }));
+      harness.assert(saved.success === true, "The owner turns on 'full resolution right away'");
+
+      const master = await get("photo_master");
+      harness.assertEqual(master.status, 200, "Unpaid, released: the original downloads");
+      harness.assertEqual(Buffer.from(await master.arrayBuffer()).length, png.length, "The original file, full size");
+      const shown = await get("photo_view");
+      harness.assertEqual(shown.status, 200, "Unpaid, released: the clean copy shows in the vault");
+      harness.assertEqual(shown.headers.get("Content-Type"), "image/jpeg", "Served as an image");
+      const anon = await withSession(null, () =>
+        downloadHandler(new NextRequest(`http://localhost:3000/api/download?projectId=${projectId}&type=photo_view&assetId=${item!.id}`))
+      );
+      harness.assertEqual(anon.status, 401, "Still only for the signed-in client or staff");
+
+      const sent = await withSession(crew, () => notifyClientPhotosReady({ tenantId: lumina.id, projectId }));
+      expectSuccess(sent, "Photos-ready sent");
+      const msg = getNotificationHistory(20).filter((n) => n.event === "PHOTOS_READY" && n.recipientEmail === clientEmail).at(-1);
+      harness.assert(!!msg?.emailText.includes("download the full-resolution files now"), "The message says they can download now");
+      harness.assert(!msg?.emailText.includes("watermarked"), "No mention of watermarked previews");
+
+      // Untouched when a save leaves the field out.
+      await withSession(owner, () => updateStudioSettings(settings));
+      const still = await db.tenant.findUnique({ where: { id: lumina.id } });
+      harness.assertEqual(still?.releaseFilesBeforePayment, true, "Saving other settings keeps the delivery choice");
+    } finally {
+      await db.tenant.update({ where: { id: lumina.id }, data: { releaseFilesBeforePayment: false } });
+    }
+    harness.assertEqual((await get("photo_master")).status, 403, "Switched back: locked again until paid");
+
+    await withSession(crew, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: item!.id }));
+    harness.assert(!(await fs.stat(masterFilePath(item!.viewUrl!)).catch(() => null)), "Removing the photo deletes its viewing copy too");
   });
 
   await harness.test("T15-BOOKING-PROJ-01: Category-based auto-provisioning of Projects from Bookings", async () => {

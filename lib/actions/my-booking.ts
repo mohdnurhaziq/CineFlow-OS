@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { filesReleased } from "@/lib/deliverables/access";
 import { z } from "zod";
 
 /**
@@ -38,6 +39,8 @@ export interface MyBookingProject {
   projectNumber: string;
   status: string;
   isFinalBalancePaid: boolean;
+  /** Full-resolution files open: paid, or the studio releases them before payment. */
+  filesReleased: boolean;
   vaultUrl: string;
 }
 
@@ -124,7 +127,7 @@ export async function lookupMyBooking(input: {
   try {
     const tenant = await db.tenant.findUnique({
       where: { slug: tenantSlug },
-      select: { id: true, currency: true },
+      select: { id: true, currency: true, releaseFilesBeforePayment: true },
     });
     if (!tenant) return NOT_FOUND;
 
@@ -179,6 +182,7 @@ export async function lookupMyBooking(input: {
         projectNumber: p.projectNumber,
         status: p.status,
         isFinalBalancePaid: p.isFinalBalancePaid,
+        filesReleased: filesReleased(p, tenant),
         vaultUrl: `/${tenantSlug}/vault/${p.id}`,
       }));
 

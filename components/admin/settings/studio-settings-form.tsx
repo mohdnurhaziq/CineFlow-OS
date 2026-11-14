@@ -14,6 +14,7 @@ import {
   Copy,
   Upload,
   X,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
@@ -174,6 +175,7 @@ export interface StudioTenantData {
   currency: string;
   qrCodeUrl?: string | null;
   bankDetails?: string | null;
+  releaseFilesBeforePayment?: boolean;
   subscriptionTier: string;
   subscriptionStatus: string;
   gatewayConfigured?: boolean;
@@ -327,6 +329,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
   );
   const [qrCodeUrl, setQrCodeUrl] = useState(tenant.qrCodeUrl || "");
   const [bankDetails, setBankDetails] = useState(tenant.bankDetails || "");
+  const [releaseFilesBeforePayment, setReleaseFilesBeforePayment] = useState(tenant.releaseFilesBeforePayment ?? false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -360,6 +363,7 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
         currency,
         qrCodeUrl: qrCodeUrl || null,
         bankDetails: bankDetails || null,
+        releaseFilesBeforePayment,
       });
 
       if (!res.success) {
@@ -591,6 +595,52 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
             className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
           />
         </div>
+      </div>
+
+      {/* Section: Photo delivery */}
+      <div className="p-6 rounded-2xl border border-zinc-800 bg-[#0d0d10] space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
+          <ImageIcon className="size-5 text-amber-400" />
+          <h2 className="text-base font-bold text-white tracking-tight">Photo delivery</h2>
+        </div>
+        <p className="text-xs text-zinc-400">
+          What clients get when you upload their final photos, before the balance is paid. Paying the balance always
+          releases everything.
+        </p>
+        <fieldset className="grid sm:grid-cols-2 gap-3">
+          <legend className="sr-only">Photo delivery before payment</legend>
+          {[
+            {
+              value: false,
+              title: "Watermarked until paid",
+              body: "Clients view watermarked previews and pick favourites. Full-resolution downloads unlock when the balance is paid.",
+            },
+            {
+              value: true,
+              title: "Full resolution right away",
+              body: "Clients view and download the full-resolution photos as soon as you upload them. The balance stays due.",
+            },
+          ].map((opt) => (
+            <label
+              key={String(opt.value)}
+              className={`flex gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
+                releaseFilesBeforePayment === opt.value ? "border-amber-500 bg-amber-500/5" : "border-zinc-800 hover:border-zinc-700"
+              }`}
+            >
+              <input
+                type="radio"
+                name="releaseFilesBeforePayment"
+                checked={releaseFilesBeforePayment === opt.value}
+                onChange={() => setReleaseFilesBeforePayment(opt.value)}
+                className="mt-0.5 accent-amber-500"
+              />
+              <span className="space-y-1">
+                <span className="block text-sm font-semibold text-white">{opt.title}</span>
+                <span className="block text-xs text-zinc-400">{opt.body}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
       </div>
 
       {/* Section 2: Bank Transfer & Payment Wire Info */}

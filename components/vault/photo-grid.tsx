@@ -30,10 +30,10 @@ export interface PhotoItem {
 interface PhotoGridProps {
   items: PhotoItem[];
   projectId: string;
-  isFinalBalancePaid: boolean;
+  filesReleased: boolean;
 }
 
-export function PhotoGrid({ items, projectId, isFinalBalancePaid }: PhotoGridProps) {
+export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
   const [filterFavsOnly, setFilterFavsOnly] = useState(false);
   const [activeItems, setActiveItems] = useState<PhotoItem[]>(items);
 
@@ -133,7 +133,7 @@ export function PhotoGrid({ items, projectId, isFinalBalancePaid }: PhotoGridPro
           {/* Batch ZIP Downloads */}
           {activeItems.length > 0 && (
             <div className="flex items-center gap-1.5">
-              {isFinalBalancePaid ? (
+              {filesReleased ? (
                 <>
                   {totalFavs > 0 && (
                     <a
@@ -196,7 +196,7 @@ export function PhotoGrid({ items, projectId, isFinalBalancePaid }: PhotoGridPro
                 />
 
                 {/* Watermark Overlay Banner if Unpaid */}
-                {!isFinalBalancePaid && (
+                {!filesReleased && (
                   <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                     <span className="transform -rotate-12 px-3 py-1 rounded bg-black/60 backdrop-blur-xs border border-amber-500/30 text-[10px] font-mono tracking-widest text-amber-300 font-bold uppercase shadow-lg">
                       Watermarked Proof
@@ -275,7 +275,7 @@ export function PhotoGrid({ items, projectId, isFinalBalancePaid }: PhotoGridPro
 
                 {/* Master Download Action */}
                 <div className="pt-2 border-t border-zinc-800">
-                  {isFinalBalancePaid ? (
+                  {filesReleased ? (
                     <a
                       href={`/api/download?projectId=${projectId}&assetId=${item.id}&type=photo_master`}
                       download
@@ -345,7 +345,7 @@ export function PhotoGrid({ items, projectId, isFinalBalancePaid }: PhotoGridPro
                 className="max-h-[70vh] w-auto object-contain rounded-lg shadow-2xl"
               />
 
-              {!isFinalBalancePaid && (
+              {!filesReleased && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                   <span className="transform -rotate-12 px-4 py-2 rounded-lg bg-black/75 border border-amber-500/40 text-xs font-mono tracking-widest text-amber-300 font-bold uppercase shadow-2xl">
                     Watermarked Proof — Final Balance Due

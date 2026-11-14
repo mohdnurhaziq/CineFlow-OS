@@ -30,6 +30,8 @@ interface VaultShellProps {
     category: string;
     discipline: string;
     isFinalBalancePaid: boolean;
+    /** Full-resolution files available: balance paid, or the studio releases them before payment. */
+    filesReleased: boolean;
     budget: number;
     client: {
       name: string;
@@ -59,6 +61,7 @@ export function VaultShell({
 }: VaultShellProps) {
   const balanceAmount = finalInvoice?.amount ?? project.budget * 0.5;
   const isPaid = project.isFinalBalancePaid;
+  const released = project.filesReleased;
 
   const totalPhotos = photoItems.length;
   const favoriteCount = photoItems.filter((i) => i.isClientFav).length;
@@ -128,6 +131,18 @@ export function VaultShell({
                   </span>
                 </div>
               </div>
+            ) : released ? (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5">
+                <CheckCircle2 className="size-5 text-emerald-400" />
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
+                    BALANCE DUE
+                  </span>
+                  <span className="text-xs font-semibold text-white">
+                    Full-resolution photos ready
+                  </span>
+                </div>
+              </div>
             ) : (
               <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5">
                 <Lock className="size-5 text-amber-400" />
@@ -153,6 +168,7 @@ export function VaultShell({
           invoiceId={finalInvoice?.id}
           balanceAmount={balanceAmount}
           currency={tenant.currency}
+          filesReleased={released}
         />
       )}
 
@@ -161,7 +177,7 @@ export function VaultShell({
         <div className="flex flex-wrap items-center gap-3">
           {/* Download Photo ZIP */}
           {photoItems.length > 0 && (
-            isPaid ? (
+            released ? (
               <a
                 href={`/api/download?projectId=${project.id}&type=photo_zip`}
                 download
@@ -184,7 +200,7 @@ export function VaultShell({
 
           {/* Download 4K Master Video */}
           {videoItems.length > 0 && (
-            isPaid ? (
+            released ? (
               <a
                 href={`/api/download?projectId=${project.id}&type=video_master`}
                 download
@@ -222,7 +238,7 @@ export function VaultShell({
         <VideoPlayerCard
           items={videoItems}
           projectId={project.id}
-          isFinalBalancePaid={isPaid}
+          filesReleased={released}
         />
       )}
 
@@ -231,7 +247,7 @@ export function VaultShell({
         <PhotoGrid
           items={photoItems}
           projectId={project.id}
-          isFinalBalancePaid={isPaid}
+          filesReleased={released}
         />
       )}
     </div>

@@ -32,6 +32,9 @@ export const UpdateStudioSettingsSchema = z.object({
   currency: z.enum(["USD", "MYR", "SGD", "EUR", "GBP"]),
   qrCodeUrl: z.string().optional().nullable(),
   bankDetails: z.string().optional().nullable(),
+  // Photo delivery: true releases full-resolution files on upload; false keeps watermarked previews until paid.
+  // Left out: unchanged.
+  releaseFilesBeforePayment: z.boolean().optional(),
 });
 
 export type UpdateStudioSettingsInput = z.input<typeof UpdateStudioSettingsSchema>;

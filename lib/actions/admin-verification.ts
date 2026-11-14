@@ -204,7 +204,13 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
         }
       }
 
-      if (unlockedDownloads && invoice.projectId && vaultUrl) {
+      // Paid before the photos are uploaded: nothing to download yet. The studio's
+      // "photos ready" message tells the client once the gallery is filled.
+      const hasFiles =
+        unlockedDownloads && invoice.projectId
+          ? (await db.deliverableItem.count({ where: { deliverable: { projectId: invoice.projectId } } })) > 0
+          : false;
+      if (unlockedDownloads && invoice.projectId && vaultUrl && hasFiles) {
         sendNotification({
           event: "VAULT_UNLOCKED",
           studioName: invoice.tenant.name,

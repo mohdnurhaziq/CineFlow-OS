@@ -80,7 +80,8 @@ interface InvoiceRow extends MilestoneInvoice {
 }
 
 interface ClientDashboardProps {
-  tenant: { name: string; slug: string; currency: string };
+  /** releaseFilesBeforePayment: the studio gives full-resolution files on upload, before the balance is paid. */
+  tenant: { name: string; slug: string; currency: string; releaseFilesBeforePayment?: boolean };
   client: { name: string; email: string; phone: string | null };
   bookings: BookingRow[];
   invoices: InvoiceRow[];
@@ -898,15 +899,15 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                           {items.length > 0 && (
                             <div className="flex items-center gap-1.5 text-xs">
-                              {p.isFinalBalancePaid ? (
+                              {p.isFinalBalancePaid || tenant.releaseFilesBeforePayment ? (
                                 <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
                                   <LockOpen className="size-3.5" />
-                                  High-Res Masters Unlocked (Ready for Download)
+                                  Full-resolution photos ready to download{p.isFinalBalancePaid ? "" : " (balance still due)"}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1.5 text-amber-400/90 font-medium">
                                   <Lock className="size-3.5" />
-                                  Watermarked Proofing Previews (Masters unlock upon balance payment)
+                                  Watermarked previews (full resolution unlocks when the balance is paid)
                                 </span>
                               )}
                             </div>

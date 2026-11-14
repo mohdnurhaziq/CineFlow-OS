@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { requireOwner, requireStaff } from "@/lib/auth/guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { deleteDeliverableFiles } from "@/lib/deliverables/storage";
+import { filesReleased } from "@/lib/deliverables/access";
 import { sendNotification } from "@/lib/notifications";
 import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
 import { PROJECT_STAGES } from "@/lib/projects/constants";
@@ -293,6 +294,83 @@ export async function deleteDeliverableItem(input: z.input<typeof DeleteItemSche
     return { success: true };
   } catch (err) {
     return fail("DELETE_FAILED", actionErrorMessage(err, "Could not delete the file."));
+  }
+}
+
+const NotifyPhotosReadySchema = z.object({ tenantId: z.string().min(1), projectId: z.string().min(1) });
+
+/**
+ * Tells the client their edited photos/videos are in the vault (email, plus a WhatsApp link
+ * for staff to send). Staff press this once the upload is complete, so a shoot uploaded in
+ * several batches sends one message. It says the files can be downloaded when they are released
+ * (balance paid, or the studio's "full resolution right away" setting), otherwise that watermarked
+ * previews are ready; an unpaid balance invoice is linked either way.
+ * Moves the project to "Delivered" when the files are released, otherwise to "Client review".
+ */
+export async function notifyClientPhotosReady(
+  input: z.input<typeof NotifyPhotosReadySchema>
+): Promise<Result<{ photoCount: number; videoCount: number; emailDelivery: string; whatsappUrl?: string }>> {
+  try {
+    const data = NotifyPhotosReadySchema.parse(input);
+    await requireStaff(data.tenantId);
+    const project = await db.project.findFirst({
+      where: { id: data.projectId, tenantId: data.tenantId },
+      include: {
+        tenant: { select: { name: true, slug: true, currency: true, releaseFilesBeforePayment: true } },
+        client: { select: { name: true, email: true, phone: true } },
+        deliverables: { select: { items: { select: { itemType: true } } } },
+      },
+    });
+    if (!project) return fail("NOT_FOUND", "Project not found.");
+
+    const items = project.deliverables.flatMap((d) => d.items);
+    const photoCount = items.filter((i) => i.itemType === "PHOTO").length;
+    const videoCount = items.length - photoCount;
+    if (items.length === 0) return fail("NO_FILES", "Upload the photos first: the client's gallery is empty.");
+
+    const appUrl = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+    const slug = project.tenant.slug;
+    const unlocked = filesReleased(project, project.tenant);
+    const balanceInvoice = project.isFinalBalancePaid
+      ? null
+      : await db.milestoneInvoice.findFirst({
+          where: {
+            tenantId: data.tenantId,
+            milestoneType: { in: ["FINAL_BALANCE_50", "BOOKING_BALANCE"] },
+            status: { not: "PAID" },
+            OR: [{ projectId: project.id }, ...(project.bookingId ? [{ bookingId: project.bookingId }] : [])],
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+    const result = await sendNotification({
+      event: "PHOTOS_READY",
+      studioName: project.tenant.name,
+      studioSlug: slug,
+      clientName: project.client.name,
+      clientEmail: project.client.email,
+      clientPhone: project.client.phone || undefined,
+      projectTitle: project.title,
+      vaultUrl: `${appUrl}/${slug}/vault/${project.id}`,
+      photoCount,
+      videoCount,
+      unlocked,
+      balanceDue: balanceInvoice
+        ? { amount: balanceInvoice.amount, currency: project.tenant.currency, payUrl: `${appUrl}/${slug}/checkout?invoiceId=${balanceInvoice.id}` }
+        : undefined,
+    });
+
+    // Move the project forward, never back: "Client review" while locked, "Delivered" once released.
+    const target = unlocked ? "DELIVERED" : "IN_REVIEW";
+    const stage = (s: string) => PROJECT_STAGES.indexOf(s as (typeof PROJECT_STAGES)[number]);
+    if (stage(project.status) < stage(target)) {
+      await db.project.update({ where: { id: project.id }, data: { status: target } });
+    }
+
+    revalidate([`/${slug}/admin/projects`, `/${slug}/admin/projects/${project.id}`, `/${slug}/account`]);
+    return { success: true, photoCount, videoCount, emailDelivery: result.emailDelivery, whatsappUrl: result.whatsappUrl };
+  } catch (err) {
+    return fail("NOTIFY_FAILED", actionErrorMessage(err, "Could not notify the client."));
   }
 }
 

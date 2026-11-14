@@ -13,6 +13,7 @@ export type NotificationEvent =
   | "PAYMENT_REJECTED"
   | "PROPOSAL_SIGNED"
   | "VAULT_UNLOCKED"
+  | "PHOTOS_READY"
   | "STUDIO_UPDATE"
   | "PASSWORD_RESET";
 
@@ -93,6 +94,27 @@ export interface VaultUnlockedPayload {
   vaultUrl: string;
 }
 
+/**
+ * The studio has finished editing and uploaded the photos/videos. Sent when staff press
+ * "Notify client" on the project, not on each upload (a shoot often goes up in batches).
+ */
+export interface PhotosReadyPayload {
+  event: "PHOTOS_READY";
+  studioName: string;
+  studioSlug: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: string;
+  projectTitle: string;
+  vaultUrl: string;
+  photoCount: number;
+  videoCount: number;
+  /** True when full-resolution downloads are open now: balance paid, or the studio releases files before payment. */
+  unlocked: boolean;
+  /** The balance still due and where to pay it, when an unpaid balance invoice exists. */
+  balanceDue?: { amount: number; currency: string; payUrl: string };
+}
+
 /** A plain message from the studio: a booking moved, cancelled or delivered, an invoice reminder. */
 export interface StudioUpdatePayload {
   event: "STUDIO_UPDATE";
@@ -128,6 +150,7 @@ export type NotificationPayload =
   | PaymentRejectedPayload
   | ProposalSignedPayload
   | VaultUnlockedPayload
+  | PhotosReadyPayload
   | StudioUpdatePayload
   | PasswordResetPayload;
 
@@ -428,6 +451,47 @@ export async function sendNotification(
       `;
       emailText = `Your master media for ${payload.projectTitle} is unlocked! Access your vault: ${payload.vaultUrl}`;
       whatsappText = `*${payload.studioName} — Masters Unlocked!*\n\nHi ${payload.clientName}, your deliverables for *${payload.projectTitle}* are ready for full PKZIP download: ${payload.vaultUrl}`;
+      break;
+    }
+
+    case "PHOTOS_READY": {
+      const parts = [
+        payload.photoCount ? `${payload.photoCount} photo${payload.photoCount === 1 ? "" : "s"}` : "",
+        payload.videoCount ? `${payload.videoCount} video${payload.videoCount === 1 ? "" : "s"}` : "",
+      ].filter(Boolean);
+      const what = parts.join(" and ") || "your files";
+      const due = payload.balanceDue;
+      const dueLabel = due ? `${due.currency} ${due.amount.toFixed(2)}` : "";
+      const nextStep = payload.unlocked
+        ? `You can view and download the full-resolution files now.${due ? ` The remaining balance of ${dueLabel} is still due.` : ""}`
+        : `You can view watermarked previews and pick your favourites now. Full-resolution downloads unlock once the remaining balance${due ? ` of ${dueLabel}` : ""} is paid.`;
+      emailSubject = payload.unlocked
+        ? `Your ${payload.projectTitle} files are ready to download`
+        : `Your ${payload.projectTitle} photos are ready to view`;
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>Good news: we've finished editing <strong>${esc(payload.projectTitle)}</strong> and uploaded ${esc(what)} to your gallery.</p>
+        <p>${esc(nextStep)}</p>
+        <div style="text-align: center; margin: 30px 0 12px 0;">
+          <a href="${esc(payload.vaultUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            ${payload.unlocked ? "Open gallery & download" : "View my photos"}
+          </a>
+        </div>
+        ${
+          due
+            ? `<div style="text-align: center; margin: 0 0 20px 0;">
+          <a href="${esc(due.payUrl)}" style="color: #f59e0b; font-size: 13px;">Pay the balance (${esc(dueLabel)})</a>
+        </div>`
+            : ""
+        }
+      `;
+      emailText = `Your ${payload.projectTitle} gallery is ready: ${what} uploaded. ${nextStep} View: ${payload.vaultUrl}${due ? ` Pay the balance: ${due.payUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — Your photos are ready!*
+
+Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. ${nextStep}
+
+📸 ${payload.vaultUrl}${due ? `
+💳 Pay balance: ${due.payUrl}` : ""}`;
       break;
     }
 

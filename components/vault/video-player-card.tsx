@@ -20,10 +20,10 @@ export interface VideoItem {
 interface VideoPlayerCardProps {
   items: VideoItem[];
   projectId: string;
-  isFinalBalancePaid: boolean;
+  filesReleased: boolean;
 }
 
-export function VideoPlayerCard({ items, projectId, isFinalBalancePaid }: VideoPlayerCardProps) {
+export function VideoPlayerCard({ items, projectId, filesReleased }: VideoPlayerCardProps) {
   const [retouchTarget, setRetouchTarget] = useState<VideoItem | null>(null);
 
   if (items.length === 0) return null;
@@ -59,12 +59,12 @@ export function VideoPlayerCard({ items, projectId, isFinalBalancePaid }: VideoP
               <div className="absolute top-3 left-3 z-10 pointer-events-none">
                 <span
                   className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border shadow-lg ${
-                    isFinalBalancePaid
+                    filesReleased
                       ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
                       : "bg-amber-500/20 text-amber-400 border-amber-500/40"
                   }`}
                 >
-                  {isFinalBalancePaid ? "Director Cut (Unlocked)" : "Streaming Review Proxy"}
+                  {filesReleased ? "Director Cut (Unlocked)" : "Streaming Review Proxy"}
                 </span>
               </div>
             </div>
@@ -116,7 +116,7 @@ export function VideoPlayerCard({ items, projectId, isFinalBalancePaid }: VideoP
                 </button>
 
                 {/* Master Download Button */}
-                {isFinalBalancePaid ? (
+                {filesReleased ? (
                   <a
                     href={`/api/download?projectId=${projectId}&assetId=${video.id}&type=video_master`}
                     download

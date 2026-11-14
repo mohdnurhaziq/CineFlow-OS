@@ -36,6 +36,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
       currency,
       qrCodeUrl,
       bankDetails,
+      releaseFilesBeforePayment,
     } = validated;
 
     // Check tenant exists
@@ -88,6 +89,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
         currency,
         qrCodeUrl: qrCodeUrl || null,
         bankDetails: bankDetails || null,
+        ...(releaseFilesBeforePayment === undefined ? {} : { releaseFilesBeforePayment }),
       },
     });
 

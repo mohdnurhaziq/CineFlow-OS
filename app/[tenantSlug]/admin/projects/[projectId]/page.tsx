@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { filesReleased } from "@/lib/deliverables/access";
 import { ProjectWorkspace } from "@/components/admin/projects/project-workspace";
 
 interface ProjectPageProps {
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
 // Access is enforced by the admin layout (studio staff or super-admin only).
 export default async function AdminProjectPage({ params }: ProjectPageProps) {
   const { tenantSlug, projectId } = await params;
-  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
+  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true, releaseFilesBeforePayment: true } });
   if (!tenant) notFound();
 
   const project = await db.project.findFirst({
@@ -55,6 +56,7 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
           status: project.status,
           budget: project.budget,
           isFinalBalancePaid: project.isFinalBalancePaid,
+          filesReleased: filesReleased(project, tenant),
           client: project.client,
           callSheets: project.callSheets.map((c) => ({
             id: c.id,

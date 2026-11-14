@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
+import { filesReleased } from "@/lib/deliverables/access";
 import { requirePageAccess } from "@/lib/auth/project-access";
 import { VaultShell } from "@/components/vault/vault-shell";
 
@@ -41,6 +42,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
       slug: true,
       currency: true,
       brandColor: true,
+      releaseFilesBeforePayment: true,
     },
   });
 
@@ -95,6 +97,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
   });
 
   const finalInvoice = project.invoices[0] || null;
+  const released = filesReleased(project, tenant);
   const allItems = project.deliverables.flatMap((d) => d.items);
 
   const photoItems = allItems
@@ -103,7 +106,8 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
       id: p.id,
       itemType: p.itemType,
       title: p.title,
-      previewUrl: p.previewUrl,
+      // Released: the clean copy, through the access-checked route. Otherwise the watermarked proof.
+      previewUrl: released ? `/api/download?projectId=${project.id}&type=photo_view&assetId=${p.id}` : p.previewUrl,
       downloadUrl: p.downloadUrl,
       thumbnailUrl: p.thumbnailUrl,
       resolution: p.resolution,
@@ -138,6 +142,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
           category: project.category,
           discipline: project.discipline,
           isFinalBalancePaid: project.isFinalBalancePaid,
+          filesReleased: released,
           budget: project.budget,
           client: project.client,
           studioLead: project.studioLead,

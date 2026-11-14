@@ -9,6 +9,8 @@ interface PaywallBannerProps {
   invoiceId?: string | null;
   balanceAmount: number;
   currency: string;
+  /** The studio already released the files: the balance is still due, but nothing is locked. */
+  filesReleased?: boolean;
 }
 
 export function PaywallBanner({
@@ -17,6 +19,7 @@ export function PaywallBanner({
   invoiceId,
   balanceAmount,
   currency,
+  filesReleased = false,
 }: PaywallBannerProps) {
   const currencySymbol = currency === "MYR" ? "RM " : "$";
   const checkoutUrl = `/${tenantSlug}/checkout?projectId=${projectId}&type=FINAL_BALANCE${
@@ -34,17 +37,18 @@ export function PaywallBanner({
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
               <Lock className="size-3" />
-              50% Final Balance Milestone Due
+              Final Balance Due
             </span>
-            <span className="text-zinc-500 text-xs font-mono">• Gated Masters</span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Settle Balance to Unlock Master Deliverables
+            {filesReleased ? "Your photos are ready. The balance is still due" : "Pay the balance to download your photos"}
           </h2>
 
           <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">
-            Uncompressed high-resolution photo ZIP bundles and 4K ProRes master video downloads are locked until your final milestone invoice is verified. You can review watermarked proofs and streaming proxy cuts below.
+            {filesReleased
+              ? "You can view and download the full-resolution files below now. Please settle the remaining balance when you can."
+              : "You can view watermarked previews and pick your favourites below. The full-resolution files unlock as soon as the balance is paid."}
           </p>
         </div>
 
@@ -65,7 +69,7 @@ export function PaywallBanner({
             className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
           >
             <Sparkles className="size-4" />
-            <span>Settle Balance &amp; Unlock</span>
+            <span>{filesReleased ? "Pay balance" : "Pay balance & unlock"}</span>
             <ArrowRight className="size-4" />
           </Link>
         </div>

@@ -296,7 +296,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
                       <div className="text-zinc-200">{p.title}</div>
                       <div className="font-mono text-zinc-500">
                         {p.projectNumber} ·{" "}
-                        {p.isFinalBalancePaid ? "Masters unlocked" : "Masters unlock after final balance"}
+                        {p.filesReleased ? "Full-resolution photos ready" : "Full resolution unlocks after the balance"}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

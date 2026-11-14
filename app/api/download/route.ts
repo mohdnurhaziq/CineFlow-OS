@@ -7,12 +7,13 @@ import { createZipArchive, ZipFileEntry } from "@/lib/zip";
 import { masterFilePath } from "@/lib/deliverables/storage";
 import { getCurrentUser } from "@/lib/auth/session";
 import { canAccessClientRecord } from "@/lib/auth/project-access";
+import { filesReleased } from "@/lib/deliverables/access";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const projectId = searchParams.get("projectId");
-    const type = searchParams.get("type"); // "photo_zip" | "video_master" | "photo_master"
+    const type = searchParams.get("type"); // "photo_zip" | "video_master" | "photo_master" | "photo_view"
     const assetId = searchParams.get("assetId");
 
     if (!projectId || !type) {
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     const project = await db.project.findUnique({
       where: { id: projectId },
       include: {
+        tenant: { select: { releaseFilesBeforePayment: true } },
         deliverables: {
           include: {
             items: true,
@@ -47,8 +49,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // 2. CANONICAL PAYWALL GATE
-    if (!project.isFinalBalancePaid) {
+    // 2. CANONICAL PAYWALL GATE: paid, or the studio releases files before payment.
+    if (!filesReleased(project, project.tenant)) {
       return NextResponse.json(
         {
           error: "Payment Required: Final balance milestone must be settled before accessing master files.",
@@ -182,6 +184,33 @@ export async function GET(request: NextRequest) {
           "Content-Disposition": `attachment; filename="${safeFilename}"`,
           "Content-Length": fileData.length.toString(),
           "Cache-Control": "private, no-cache, no-store",
+        },
+      });
+    }
+
+    // 6. Handle type: "photo_view" (clean web-size copy shown in the vault, not a download)
+    if (type === "photo_view") {
+      const photoItem = assetId ? allItems.find((i) => i.id === assetId && i.itemType === "PHOTO") : undefined;
+      if (!photoItem) {
+        return NextResponse.json({ error: "Photo deliverable asset not found" }, { status: 404 });
+      }
+      // Older uploads have no clean copy: show the original instead.
+      const filePath = masterFilePath(photoItem.viewUrl ?? photoItem.downloadUrl);
+      let fileData: Buffer;
+      try {
+        fileData = await fs.readFile(filePath);
+      } catch {
+        return NextResponse.json({ error: "Photo file is missing" }, { status: 404 });
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".tif" ? "image/tiff" : "image/jpeg";
+      return new Response(new Uint8Array(fileData), {
+        status: 200,
+        headers: {
+          "Content-Type": mimeType,
+          "Content-Disposition": "inline",
+          "Content-Length": fileData.length.toString(),
+          "Cache-Control": "private, max-age=3600",
         },
       });
     }

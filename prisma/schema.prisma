@@ -24,6 +24,7 @@ model Tenant {
   currency           String              @default("USD")
   qrCodeUrl          String?             // Studio payment QR code image asset
   bankDetails        String?             // Bank name, account number, account holder
+  releaseFilesBeforePayment Boolean      @default(false) // false: clients see watermarked previews until the balance is paid; true: full-resolution files right after upload
   toyyibpaySecretEnc    String?          // AES-GCM encrypted Toyyibpay userSecretKey (never stored in plaintext)
   toyyibpayCategoryCode String?          // Toyyibpay category the studio's bills are created under
   invoiceSeq         Int                 @default(0) // Last invoice number used in invoiceSeqYear (INV-<year>-<seq>)
@@ -410,6 +411,7 @@ model DeliverableItem {
   title          String
   previewUrl     String            // Watermarked preview or streaming link
   downloadUrl    String            // Unlocked high-res master download URL
+  viewUrl        String?           // Private clean web-size copy, shown in the vault once files are released
   thumbnailUrl   String?
   resolution     String?
   duration       String?
