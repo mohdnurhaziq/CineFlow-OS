@@ -95,6 +95,19 @@ export function DashboardTour({ tenantSlug, autoStart }: DashboardTourProps) {
       popoverClass: "cineflow-tour",
       overlayOpacity: 0.65,
       stagePadding: 6,
+      onHighlighted: (element, _step, { driver: tourDriver }) => {
+        // driver.js centres a target against the whole screen, so on a phone a tall target (the
+        // KPI cards, the checklist) ends up under the sticky admin header. Pull its top down to
+        // just below the header, then let driver.js redraw the highlight and popover.
+        const header = document.querySelector("header");
+        if (!(element instanceof HTMLElement) || !header || header.contains(element)) return;
+        const clearOfHeader = header.getBoundingClientRect().bottom + 8;
+        const top = element.getBoundingClientRect().top;
+        if (top < clearOfHeader) {
+          window.scrollBy({ top: top - clearOfHeader, behavior: "instant" });
+          tourDriver.refresh();
+        }
+      },
       onDestroyed: () => {
         running.current = false;
         // Finished or skipped: either way, don't start it on its own again.
