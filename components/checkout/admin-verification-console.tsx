@@ -1,37 +1,31 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   CheckCircle2,
-  XCircle,
   Clock,
   QrCode,
   Banknote,
   Search,
   Filter,
-  Eye,
   AlertTriangle,
   User,
-  Calendar,
   DollarSign,
   Loader2,
-  RefreshCw,
-  ExternalLink,
-  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptLightboxModal } from "./receipt-lightbox-modal";
+import { VerificationQueue } from "./verification-queue";
 import {
   approvePaymentVerification,
   rejectPaymentVerification,
 } from "@/lib/actions/admin-verification";
 import { useDialog } from "@/lib/use-dialog";
-import { humanize, invoiceStatusLabel, milestoneLabel, paymentMethodLabel } from "@/lib/labels";
+import { humanize, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
-import { formatSlotDate, STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
 
-interface AdminVerificationConsoleProps {
+export interface AdminVerificationConsoleProps {
   /** The signed-in staff member; the server records approvals and rejections under this name. */
   verifierName: string;
   /** Approving and rejecting payments is owner-only; staff can review the queue. */
@@ -374,209 +368,28 @@ export function AdminVerificationConsole({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredPending.map((item) => {
-              const isQr = item.paymentMethod === "QR_CODE";
-              const isCash = item.paymentMethod === "CASH";
-
-              return (
-                <div
-                  key={item.id}
-                  className="p-5 rounded-2xl border border-zinc-800 bg-[#121215] hover:border-zinc-700 transition-all shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6"
-                >
-                  {/* Left: Invoice & Client info */}
-                  <div className="space-y-3 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-                      <span className="font-bold text-white">{item.invoiceNumber}</span>
-                      <span className="text-zinc-600">•</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        {milestoneLabel(item.milestoneType)}
-                      </span>
-                      <span className="text-zinc-600">•</span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${
-                          isQr
-                            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                            : isCash
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                            : "bg-zinc-800 text-zinc-300 border-zinc-700"
-                        }`}
-                      >
-                        {item.paymentMethod ? paymentMethodLabel(item.paymentMethod) : "Not chosen"}
-                      </span>
-                      <span className="text-zinc-500 text-[11px] ml-auto">
-                        {/* Studio time zone, so the server (UTC) and the browser render the same text. */}
-                        {new Date(item.createdAt).toLocaleString("en-US", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                          timeZone: STUDIO_TIME_ZONE,
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      {/* Client Box */}
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-mono uppercase text-zinc-500">Client Details</div>
-                        <div className="font-semibold text-white">{item.client.name}</div>
-                        <div className="text-zinc-400 text-[11px] font-mono truncate">
-                          {item.client.email} {item.client.phone ? `• ${item.client.phone}` : ""}
-                        </div>
-                        {item.client.phone && (
-                          <a
-                            href={`https://wa.me/${item.client.phone.replace(/[^0-9]/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 hover:text-emerald-300 hover:underline pt-0.5"
-                            title="Chat with client on WhatsApp"
-                          >
-                            <MessageSquare className="size-3" />
-                            <span>WhatsApp Client</span>
-                          </a>
-                        )}
-                      </div>
-
-                      {/* Shoot / Project Box */}
-                      <div className="space-y-1">
-                        <div className="text-[10px] font-mono uppercase text-zinc-500">
-                          {item.project ? "Linked Project" : "Booking Session"}
-                        </div>
-                        {item.booking ? (
-                          <>
-                            <div className="font-semibold text-amber-400 font-mono text-xs">
-                              <Link
-                                href={`/${tenant.slug}/admin/bookings/${item.booking.id}`}
-                                className="underline decoration-amber-500/40 underline-offset-2 hover:decoration-amber-400"
-                                title="Open this booking's full details"
-                              >
-                                {item.booking.trackingCode}
-                              </Link>{" "}
-                              · {categoryName(item.booking.category)}
-                            </div>
-                            <div className="text-zinc-400 text-[11px] font-mono">
-                              {[
-                                item.booking.slot?.date
-                                  ? formatSlotDate(item.booking.slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })
-                                  : item.booking.targetDate,
-                                item.booking.slot ? `${item.booking.slot.startTime} – ${item.booking.slot.endTime}` : null,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </div>
-                          </>
-                        ) : item.project ? (
-                          <>
-                            <div className="font-semibold text-white truncate">{item.project.title}</div>
-                            <div className="text-zinc-400 text-[11px] font-mono">
-                              #{item.project.projectNumber}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-zinc-400 text-[11px]">Direct Studio Milestone</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Payment Reference Note */}
-                    {item.paymentReference && (
-                      <div className="text-[11px] font-mono text-zinc-400 bg-zinc-900/60 p-2 rounded-lg border border-zinc-800/80">
-                        <span className="text-zinc-500 uppercase">Payment Note / Ref: </span>
-                        <span className="text-white font-medium">{item.paymentReference}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Middle: Evidence Thumbnail (Receipt Slip) */}
-                  <div className="shrink-0 flex items-center">
-                    {item.paymentProofUrl ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setLightboxData({
-                            url: item.paymentProofUrl!,
-                            invoiceNumber: item.invoiceNumber,
-                            clientName: item.client.name,
-                            amount: item.amount,
-                            reference: item.paymentReference,
-                            submittedAt: item.createdAt,
-                          })
-                        }
-                        className="group relative size-20 rounded-xl overflow-hidden border border-zinc-700 bg-zinc-900 shadow-md hover:border-amber-500 transition-all cursor-pointer"
-                        title="Click to zoom receipt"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.paymentProofUrl}
-                          alt="Receipt slip"
-                          className="size-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Eye className="size-5 text-amber-400" />
-                        </div>
-                        <span className="absolute bottom-1 right-1 bg-black/80 px-1 rounded text-[8px] font-mono text-amber-400 font-bold">
-                          PROOF
-                        </span>
-                      </button>
-                    ) : isCash ? (
-                      <div className="size-20 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 flex flex-col items-center justify-center p-2 text-center">
-                        <Banknote className="size-6 text-emerald-400" />
-                        <span className="text-[9px] font-mono text-zinc-400 mt-1">Cash Desk</span>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* Right: Amount & 1-Click Action Buttons */}
-                  <div className="shrink-0 flex flex-col sm:items-end justify-between gap-3 border-t lg:border-t-0 pt-4 lg:pt-0">
-                    <div className="text-left sm:text-right">
-                      <div className="text-[10px] font-mono uppercase text-zinc-500">Amount Due</div>
-                      <div className="text-2xl font-bold font-mono tabular-nums text-amber-400">
-                        {currencySymbol}
-                        {item.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
-
-                    {!isOwner ? (
-                      <p className="text-[11px] text-zinc-500 max-w-[12rem] text-right">
-                        Only the studio owner can approve or reject payments.
-                      </p>
-                    ) : (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        onClick={() =>
-                          setRejectModalItem({
-                            id: item.id,
-                            invoiceNumber: item.invoiceNumber,
-                            clientName: item.client.name,
-                          })
-                        }
-                        className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-500/50 text-zinc-300 hover:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <XCircle className="size-3.5" />
-                        <span>Reject</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        onClick={() => handleApprove(item.id, item.invoiceNumber)}
-                        className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        {isPending ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="size-3.5" />
-                        )}
-                        <span>1-Click Approve</span>
-                      </button>
-                    </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <VerificationQueue
+            items={filteredPending}
+            tenantSlug={tenant.slug}
+            currencySymbol={currencySymbol}
+            isOwner={isOwner}
+            isPending={isPending}
+            categoryName={categoryName}
+            onApprove={(item) => handleApprove(item.id, item.invoiceNumber)}
+            onReject={(item) =>
+              setRejectModalItem({ id: item.id, invoiceNumber: item.invoiceNumber, clientName: item.client.name })
+            }
+            onZoom={(item) =>
+              setLightboxData({
+                url: item.paymentProofUrl!,
+                invoiceNumber: item.invoiceNumber,
+                clientName: item.client.name,
+                amount: item.amount,
+                reference: item.paymentReference,
+                submittedAt: item.createdAt,
+              })
+            }
+          />
         )
       ) : (
         /* History View */
