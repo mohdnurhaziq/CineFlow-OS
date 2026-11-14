@@ -17,6 +17,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:backfill-invoice-bookings": "tsx prisma/backfill-invoice-bookings.ts",
+    "db:backfill-booking-projects": "tsx prisma/backfill-booking-projects.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {
