@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { STUDIO_TIME_ZONE, formatStudioDate } from "@/lib/slot-time";
 import type { ClientAccountStatus } from "@/lib/client-directory-labels";
 
 export type { ClientAccountStatus } from "@/lib/client-directory-labels";
@@ -56,10 +56,7 @@ export interface ClientDirectoryRow {
   createdAt: string;
 }
 
-/** A timestamp as a studio-local calendar date, e.g. "13 Nov 2026". */
-export function formatStudioDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: STUDIO_TIME_ZONE });
-}
+export { formatStudioDate };
 
 /** A timestamp as a studio-local "YYYY-MM-DD" (the en-CA locale writes dates that way). */
 export function studioIsoDate(date: Date): string {

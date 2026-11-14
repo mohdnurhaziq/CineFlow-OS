@@ -5,6 +5,7 @@ import { X, Video, Loader2, Camera, Sun, Film } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 import { createShotItem, updateShotItem } from "@/lib/actions/logistics";
 import { toast } from "sonner";
+import { bareNumber } from "@/lib/labels";
 import type { ShotItemData } from "./shot-list-hud";
 import { errorMessageOf } from "@/lib/action-error";
 
@@ -118,7 +119,7 @@ export function ShotDialog({
             return;
           }
 
-          toast.success(`Shot ${res.shot.sceneNumber}-${res.shot.shotNumber} updated.`);
+          toast.success(`Shot ${bareNumber(res.shot.sceneNumber, "scene")}-${bareNumber(res.shot.shotNumber, "shot")} updated.`);
           onSaved(res.shot as unknown as ShotItemData, true);
           onClose();
         } else {
@@ -139,7 +140,7 @@ export function ShotDialog({
             return;
           }
 
-          toast.success(`Shot ${res.shot.sceneNumber}-${res.shot.shotNumber} added to shot list.`);
+          toast.success(`Shot ${bareNumber(res.shot.sceneNumber, "scene")}-${bareNumber(res.shot.shotNumber, "shot")} added to shot list.`);
           onSaved(res.shot as unknown as ShotItemData, false);
           onClose();
         }

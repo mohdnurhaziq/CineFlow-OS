@@ -379,8 +379,16 @@ export function BookingDetailsBody({
       <Section title="Deposit & payment" icon={Receipt}>
         <Row label="Deposit">
           {formatCurrency(booking.depositAmount, currency)}{" "}
-          <span className={booking.depositPaid ? "text-emerald-400" : "text-amber-400"}>
-            ({booking.depositPaid ? "paid" : "unpaid"})
+          <span
+            className={
+              booking.depositPaid
+                ? "text-emerald-400"
+                : inv?.status === "PENDING_VERIFICATION"
+                  ? "text-blue-400"
+                  : "text-amber-400"
+            }
+          >
+            ({booking.depositPaid ? "paid" : inv?.status === "PENDING_VERIFICATION" ? "awaiting verification" : "unpaid"})
           </span>
         </Row>
         <Row label="Method">{formatPaymentMethod(booking.paymentMethod)}</Row>
@@ -425,8 +433,22 @@ export function BookingDetailsBody({
           <>
             <Row label="Amount">
               {formatCurrency(booking.balanceInvoice.amount, currency)}{" "}
-              <span className={booking.balanceInvoice.status === "PAID" ? "text-emerald-400" : "text-amber-400"}>
-                ({booking.balanceInvoice.status === "PAID" ? "paid" : "unpaid"})
+              <span
+                className={
+                  booking.balanceInvoice.status === "PAID"
+                    ? "text-emerald-400"
+                    : booking.balanceInvoice.status === "PENDING_VERIFICATION"
+                      ? "text-blue-400"
+                      : "text-amber-400"
+                }
+              >
+                (
+                {booking.balanceInvoice.status === "PAID"
+                  ? "paid"
+                  : booking.balanceInvoice.status === "PENDING_VERIFICATION"
+                    ? "awaiting verification"
+                    : "unpaid"}
+                )
               </span>
             </Row>
             <Row label="Invoice">

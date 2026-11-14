@@ -20,7 +20,7 @@ import {
 } from "@/lib/actions/admin-calendar";
 import type { BookingSlotRow, CategoryOption } from "./single-slot-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { isSlotInPast } from "@/lib/slot-time";
+import { formatSlotDate, isSlotInPast } from "@/lib/slot-time";
 import { errorMessageOf } from "@/lib/action-error";
 
 interface SlotTableProps {
@@ -73,7 +73,7 @@ export function SlotTable({
   };
 
   const handleDelete = async (slot: BookingSlotRow) => {
-    if (!(await confirm({ title: `Delete the ${slot.startTime} slot on ${new Date(slot.date).toISOString().slice(0, 10)}?`, confirmLabel: "Delete" }))) return;
+    if (!(await confirm({ title: `Delete the ${slot.startTime} slot on ${formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}?`, confirmLabel: "Delete" }))) return;
 
     setDeletingId(slot.id);
     setErrorMessage(null);
@@ -227,7 +227,7 @@ export function SlotTable({
             </thead>
             <tbody className="divide-y divide-zinc-800/60 font-mono text-xs">
               {slots.map((slot) => {
-                const dateStr = new Date(slot.date).toISOString().split("T")[0];
+                const dateStr = formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
                 const categoryObj = categories.find((c) => c.slug === slot.category);
                 const isSelected = selectedIds.includes(slot.id);
                 // An open slot whose time has passed can't be booked any more.
@@ -328,7 +328,7 @@ export function SlotTable({
                       {slot.status === "PENDING_VERIFICATION" && (
                         <div className="space-y-0.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                            Verification Pending
+                            Awaiting verification
                           </span>
                           {slot.booking && (
                             <BookingClientLink slot={slot} onViewBooking={onViewBooking} withIcon />

@@ -44,6 +44,9 @@
     --cine-success: #10b981;
     --cine-warning: #f59e0b;
     --cine-danger: #ef4444;
+
+    /* Dark scrollbars everywhere (dialogs, tables); the browser default is light grey. */
+    scrollbar-color: #3f3f46 transparent;
   }
 }
 

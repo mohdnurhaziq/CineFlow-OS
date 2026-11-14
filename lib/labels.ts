@@ -14,6 +14,15 @@ function lookup(map: Record<string, string>) {
   return (code: string | null | undefined) => (code ? map[code] ?? humanize(code) : "");
 }
 
+/**
+ * A scene or shot number without a typed-in prefix: "SCENE 1", "Scene 1" and "1" all give "1",
+ * so a label can write "Scene {n}" without doubling the word.
+ */
+export function bareNumber(value: string | number | null | undefined, word: "scene" | "shot"): string {
+  const text = String(value ?? "").trim();
+  return text.replace(new RegExp(`^${word}\\b[\\s#:.-]*`, "i"), "") || text;
+}
+
 export const DISCIPLINE_LABELS: Record<string, string> = {
   PHOTOGRAPHY: "Photography",
   VIDEOGRAPHY: "Videography",
@@ -59,7 +68,7 @@ export function milestoneInstallmentLabel(type: string | null | undefined): stri
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
   PENDING: "Unpaid",
   OVERDUE: "Overdue",
-  PENDING_VERIFICATION: "Under review",
+  PENDING_VERIFICATION: "Awaiting verification",
   PAID: "Paid",
   REJECTED: "Slip rejected",
   VOID: "Cancelled",

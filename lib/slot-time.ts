@@ -80,6 +80,11 @@ export function sessionBlock(time: string): SessionBlock {
   return "evening";
 }
 
+/** A timestamp (paid at, issued at, due at…) as a studio-local calendar date, e.g. "13 Nov 2026". */
+export function formatStudioDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: STUDIO_TIME_ZONE });
+}
+
 /**
  * Formats a slot's calendar day. Slot dates are stored as midnight UTC, so they are
  * formatted in UTC; formatting in the viewer's zone would show the previous day west of UTC.

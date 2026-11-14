@@ -197,7 +197,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
                 <StatusPill status={p.status} label={humanize(p.status)} />
               </>
             }
-            meta={`${p.projectNumber}${p.shootDates ? ` · ${p.shootDates}` : ""}`}
+            meta={`${p.projectNumber}${p.shootDates ? ` · ${formatDate(p.shootDates)}` : ""}`}
             right={formatMoney(tenant.currency, p.budget)}
           />
         ))}

@@ -17,7 +17,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { StudioAnalyticsData } from "@/lib/actions/admin-analytics";
-import { conditionLabel, milestoneLabel } from "@/lib/labels";
+import { conditionLabel, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
+import { formatCurrency as formatMoneyAmount } from "@/lib/utils";
 
 interface StudioDashboardProps {
   data: StudioAnalyticsData;
@@ -29,13 +30,8 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
   const { tenant, kpis, proposalsSummary, recentInvoices, upcomingCallSheets, gearAlerts } = data;
   const currency = tenant.currency || "USD";
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+  // Same two-decimal money format as Invoices, Clients and Galleries.
+  const formatCurrency = (amount: number) => formatMoneyAmount(amount, currency);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -43,34 +39,34 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="size-3" />
-            PAID
+            {invoiceStatusLabel(status)}
           </span>
         );
       case "PENDING_VERIFICATION":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">
             <Clock className="size-3" />
-            PENDING VERIFY
+            {invoiceStatusLabel(status)}
           </span>
         );
       case "PENDING":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
             <Clock className="size-3" />
-            PENDING
+            {invoiceStatusLabel(status)}
           </span>
         );
       case "OVERDUE":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <AlertTriangle className="size-3" />
-            OVERDUE
+            {invoiceStatusLabel(status)}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
-            {status}
+            {invoiceStatusLabel(status)}
           </span>
         );
     }
@@ -162,7 +158,7 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
           className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-amber-500/40 transition-all shadow-sm block"
         >
           <div className="flex items-center justify-between text-zinc-400">
-            <span className="text-xs font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">Pending Verification</span>
+            <span className="text-xs font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">Awaiting verification</span>
             <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:bg-amber-500/20 group-hover:scale-105 transition-all">
               <Clock className="size-4" />
             </div>
@@ -264,9 +260,8 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
             <table className="w-full text-left text-xs font-mono">
               <thead className="bg-zinc-900/60 text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-800/80">
                 <tr>
-                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Invoice #</th>
+                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Invoice</th>
                   <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Client / Project</th>
-                  <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Milestone</th>
                   <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold text-right">Amount</th>
                   <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold text-center">Status</th>
                   <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold text-right">Action</th>
@@ -275,7 +270,7 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
               <tbody className="divide-y divide-zinc-800/60">
                 {recentInvoices.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-zinc-500 font-mono">
+                    <td colSpan={5} className="px-5 py-8 text-center text-zinc-500 font-mono">
                       No milestone invoices issued yet.
                     </td>
                   </tr>
@@ -290,6 +285,7 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
                           <span>{inv.invoiceNumber}</span>
                           <ArrowUpRight className="size-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                         </Link>
+                        <div className="text-[11px] text-zinc-400 font-sans mt-0.5">{milestoneLabel(inv.milestoneType)}</div>
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5">
                         <div className="font-sans font-medium text-white">{inv.clientName}</div>
@@ -307,11 +303,6 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-3 py-3 first:pl-5 last:pr-5">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 whitespace-nowrap">
-                          {milestoneLabel(inv.milestoneType)}
-                        </span>
-                      </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5 text-right font-bold text-white tabular-nums whitespace-nowrap">
                         {formatCurrency(inv.amount)}
                       </td>
@@ -320,21 +311,23 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {inv.status === "PENDING_VERIFICATION" && (
+                          {inv.status === "PENDING_VERIFICATION" ? (
                             <Link
                               href={`/${tenant.slug}/admin/verification`}
-                              className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-semibold text-[10px] uppercase tracking-wider transition-colors inline-block whitespace-nowrap"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-[11px] font-sans transition-colors whitespace-nowrap"
                             >
-                              Review Proof
+                              Verify
+                              <ChevronRight className="size-3" />
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/${tenant.slug}/admin/invoices/${inv.id}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 hover:text-white text-[11px] font-sans transition-colors whitespace-nowrap"
+                            >
+                              View
+                              <ChevronRight className="size-3 text-amber-400" />
                             </Link>
                           )}
-                          <Link
-                            href={`/${tenant.slug}/admin/invoices/${inv.id}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 hover:text-white text-[11px] font-sans transition-colors whitespace-nowrap"
-                          >
-                            View
-                            <ChevronRight className="size-3 text-amber-400" />
-                          </Link>
                         </div>
                       </td>
                     </tr>
@@ -492,12 +485,17 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
                 className="p-4 rounded-lg bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 transition-all flex flex-col justify-between space-y-3"
               >
                 <div>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
-                    <span className="text-amber-400 font-bold truncate max-w-[160px]">{cs.title}</span>
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center justify-between gap-2 text-xs text-zinc-300">
+                    <span className="flex items-center gap-1.5 font-semibold text-white">
+                      <Calendar className="size-3.5 text-amber-400" /> {cs.shootDate}
+                    </span>
+                    <span className="flex items-center gap-1 font-mono text-zinc-400 whitespace-nowrap">
                       <Clock className="size-3" /> {cs.callTime}
                     </span>
                   </div>
+                  <p className="text-[11px] text-amber-400 font-medium mt-1.5 line-clamp-2" title={cs.title}>
+                    {cs.title}
+                  </p>
                   {cs.projectId ? (
                     <Link
                       href={`/${tenant.slug}/admin/projects/${cs.projectId}`}

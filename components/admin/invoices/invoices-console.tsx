@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Receipt, Search, Inbox } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { formatStudioDate } from "@/lib/slot-time";
 
 export interface InvoiceRow {
   id: string;
@@ -27,7 +28,7 @@ type FilterId = "all" | "unpaid" | "review" | "paid" | "closed";
 const FILTERS: { id: FilterId; label: string; statuses: string[] | null }[] = [
   { id: "all", label: "All", statuses: null },
   { id: "unpaid", label: "Unpaid", statuses: ["PENDING", "OVERDUE"] },
-  { id: "review", label: "Under review", statuses: ["PENDING_VERIFICATION"] },
+  { id: "review", label: "Awaiting verification", statuses: ["PENDING_VERIFICATION"] },
   { id: "paid", label: "Paid", statuses: ["PAID"] },
   { id: "closed", label: "Cancelled / rejected", statuses: ["VOID", "REJECTED"] },
 ];
@@ -35,14 +36,14 @@ const FILTERS: { id: FilterId; label: string; statuses: string[] | null }[] = [
 const STATUS_STYLE: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Unpaid", className: "bg-amber-500/10 text-amber-400 border-amber-500/25" },
   OVERDUE: { label: "Overdue", className: "bg-red-500/10 text-red-400 border-red-500/25" },
-  PENDING_VERIFICATION: { label: "Under review", className: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
+  PENDING_VERIFICATION: { label: "Awaiting verification", className: "bg-blue-500/10 text-blue-400 border-blue-500/25" },
   PAID: { label: "Paid", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" },
   REJECTED: { label: "Rejected", className: "bg-red-500/10 text-red-400 border-red-500/25" },
   VOID: { label: "Cancelled", className: "bg-zinc-800 text-zinc-400 border-zinc-700" },
 };
 
 function day(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return formatStudioDate(iso);
 }
 
 const COLS = "md:grid-cols-[1.1fr_1.4fr_1.6fr_0.9fr_0.9fr_9rem]";
@@ -112,7 +113,7 @@ export function InvoicesConsole({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: "Outstanding", value: totals.outstanding, tone: "text-amber-400" },
-          { label: "Under review", value: totals.review, tone: "text-blue-400" },
+          { label: "Awaiting verification", value: totals.review, tone: "text-blue-400" },
           { label: "Collected", value: totals.collected, tone: "text-emerald-400" },
         ].map((t) => (
           <div key={t.label} className="p-4 rounded-2xl border border-zinc-800 bg-[#0d0d10]">

@@ -17,6 +17,7 @@ import { toggleShotCompletion, deleteShotItem } from "@/lib/actions/logistics";
 import { ShotDialog } from "./shot-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
+import { bareNumber } from "@/lib/labels";
 
 export interface ShotItemData {
   id: string;
@@ -127,7 +128,7 @@ export function ShotListHud({
 
   const handleDeleteShot = async (shot: ShotItemData) => {
     const confirmed = await confirm({
-      title: `Delete Scene ${shot.sceneNumber} • Shot ${shot.shotNumber}?`,
+      title: `Delete Scene ${bareNumber(shot.sceneNumber, "scene")} • Shot ${bareNumber(shot.shotNumber, "shot")}?`,
       message: `"${shot.description.slice(0, 80)}${shot.description.length > 80 ? "..." : ""}" will be removed from the shot list.`,
       confirmLabel: "Delete Shot",
       destructive: true,
@@ -148,7 +149,7 @@ export function ShotListHud({
         }
 
         setShots((prev) => prev.filter((s) => s.id !== shot.id));
-        toast.success(`Shot ${shot.sceneNumber}-${shot.shotNumber} deleted.`);
+        toast.success(`Shot ${bareNumber(shot.sceneNumber, "scene")}-${bareNumber(shot.shotNumber, "shot")} deleted.`);
       } catch (err) {
         console.error("Failed to delete shot:", err);
         toast.error("Error deleting shot.");
@@ -281,7 +282,7 @@ export function ShotListHud({
               <option value="ALL">All Scenes ({scenes.length})</option>
               {scenes.map((sc) => (
                 <option key={sc} value={sc}>
-                  Scene {sc}
+                  Scene {bareNumber(sc, "scene")}
                 </option>
               ))}
             </select>
@@ -339,7 +340,7 @@ export function ShotListHud({
                     {/* Header Badges */}
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-zinc-800 text-white border border-zinc-700">
-                        SCENE {shot.sceneNumber} • SHOT {shot.shotNumber}
+                        SCENE {bareNumber(shot.sceneNumber, "scene")} • SHOT {bareNumber(shot.shotNumber, "shot")}
                       </span>
                       <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
                         {shot.framing}

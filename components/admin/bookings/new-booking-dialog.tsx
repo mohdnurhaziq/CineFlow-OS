@@ -132,13 +132,16 @@ export function NewBookingDialog({
 
         <div className="p-5 space-y-4">
           {slots.length === 0 ? (
-            <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-300 space-y-2">
-              <p>There are no open sessions to book right now.</p>
+            <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-300 space-y-3">
+              <p className="font-medium text-white">No session times are open yet.</p>
+              <p className="text-xs text-zinc-400">
+                A booking needs an open time slot. Add one in the Calendar, then come back here to book it for your client.
+              </p>
               <Link
                 href={`/${tenantSlug}/admin/calendar`}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:underline"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs tracking-tight transition-colors"
               >
-                Open sessions in the Calendar <ArrowRight className="size-3.5" aria-hidden="true" />
+                Add a session time <ArrowRight className="size-3.5" aria-hidden="true" />
               </Link>
             </div>
           ) : (
@@ -216,15 +219,17 @@ export function NewBookingDialog({
             >
               Cancel
             </button>
-            <button
-              type="button"
-              disabled={!selected}
-              onClick={() => setStep("details")}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs tracking-tight transition-all"
-            >
-              Next
-              <ArrowRight className="size-3.5" aria-hidden="true" />
-            </button>
+            {slots.length > 0 && (
+              <button
+                type="button"
+                disabled={!selected}
+                onClick={() => setStep("details")}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs tracking-tight transition-all"
+              >
+                Next
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
       </div>

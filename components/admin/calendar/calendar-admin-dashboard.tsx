@@ -235,7 +235,7 @@ export function CalendarAdminDashboard({
 
         <div className="p-3.5 rounded-2xl border border-blue-500/20 bg-blue-500/5">
           <span className="text-[10px] font-mono text-blue-400 uppercase tracking-wider block flex items-center gap-1">
-            <UserCheck className="size-3" /> Pending Verif
+            <UserCheck className="size-3" /> Awaiting verification
           </span>
           <span className="text-xl font-bold font-mono text-blue-400 mt-1 block">
             {pendingSlots}
@@ -293,7 +293,7 @@ export function CalendarAdminDashboard({
             <option value="ALL">All Statuses</option>
             <option value="AVAILABLE">Available</option>
             <option value="HELD">Held (Checkout)</option>
-            <option value="PENDING_VERIFICATION">Pending Verification</option>
+            <option value="PENDING_VERIFICATION">Awaiting verification</option>
             <option value="BOOKED">Booked</option>
             <option value="BLOCKED">Blocked</option>
           </select>

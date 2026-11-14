@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { formatSlotDate } from "@/lib/slot-time";
 import { liveProjectWhere } from "@/lib/projects/list";
 import { requireStaffBySlug } from "@/lib/auth/guard";
 
@@ -229,13 +230,10 @@ export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnal
       title: cs.title,
       projectId: cs.projectId ?? cs.project?.id ?? null,
       projectTitle: cs.project?.title ?? "Shoot Production",
+      // Shoot days are calendar days stored as midnight UTC, like booking slots.
       shootDate: cs.shootDate
-        ? new Date(cs.shootDate).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        : "TBD",
+        ? formatSlotDate(cs.shootDate, { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+        : "Date not set",
       callTime: cs.generalCallTime ?? "08:00 AM",
       locationName: cs.locationName ?? "Studio Set",
       weatherSummary: cs.weatherSummary,

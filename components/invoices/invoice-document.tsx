@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
-import { formatSlotDate } from "@/lib/slot-time";
+import { formatSlotDate, formatStudioDate } from "@/lib/slot-time";
 import type { InvoiceDocument } from "@/lib/invoices/document";
 
 /**
@@ -12,7 +12,7 @@ import type { InvoiceDocument } from "@/lib/invoices/document";
 const STATUS: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Unpaid", className: "text-amber-700 border-amber-600" },
   OVERDUE: { label: "Overdue", className: "text-red-700 border-red-600" },
-  PENDING_VERIFICATION: { label: "Payment under review", className: "text-blue-700 border-blue-600" },
+  PENDING_VERIFICATION: { label: "Awaiting verification", className: "text-blue-700 border-blue-600" },
   PAID: { label: "Paid", className: "text-emerald-700 border-emerald-600" },
   REJECTED: { label: "Payment rejected", className: "text-red-700 border-red-600" },
   VOID: { label: "Cancelled", className: "text-zinc-500 border-zinc-400" },
@@ -23,7 +23,7 @@ export function invoiceStatus(doc: Pick<InvoiceDocument, "status" | "dueDate">, 
 }
 
 function day(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return formatStudioDate(iso);
 }
 
 function method(m: string | null): string {
