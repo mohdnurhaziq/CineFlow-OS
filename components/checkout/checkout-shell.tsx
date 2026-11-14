@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CreditCard, QrCode, Banknote, User, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { OrderSummaryCard } from "./order-summary-card";
 import { OnlinePaymentForm } from "./online-payment-form";
 import { QrPaymentForm } from "./qr-payment-form";
 import { CashPaymentForm } from "./cash-payment-form";
-import { PaymentSuccessCard } from "./payment-success-card";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import { PackagePicker, type BookingPackageOption } from "@/components/booking/package-picker";
 import { errorMessageOf } from "@/lib/action-error";
@@ -64,6 +64,11 @@ interface CheckoutShellProps {
   /** Packages offered for the slot; one must be chosen and it sets the price and deposit. */
   packages?: BookingPackageOption[];
   initialPackageId?: string;
+  /**
+   * Where to go after paying an invoice. Defaults to the client's invoice page; studio staff
+   * paying on a client's behalf are sent to the admin invoice instead.
+   */
+  invoiceDoneHref?: string;
 }
 
 export function CheckoutShell({
@@ -75,6 +80,7 @@ export function CheckoutShell({
   cardMode = "OFF",
   packages = [],
   initialPackageId,
+  invoiceDoneHref: invoiceDoneHrefProp,
 }: CheckoutShellProps) {
   const [activeTab, setActiveTab] = useState<"CARD" | "QR_CODE" | "CASH">(cardMode === "OFF" ? "QR_CODE" : "CARD");
 
@@ -86,15 +92,20 @@ export function CheckoutShell({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [checkoutResult, setCheckoutResult] = useState<{
-    trackingCode?: string;
-    invoiceNumber: string;
-    status: string;
-    paymentMethod: string;
-    amount: number;
-    unlockedDownloads?: boolean;
-    projectId?: string;
-  } | null>(null);
+  // After a payment the client goes where the booking or invoice lives, with a confirmation
+  // banner there (see PaymentConfirmationBanner). replace(): Back skips the spent payment form.
+  const router = useRouter();
+  const leaving = useRef(false);
+  const goTo = (href: string) => {
+    leaving.current = true;
+    router.replace(href);
+  };
+  const bookingDoneHref = (trackingCode?: string) =>
+    trackingCode
+      ? `/${tenant.slug}/account?tab=bookings&confirmed=${encodeURIComponent(trackingCode)}`
+      : `/${tenant.slug}/account?tab=bookings`;
+  const invoiceDoneHref =
+    invoiceDoneHrefProp ?? (invoice ? `/${tenant.slug}/account/invoices/${invoice.id}?paid=1` : `/${tenant.slug}/account?tab=invoices`);
 
   const [packageId, setPackageId] = useState<string | null>(
     packages.some((p) => p.id === initialPackageId) ? (initialPackageId as string) : null
@@ -151,14 +162,7 @@ export function CheckoutShell({
           redirecting = true;
           window.location.assign(res.paymentUrl);
         } else if (res.success && res.invoiceNumber) {
-          setCheckoutResult({
-            trackingCode: res.trackingCode,
-            invoiceNumber: res.invoiceNumber,
-            status: res.status || "CONFIRMED",
-            paymentMethod: "CARD",
-            amount: amountToPay,
-          });
-          toast.success("Simulated payment accepted. Slot confirmed.");
+          goTo(bookingDoneHref(res.trackingCode));
         } else {
           toast.error(res.message || "Failed to process card checkout.");
         }
@@ -174,19 +178,7 @@ export function CheckoutShell({
           redirecting = true;
           window.location.assign(res.paymentUrl);
         } else if (res.success && res.invoiceNumber) {
-          setCheckoutResult({
-            invoiceNumber: res.invoiceNumber,
-            status: "PAID",
-            paymentMethod: "CARD",
-            amount: amountToPay,
-            unlockedDownloads: res.unlockedDownloads,
-            projectId: invoice.projectId || undefined,
-          });
-          toast.success(
-            res.unlockedDownloads
-              ? "Payment verified! Master 4K deliverables unlocked in vault."
-              : "Invoice settled successfully!"
-          );
+          goTo(invoiceDoneHref);
         } else {
           toast.error(res.message || "Failed to settle invoice.");
         }
@@ -195,8 +187,8 @@ export function CheckoutShell({
       console.error("Card payment error:", err);
       toast.error(errorMessageOf(err) || "An unexpected error occurred starting the payment.");
     } finally {
-      // Keep the button disabled while the browser navigates to the gateway.
-      if (!redirecting) setIsSubmitting(false);
+      // Keep the button disabled while the browser navigates away.
+      if (!redirecting && !leaving.current) setIsSubmitting(false);
     }
   };
 
@@ -225,14 +217,7 @@ export function CheckoutShell({
         });
 
         if (res.success && res.invoiceNumber) {
-          setCheckoutResult({
-            trackingCode: res.trackingCode,
-            invoiceNumber: res.invoiceNumber,
-            status: "PENDING_VERIFICATION",
-            paymentMethod: "QR_CODE",
-            amount: amountToPay,
-          });
-          toast.success("Receipt slip submitted for studio verification.");
+          goTo(bookingDoneHref(res.trackingCode));
         } else {
           toast.error(res.message || "Failed to submit checkout.");
         }
@@ -247,14 +232,7 @@ export function CheckoutShell({
         });
 
         if (res.success && res.invoiceNumber) {
-          setCheckoutResult({
-            invoiceNumber: res.invoiceNumber,
-            status: "PENDING_VERIFICATION",
-            paymentMethod: "QR_CODE",
-            amount: amountToPay,
-            projectId: invoice.projectId || undefined,
-          });
-          toast.success("Receipt submitted! Awaiting studio verification.");
+          goTo(invoiceDoneHref);
         } else {
           toast.error(res.message || "Failed to submit payment slip.");
         }
@@ -263,7 +241,7 @@ export function CheckoutShell({
       console.error("QR checkout error:", err);
       toast.error(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
-      setIsSubmitting(false);
+      if (!leaving.current) setIsSubmitting(false);
     }
   };
 
@@ -288,14 +266,7 @@ export function CheckoutShell({
         });
 
         if (res.success && res.invoiceNumber) {
-          setCheckoutResult({
-            trackingCode: res.trackingCode,
-            invoiceNumber: res.invoiceNumber,
-            status: "PENDING_VERIFICATION",
-            paymentMethod: "CASH",
-            amount: amountToPay,
-          });
-          toast.success("Cash booking invoice created! Settle at front desk.");
+          goTo(bookingDoneHref(res.trackingCode));
         } else {
           toast.error(res.message || "Failed to generate cash booking.");
         }
@@ -309,14 +280,7 @@ export function CheckoutShell({
         });
 
         if (res.success && res.invoiceNumber) {
-          setCheckoutResult({
-            invoiceNumber: res.invoiceNumber,
-            status: "PENDING_VERIFICATION",
-            paymentMethod: "CASH",
-            amount: amountToPay,
-            projectId: invoice.projectId || undefined,
-          });
-          toast.success("Cash counter request registered.");
+          goTo(invoiceDoneHref);
         } else {
           toast.error(res.message || "Failed to process cash request.");
         }
@@ -325,28 +289,9 @@ export function CheckoutShell({
       console.error("Cash checkout error:", err);
       toast.error(errorMessageOf(err) || "An unexpected error occurred.");
     } finally {
-      setIsSubmitting(false);
+      if (!leaving.current) setIsSubmitting(false);
     }
   };
-
-  // If transaction completed, render the success card
-  if (checkoutResult) {
-    return (
-      <div className="py-12 px-4 sm:px-6">
-        <PaymentSuccessCard
-          tenantSlug={tenant.slug}
-          trackingCode={checkoutResult.trackingCode}
-          invoiceNumber={checkoutResult.invoiceNumber}
-          status={checkoutResult.status}
-          paymentMethod={checkoutResult.paymentMethod}
-          amount={checkoutResult.amount}
-          currency={tenant.currency}
-          unlockedDownloads={checkoutResult.unlockedDownloads}
-          projectId={checkoutResult.projectId}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

@@ -102,7 +102,7 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
   });
 
   const clientPage = (invoiceId: string) => () =>
-    ClientInvoicePage({ params: Promise.resolve({ tenantSlug: "lumina-cine", invoiceId }) });
+    ClientInvoicePage({ params: Promise.resolve({ tenantSlug: "lumina-cine", invoiceId }), searchParams: Promise.resolve({}) });
 
   await harness.test("T13-DOC-01: a paid deposit renders as a receipt with the session payment plan", async () => {
     const doc = await loadInvoiceDocument(lumina.id, booked.invoiceId);

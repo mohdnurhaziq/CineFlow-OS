@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import { Toaster } from "sonner";
+import { SignedOutNotice } from "@/components/auth/signed-out-notice";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,6 +49,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans bg-[#09090b] text-[#fafafa] antialiased selection:bg-amber-500/20 selection:text-amber-400 min-h-screen flex flex-col`}
       >
         {children}
+        {/* Reads the URL, so it needs its own Suspense boundary to keep pages static where they can be. */}
+        <Suspense fallback={null}>
+          <SignedOutNotice />
+        </Suspense>
         <Toaster
           theme="dark"
           position="bottom-right"

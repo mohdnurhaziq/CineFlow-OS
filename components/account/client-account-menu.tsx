@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
+import { signedOutHref } from "@/lib/auth/signed-out";
 
 interface ClientAccountMenuProps {
   tenantSlug: string;
@@ -46,7 +47,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
           onClick={() =>
             startTransition(async () => {
               await logoutAction();
-              window.location.href = `/${tenantSlug}`;
+              window.location.href = signedOutHref(`/${tenantSlug}`);
             })
           }
           title="Sign out"
@@ -101,7 +102,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
         onClick={() =>
           startTransition(async () => {
             await logoutAction();
-            window.location.href = `/${tenantSlug}`;
+            window.location.href = signedOutHref(`/${tenantSlug}`);
           })
         }
         title="Sign out"

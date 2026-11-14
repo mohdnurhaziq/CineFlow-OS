@@ -4,9 +4,13 @@ import { db } from "@/lib/db";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ClientDashboard } from "@/components/account/client-dashboard";
+import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
+import { loadBookingConfirmation } from "@/lib/payments/confirmation";
 
 interface AccountPageProps {
   params: Promise<{ tenantSlug: string }>;
+  /** `confirmed`: tracking code of a booking just made at checkout, to show its confirmation. */
+  searchParams: Promise<{ tab?: string; confirmed?: string }>;
 }
 
 export const metadata: Metadata = {
@@ -16,8 +20,9 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientAccountPage({ params }: AccountPageProps) {
+export default async function ClientAccountPage({ params, searchParams }: AccountPageProps) {
   const { tenantSlug } = await params;
+  const { confirmed } = await searchParams;
 
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
@@ -116,6 +121,10 @@ export default async function ClientAccountPage({ params }: AccountPageProps) {
     }),
   ]);
 
+  // Right after checkout: confirm the booking (looked up as this client's, never trusted from the URL).
+  const confirmation =
+    typeof confirmed === "string" && confirmed ? await loadBookingConfirmation(tenant.id, client.id, confirmed) : null;
+
   return (
     <ClientDashboard
       tenant={tenant}
@@ -124,6 +133,16 @@ export default async function ClientAccountPage({ params }: AccountPageProps) {
       invoices={invoices}
       proposals={proposals}
       projects={projects}
+      banner={
+        confirmation ? (
+          <PaymentConfirmationBanner
+            tenantSlug={tenant.slug}
+            currency={tenant.currency}
+            confirmation={confirmation}
+            dismissHref={`/${tenant.slug}/account?tab=bookings`}
+          />
+        ) : null
+      }
     />
   );
 }

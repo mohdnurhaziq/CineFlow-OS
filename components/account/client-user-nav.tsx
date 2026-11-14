@@ -15,6 +15,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
+import { signedOutHref } from "@/lib/auth/signed-out";
 
 interface ClientUserNavProps {
   tenantSlug: string;
@@ -40,7 +41,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
   const handleLogout = () => {
     startTransition(async () => {
       await logoutAction();
-      router.push(`/${tenantSlug}/login`);
+      router.push(signedOutHref(`/${tenantSlug}/login`));
       router.refresh();
     });
   };

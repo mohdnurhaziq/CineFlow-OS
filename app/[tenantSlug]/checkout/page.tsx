@@ -104,6 +104,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   }
 
   // Paying an invoice is for its client (or studio staff), signed in.
+  let invoiceDoneHref: string | undefined;
   if (invoice) {
     const query = new URLSearchParams();
     if (search.invoiceId) query.set("invoiceId", search.invoiceId);
@@ -111,12 +112,18 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       query.set("projectId", invoice.projectId ?? "");
       query.set("type", "FINAL_BALANCE");
     }
-    await requirePageAccess({
+    const payer = await requirePageAccess({
       tenantSlug: tenant.slug,
       tenantId: tenant.id,
       clientId: invoice.clientId,
       returnTo: `/${tenant.slug}/checkout?${query.toString()}`,
     });
+    // After paying: the client sees their invoice (receipt + confirmation); staff paying on a
+    // client's behalf go back to the admin invoice.
+    invoiceDoneHref =
+      payer.role === "CLIENT"
+        ? `/${tenant.slug}/account/invoices/${invoice.id}?paid=1`
+        : `/${tenant.slug}/admin/invoices/${invoice.id}`;
   }
 
   // Packages offered for this slot set its price and deposit.
@@ -161,6 +168,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         cardMode={cardMode}
         packages={packages}
         initialPackageId={search.packageId}
+        invoiceDoneHref={invoiceDoneHref}
         initialData={{
           name: client?.name ?? search.name,
           email: client?.email ?? search.email,

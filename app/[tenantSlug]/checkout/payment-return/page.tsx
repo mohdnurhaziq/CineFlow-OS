@@ -30,7 +30,13 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
     if (outcome.trackingCode && !signedInClient) {
       redirect(`/${tenantSlug}/my-booking?code=${encodeURIComponent(outcome.trackingCode)}`);
     }
-    redirect(`/${tenantSlug}/account?tab=${outcome.trackingCode ? "bookings" : "invoices"}`);
+    // Same landing as the other payment methods: the booking (with its confirmation) or the
+    // paid invoice's receipt.
+    redirect(
+      outcome.trackingCode
+        ? `/${tenantSlug}/account?tab=bookings&confirmed=${encodeURIComponent(outcome.trackingCode)}`
+        : `/${tenantSlug}/account/invoices/${outcome.invoiceId}?paid=1`
+    );
   }
 
   const message =

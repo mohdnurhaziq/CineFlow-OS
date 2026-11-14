@@ -86,6 +86,8 @@ interface ClientDashboardProps {
   invoices: InvoiceRow[];
   proposals: Proposal[];
   projects: ProjectRow[];
+  /** Shown above everything, e.g. the confirmation right after checkout. */
+  banner?: React.ReactNode;
 }
 
 const STAGES = [
@@ -109,7 +111,7 @@ function humanize(value: string) {
   return value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects }: ClientDashboardProps) {
+export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects, banner }: ClientDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryTab = searchParams.get("tab");
@@ -240,6 +242,8 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   return (
     <div className="w-full">
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {banner}
+
         {/* Client Welcome Heading */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-800/60">
           <div>

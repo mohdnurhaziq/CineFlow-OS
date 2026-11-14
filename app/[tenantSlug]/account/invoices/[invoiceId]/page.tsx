@@ -7,9 +7,13 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { loadInvoiceDocument } from "@/lib/invoices/document";
 import { InvoiceDocumentView, invoiceStatus } from "@/components/invoices/invoice-document";
 import { PrintButton } from "@/components/invoices/print-button";
+import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
+import { loadInvoiceConfirmation } from "@/lib/payments/confirmation";
 
 interface ClientInvoicePageProps {
   params: Promise<{ tenantSlug: string; invoiceId: string }>;
+  /** `paid=1`: arrived straight from checkout, so show the payment confirmation. */
+  searchParams: Promise<{ paid?: string }>;
 }
 
 export async function generateMetadata({ params }: ClientInvoicePageProps): Promise<Metadata> {
@@ -18,10 +22,11 @@ export async function generateMetadata({ params }: ClientInvoicePageProps): Prom
   return { title: tenant ? `Invoice | ${tenant.name}` : "Invoice", robots: { index: false } };
 }
 
-export default async function ClientInvoicePage({ params }: ClientInvoicePageProps) {
+export default async function ClientInvoicePage({ params, searchParams }: ClientInvoicePageProps) {
   const { tenantSlug, invoiceId } = await params;
+  const { paid } = await searchParams;
 
-  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true } });
+  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
   if (!tenant) notFound();
 
   const self = `/${tenant.slug}/account/invoices/${invoiceId}`;
@@ -42,9 +47,19 @@ export default async function ClientInvoicePage({ params }: ClientInvoicePagePro
     // The studio rejected the slip: send a new one.
     status === "REJECTED";
 
+  const confirmation = paid ? await loadInvoiceConfirmation(tenant.id, session.id, doc.id) : null;
+
   return (
     <div className="w-full">
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 print:p-0 print:max-w-none">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6 print:p-0 print:max-w-none print:space-y-0">
+        {confirmation && (
+          <PaymentConfirmationBanner
+            tenantSlug={tenant.slug}
+            currency={tenant.currency}
+            confirmation={confirmation}
+            dismissHref={self}
+          />
+        )}
         <InvoiceDocumentView
           doc={doc}
           actions={
