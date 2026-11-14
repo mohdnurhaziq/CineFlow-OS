@@ -366,13 +366,17 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
         releaseFilesBeforePayment,
       });
 
+      // Also as a toast: the banner sits at the top, out of view when saving from the bottom button.
       if (!res.success) {
-        setErrorMessage(res.message || "Failed to update studio settings.");
+        const message = res.message || "Failed to update studio settings.";
+        setErrorMessage(message);
+        toast.error(message);
         setIsSubmitting(false);
         return;
       }
 
-      setSuccessMessage("Studio settings and payment credentials saved successfully!");
+      setSuccessMessage("Settings saved.");
+      toast.success(res.slugChanged ? "Settings saved. Taking you to your new studio address…" : "Settings saved.");
 
       if (res.slugChanged && res.newSlug) {
         // Redirect to new admin settings path
@@ -383,7 +387,9 @@ export function StudioSettingsForm({ tenant }: StudioSettingsFormProps) {
         router.refresh();
       }
     } catch (err) {
-      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
+      const message = errorMessageOf(err) || "An unexpected error occurred.";
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
