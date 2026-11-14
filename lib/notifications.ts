@@ -1,4 +1,5 @@
 import { errorMessageOf } from "./action-error";
+import { deliverViaSmtp, smtpConfigFromEnv } from "./email/smtp";
 /**
  * CineFlow OS Multi-Channel Transactional Notification Engine
  * Supports Responsive HTML Email and WhatsApp Dispatch
@@ -128,7 +129,7 @@ export interface NotificationResult {
   whatsappUrl?: string;
   timestamp: string;
   success: boolean;
-  /** SENT: accepted by Resend. SKIPPED: no email requested or no RESEND_API_KEY. FAILED: provider/network error. */
+  /** SENT: accepted by the provider (SMTP or Resend). SKIPPED: no email requested or no provider configured. FAILED: provider/network error. */
   emailDelivery: "SENT" | "SKIPPED" | "FAILED";
   emailError?: string;
 }
@@ -169,15 +170,22 @@ function resendRefusalReason(status: number, detail: string): string {
 }
 
 /**
- * Sends one email through Resend's REST API. Never throws: the booking, payment
- * and proposal flows that trigger notifications must not fail because mail did.
+ * Sends one email: over SMTP when SMTP_HOST/SMTP_USER/SMTP_PASS are set (e.g. Gmail),
+ * otherwise through Resend's REST API when RESEND_API_KEY is set, otherwise skipped.
+ * Never throws: the booking, payment and proposal flows that trigger notifications must
+ * not fail because mail did.
  */
 async function deliverEmail(input: {
   to: string;
   subject: string;
   html: string;
   text: string;
+  /** Display name for the sender (the studio). Used for SMTP; Resend uses RESEND_FROM_EMAIL. */
+  fromName?: string;
 }): Promise<{ delivery: "SENT" | "SKIPPED" | "FAILED"; error?: string }> {
+  const smtp = smtpConfigFromEnv();
+  if (smtp) return deliverViaSmtp(smtp, input);
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { delivery: "SKIPPED" };
 
@@ -439,7 +447,7 @@ export async function sendNotification(
   const wantsEmail = channel === "EMAIL" || channel === "BOTH";
   const delivery =
     wantsEmail && recipientEmail
-      ? await deliverEmail({ to: recipientEmail, subject: emailSubject, html: emailHtml, text: emailText })
+      ? await deliverEmail({ to: recipientEmail, subject: emailSubject, html: emailHtml, text: emailText, fromName: payload.studioName })
       : { delivery: "SKIPPED" as const };
 
   const result: NotificationResult = {

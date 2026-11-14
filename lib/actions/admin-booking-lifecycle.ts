@@ -314,7 +314,7 @@ export async function resendBookingConfirmation(
       return {
         success: false,
         error: "EMAIL_NOT_CONFIGURED",
-        message: "Email isn't set up yet: add RESEND_API_KEY to the server settings, then try again.",
+        message: "Email isn't set up yet: add SMTP settings (e.g. Gmail) or RESEND_API_KEY to the server settings, then try again.",
       };
     }
     if (result.emailDelivery === "FAILED") {

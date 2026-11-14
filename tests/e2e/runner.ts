@@ -44,8 +44,9 @@ if (!/^file:.*\btest\.db$/.test(process.env.DATABASE_URL ?? "")) {
   );
 }
 
-// Never let the suite send real email, even if a real key is present in the environment.
+// Never let the suite send real email, even if a real key or SMTP login is present in the environment.
 process.env.RESEND_API_KEY = "";
+for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM_ADDRESS"]) delete process.env[key];
 // Earlier tiers exercise the fake instant card flow; Tier 9 tests the real gateway path explicitly.
 process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "true";
 
