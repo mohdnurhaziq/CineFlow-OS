@@ -5,6 +5,7 @@ import { getSessionClient } from "@/lib/clients";
 import { inviteMatches } from "@/lib/auth/invite";
 import { ClientRegisterCard } from "@/components/auth/client-register-card";
 import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
+import { InviteForAnotherAccount } from "@/components/auth/invite-for-another-account";
 
 interface RegisterPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -52,7 +53,15 @@ export default async function ClientRegisterPage({ params, searchParams }: Regis
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center p-4 selection:bg-amber-500/20 selection:text-amber-400">
-      {client ? (
+      {client && inviteToken && inviteEmail && client.email.toLowerCase() !== inviteEmail ? (
+        // An invite for someone else: redirecting would quietly open the wrong account.
+        <InviteForAnotherAccount
+          inviteEmail={inviteEmail}
+          signedInEmail={client.email}
+          signedInName={client.name}
+          accountHref={`/${tenant.slug}/account`}
+        />
+      ) : client ? (
         <SignedInRedirect name={client.name} href={next ?? `/${tenant.slug}/account`} />
       ) : (
         <ClientRegisterCard

@@ -18,6 +18,7 @@ import { TestHarness } from "./test-harness";
 import { registerClient } from "@/lib/actions/client-auth";
 import { createBookingForCustomer, getBookingDetails } from "@/lib/actions/admin-bookings";
 import { resendBookingConfirmation } from "@/lib/actions/admin-booking-lifecycle";
+import ClientRegisterPage from "@/app/[tenantSlug]/register/page";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { createClientBooking } from "@/lib/actions/booking";
@@ -431,6 +432,55 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       if (savedKey === undefined) delete process.env.RESEND_API_KEY;
       else process.env.RESEND_API_KEY = savedKey;
     }
+  });
+
+  await harness.test("T7-INVITE-02: an invite opened while signed in as someone else asks to sign out", async () => {
+    // Walks a server-component tree for the first props object that has `key`.
+    const findProp = (node: any, key: string): any => {
+      if (!node || typeof node !== "object") return undefined;
+      if (Array.isArray(node)) {
+        for (const n of node) {
+          const hit = findProp(n, key);
+          if (hit !== undefined) return hit;
+        }
+        return undefined;
+      }
+      const props = node.props;
+      if (props && key in props) return props[key];
+      return props ? findProp(props.children, key) : undefined;
+    };
+    // The test runner compiles JSX to React.createElement; pages don't import React themselves.
+    (globalThis as { React?: unknown }).React ??= await import("react");
+    const other = validInput("invite-other");
+    const regOther: any = await withRequest(() => registerClient(other));
+    harness.assert(regOther.success === true, "Another customer is registered and signed in");
+    const otherUser = await db.user.findFirst({ where: { tenantId: lumina.id, email: other.email.toLowerCase() } });
+    const invitee = email("invite-target");
+    createdUserEmails.push(invitee);
+    const render = (session: any) =>
+      withSession(session, async () =>
+        ClientRegisterPage({
+          params: Promise.resolve({ tenantSlug: "lumina-cine" }),
+          searchParams: Promise.resolve({ invite: "sometoken", email: invitee, next: "/lumina-cine/account" }),
+        })
+      );
+
+    const asOther = await render(asUser(otherUser!, "lumina-cine"));
+    harness.assertEqual(findProp(asOther, "inviteEmail"), invitee, "Signed in as someone else: shows whose link it is");
+    harness.assertEqual(findProp(asOther, "signedInEmail"), other.email.toLowerCase(), "and who is signed in");
+    harness.assertEqual(findProp(asOther, "href"), undefined, "and does not redirect to the wrong account");
+
+    const regInvitee: any = await withRequest(() =>
+      registerClient({ tenantSlug: "lumina-cine", name: "Invite Target", email: invitee, phone: "0123456789", password: "supersecret1" })
+    );
+    harness.assert(regInvitee.success === true, "The invited customer has signed up");
+    const inviteeUser = await db.user.findFirst({ where: { tenantId: lumina.id, email: invitee } });
+    const asSame = await render(asUser(inviteeUser!, "lumina-cine"));
+    harness.assertEqual(findProp(asSame, "inviteEmail"), undefined, "Signed in as that customer: no warning");
+    harness.assertEqual(findProp(asSame, "href"), "/lumina-cine/account", "and goes straight to their account");
+
+    const signedOut = await render(null);
+    harness.assertEqual(findProp(signedOut, "defaultEmail"), invitee, "Signed out: the set-password form, email filled in");
   });
 
   await harness.test("T7-ADM-04: staff books for an EXISTING customer, marked PAID -> confirmed", async () => {
