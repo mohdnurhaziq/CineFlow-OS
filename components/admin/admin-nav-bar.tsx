@@ -18,6 +18,7 @@ import {
   Sparkles,
   Settings,
   ChevronDown,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -146,6 +147,8 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
   }, [domains, pathname]);
 
   const isOverviewActive = pathname === `/${tenantSlug}/admin`;
+  const clientsHref = `/${tenantSlug}/admin/clients`;
+  const isClientsActive = pathname === clientsHref || pathname.startsWith(clientsHref + "/");
   const isSettingsActive =
     pathname === `/${tenantSlug}/admin/settings` || pathname.startsWith(`/${tenantSlug}/admin/settings/`);
 
@@ -166,6 +169,21 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
         >
           <LayoutDashboard className={cn("size-3.5", isOverviewActive ? "text-amber-400" : "text-zinc-500")} />
           <span>Overview</span>
+        </Link>
+
+        {/* Clients: their own tab, since a client spans bookings, projects and invoices */}
+        <Link
+          href={clientsHref}
+          aria-current={isClientsActive ? "page" : undefined}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all border whitespace-nowrap",
+            isClientsActive
+              ? "bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold shadow-sm shadow-amber-500/10"
+              : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-transparent"
+          )}
+        >
+          <Users className={cn("size-3.5", isClientsActive ? "text-amber-400" : "text-zinc-500")} />
+          <span>Clients</span>
         </Link>
 
         {/* 2, 3, 4. Domain Dropdown Groups */}
