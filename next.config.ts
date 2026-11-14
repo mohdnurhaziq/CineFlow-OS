@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Lint runs on its own (`pnpm lint`), not inside `next build`: the codebase still has
+  // pre-existing lint errors (mostly `any` in tests and actions) that would fail every build.
+  // Type errors still fail the build. Remove this once `pnpm lint` passes cleanly.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",

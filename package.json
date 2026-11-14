@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:e2e": "node tests/e2e/run.mjs",
     "prisma:generate": "prisma generate",
@@ -58,6 +58,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "3.3.7",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/canvas-confetti": "^1.9.0",

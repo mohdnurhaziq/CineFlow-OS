@@ -29,15 +29,17 @@ async function isNotFound(fn: () => Promise<unknown>): Promise<boolean> {
   try {
     await fn();
     return false;
-  } catch (err: any) {
-    if (String(err?.digest ?? "").startsWith("NEXT_HTTP_ERROR_FALLBACK;404")) return true;
+  } catch (err) {
+    const digest = (err as { digest?: unknown } | null)?.digest;
+    if (String(digest ?? "").startsWith("NEXT_HTTP_ERROR_FALLBACK;404")) return true;
     throw err;
   }
 }
 
 export async function runTier17ClientsTests(harness: TestHarness) {
   harness.setSuite("Tier 17", "Admin Clients Section");
-  (globalThis as any).React ??= await import("react");
+  // The admin page is rendered as a plain function here, so JSX needs React in scope.
+  (globalThis as { React?: unknown }).React ??= await import("react");
 
   const lumina = await db.tenant.findUnique({ where: { slug: "lumina-cine" } });
   const apex = await db.tenant.findUnique({ where: { slug: "apex-media" } });
