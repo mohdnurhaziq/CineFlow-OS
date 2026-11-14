@@ -6,6 +6,7 @@
  * - Deliver it, with an optional gallery link.
  */
 import { db } from "@/lib/db";
+import { loadBookableSlots } from "@/lib/bookings/bookable-slots";
 import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
 import { processBookingCheckout } from "@/lib/actions/checkout";
@@ -253,5 +254,38 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     const deposit = await db.milestoneInvoice.findFirst({ where: { bookingId, milestoneType: "BOOKING_DEPOSIT" } });
     const res: any = await withSession(owner, () => voidInvoice({ tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: deposit!.id, reason: "Test" }));
     harness.assertEqual(res.error, "BOOKING_ACTIVE", "Refused: cancel the booking instead");
+  });
+
+  await harness.test("T14-BOOKABLE-01: New booking offers only open, upcoming slots of this studio", async () => {
+    // Fixed clock: 12:00 noon on 15 Jun 2030 in the studio's zone (Asia/Kuala_Lumpur, UTC+8).
+    const now = new Date("2030-06-15T04:00:00Z");
+    const day = (d: string) => new Date(`${d}T00:00:00Z`);
+    const run = Date.now().toString(36);
+    const t = await db.tenant.create({ data: { name: "T14 Bookable", slug: `t14-bookable-${run}` } });
+    const other = await db.tenant.create({ data: { name: "T14 Other", slug: `t14-other-${run}` } });
+    harness.registerTeardown(async () => {
+      await db.tenant.deleteMany({ where: { id: { in: [t.id, other.id] } } });
+    });
+    const slot = (tenantId: string, date: string, startTime: string, extra: Record<string, unknown> = {}) =>
+      db.bookingSlot.create({ data: { tenantId, date: day(date), startTime, endTime: "11:59 PM", ...extra } });
+
+    const laterToday = await slot(t.id, "2030-06-15", "02:00 PM");
+    const tomorrow = await slot(t.id, "2030-06-16", "10:00 AM");
+    const expiredHold = await slot(t.id, "2030-06-17", "10:00 AM", { status: "HELD", heldUntil: new Date("2030-06-15T03:00:00Z"), heldBySessionId: "s1" });
+    await slot(t.id, "2030-06-14", "10:00 AM"); // yesterday
+    await slot(t.id, "2030-06-15", "09:00 AM"); // already started today
+    await slot(t.id, "2030-06-16", "01:00 PM", { status: "BLOCKED" });
+    await slot(t.id, "2030-06-16", "03:00 PM", { status: "BOOKED" });
+    await slot(t.id, "2030-06-16", "05:00 PM", { status: "HELD", heldUntil: new Date("2030-06-15T05:00:00Z"), heldBySessionId: "s2" });
+    await slot(other.id, "2030-06-16", "10:00 AM"); // another studio
+
+    const ids = (await loadBookableSlots(t.id, now)).map((s) => s.id);
+    harness.assertDeepEqual(
+      ids,
+      [laterToday.id, tomorrow.id, expiredHold.id],
+      "Only open, not-yet-started slots of this studio, in date and time order",
+    );
+    const released = await db.bookingSlot.findUnique({ where: { id: expiredHold.id } });
+    harness.assertEqual(released?.status, "AVAILABLE", "An expired hold is released so it can be booked");
   });
 }
