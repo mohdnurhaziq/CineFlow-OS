@@ -21,6 +21,21 @@ services:
       - cineflow-data:/app/data              # SQLite database
       - cineflow-uploads:/app/public/uploads # user uploads (logos, previews…)
       - cineflow-storage:/app/storage        # private deliverable masters
+    depends_on:
+      - mailpit
+
+  # Development mail catcher: accepts every email the app sends and shows it in a web inbox
+  # at http://localhost:8025. It never delivers to real inboxes. Use it with
+  # SMTP_HOST="mailpit" SMTP_PORT="1025" in .env; switch to a real provider for production.
+  mailpit:
+    image: axllent/mailpit:v1.21.0
+    container_name: cineflow-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025" # web inbox (this computer only)
+      - "127.0.0.1:1025:1025" # SMTP, for `pnpm dev` running outside Docker
+    environment:
+      MP_MAX_MESSAGES: 1000
 
 volumes:
   cineflow-data:

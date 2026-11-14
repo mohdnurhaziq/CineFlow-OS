@@ -8,7 +8,7 @@
 import { TestHarness } from "./test-harness";
 import nodemailer, { type Transporter } from "nodemailer";
 import { sendNotification, type NotificationPayload } from "../../lib/notifications";
-import { formatFrom, setSmtpTransportForTests, smtpConfigFromEnv } from "../../lib/email/smtp";
+import { DEFAULT_NO_AUTH_FROM, formatFrom, setSmtpTransportForTests, smtpConfigFromEnv } from "../../lib/email/smtp";
 
 type FetchCall = { url: string; init: RequestInit };
 
@@ -188,12 +188,37 @@ export async function runTier8EmailDeliveryTests(harness: TestHarness) {
     harness.assert(c !== null, "Configured when host, user and password are set");
     harness.assertEqual(c?.port, 465, "Port 465");
     harness.assertEqual(c?.secure, true, "TLS on 465");
-    harness.assertEqual(c?.pass, "abcdefghijklmnop", "App password spaces are removed");
+    harness.assertEqual(c?.auth?.pass, "abcdefghijklmnop", "App password spaces are removed");
     harness.assertEqual(c?.fromAddress, "studio.owner@gmail.com", "Sender defaults to SMTP_USER");
     process.env.SMTP_PORT = "587";
     harness.assertEqual(smtpConfigFromEnv()?.secure, false, "STARTTLS on 587");
-    delete process.env.SMTP_PASS;
-    harness.assertEqual(smtpConfigFromEnv(), null, "Not configured without a password");
+    console.error = () => {};
+    try {
+      delete process.env.SMTP_PASS;
+      harness.assertEqual(smtpConfigFromEnv(), null, "A user without a password is a mistake: SMTP stays off");
+      process.env.SMTP_PASS = "abcdefghijklmnop";
+      delete process.env.SMTP_USER;
+      harness.assertEqual(smtpConfigFromEnv(), null, "A password without a user is a mistake: SMTP stays off");
+    } finally {
+      console.error = originalError;
+    }
+  });
+
+  await harness.test("T8-SMTP-06: a server without login (Mailpit) needs only host and port", async () => {
+    for (const k of SMTP_KEYS) delete process.env[k];
+    process.env.SMTP_HOST = "mailpit";
+    process.env.SMTP_PORT = "1025";
+    const c = smtpConfigFromEnv();
+    harness.assert(c !== null, "Configured with host and port only");
+    harness.assertEqual(c?.auth, null, "No login");
+    harness.assertEqual(c?.secure, false, "Plain SMTP on 1025");
+    harness.assertEqual(c?.fromAddress, DEFAULT_NO_AUTH_FROM, "Default sender address");
+    const sent = captureSmtp();
+    const res = await sendNotification(payload());
+    harness.assertEqual(res.emailDelivery, "SENT", "SENT");
+    harness.assertEqual(sent[0]?.from, `"Lumina CineWorks" <${DEFAULT_NO_AUTH_FROM}>`, "From: studio name, default address");
+    process.env.SMTP_FROM_ADDRESS = "bookings@studio.test";
+    harness.assertEqual(smtpConfigFromEnv()?.fromAddress, "bookings@studio.test", "SMTP_FROM_ADDRESS overrides the sender");
   });
 
   await harness.test("T8-SMTP-02: with SMTP set, email goes over SMTP from the studio's name, not to Resend", async () => {

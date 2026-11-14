@@ -170,7 +170,7 @@ function resendRefusalReason(status: number, detail: string): string {
 }
 
 /**
- * Sends one email: over SMTP when SMTP_HOST/SMTP_USER/SMTP_PASS are set (e.g. Gmail),
+ * Sends one email: over SMTP when SMTP_HOST is set (e.g. Gmail, or Mailpit in development),
  * otherwise through Resend's REST API when RESEND_API_KEY is set, otherwise skipped.
  * Never throws: the booking, payment and proposal flows that trigger notifications must
  * not fail because mail did.
