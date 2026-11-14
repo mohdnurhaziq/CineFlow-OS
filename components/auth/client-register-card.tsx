@@ -10,6 +10,8 @@ interface ClientRegisterCardProps {
   defaultMode?: "register" | "login";
   inviteToken?: string;
   defaultEmail?: string;
+  defaultName?: string;
+  defaultPhone?: string;
   /** Where to go once signed in (a path inside this studio); the account page by default. */
   next?: string;
 }
@@ -20,6 +22,8 @@ export function ClientRegisterCard({
   defaultMode = "register",
   inviteToken,
   defaultEmail,
+  defaultName,
+  defaultPhone,
   next,
 }: ClientRegisterCardProps) {
   const router = useRouter();
@@ -41,6 +45,8 @@ export function ClientRegisterCard({
         defaultMode={defaultMode}
         inviteToken={inviteToken}
         defaultEmail={defaultEmail}
+        defaultName={defaultName}
+        defaultPhone={defaultPhone}
         // One navigation only: a refresh here re-renders /register, which itself redirects signed-in
         // clients, and the two navigations race (the page could be left blank). /account is
         // dynamic, so it renders fresh with the new session; replace keeps /register out of history.

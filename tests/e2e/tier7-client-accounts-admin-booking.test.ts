@@ -322,6 +322,55 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       harness.assert(!!mail?.html?.includes(res.trackingCode), "Email carries the booking reference");
       harness.assert(!!mail?.text?.includes("Deposit due"), "An unpaid deposit is shown as due, not paid");
       harness.assert(!mail?.text?.includes("Deposit paid"), "It does not claim the deposit was paid");
+
+      // The new customer has no password yet: the button sets one, then opens their account.
+      const href = (mail?.html?.match(/href="([^"]+)"/)?.[1] ?? "").replace(/&amp;/g, "&");
+      const link = new URL(href, "http://localhost");
+      harness.assertEqual(link.pathname, "/lumina-cine/register", "Link opens the studio's set-password page");
+      harness.assertEqual(link.searchParams.get("email"), e, "with the customer's email filled in");
+      harness.assertEqual(link.searchParams.get("next"), "/lumina-cine/account", "and continues to their account");
+      harness.assert(!!mail?.html?.includes("Set your password"), "Button says to set a password");
+      const token = link.searchParams.get("invite") ?? "";
+      harness.assert(token.length > 20, "Link carries a one-time invite");
+      const claimed: any = await withRequest(() =>
+        registerClient({ tenantSlug: "lumina-cine", name: "Email Walk In", email: e, phone: "0123456789", password: "Sup3r-secret!", inviteToken: token })
+      );
+      harness.assertEqual(claimed.success, true, `The invite lets the customer set a password (${claimed.message ?? "ok"})`);
+      const account = await db.user.findFirst({ where: { tenantId: lumina.id, email: e } });
+      harness.assert(!!account?.passwordHash, "The account now has a password");
+      harness.assertEqual(account?.inviteToken ?? null, null, "and the invite is used up");
+    } finally {
+      globalThis.fetch = realFetch;
+      if (savedKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = savedKey;
+    }
+  });
+
+  await harness.test("T7-ADM-EMAIL-02: a customer who already has a password gets a plain account link", async () => {
+    const slot = await makeSlot(lumina.id);
+    const input = validInput("emailexisting");
+    const reg: any = await withRequest(() => registerClient(input));
+    harness.assert(reg.success === true, "Customer registered with a password");
+    const customer = await db.user.findFirst({ where: { tenantId: lumina.id, email: input.email.toLowerCase() } });
+    const realFetch = globalThis.fetch;
+    const savedKey = process.env.RESEND_API_KEY;
+    const sent: { to: string[]; html: string }[] = [];
+    process.env.RESEND_API_KEY = "re_test_key";
+    globalThis.fetch = (async (url: any, init: any) => {
+      if (String(url).includes("api.resend.com")) sent.push(JSON.parse(String(init?.body ?? "{}")));
+      return new Response(JSON.stringify({ id: "email_test" }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const res: any = await withSession(luminaStaff, () =>
+        createBookingForCustomer({ tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, clientId: customer!.id })
+      );
+      harness.assert(res.success === true, `Booking created (${res.error ?? "ok"})`);
+      const mail = sent.find((m) => m.to?.includes(customer!.email));
+      const href = (mail?.html?.match(/href="([^"]+)"/)?.[1] ?? "").replace(/&amp;/g, "&");
+      harness.assertEqual(new URL(href, "http://localhost").pathname, "/lumina-cine/account", "Link opens their account");
+      harness.assert(!href.includes("invite="), "No invite for an account that has a password");
+      const after = await db.user.findUnique({ where: { id: customer!.id } });
+      harness.assertEqual(after?.inviteToken ?? null, null, "No invite token was issued");
     } finally {
       globalThis.fetch = realFetch;
       if (savedKey === undefined) delete process.env.RESEND_API_KEY;

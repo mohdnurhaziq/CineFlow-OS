@@ -30,6 +30,8 @@ export interface BookingConfirmedPayload {
   bookingUrl?: string;
   /** False while the deposit still awaits payment or verification: the email then says "Deposit due". */
   depositPaid?: boolean;
+  /** Button text for bookingUrl, e.g. "Set your password & view booking" for a new account. */
+  bookingLinkLabel?: string;
 }
 
 export interface PaymentApprovedPayload {
@@ -283,15 +285,15 @@ export async function sendNotification(
           payload.bookingUrl
             ? `<div style="text-align: center; margin: 24px 0 10px 0;">
           <a href="${esc(payload.bookingUrl)}" style="display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 13px;">
-            View My Booking Details
+            ${esc(payload.bookingLinkLabel || "View my booking")}
           </a>
         </div>`
             : ""
         }
         <p>Our production team will contact you with call times, wardrobe guidelines, and location ephemeris.</p>
       `;
-      emailText = `Booking Confirmed with ${payload.studioName}!\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\n${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\nLink: ${payload.bookingUrl}` : ""}`;
-      whatsappText = `*${payload.studioName} — Booking Confirmed!*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is confirmed.${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} ${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 View details: ${payload.bookingUrl}` : ""}`;
+      emailText = `Booking Confirmed with ${payload.studioName}!\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\n${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\n${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — Booking Confirmed!*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is confirmed.${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} ${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 ${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
       break;
     }
 

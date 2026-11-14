@@ -14,6 +14,9 @@ interface ClientAuthPanelProps {
   /** From a studio invite email: proves ownership of the account the studio created. */
   inviteToken?: string;
   defaultEmail?: string;
+  /** Pre-filled from the account a valid studio invite belongs to. */
+  defaultName?: string;
+  defaultPhone?: string;
 }
 
 const inputClass =
@@ -60,11 +63,13 @@ export function ClientAuthPanel({
   defaultMode = "register",
   inviteToken,
   defaultEmail = "",
+  defaultName = "",
+  defaultPhone = "",
 }: ClientAuthPanelProps) {
   const [mode, setMode] = useState<"register" | "login">(defaultMode);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState(defaultEmail);
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(defaultPhone);
   const [password, setPassword] = useState("");
   const [claimCode, setClaimCode] = useState("");
   const [needsClaim, setNeedsClaim] = useState(false);
