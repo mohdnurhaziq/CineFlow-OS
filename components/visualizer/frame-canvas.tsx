@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import type { MatBoardType } from "@/lib/prints/pricing";
 
 interface FrameCanvasProps {
   pixelsPerInch: number;
@@ -12,7 +13,7 @@ interface FrameCanvasProps {
   frameName: string;
   frameColor: string;
   frameMaterial: string;
-  matBoardType: "NONE" | "WHITE_2INCH" | "OFFWHITE_2INCH";
+  matBoardType: MatBoardType;
   orientation: "PORTRAIT" | "LANDSCAPE";
   sofaWidthPx: number;
 }

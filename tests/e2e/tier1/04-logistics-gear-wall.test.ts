@@ -13,7 +13,7 @@ import {
   logPreShootInspection,
   logPostShootInspection,
 } from "@/lib/actions/gear";
-import { createPrintOrder } from "@/lib/actions/visualizer";
+import { placePrintOrder } from "@/lib/actions/print-orders";
 import { invalid } from "../result-helpers";
 
 export async function runLogisticsGearWallTests(harness: TestHarness) {
@@ -1113,143 +1113,79 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
   });
 
   // ============================================================================
-  // Feature 39: 1-Click Print Order Invoicing (5 Tests)
+  // Feature 39: Framed Print Orders From a Paid Gallery (5 Tests)
   // ============================================================================
-  await harness.test("T1-F39-01: createPrintOrder validates required inputs (printSizeId, frameDesignId, clientEmail, photoUrl)", async () => {
-    const res = await createPrintOrder({
-      tenantId: luminaTenant!.id,
-      tenantSlug: "lumina-cine",
-      printSizeId: "",
-      frameDesignId: "",
-      matBoardType: "NONE",
-      orientation: "PORTRAIT",
-      photoUrl: "not-a-url",
-      photoTitle: "Test",
-      clientName: "Test",
-      clientEmail: "invalid-email",
+  // Apex's seeded project is paid and has delivered photos. Runs as the ambient platform admin.
+  const apexProjectId = "proj_apex_01";
+  const apexPhotoId = "item_apx_photo_1";
+  const placedOrderIds: string[] = [];
+  harness.registerTeardown(async () => {
+    const orders = await db.printOrder.findMany({ where: { id: { in: placedOrderIds } }, select: { invoiceId: true } });
+    await db.printOrder.deleteMany({ where: { id: { in: placedOrderIds } } });
+    await db.milestoneInvoice.deleteMany({ where: { id: { in: orders.map((o) => o.invoiceId).filter((id): id is string => !!id) } } });
+  });
+  const paidOrder = async (printSizeId: string, frameDesignId: string, matBoardType: "NONE" | "WHITE_2INCH" | "OFFWHITE_2INCH", orientation: "PORTRAIT" | "LANDSCAPE" = "PORTRAIT") => {
+    const res = await placePrintOrder({
+      tenantId: apexTenant!.id,
+      tenantSlug: "apex-media",
+      projectId: apexProjectId,
+      items: [{ kind: "PAID", deliverableItemId: apexPhotoId, orientation, printSizeId, frameDesignId, matBoardType }],
+      fulfilment: "PICKUP",
     });
+    if (res.success) placedOrderIds.push(res.orderId);
+    return res;
+  };
 
-    harness.assert(res.success === false, "Rejected invalid createPrintOrder input");
+  await harness.test("T1-F39-01: placePrintOrder validates required inputs (items, photo, size, frame)", async () => {
+    const empty = await placePrintOrder({ tenantId: apexTenant!.id, tenantSlug: "apex-media", projectId: apexProjectId, items: [], fulfilment: "PICKUP" });
+    harness.assert(empty.success === false, "An order with no prints is rejected");
+    const blank = await paidOrder("", "", "NONE");
+    harness.assert(blank.success === false, "Blank size and frame rejected");
   });
 
-  await harness.test("T1-F39-02: Atomically creates MilestoneInvoice with milestoneType = 'PRINT_FRAME_ORDER'", async () => {
-    const printSize = await db.printSize.findFirst({ where: { tenantId: luminaTenant!.id } });
-    const frame = await db.frameDesign.findFirst({ where: { tenantId: luminaTenant!.id } });
-    harness.assert(printSize !== null && frame !== null, "Print size and frame found");
-
-    const res = await createPrintOrder({
-      tenantId: luminaTenant!.id,
-      tenantSlug: "lumina-cine",
-      printSizeId: printSize!.id,
-      frameDesignId: frame!.id,
-      matBoardType: "NONE",
-      orientation: "PORTRAIT",
-      photoUrl: "/uploads/deliverables/masters/lookbook_01.jpg",
-      photoTitle: "Autumn Lookbook Archival Print",
-      clientName: "E2E Print Buyer",
-      clientEmail: "printbuyer@example.com",
-    });
-
-    harness.assert(res.success === true, "createPrintOrder succeeded");
-    harness.assert(Boolean(res.invoiceId), "Returned invoiceId");
-
-    harness.registerTeardown(async () => {
-      await db.milestoneInvoice.delete({ where: { id: res.invoiceId } }).catch(() => null);
-    });
-
-    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
-    harness.assertEqual(inv?.milestoneType, "PRINT_FRAME_ORDER", "milestoneType is PRINT_FRAME_ORDER");
-    harness.assertEqual(inv?.status, "PENDING", "Initial invoice status is PENDING");
+  await harness.test("T1-F39-02: a paid print creates an AWAITING_PAYMENT order with a PRINT_FRAME_ORDER invoice", async () => {
+    const size = await db.printSize.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+    const frame = await db.frameDesign.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+    harness.assert(size !== null && frame !== null, "Print size and frame found");
+    const res = await paidOrder(size!.id, frame!.id, "NONE");
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const order = await db.printOrder.findUnique({ where: { id: res.orderId }, include: { invoice: true } });
+    harness.assertEqual(order?.status, "AWAITING_PAYMENT", "Order awaits payment");
+    harness.assertEqual(order?.invoice?.milestoneType, "PRINT_FRAME_ORDER", "milestoneType is PRINT_FRAME_ORDER");
+    harness.assertEqual(order?.invoice?.status, "PENDING", "Initial invoice status is PENDING");
   });
 
-  await harness.test("T1-F39-03: Total price correctly calculated as printPrice + frameOffset + matPrice", async () => {
-    const size16R = await db.printSize.findFirst({ where: { tenantId: luminaTenant!.id, code: "16R" } });
-    const walnut = await db.frameDesign.findFirst({
-      where: { tenantId: luminaTenant!.id, name: { contains: "Walnut" } },
-    });
-    harness.assert(size16R !== null && walnut !== null, "Size 16R and Walnut frame found");
-
-    const expectedTotal = size16R!.basePrice + walnut!.priceOffset + 25.0; // with mat
-
-    const res = await createPrintOrder({
-      tenantId: luminaTenant!.id,
-      tenantSlug: "lumina-cine",
-      printSizeId: size16R!.id,
-      frameDesignId: walnut!.id,
-      matBoardType: "OFF_WHITE_2INCH",
-      orientation: "PORTRAIT",
-      photoUrl: "/uploads/deliverables/masters/lookbook_01.jpg",
-      photoTitle: "Total Calculation Test",
-      clientName: "Total Test",
-      clientEmail: "totaltest@example.com",
-    });
-
-    harness.assert(res.success === true, "createPrintOrder succeeded");
-    harness.registerTeardown(async () => {
-      await db.milestoneInvoice.delete({ where: { id: res.invoiceId } }).catch(() => null);
-    });
-
-    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
-    harness.assertEqual(inv?.amount, expectedTotal, "Total invoice amount matches exact mathematical sum");
+  await harness.test("T1-F39-03: Total price is size price + frame offset + the studio's mat price", async () => {
+    const size = await db.printSize.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true }, orderBy: { basePrice: "desc" } });
+    const frame = await db.frameDesign.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true }, orderBy: { priceOffset: "desc" } });
+    const expectedTotal = size!.basePrice + frame!.priceOffset + apexTenant!.matBoardPrice;
+    const res = await paidOrder(size!.id, frame!.id, "OFFWHITE_2INCH");
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const order = await db.printOrder.findUnique({ where: { id: res.orderId }, include: { invoice: true } });
+    harness.assertEqual(order?.totalAmount, expectedTotal, "Order total matches the exact sum");
+    harness.assertEqual(order?.invoice?.amount, expectedTotal, "Invoice amount matches the order total");
   });
 
-  await harness.test("T1-F39-04: Serializes itemized print specs (photo title, print size code, frame name, mat type) into paymentReference JSON", async () => {
-    const size = await db.printSize.findFirst({ where: { tenantId: luminaTenant!.id } });
-    const frame = await db.frameDesign.findFirst({ where: { tenantId: luminaTenant!.id } });
-
-    const res = await createPrintOrder({
-      tenantId: luminaTenant!.id,
-      tenantSlug: "lumina-cine",
-      printSizeId: size!.id,
-      frameDesignId: frame!.id,
-      matBoardType: "WHITE_2INCH",
-      orientation: "LANDSCAPE",
-      photoUrl: "/uploads/deliverables/masters/lookbook_01.jpg",
-      photoTitle: "Archival Landscape Print",
-      clientName: "Metadata Buyer",
-      clientEmail: "metadatabuyer@example.com",
-    });
-
-    harness.assert(res.success === true, "Order created");
-    harness.registerTeardown(async () => {
-      await db.milestoneInvoice.delete({ where: { id: res.invoiceId } }).catch(() => null);
-    });
-
-    const inv = await db.milestoneInvoice.findUnique({ where: { id: res.invoiceId } });
-    harness.assert(typeof inv?.paymentReference === "string", "paymentReference is populated");
-
-    const metadata = JSON.parse(inv!.paymentReference!);
-    harness.assertEqual(metadata.orderType, "PRINT_FRAME_ORDER", "orderType is PRINT_FRAME_ORDER");
-    harness.assertEqual(metadata.printSize.code, size!.code, "printSize code serialized");
-    harness.assertEqual(metadata.frameDesign.name, frame!.name, "frameDesign name serialized");
-    harness.assertEqual(metadata.matBoard.type, "WHITE_2INCH", "matBoard type serialized");
-    harness.assertEqual(metadata.orientation, "LANDSCAPE", "orientation serialized");
+  await harness.test("T1-F39-04: Each item keeps its print spec (photo master, size code, frame name, mat, orientation)", async () => {
+    const size = await db.printSize.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+    const frame = await db.frameDesign.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+    const photo = await db.deliverableItem.findUniqueOrThrow({ where: { id: apexPhotoId } });
+    const res = await paidOrder(size!.id, frame!.id, "WHITE_2INCH", "LANDSCAPE");
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const item = await db.printOrderItem.findFirst({ where: { orderId: res.orderId } });
+    harness.assertEqual(item?.sizeCode, size!.code, "Size code kept");
+    harness.assertEqual(item?.frameName, frame!.name, "Frame name kept");
+    harness.assertEqual(item?.matBoardType, "WHITE_2INCH", "Mat kept");
+    harness.assertEqual(item?.orientation, "LANDSCAPE", "Orientation kept");
+    harness.assertEqual(item?.photoUrl, photo.downloadUrl, "Prints from the master file");
   });
 
-  await harness.test("T1-F39-05: Returns checkout redirect URL /[tenantSlug]/checkout?invoiceId=... for instant payment", async () => {
-    const size = await db.printSize.findFirst({ where: { tenantId: luminaTenant!.id } });
-    const frame = await db.frameDesign.findFirst({ where: { tenantId: luminaTenant!.id } });
-
-    const res = await createPrintOrder({
-      tenantId: luminaTenant!.id,
-      tenantSlug: "lumina-cine",
-      printSizeId: size!.id,
-      frameDesignId: frame!.id,
-      matBoardType: "NONE",
-      orientation: "PORTRAIT",
-      photoUrl: "/uploads/deliverables/masters/lookbook_01.jpg",
-      photoTitle: "Instant Checkout Test",
-      clientName: "Instant Checkout Buyer",
-      clientEmail: "instantbuyer@example.com",
-    });
-
-    harness.assert(res.success === true, "Order succeeded");
-    harness.registerTeardown(async () => {
-      await db.milestoneInvoice.delete({ where: { id: res.invoiceId } }).catch(() => null);
-    });
-
-    harness.assert(typeof res.checkoutUrl === "string", "checkoutUrl returned");
-    const expectedUrl = `/lumina-cine/checkout?invoiceId=${res.invoiceId}`;
-    harness.assertEqual(res.checkoutUrl, expectedUrl, "checkoutUrl matches exact tenant checkout path");
+  await harness.test("T1-F39-05: Returns checkout redirect URL /[tenantSlug]/checkout?invoiceId=... for a paid order", async () => {
+    const size = await db.printSize.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+    const frame = await db.frameDesign.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+    const res = await paidOrder(size!.id, frame!.id, "NONE");
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const order = await db.printOrder.findUniqueOrThrow({ where: { id: res.orderId } });
+    harness.assertEqual(res.checkoutUrl, `/apex-media/checkout?invoiceId=${order.invoiceId}`, "checkoutUrl matches exact tenant checkout path");
   });
 }

@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { ZoomIn, ZoomOut, RotateCcw, Palette } from "lucide-react";
 import { SofaMockup } from "./sofa-mockup";
 import { FrameCanvas } from "./frame-canvas";
+import type { MatBoardType } from "@/lib/prints/pricing";
 
 export type WallColorKey = "WARM_GRAY" | "CHARCOAL" | "CREAM" | "DEEP_NAVY";
 
@@ -30,7 +31,7 @@ interface RoomSceneProps {
   frameName: string;
   frameColor: string;
   frameMaterial: string;
-  matBoardType: "NONE" | "WHITE_2INCH" | "OFFWHITE_2INCH";
+  matBoardType: MatBoardType;
   orientation: "PORTRAIT" | "LANDSCAPE";
   wallColor: WallColorKey;
   zoomMode: "ROOM" | "DETAIL";

@@ -4,12 +4,7 @@
  *
  * Scrutinizes:
  * 1. Module 8: Print & Frame Wall Visualizer
- *    - Tenant isolation & cross-tenant injection rejection
- *    - Price calculation determinism & atomicity
- *    - MilestoneInvoice creation with milestoneType = "PRINT_FRAME_ORDER"
- *    - paymentReference JSON integrity & serialization
- *    - Checkout route parameter resolution
- *    - processInvoicePayment integration & paymentReference preservation analysis
+ *    - Seeded print catalog per tenant (print ordering itself is covered by the E2E suite, Tier 20)
  * 2. Visualizer Mathematical Scaling & Geometry:
  *    - Proportional scaling math: pixelsPerInch = (sofaWidthPx / 84)
  *    - Dimension calculation for 8R, 12R, 16R in Portrait & Landscape
@@ -20,9 +15,6 @@
  */
 
 import { db } from "../lib/db";
-import { createPrintOrder } from "../lib/actions/visualizer";
-import { processInvoicePayment } from "../lib/actions/checkout";
-import { errorMessageOf } from "../lib/action-error";
 
 let passed = 0;
 let failed = 0;
@@ -53,9 +45,9 @@ async function runReviewerAdversarialTests() {
   }
 
   // ----------------------------------------------------------------------------
-  // SECTION 1: Tenant Isolation & Malicious Cross-Tenant Injection in Visualizer
+  // SECTION 1: Print catalog seeding
   // ----------------------------------------------------------------------------
-  console.log("--- 1. Tenant Isolation & Cross-Tenant Attacks in createPrintOrder ---");
+  console.log("--- 1. Print Catalog Seeding ---");
 
   // Fetch Lumina and Apex print sizes and frames
   const luminaPrintSizes = await db.printSize.findMany({ where: { tenantId: luminaTenant.id } });
@@ -68,162 +60,12 @@ async function runReviewerAdversarialTests() {
   check("Lumina has seeded frames", luminaFrames.length >= 3, `Found ${luminaFrames.length}`);
   check("Apex has seeded frames", apexFrames.length >= 3, `Found ${apexFrames.length}`);
 
-  // Test 1.1: Attempt to create Lumina print order using Apex's printSizeId
-  const crossPrintRes = await createPrintOrder({
-    tenantId: luminaTenant.id,
-    tenantSlug: luminaTenant.slug,
-    printSizeId: apexPrintSizes[0]!.id, // Belongs to Apex!
-    frameDesignId: luminaFrames[0]!.id,
-    matBoardType: "WHITE_2INCH",
-    orientation: "LANDSCAPE",
-    photoUrl: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    clientName: "Adversary Attacker",
-    clientEmail: "attacker@test.com",
-  });
-  check(
-    "Rejects cross-tenant printSizeId (tenant isolation enforced)",
-    crossPrintRes.success === false && crossPrintRes.error === "PRINT_SIZE_NOT_FOUND",
-    `Expected PRINT_SIZE_NOT_FOUND, got: ${JSON.stringify(crossPrintRes)}`
-  );
-
-  // Test 1.2: Attempt to create Lumina print order using Apex's frameDesignId
-  const crossFrameRes = await createPrintOrder({
-    tenantId: luminaTenant.id,
-    tenantSlug: luminaTenant.slug,
-    printSizeId: luminaPrintSizes[0]!.id,
-    frameDesignId: apexFrames[0]!.id, // Belongs to Apex!
-    matBoardType: "WHITE_2INCH",
-    orientation: "LANDSCAPE",
-    photoUrl: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    clientName: "Adversary Attacker",
-    clientEmail: "attacker@test.com",
-  });
-  check(
-    "Rejects cross-tenant frameDesignId (tenant isolation enforced)",
-    crossFrameRes.success === false && crossFrameRes.error === "FRAME_DESIGN_NOT_FOUND",
-    `Expected FRAME_DESIGN_NOT_FOUND, got: ${JSON.stringify(crossFrameRes)}`
-  );
-
-  // Test 1.3: Non-existent tenantId
-  const fakeTenantRes = await createPrintOrder({
-    tenantId: "ten_nonexistent_xyz",
-    tenantSlug: "fake-studio",
-    printSizeId: luminaPrintSizes[0]!.id,
-    frameDesignId: luminaFrames[0]!.id,
-    matBoardType: "NONE",
-    orientation: "PORTRAIT",
-    photoUrl: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    clientName: "Adversary Attacker",
-    clientEmail: "attacker@test.com",
-  });
-  check(
-    "Rejects non-existent tenantId",
-    fakeTenantRes.success === false && fakeTenantRes.error === "TENANT_NOT_FOUND",
-    `Expected TENANT_NOT_FOUND, got: ${JSON.stringify(fakeTenantRes)}`
-  );
-
-  // Test 1.4: Schema validation rejects invalid inputs
-  const invalidEmailRes = await createPrintOrder({
-    tenantId: luminaTenant.id,
-    tenantSlug: luminaTenant.slug,
-    printSizeId: luminaPrintSizes[0]!.id,
-    frameDesignId: luminaFrames[0]!.id,
-    matBoardType: "NONE",
-    orientation: "PORTRAIT",
-    photoUrl: "/uploads/test.jpg",
-    clientName: "A", // too short (min 2)
-    clientEmail: "not-an-email",
-  });
-  check(
-    "Zod schema rejects invalid email and short client name",
-    invalidEmailRes.success === false && invalidEmailRes.error === "ORDER_CREATION_FAILED",
-    `Expected validation rejection, got: ${JSON.stringify(invalidEmailRes)}`
-  );
+  // Cross-tenant print ordering is covered by the E2E suite (Tier 20).
 
   // ----------------------------------------------------------------------------
-  // SECTION 2: Legitimate Order Creation, Math Verification, & Invoicing
+  // SECTION 2: The frame used for the scaling math (Walnut)
   // ----------------------------------------------------------------------------
-  console.log("\n--- 2. Legitimate Order Math & Invoice Invariants ---");
-
-  // Find 16R size and Walnut frame
-  const targetSize = luminaPrintSizes.find((s) => s.code === "16R") || luminaPrintSizes[0]!;
   const targetFrame = luminaFrames.find((f) => f.name.toLowerCase().includes("walnut")) || luminaFrames[0]!;
-
-  const expectedBase = targetSize.basePrice;
-  const expectedFrameOffset = targetFrame.priceOffset;
-  const expectedMatPrice = 25.0; // 2" Mat board
-  const expectedTotal = expectedBase + expectedFrameOffset + expectedMatPrice;
-
-  const validOrderRes = await createPrintOrder({
-    tenantId: luminaTenant.id,
-    tenantSlug: luminaTenant.slug,
-    projectId: "proj_lumina_01",
-    printSizeId: targetSize.id,
-    frameDesignId: targetFrame.id,
-    matBoardType: "WHITE_2INCH",
-    orientation: "LANDSCAPE",
-    photoUrl: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    photoTitle: "Aurora Fall Editorial Hero",
-    clientName: "Eleanor Vance",
-    clientEmail: "eleanor.vance@aurorafashion.com",
-    clientPhone: "+1 (555) 431-9002",
-    notes: "Archival rag paper with white cotton inspection gloves.",
-  });
-
-  check("Order created successfully", validOrderRes.success === true, `Result: ${JSON.stringify(validOrderRes)}`);
-  check(
-    "Total calculated price strictly matches formula (print + frame + mat)",
-    validOrderRes.totalAmount === expectedTotal,
-    `Expected ${expectedTotal}, got ${validOrderRes.totalAmount}`
-  );
-  check(
-    "Checkout redirect URL points to /[tenantSlug]/checkout?invoiceId=...",
-    validOrderRes.checkoutUrl === `/${luminaTenant.slug}/checkout?invoiceId=${validOrderRes.invoiceId}`,
-    `Got: ${validOrderRes.checkoutUrl}`
-  );
-
-  // Verify database state
-  const invoice = await db.milestoneInvoice.findUnique({
-    where: { id: validOrderRes.invoiceId },
-    include: { client: true, project: true },
-  });
-
-  check("MilestoneInvoice exists in database", invoice !== null);
-  check(
-    "milestoneType is strictly 'PRINT_FRAME_ORDER'",
-    invoice?.milestoneType === "PRINT_FRAME_ORDER",
-    `Got: ${invoice?.milestoneType}`
-  );
-  check("Invoice initial status is PENDING", invoice?.status === "PENDING", `Got: ${invoice?.status}`);
-  check("Invoice amount matches total", invoice?.amount === expectedTotal, `Got: ${invoice?.amount}`);
-  check("Invoice clientId is set to client user", !!invoice?.clientId);
-  check("Client user role is CLIENT", invoice?.client?.role === "CLIENT");
-  check("Invoice dueDate is set (Net 7 days in future)", (invoice?.dueDate?.getTime() || 0) > Date.now());
-
-  // Verify paymentReference serialization
-  check("paymentReference is non-empty string", typeof invoice?.paymentReference === "string");
-  // What a print order stores in paymentReference (JSON); every field optional until checked.
-  let parsedMetadata: {
-    orderType?: string;
-    photoTitle?: string;
-    printSize?: { code?: string };
-    frameDesign?: { name?: string };
-    matBoard?: { type?: string };
-    financialBreakdown?: { totalAmount?: number };
-  } | null = null;
-  try {
-    parsedMetadata = JSON.parse(invoice!.paymentReference!);
-  } catch (err) {
-    findings.push(`JSON parse error on paymentReference: ${errorMessageOf(err)}`);
-  }
-
-  check("paymentReference parsed as valid JSON", parsedMetadata !== null);
-  check("orderType is 'PRINT_FRAME_ORDER'", parsedMetadata?.orderType === "PRINT_FRAME_ORDER");
-  check("printSize code matches", parsedMetadata?.printSize?.code === targetSize.code);
-  check("frameDesign name matches", parsedMetadata?.frameDesign?.name === targetFrame.name);
-  check("matBoard type is WHITE_2INCH", parsedMetadata?.matBoard?.type === "WHITE_2INCH");
-  check("photoTitle matches", parsedMetadata?.photoTitle === "Aurora Fall Editorial Hero");
-  check("financialBreakdown totalAmount matches", parsedMetadata?.financialBreakdown?.totalAmount === expectedTotal);
 
   // ----------------------------------------------------------------------------
   // SECTION 3: Visualizer Proportional Scaling Mathematics
@@ -280,44 +122,6 @@ async function runReviewerAdversarialTests() {
   const percent8rSofa = Math.round((total8rWInches / 84) * 100);
   check("8R No Mat width (8 + 2.5 = 10.5 in)", total8rWInches === 10.5);
   check("8R % of 84\" sofa (10.5 / 84 ≈ 13%)", percent8rSofa === 13, `Got: ${percent8rSofa}%`);
-
-  // ----------------------------------------------------------------------------
-  // SECTION 4: Checkout Resolution & Payment Processing Analysis
-  // ----------------------------------------------------------------------------
-  console.log("\n--- 4. Checkout Resolution & Payment Processing ---");
-
-  // Verify that the checkout route query logic resolves the invoice
-  const checkoutResolvedInvoice = await db.milestoneInvoice.findFirst({
-    where: {
-      id: validOrderRes.invoiceId,
-      tenantId: luminaTenant.id,
-    },
-    include: { client: true, project: true },
-  });
-  check(
-    "Checkout page query resolves PRINT_FRAME_ORDER invoice by invoiceId",
-    checkoutResolvedInvoice !== null && checkoutResolvedInvoice.id === validOrderRes.invoiceId
-  );
-
-  // Test paying via processInvoicePayment with QR Code (manual verification queue)
-  const qrPayRes = await processInvoicePayment({
-    tenantId: luminaTenant.id,
-    tenantSlug: luminaTenant.slug,
-    invoiceId: validOrderRes.invoiceId!,
-    paymentMethod: "QR_CODE",
-    paymentProofUrl: "/uploads/receipts/test_print_qr.jpg",
-    paymentReference: "QR-DUITNOW-PRINT-01",
-  });
-
-  check("processInvoicePayment accepts QR payment for print order", qrPayRes.success === true);
-  check("Invoice status transitioned to PENDING_VERIFICATION", qrPayRes.status === "PENDING_VERIFICATION");
-
-  const pendingInv = await db.milestoneInvoice.findUnique({ where: { id: validOrderRes.invoiceId } });
-  check("Database status is PENDING_VERIFICATION", pendingInv?.status === "PENDING_VERIFICATION");
-  check("paymentProofUrl persisted", pendingInv?.paymentProofUrl === "/uploads/receipts/test_print_qr.jpg");
-
-  // Clean up test invoice and client
-  await db.milestoneInvoice.delete({ where: { id: validOrderRes.invoiceId } });
 
   // ----------------------------------------------------------------------------
   // SECTION 5: Database Model Integrity & Global Regression

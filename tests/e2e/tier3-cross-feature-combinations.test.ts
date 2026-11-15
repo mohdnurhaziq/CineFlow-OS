@@ -23,7 +23,7 @@ import {
   logPreShootInspection,
   logPostShootInspection,
 } from "@/lib/actions/gear";
-import { createPrintOrder } from "@/lib/actions/visualizer";
+import { placePrintOrder } from "@/lib/actions/print-orders";
 import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";
 
 export async function runTier3CrossFeatureTests(harness: TestHarness) {
@@ -392,48 +392,42 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
     await db.inventoryItem.delete({ where: { id: item.item!.id } });
   });
 
-  await harness.test("T3-COMBO-06: Interactive Wall Visualizer × 1-Click Print Order Invoicing × Checkout", async () => {
-    const size = await db.printSize.findFirst({ where: { tenantId: luminaTenant!.id } });
-    const frame = await db.frameDesign.findFirst({ where: { tenantId: luminaTenant!.id } });
-    const project = await db.project.findFirst({ where: { tenantId: luminaTenant!.id } });
+  await harness.test("T3-COMBO-06: Wall Art × Framed Print Order × Invoice Checkout", async () => {
+    // Apex's seeded project is paid and has delivered photos, so its prints are unlocked.
+    const size = await db.printSize.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+    const frame = await db.frameDesign.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
 
-    const orderRes = await createPrintOrder({
-      tenantId: luminaTenant!.id,
-      tenantSlug: "lumina-cine",
-      projectId: project!.id,
-      printSizeId: size!.id,
-      frameDesignId: frame!.id,
-      matBoardType: "WHITE_2INCH",
-      orientation: "PORTRAIT",
-      photoUrl: "/uploads/deliverables/masters/lookbook_01.jpg",
-      photoTitle: "Wall Art Masterpiece",
-      clientName: "Art Collector",
-      clientEmail: "collector@example.com",
+    const orderRes = await placePrintOrder({
+      tenantId: apexTenant!.id,
+      tenantSlug: "apex-media",
+      projectId: "proj_apex_01",
+      items: [{ kind: "PAID", deliverableItemId: "item_apx_photo_1", orientation: "PORTRAIT", printSizeId: size!.id, frameDesignId: frame!.id, matBoardType: "WHITE_2INCH" }],
+      fulfilment: "PICKUP",
     });
-
-    harness.assert(orderRes.success === true, "createPrintOrder succeeded");
-    harness.assert(Boolean(orderRes.invoiceId), "Invoice created for print order");
+    if (!orderRes.success) throw new Error("placePrintOrder failed: " + JSON.stringify(orderRes));
     harness.assert(Boolean(orderRes.checkoutUrl), "Checkout redirect URL returned");
 
-    const expectedTotal = size!.basePrice + frame!.priceOffset + 25;
-    const invoice = await db.milestoneInvoice.findUnique({ where: { id: orderRes.invoiceId } });
-    harness.assertEqual(invoice?.amount, expectedTotal, "Total price equals printPrice + frameOffset + matFee");
-    harness.assertEqual(invoice?.milestoneType, "PRINT_FRAME_ORDER", "milestoneType is PRINT_FRAME_ORDER");
+    const order = await db.printOrder.findUniqueOrThrow({ where: { id: orderRes.orderId }, include: { invoice: true } });
+    const expectedTotal = size!.basePrice + frame!.priceOffset + apexTenant!.matBoardPrice;
+    harness.assertEqual(order.invoice?.amount, expectedTotal, "Total price equals printPrice + frameOffset + matFee");
+    harness.assertEqual(order.invoice?.milestoneType, "PRINT_FRAME_ORDER", "milestoneType is PRINT_FRAME_ORDER");
 
     // Pay invoice via Card
     const payRes = await processInvoicePayment({
-      tenantId: luminaTenant!.id,
-      tenantSlug: "lumina-cine",
-      invoiceId: invoice!.id,
+      tenantId: apexTenant!.id,
+      tenantSlug: "apex-media",
+      invoiceId: order.invoiceId!,
       paymentMethod: "CARD",
     });
 
     harness.assert(payRes.success === true, "Invoice payment succeeded");
-    const settledInvoice = await db.milestoneInvoice.findUnique({ where: { id: invoice!.id } });
+    const settledInvoice = await db.milestoneInvoice.findUnique({ where: { id: order.invoiceId! } });
     harness.assertEqual(settledInvoice?.status, "PAID", "Invoice status is PAID");
+    harness.assertEqual((await db.printOrder.findUnique({ where: { id: order.id } }))?.status, "NEW", "Paid order goes to the studio");
 
     // Clean up
-    await db.milestoneInvoice.delete({ where: { id: invoice!.id } });
+    await db.printOrder.delete({ where: { id: order.id } });
+    await db.milestoneInvoice.delete({ where: { id: order.invoiceId! } });
   });
 
   // ============================================================================
@@ -653,27 +647,22 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
     // --------------------------------------------------------------------------
     // Step 9: Interactive Wall Visualizer 1-Click Archival Framed Print Order
     // --------------------------------------------------------------------------
-    const printSize = await db.printSize.findFirst({ where: { tenantId: luminaTenant!.id } });
-    const frameDesign = await db.frameDesign.findFirst({ where: { tenantId: luminaTenant!.id } });
+    const printSize = await db.printSize.findFirst({ where: { tenantId: luminaTenant!.id, isAvailable: true } });
+    const frameDesign = await db.frameDesign.findFirst({ where: { tenantId: luminaTenant!.id, isAvailable: true } });
 
-    const printOrderRes = await createPrintOrder({
+    const printOrderRes = await placePrintOrder({
       tenantId: luminaTenant!.id,
       tenantSlug: "lumina-cine",
       projectId: journeyProjectId,
-      printSizeId: printSize!.id,
-      frameDesignId: frameDesign!.id,
-      matBoardType: "WHITE_2INCH",
-      orientation: "PORTRAIT",
-      photoUrl: photoItem.downloadUrl,
-      photoTitle: "Julian Sterling Executive Portrait",
-      clientName: "Julian Sterling",
-      clientEmail: "julian@sterlingmedia.com",
+      items: [{ kind: "PAID", deliverableItemId: photoItem.id, orientation: "PORTRAIT", printSizeId: printSize!.id, frameDesignId: frameDesign!.id, matBoardType: "WHITE_2INCH" }],
+      fulfilment: "PICKUP",
     });
 
-    harness.assert(printOrderRes.success === true, "Step 9: Wall visualizer 1-click order placed");
-    harness.assert(Boolean(printOrderRes.invoiceId), "Step 9: PRINT_FRAME_ORDER invoice generated");
+    if (!printOrderRes.success) throw new Error("Step 9: placePrintOrder failed: " + JSON.stringify(printOrderRes));
+    const printOrder = await db.printOrder.findUniqueOrThrow({ where: { id: printOrderRes.orderId } });
+    harness.assert(Boolean(printOrder.invoiceId), "Step 9: PRINT_FRAME_ORDER invoice generated");
 
-    const printInvoice = await db.milestoneInvoice.findUnique({ where: { id: printOrderRes.invoiceId } });
+    const printInvoice = await db.milestoneInvoice.findUnique({ where: { id: printOrder.invoiceId! } });
     harness.assertEqual(printInvoice?.milestoneType, "PRINT_FRAME_ORDER", "Step 9: milestoneType is PRINT_FRAME_ORDER");
 
     const payPrintRes = await processInvoicePayment({
@@ -688,6 +677,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
     harness.assertEqual(finalPrintInv?.status, "PAID", "Step 9: Archival print invoice marked PAID");
 
     // Clean up
+    await db.printOrder.delete({ where: { id: printOrder.id } });
     await db.milestoneInvoice.delete({ where: { id: printInvoice!.id } });
     await db.deliverableItem.deleteMany({ where: { deliverableId: deliverable.id } });
     await db.clientDeliverable.delete({ where: { id: deliverable.id } });

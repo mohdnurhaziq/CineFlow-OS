@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/session";
 import { currencySymbol } from "@/lib/money";
 import { PageShell } from "@/components/ui/page";
 import { VisualizerShell } from "@/components/visualizer/visualizer-shell";
@@ -17,13 +16,16 @@ export async function generateMetadata({ params }: AdminVisualizerPageProps): Pr
   return { title: tenant ? `Wall Art Preview | ${tenant.name} Studio Admin` : "Wall Art Preview" };
 }
 
-/** Wall Art inside the admin console: the admin layout supplies the staff guard and the admin top bar. */
+/**
+ * Wall Art inside the admin console, as a preview (no ordering): the admin layout supplies the
+ * staff guard and the admin top bar.
+ */
 export default async function AdminVisualizerPage({ params }: AdminVisualizerPageProps) {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant) notFound();
 
-  const [printSizes, frameDesigns, showcase, session] = await Promise.all([
+  const [printSizes, frameDesigns, showcase] = await Promise.all([
     db.printSize.findMany({ where: { tenantId: tenant.id }, orderBy: { widthInches: "asc" } }),
     db.frameDesign.findMany({ where: { tenantId: tenant.id, isAvailable: true }, orderBy: { priceOffset: "asc" } }),
     db.showcaseItem.findMany({
@@ -32,7 +34,6 @@ export default async function AdminVisualizerPage({ params }: AdminVisualizerPag
       select: { id: true, title: true, coverImageUrl: true },
       take: 12,
     }),
-    getCurrentUser(),
   ]);
 
   const photos: PhotoOption[] = showcase
@@ -46,7 +47,9 @@ export default async function AdminVisualizerPage({ params }: AdminVisualizerPag
         tenantId={tenant.id}
         tenantName={tenant.name}
         currency={currencySymbol(tenant.currency)}
-        orderer={session ? { kind: "staff", name: session.name, email: "", phone: "" } : null}
+        matBoardPrice={tenant.matBoardPrice}
+        canOrder={false}
+        ordering={null}
         initialPrintSizes={printSizes as PrintSizeOption[]}
         initialFrameDesigns={frameDesigns as FrameDesignOption[]}
         initialPhotos={photos}

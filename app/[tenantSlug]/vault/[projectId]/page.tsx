@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { filesReleased } from "@/lib/deliverables/access";
 import { requirePageAccess } from "@/lib/auth/project-access";
 import { VaultShell } from "@/components/vault/vault-shell";
+import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
+import { loadFramedPrints } from "@/lib/prints/gallery";
+import { currencySymbol } from "@/lib/money";
 
 interface VaultPageProps {
   params: Promise<{
@@ -97,6 +100,12 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
   });
 
   const finalInvoice = project.invoices[0] || null;
+  const [framedPrints, orderableSizes] = await Promise.all([
+    loadFramedPrints(project.id),
+    db.printSize.count({ where: { tenantId: tenant.id, isAvailable: true } }),
+  ]);
+  // Shown when there is something to claim, an order to follow, or a catalog to order from.
+  const showFramedPrints = framedPrints.lines.length > 0 || framedPrints.orders.length > 0 || orderableSizes > 0;
   const released = filesReleased(project, tenant);
   const allItems = project.deliverables.flatMap((d) => d.items);
 
@@ -150,7 +159,20 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
         finalInvoice={finalInvoice}
         photoItems={photoItems}
         videoItems={videoItems}
-      />
+      >
+        {showFramedPrints && (
+          <FramedPrintsSection
+            tenantId={tenant.id}
+            tenantSlug={tenant.slug}
+            currency={currencySymbol(tenant.currency)}
+            projectId={project.id}
+            lines={framedPrints.lines}
+            unlocked={framedPrints.unlocked}
+            hasPhotos={framedPrints.hasPhotos}
+            orders={framedPrints.orders}
+          />
+        )}
+      </VaultShell>
     </div>
   );
 }

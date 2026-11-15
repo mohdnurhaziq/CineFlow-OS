@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Gift, Lock, Plus, ShoppingBag, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import { framedPrice, type MatBoardType } from "@/lib/prints/pricing";
 import { RoomScene, type WallColorKey } from "./room-scene";
 import {
   ConfiguratorPanel,
@@ -9,16 +14,20 @@ import {
   type FrameDesignOption,
   type PhotoOption,
 } from "./configurator-panel";
-import { OrderModal, type PrintOrderer } from "./order-modal";
+import { CartDrawer } from "./cart-drawer";
+import { loadCart, money, priceLabel, priceLine, saveCart, type CartLine, type Catalog, type OrderingContext } from "./cart";
 
 interface VisualizerShellProps {
   tenantSlug: string;
   tenantId: string;
   tenantName: string;
   currency: string;
-  projectId?: string | null;
-  /** Signed-in person who would place an order; null when signed out. */
-  orderer: PrintOrderer | null;
+  /** The studio's mat board price (Tenant.matBoardPrice). */
+  matBoardPrice: number;
+  /** Prints can be ordered here: opened from a gallery whose balance is paid and which has photos. */
+  canOrder: boolean;
+  /** The gallery being ordered from; null on the public preview and the admin preview. */
+  ordering: OrderingContext | null;
   initialPrintSizes: PrintSizeOption[];
   initialFrameDesigns: FrameDesignOption[];
   initialPhotos: PhotoOption[];
@@ -29,12 +38,15 @@ export function VisualizerShell({
   tenantId,
   tenantName,
   currency,
-  projectId,
-  orderer,
+  matBoardPrice,
+  canOrder,
+  ordering,
   initialPrintSizes,
   initialFrameDesigns,
   initialPhotos,
 }: VisualizerShellProps) {
+  const router = useRouter();
+
   // Safe defaults if catalog is empty
   const defaultPrintSize: PrintSizeOption = initialPrintSizes[0] || {
     id: "default_16r",
@@ -66,25 +78,73 @@ export function VisualizerShell({
       ),
   };
 
+  const lines = useMemo(() => ordering?.lines ?? [], [ordering]);
+  const claimLine = ordering?.claimLineId ? lines.find((l) => l.id === ordering.claimLineId) ?? null : null;
+
   // State
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoOption>(defaultPhoto);
-  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSizeOption>(defaultPrintSize);
-  const [selectedFrameDesign, setSelectedFrameDesign] = useState<FrameDesignOption>(defaultFrameDesign);
-  const [matBoard, setMatBoard] = useState<"NONE" | "WHITE_2INCH" | "OFFWHITE_2INCH">("WHITE_2INCH");
+  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSizeOption>(claimLine?.size ?? defaultPrintSize);
+  const [selectedFrameDesign, setSelectedFrameDesign] = useState<FrameDesignOption>(claimLine?.frame ?? defaultFrameDesign);
+  const [matBoard, setMatBoard] = useState<MatBoardType>(claimLine ? "NONE" : "WHITE_2INCH");
   const [orientation, setOrientation] = useState<"PORTRAIT" | "LANDSCAPE">("LANDSCAPE");
   const [wallColor, setWallColor] = useState<WallColorKey>("WARM_GRAY");
   const [zoomMode, setZoomMode] = useState<"ROOM" | "DETAIL">("ROOM");
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  /** The included print being claimed, if any: its size and frame are the starting point. */
+  const [activeLineId, setActiveLineId] = useState<string | null>(claimLine?.id ?? null);
 
-  // Compute live price
-  const matPrice = matBoard === "NONE" ? 0 : 25.0;
-  const totalPrice = selectedPrintSize.basePrice + selectedFrameDesign.priceOffset + matPrice;
+  // The cart, remembered for this gallery in this browser tab.
+  const projectId = ordering?.projectId ?? null;
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [cartLoaded, setCartLoaded] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  useEffect(() => {
+    if (!projectId) return;
+    setCart(loadCart(projectId));
+    setCartLoaded(true);
+  }, [projectId]);
+  useEffect(() => {
+    if (projectId && cartLoaded) saveCart(projectId, cart);
+  }, [projectId, cart, cartLoaded]);
+
+  const catalog: Catalog = useMemo(() => {
+    const sizes = new Map(initialPrintSizes.map((s) => [s.id, s]));
+    const frames = new Map(initialFrameDesigns.map((f) => [f.id, f]));
+    for (const l of lines) {
+      if (!sizes.has(l.size.id)) sizes.set(l.size.id, l.size);
+      if (!frames.has(l.frame.id)) frames.set(l.frame.id, l.frame);
+    }
+    return { sizes, frames, lines: new Map(lines.map((l) => [l.id, l])), matBoardPrice };
+  }, [initialPrintSizes, initialFrameDesigns, lines, matBoardPrice]);
+
+  const remainingFor = (lineId: string) => {
+    const line = catalog.lines.get(lineId);
+    if (!line) return 0;
+    return line.remaining - cart.filter((c) => c.kind === "INCLUDED" && c.bookingIncludedPrintId === lineId).length;
+  };
+  const activeLine = activeLineId ? catalog.lines.get(activeLineId) ?? null : null;
+
+  // A hidden size or frame is offered only while claiming the included print that uses it.
+  const printSizes = activeLine && !initialPrintSizes.some((s) => s.id === activeLine.size.id) ? [...initialPrintSizes, activeLine.size] : initialPrintSizes;
+  const frameDesigns =
+    activeLine && !initialFrameDesigns.some((f) => f.id === activeLine.frame.id) ? [...initialFrameDesigns, activeLine.frame] : initialFrameDesigns;
+
+  // Live price of what is on the wall.
+  const totalPrice = framedPrice({
+    sizePrice: selectedPrintSize.basePrice,
+    framePrice: selectedFrameDesign.priceOffset,
+    mat: matBoard,
+    matBoardPrice,
+  });
+  const current = {
+    printSizeId: selectedPrintSize.id,
+    frameDesignId: selectedFrameDesign.id,
+    matBoardType: matBoard,
+  };
+  const includedPriced = activeLine ? priceLine({ ...current, kind: "INCLUDED", bookingIncludedPrintId: activeLine.id }, catalog) : null;
 
   // Print dimensions based on orientation
-  const printWidthInches =
-    orientation === "PORTRAIT" ? selectedPrintSize.widthInches : selectedPrintSize.heightInches;
-  const printHeightInches =
-    orientation === "PORTRAIT" ? selectedPrintSize.heightInches : selectedPrintSize.widthInches;
+  const printWidthInches = orientation === "PORTRAIT" ? selectedPrintSize.widthInches : selectedPrintSize.heightInches;
+  const printHeightInches = orientation === "PORTRAIT" ? selectedPrintSize.heightInches : selectedPrintSize.widthInches;
 
   const handleCustomPhotoUpload = (file: File) => {
     const objectUrl = URL.createObjectURL(file);
@@ -96,13 +156,75 @@ export function VisualizerShell({
     setSelectedPhoto(customPhoto);
   };
 
-  const handleOrientationToggle = () => {
-    setOrientation((prev) => (prev === "PORTRAIT" ? "LANDSCAPE" : "PORTRAIT"));
+  const chooseLine = (lineId: string | null) => {
+    setActiveLineId(lineId);
+    const line = lineId ? catalog.lines.get(lineId) : null;
+    if (line) {
+      setSelectedPrintSize(line.size);
+      setSelectedFrameDesign(line.frame);
+      setMatBoard("NONE");
+    } else {
+      // Leaving a hidden size or frame behind: back to one that can be ordered.
+      if (!initialPrintSizes.some((s) => s.id === selectedPrintSize.id)) setSelectedPrintSize(defaultPrintSize);
+      if (!initialFrameDesigns.some((f) => f.id === selectedFrameDesign.id)) setSelectedFrameDesign(defaultFrameDesign);
+    }
   };
 
-  const handleZoomToggle = () => {
-    setZoomMode((prev) => (prev === "ROOM" ? "DETAIL" : "ROOM"));
+  const isGalleryPhoto = initialPhotos.some((p) => p.id === selectedPhoto.id);
+  const addToCart = (kind: "INCLUDED" | "PAID") => {
+    if (!isGalleryPhoto) return;
+    if (kind === "INCLUDED" && (!activeLine || remainingFor(activeLine.id) <= 0)) return;
+    const line: CartLine = {
+      key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      kind,
+      ...(kind === "INCLUDED" && activeLine ? { bookingIncludedPrintId: activeLine.id } : {}),
+      deliverableItemId: selectedPhoto.id,
+      photoTitle: selectedPhoto.title,
+      photoUrl: selectedPhoto.url,
+      orientation,
+      ...current,
+    };
+    setCart((c) => [...c, line]);
+    if (kind === "INCLUDED" && activeLine && remainingFor(activeLine.id) - 1 <= 0) setActiveLineId(null);
+    setCartOpen(true);
   };
+
+  const includedCount = lines.reduce((n, l) => n + l.quantity, 0);
+  const lockedMessage = ordering
+    ? !ordering.unlocked
+      ? includedCount > 0
+        ? `${includedCount} framed print${includedCount === 1 ? "" : "s"} included, unlocks when your balance is paid`
+        : "Framed prints unlock when your balance is paid"
+      : !ordering.hasPhotos
+        ? "Ask the studio to add your photos here to choose one"
+        : null
+    : null;
+
+  const footerActions = canOrder ? (
+    <div className="space-y-2">
+      {!isGalleryPhoto && <p className="text-xs text-amber-400">Choose one of your gallery photos to order a print.</p>}
+      {activeLine && (
+        <button
+          type="button"
+          onClick={() => addToCart("INCLUDED")}
+          disabled={!isGalleryPhoto || remainingFor(activeLine.id) <= 0}
+          className={cn(buttonVariants({ size: "lg" }), "w-full min-h-12")}
+        >
+          <Gift className="size-4" />
+          <span>Add included print</span>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => addToCart("PAID")}
+        disabled={!isGalleryPhoto}
+        className={cn(buttonVariants({ variant: activeLine ? "secondary" : "primary", size: "lg" }), "w-full min-h-12")}
+      >
+        <Plus className="size-4" />
+        <span>Add as paid print · {currency} {money(totalPrice)}</span>
+      </button>
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-6">
@@ -125,12 +247,64 @@ export function VisualizerShell({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-xs font-mono text-zinc-400">Current Studio:</div>
-            <div className="text-sm font-bold text-white font-mono">{tenantName}</div>
-          </div>
+          {ordering ? (
+            <>
+              <Link href={ordering.galleryHref} className={buttonVariants({ variant: "secondary" })}>
+                Back to gallery
+              </Link>
+              {canOrder && (
+                <button type="button" onClick={() => setCartOpen(true)} className={buttonVariants()}>
+                  <ShoppingBag className="size-4" />
+                  Cart ({cart.length})
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="text-right">
+              <div className="text-xs font-mono text-zinc-400">Current Studio:</div>
+              <div className="text-sm font-bold text-white font-mono">{tenantName}</div>
+            </div>
+          )}
         </div>
       </div>
+
+      {lockedMessage && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <Lock className="size-4 shrink-0" />
+          <span>{lockedMessage}</span>
+        </div>
+      )}
+
+      {/* Included prints to claim */}
+      {canOrder && lines.length > 0 && (
+        <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-4 space-y-3">
+          <div className="text-xs font-mono uppercase tracking-wider text-amber-400 font-semibold">Included with your package</div>
+          <div className="flex flex-wrap gap-2">
+            {lines.map((l) => {
+              const left = remainingFor(l.id);
+              const active = activeLineId === l.id;
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  disabled={left <= 0 && !active}
+                  aria-pressed={active}
+                  onClick={() => chooseLine(active ? null : l.id)}
+                  className={cn(
+                    "min-h-10 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+                    active ? "border-amber-400 bg-amber-500/15 text-amber-200" : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-700"
+                  )}
+                >
+                  {l.sizeName} · {l.frameName} — {Math.max(0, left)} of {l.quantity} left
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-zinc-500">
+            Choose one to start from its size and frame. A bigger size or pricier frame costs only the difference.
+          </p>
+        </div>
+      )}
 
       {/* Main Dual-Pane Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -150,16 +324,16 @@ export function VisualizerShell({
             wallColor={wallColor}
             zoomMode={zoomMode}
             onWallColorChange={(color) => setWallColor(color)}
-            onZoomToggle={handleZoomToggle}
-            onOrientationToggle={handleOrientationToggle}
+            onZoomToggle={() => setZoomMode((prev) => (prev === "ROOM" ? "DETAIL" : "ROOM"))}
+            onOrientationToggle={() => setOrientation((prev) => (prev === "PORTRAIT" ? "LANDSCAPE" : "PORTRAIT"))}
           />
         </div>
 
         {/* Right Pane: Configurator Controls Panel (5 cols on desktop) */}
         <div className="lg:col-span-5">
           <ConfiguratorPanel
-            printSizes={initialPrintSizes}
-            frameDesigns={initialFrameDesigns}
+            printSizes={printSizes}
+            frameDesigns={frameDesigns}
             curatedPhotos={initialPhotos}
             selectedPhoto={selectedPhoto}
             selectedPrintSize={selectedPrintSize}
@@ -167,33 +341,40 @@ export function VisualizerShell({
             matBoard={matBoard}
             orientation={orientation}
             currency={currency}
+            matBoardPrice={matBoardPrice}
             totalPrice={totalPrice}
+            priceNote={activeLine ? priceLabel({ kind: "INCLUDED" }, includedPriced, currency) : undefined}
+            footerActions={footerActions}
+            allowCustomUpload={!ordering}
+            photosHeading={ordering ? "Your Gallery Photos" : undefined}
             onPhotoSelect={(p) => setSelectedPhoto(p)}
             onPrintSizeSelect={(s) => setSelectedPrintSize(s)}
             onFrameDesignSelect={(f) => setSelectedFrameDesign(f)}
             onMatBoardSelect={(m) => setMatBoard(m)}
             onCustomPhotoUpload={handleCustomPhotoUpload}
-            onOrderClick={() => setIsOrderModalOpen(true)}
           />
         </div>
       </div>
 
-      {/* 1-Click Order Confirmation Modal */}
-      <OrderModal
-        isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
-        tenantId={tenantId}
-        tenantSlug={tenantSlug}
-        projectId={projectId}
-        orderer={orderer}
-        currency={currency}
-        selectedPhoto={selectedPhoto}
-        selectedPrintSize={selectedPrintSize}
-        selectedFrameDesign={selectedFrameDesign}
-        matBoard={matBoard}
-        orientation={orientation}
-        totalPrice={totalPrice}
-      />
+      {ordering && canOrder && (
+        <CartDrawer
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          tenantId={tenantId}
+          tenantSlug={tenantSlug}
+          currency={currency}
+          ordering={ordering}
+          cart={cart}
+          catalog={catalog}
+          onRemove={(key) => setCart((c) => c.filter((l) => l.key !== key))}
+          onOrdered={() => {
+            setCart([]);
+            if (projectId) saveCart(projectId, []);
+            setActiveLineId(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

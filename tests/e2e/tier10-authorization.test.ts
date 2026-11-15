@@ -23,7 +23,7 @@ import { toggleShotCompletion, submitDigitalRelease } from "@/lib/actions/logist
 import { acceptProposal, getProposalBySlugAndId, toggleProposalAddOn } from "@/lib/actions/proposals";
 import { toggleClientFavorite, submitRetouchNote } from "@/lib/actions/vault";
 import { registerClient } from "@/lib/actions/client-auth";
-import { createPrintOrder } from "@/lib/actions/visualizer";
+import { placePrintOrder } from "@/lib/actions/print-orders";
 import { processInvoicePayment } from "@/lib/actions/checkout";
 import { issueClientInvite } from "@/lib/auth/invite";
 import { GET as downloadHandler } from "@/app/api/download/route";
@@ -424,37 +424,34 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     harness.assertEqual(again.success, false, "Invite can't be reused");
   });
 
-  await harness.test("T10-REC-07: print orders need a sign-in, and a client is billed as themselves", async () => {
-    const size = await db.printSize.findFirst({ where: { tenantId: lumina.id } });
-    const frame = await db.frameDesign.findFirst({ where: { tenantId: lumina.id } });
+  await harness.test("T10-REC-07: print orders need a sign-in, and are billed to the project's client", async () => {
+    const size = await db.printSize.findFirst({ where: { tenantId: lumina.id, isAvailable: true } });
+    const frame = await db.frameDesign.findFirst({ where: { tenantId: lumina.id, isAvailable: true } });
     if (!size || !frame) {
       harness.assert(true, "No seeded print catalog (skipped)");
       return;
     }
-    type PrintOrderInput = Parameters<typeof createPrintOrder>[0];
-    const order = (extra: Partial<PrintOrderInput> = {}): PrintOrderInput => ({
-      tenantId: lumina.id, tenantSlug: "lumina-cine", printSizeId: size.id, frameDesignId: frame.id,
-      matBoardType: "NONE", orientation: "PORTRAIT", photoUrl: "/x.jpg",
-      clientName: "Someone Else", clientEmail: `t10-victim-${run}@example.test`, ...extra,
+    const order = () => ({
+      tenantId: lumina.id, tenantSlug: "lumina-cine", projectId: project.id, fulfilment: "PICKUP" as const,
+      items: [{ kind: "PAID" as const, deliverableItemId: itemId, orientation: "PORTRAIT" as const, printSizeId: size.id, frameDesignId: frame.id, matBoardType: "NONE" as const }],
     });
-    const anon = await withSession(null, () => createPrintOrder(order()));
-    harness.assert(denied(anon), "Signed out: refused", JSON.stringify(anon));
-    const cross = await withSession(apexOwner, () => createPrintOrder(order()));
-    harness.assert(denied(cross), "Another studio's owner: refused", JSON.stringify(cross));
-    const peek = await withSession(client, () => createPrintOrder(order({ projectId: project.id })));
-    harness.assert(denied(peek), "A client can't attach another client's project", JSON.stringify(peek));
+    const errorOf = (r: { success: boolean }) => ("error" in r ? String((r as { error: unknown }).error) : "");
+    const anon = await withSession(null, () => placePrintOrder(order()));
+    harness.assertEqual(errorOf(anon), "UNAUTHENTICATED", "Signed out: refused", JSON.stringify(anon));
+    const cross = await withSession(apexOwner, () => placePrintOrder(order()));
+    harness.assertEqual(errorOf(cross), "FORBIDDEN", "Another studio's owner: refused", JSON.stringify(cross));
+    const peek = await withSession(client, () => placePrintOrder(order()));
+    harness.assertEqual(errorOf(peek), "FORBIDDEN", "A client can't order from another client's project", JSON.stringify(peek));
 
-    const mine = await withSession(recordClient, () => createPrintOrder(order({ projectId: project.id })));
-    harness.assertEqual(mine.success, true, "Client orders for themselves", JSON.stringify(mine));
-    const inv = await db.milestoneInvoice.findUnique({ where: { id: mine.invoiceId } });
-    harness.assertEqual(inv?.clientId, recordClientRow.id, "Billed to the signed-in client, not the typed email");
-    harness.assert(!(await db.user.findFirst({ where: { email: `t10-victim-${run}@example.test` } })), "No account made for the typed email");
-
-    const counter = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: `t10-counter-${run}@example.test` })));
-    harness.assertEqual(counter.success, true, "Staff can order for a client", JSON.stringify(counter));
-    const staffEmail = await withSession(luminaCrew, () => createPrintOrder(order({ clientEmail: luminaOwner!.email })));
-    harness.assertEqual(staffEmail.success, false, "Staff can't bill a team member");
-    await db.milestoneInvoice.deleteMany({ where: { id: { in: [mine.invoiceId, counter.invoiceId].filter((id): id is string => !!id) } } });
+    const mine = await withSession(recordClient, () => placePrintOrder(order()));
+    if (!mine.success) throw new Error("client order failed: " + JSON.stringify(mine));
+    const counter = await withSession(luminaCrew, () => placePrintOrder(order()));
+    if (!counter.success) throw new Error("staff order failed: " + JSON.stringify(counter));
+    const placed = await db.printOrder.findMany({ where: { id: { in: [mine.orderId, counter.orderId] } }, include: { invoice: true } });
+    harness.assertEqual(placed.length, 2, "Client and staff orders placed");
+    harness.assert(placed.every((o) => o.clientId === recordClientRow.id && o.invoice?.clientId === recordClientRow.id), "Both billed to the project's client");
+    await db.printOrder.deleteMany({ where: { id: { in: placed.map((o) => o.id) } } });
+    await db.milestoneInvoice.deleteMany({ where: { id: { in: placed.map((o) => o.invoiceId).filter((id): id is string => !!id) } } });
   });
 
   await harness.test("T10-REC-08: only the invoice's client or studio staff can pay it", async () => {

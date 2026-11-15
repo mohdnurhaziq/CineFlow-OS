@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { ClientAccountHeader } from "@/components/account/client-account-header";
+import { loadClientHeaderBadges } from "@/lib/client-header-badges";
 
 interface ClientAccountLayoutProps {
   children: React.ReactNode;
@@ -43,38 +44,12 @@ export default async function ClientAccountLayout({ children, params }: ClientAc
   // Release slots whose QR/cash deposit went unpaid for 24 hours before counting
   await expireUnpaidDeposits(tenant.id);
 
-  // Fetch client user data and badge metrics in parallel
-  const [client, unpaidInvoicesCount, activeBookingsCount, projectsCount, proposalsCount] = await Promise.all([
+  const [client, badges] = await Promise.all([
     db.user.findFirst({
       where: { id: currentUser.id, tenantId: tenant.id, role: "CLIENT" },
       select: { id: true, name: true, email: true, phone: true },
     }),
-    db.milestoneInvoice.count({
-      where: {
-        tenantId: tenant.id,
-        clientId: currentUser.id,
-        status: { in: ["PENDING", "OVERDUE"] },
-      },
-    }),
-    db.clientBooking.count({
-      where: {
-        tenantId: tenant.id,
-        userId: currentUser.id,
-        status: { in: ["CONFIRMED", "PENDING"] },
-      },
-    }),
-    db.project.count({
-      where: {
-        tenantId: tenant.id,
-        clientId: currentUser.id,
-      },
-    }),
-    db.proposal.count({
-      where: {
-        tenantId: tenant.id,
-        clientId: currentUser.id,
-      },
-    }),
+    loadClientHeaderBadges(tenant.id, currentUser.id),
   ]);
 
   if (!client) redirect(`/${tenantSlug}/login`);
@@ -84,12 +59,7 @@ export default async function ClientAccountLayout({ children, params }: ClientAc
       <ClientAccountHeader
         tenant={tenant}
         client={client}
-        badges={{
-          unpaidInvoices: unpaidInvoicesCount,
-          activeBookings: activeBookingsCount,
-          projects: projectsCount,
-          proposals: proposalsCount,
-        }}
+        badges={badges}
       />
       <main className="flex-1">{children}</main>
     </div>

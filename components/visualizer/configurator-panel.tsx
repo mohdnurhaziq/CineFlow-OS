@@ -1,8 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import type { MatBoardType } from "@/lib/prints/pricing";
 import {
   Image as ImageIcon,
   Maximize,
@@ -11,7 +10,6 @@ import {
   Upload,
   Check,
   Sparkles,
-  ShoppingBag,
 } from "lucide-react";
 
 export interface PrintSizeOption {
@@ -47,16 +45,25 @@ interface ConfiguratorPanelProps {
   selectedPhoto: PhotoOption;
   selectedPrintSize: PrintSizeOption;
   selectedFrameDesign: FrameDesignOption;
-  matBoard: "NONE" | "WHITE_2INCH" | "OFFWHITE_2INCH";
+  matBoard: MatBoardType;
   orientation: "PORTRAIT" | "LANDSCAPE";
   currency: string;
+  /** The studio's mat board price (Tenant.matBoardPrice). */
+  matBoardPrice: number;
   totalPrice: number;
+  /** Shown under the total, e.g. "Included" or "Upgrade +RM 20" for an included print. */
+  priceNote?: ReactNode;
+  /** Buttons in the footer (add to cart). None on a preview. */
+  footerActions?: ReactNode;
+  /** Trying your own photo on the wall; off when ordering from a gallery (only its photos can be printed). */
+  allowCustomUpload?: boolean;
+  /** Heading over the photo picker. */
+  photosHeading?: string;
   onPhotoSelect: (photo: PhotoOption) => void;
   onPrintSizeSelect: (size: PrintSizeOption) => void;
   onFrameDesignSelect: (frame: FrameDesignOption) => void;
-  onMatBoardSelect: (mat: "NONE" | "WHITE_2INCH" | "OFFWHITE_2INCH") => void;
+  onMatBoardSelect: (mat: MatBoardType) => void;
   onCustomPhotoUpload: (file: File) => void;
-  onOrderClick: () => void;
 }
 
 export function ConfiguratorPanel({
@@ -69,13 +76,17 @@ export function ConfiguratorPanel({
   matBoard,
   orientation,
   currency,
+  matBoardPrice,
   totalPrice,
+  priceNote,
+  footerActions,
+  allowCustomUpload = true,
+  photosHeading = "Studio Masterpiece Presets",
   onPhotoSelect,
   onPrintSizeSelect,
   onFrameDesignSelect,
   onMatBoardSelect,
   onCustomPhotoUpload,
-  onOrderClick,
 }: ConfiguratorPanelProps) {
   const [activeTab, setActiveTab] = useState<"PHOTO" | "SIZE" | "FRAME" | "MAT">("SIZE");
 
@@ -155,7 +166,7 @@ export function ConfiguratorPanel({
           <div className="space-y-4">
             <div>
               <h4 className="text-xs font-mono uppercase tracking-wider text-amber-400 font-semibold mb-2">
-                Studio Masterpiece Presets
+                {photosHeading}
               </h4>
               <div className="grid grid-cols-2 gap-2.5">
                 {curatedPhotos.map((photo) => (
@@ -193,6 +204,7 @@ export function ConfiguratorPanel({
             </div>
 
             {/* Custom Photo Upload */}
+            {allowCustomUpload && (
             <div className="pt-2 border-t border-zinc-800">
               <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 font-semibold block mb-2">
                 Upload Custom High-Res Photo
@@ -213,6 +225,7 @@ export function ConfiguratorPanel({
                 />
               </label>
             </div>
+            )}
           </div>
         )}
 
@@ -342,7 +355,7 @@ export function ConfiguratorPanel({
                   </div>
                 </div>
                 <div className="text-right font-mono text-sm font-bold text-zinc-400">
-                  +$0.00
+                  +{currency} 0
                 </div>
               </button>
 
@@ -366,7 +379,7 @@ export function ConfiguratorPanel({
                   </div>
                 </div>
                 <div className="text-right font-mono text-sm font-bold text-amber-400">
-                  +{currency} 25
+                  +{currency} {matBoardPrice}
                 </div>
               </button>
 
@@ -390,7 +403,7 @@ export function ConfiguratorPanel({
                   </div>
                 </div>
                 <div className="text-right font-mono text-sm font-bold text-amber-400">
-                  +{currency} 25
+                  +{currency} {matBoardPrice}
                 </div>
               </button>
             </div>
@@ -403,7 +416,7 @@ export function ConfiguratorPanel({
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
-              Total Framed Work Order
+              Framed Print Price
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
               {currency} {totalPrice.toFixed(2)}
@@ -420,14 +433,9 @@ export function ConfiguratorPanel({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onOrderClick}
-          className={cn(buttonVariants({ size: "lg" }), "w-full min-h-12")}
-        >
-          <ShoppingBag className="size-4" />
-          <span>Order Framed Print · {currency} {totalPrice.toFixed(2)}</span>
-        </button>
+        {priceNote ? <div className="text-xs font-mono font-semibold text-amber-300">{priceNote}</div> : null}
+
+        {footerActions}
       </div>
     </div>
   );

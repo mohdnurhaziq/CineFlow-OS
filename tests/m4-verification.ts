@@ -21,7 +21,6 @@ import {
   logPreShootInspection,
   logPostShootInspection,
 } from "../lib/actions/gear";
-import { createPrintOrder } from "../lib/actions/visualizer";
 
 let assertionsPassed = 0;
 
@@ -298,48 +297,7 @@ async function runM4Verification() {
   assert(returnedReservation!.item.condition === "DAMAGED", "InventoryItem condition updated to DAMAGED");
   assert(returnedReservation!.inspection!.checkinCondition !== null, "Post-shoot checkinCondition recorded in InspectionLog");
 
-  // ---------------------------------------------------------------------------
-  // 8. Print & Frame Wall Visualizer & Invoicing (Features 36–39)
-  // ---------------------------------------------------------------------------
-  console.log("\n--- 8. Print & Frame Wall Visualizer Order Invoicing (Feature 39) ---");
-  const orderRes = await createPrintOrder({
-    tenantId: "ten_lumina",
-    tenantSlug: "lumina-cine",
-    projectId: "proj_lumina_01",
-    printSizeId: "psz_lum_16r", // 16R: $140
-    frameDesignId: "frm_lum_walnut", // Warm Walnut: +$45
-    matBoardType: "WHITE_2INCH", // 2" Mat: +$25
-    orientation: "LANDSCAPE",
-    photoUrl: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    photoTitle: "Aurora Luxury Fall Campaign Hero Print",
-    clientName: "Jessica Montgomery",
-    clientEmail: "jessica.m@aurorafashion.com",
-    clientPhone: "+1 (555) 304-9912",
-    notes: "Ship with white cotton gallery gloves.",
-  });
-
-  assert(orderRes.success === true, "createPrintOrder executed successfully");
-  assert(typeof orderRes.invoiceId === "string", `Milestone invoice generated: ${orderRes.invoiceId}`);
-  assert(orderRes.totalAmount === 140 + 45 + 25, `Total order amount calculated accurately: expected 210, got ${orderRes.totalAmount}`);
-  assert(orderRes.checkoutUrl === `/lumina-cine/checkout?invoiceId=${orderRes.invoiceId}`, `Checkout redirect URL constructed: ${orderRes.checkoutUrl}`);
-
-  // Verify database MilestoneInvoice record
-  const invoiceInDb = await db.milestoneInvoice.findUnique({
-    where: { id: orderRes.invoiceId },
-    include: { client: true, tenant: true },
-  });
-
-  assert(invoiceInDb !== null, "MilestoneInvoice record found in database");
-  assert(invoiceInDb!.milestoneType === "PRINT_FRAME_ORDER", "milestoneType is strictly 'PRINT_FRAME_ORDER'");
-  assert(invoiceInDb!.amount === 210, "Invoice amount in database is 210.0");
-  assert(invoiceInDb!.status === "PENDING", "Invoice initial status is PENDING");
-  assert(invoiceInDb!.paymentReference !== null, "paymentReference contains itemized order specification");
-
-  const metadata = JSON.parse(invoiceInDb!.paymentReference!);
-  assert(metadata.orderType === "PRINT_FRAME_ORDER", "paymentReference metadata has orderType 'PRINT_FRAME_ORDER'");
-  assert(metadata.printSize.code === "16R", "paymentReference records 16R print size");
-  assert(metadata.frameDesign.name === "Warm Walnut Shadowbox", "paymentReference records frame design");
-  assert(metadata.matBoard.type === "WHITE_2INCH", "paymentReference records 2-inch mat board");
+  // 8. Wall Art print ordering is covered by the E2E suite (Tier 20).
 
   // Clean up temporary test item and bundle
   await db.kitBundleItem.deleteMany({ where: { bundleId: validBundleRes.bundle!.id } });

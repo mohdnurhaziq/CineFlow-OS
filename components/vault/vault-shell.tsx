@@ -51,6 +51,8 @@ interface VaultShellProps {
   } | null;
   photoItems: PhotoItem[];
   videoItems: VideoItem[];
+  /** Extra gallery sections (framed prints), shown after the download bar. */
+  children?: React.ReactNode;
 }
 
 export function VaultShell({
@@ -59,6 +61,7 @@ export function VaultShell({
   finalInvoice,
   photoItems,
   videoItems,
+  children,
 }: VaultShellProps) {
   const balanceAmount = finalInvoice?.amount ?? project.budget * 0.5;
   const isPaid = project.isFinalBalancePaid;
@@ -233,6 +236,8 @@ export function VaultShell({
           </div>
         )}
       </div>
+
+      {children}
 
       {/* 4. Cinematic Video Player Section */}
       {videoItems.length > 0 && (

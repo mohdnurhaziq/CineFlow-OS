@@ -27,6 +27,9 @@ import { markPrintOrderPaid } from "@/lib/prints/orders";
 import { InvoiceNotPayableError, updatePayableInvoice } from "@/lib/bookings/billing";
 import { encryptSecret } from "../../lib/crypto/secret-box";
 import type { PlaceOrderInput } from "@/lib/validations/print-orders";
+import { findProp, provideReactGlobal } from "./react-tree";
+import VisualizerPage from "@/app/[tenantSlug]/visualizer/page";
+import ProjectVaultPage from "@/app/[tenantSlug]/vault/[projectId]/page";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
   harness.setSuite("Tier 20", "Wall Art Print Orders: Schema, Pricing & Zones");
@@ -920,5 +923,44 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Still VOID");
     const unvoid = await withSession(ownerSession, () => voidInvoice({ ...orderBase, invoiceId: a.invoice.id, reason: "Again" }));
     harness.assertEqual(errOf(unvoid), "NOT_UNPAID", "Voiding twice refused");
+  });
+
+  // ---- Client pages (render level) ----
+  await provideReactGlobal();
+  const visualizer = (projectId?: string, claim?: string) =>
+    VisualizerPage({
+      params: Promise.resolve({ tenantSlug: "lumina-cine" }),
+      searchParams: Promise.resolve({ ...(projectId ? { projectId } : {}), ...(claim ? { claim } : {}) }),
+    });
+
+  await harness.test("T20-UI-01: Wall Art opened from a gallery offers only that project's photos", async () => {
+    const p = await makeOrderProject(true);
+    const tree = await withSession(p.session, () => visualizer(p.project.id, p.line.id));
+    const photos = findProp<{ id: string; url: string }[]>(tree, "initialPhotos") ?? [];
+    harness.assertEqual(JSON.stringify(photos.map((x) => x.id)), JSON.stringify([p.photo.id]), "Only the project's PHOTO item");
+    harness.assertEqual(photos[0]?.url, "/t20/p1-preview.jpg", "Shows the preview, not the master");
+    harness.assertEqual(findProp<boolean>(tree, "canOrder"), true, "A paid project with photos can order");
+    const ordering = findProp<{ claimLineId: string | null; matBoardPrice: number }>(tree, "ordering");
+    harness.assertEqual(ordering?.claimLineId, p.line.id, "claim preselects the included line");
+    const current = await db.tenant.findUniqueOrThrow({ where: { id: lumina.id }, select: { matBoardPrice: true } });
+    harness.assertEqual(findProp<number>(tree, "matBoardPrice"), current.matBoardPrice, "Studio's current mat price");
+  });
+
+  await harness.test("T20-UI-02: Wall Art without a project is a preview with no ordering", async () => {
+    const tree = await withSession(null, () => visualizer());
+    harness.assertEqual(findProp<boolean>(tree, "canOrder"), false, "canOrder false");
+    harness.assertEqual(findProp(tree, "ordering"), null, "No ordering context");
+    const photos = findProp<{ id: string }[]>(tree, "initialPhotos") ?? [];
+    harness.assertEqual(photos.every((x) => x.id.startsWith("showcase_")), true, "Showcase covers only");
+  });
+
+  await harness.test("T20-UI-03: an unpaid project's vault shows the framed prints section locked", async () => {
+    const tree = await withSession(unpaid.session, () =>
+      ProjectVaultPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: unpaid.project.id }) })
+    );
+    harness.assertEqual(findProp<boolean>(tree, "unlocked"), false, "Section rendered, locked");
+    const lines = findProp<{ quantity: number; remaining: number }[]>(tree, "lines") ?? [];
+    harness.assertEqual(lines.length, 1, "Lists the included line");
+    harness.assertEqual(lines[0]?.remaining, 1, "Nothing claimed yet");
   });
 }

@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { ClientDashboard } from "@/components/account/client-dashboard";
 import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
 import { loadBookingConfirmation } from "@/lib/payments/confirmation";
+import { loadFramedPrints } from "@/lib/prints/gallery";
 
 interface AccountPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -132,6 +133,9 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
     }),
   ]);
 
+  // Each gallery's framed prints (included prints, past orders), for its Galleries card.
+  const projectsWithPrints = await Promise.all(projects.map(async (p) => ({ ...p, framedPrints: await loadFramedPrints(p.id) })));
+
   // Right after checkout: confirm the booking (looked up as this client's, never trusted from the URL).
   const confirmation =
     typeof confirmed === "string" && confirmed ? await loadBookingConfirmation(tenant.id, client.id, confirmed) : null;
@@ -143,7 +147,7 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
       bookings={bookings}
       invoices={invoices}
       proposals={proposals}
-      projects={projects}
+      projects={projectsWithPrints}
       banner={
         confirmation ? (
           <PaymentConfirmationBanner

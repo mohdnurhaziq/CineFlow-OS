@@ -22,7 +22,7 @@ import { acceptProposalAsClient } from "./proposal-helpers";
 import { processInvoicePayment, processBookingCheckout } from "@/lib/actions/checkout";
 import { holdBookingSlot } from "@/lib/actions/booking";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
-import { createPrintOrder } from "@/lib/actions/visualizer";
+import { placePrintOrder } from "@/lib/actions/print-orders";
 import { calculateGoldenHour, extractCoordinates } from "@/lib/solar";
 import { generateWhatsAppCallSheetUrl, type CallSheetWithDetails } from "@/lib/whatsapp";
 import {
@@ -471,40 +471,44 @@ export async function runTier4RealWorldScenariosTests(harness: TestHarness) {
       harness.assertEqual(settledProj?.isFinalBalancePaid, true, "S4.2-4: Project isFinalBalancePaid is true");
 
       // 5. Interactive Wall Art Visualizer 1-Click Archival Framed Print Order
-      const printSize = await db.printSize.findFirst({ where: { tenantId: apexTenant!.id } });
-      const frameDesign = await db.frameDesign.findFirst({ where: { tenantId: apexTenant!.id } });
+      const printSize = await db.printSize.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+      const frameDesign = await db.frameDesign.findFirst({ where: { tenantId: apexTenant!.id, isAvailable: true } });
+      const gallery = await db.clientDeliverable.create({
+        data: {
+          projectId: project.id, title: "Convocation Gallery", discipline: "PHOTOGRAPHY",
+          items: { create: { itemType: "PHOTO", title: "Farhan Hakim Official Convocation Portrait", previewUrl: "/uploads/convocation/farhan_preview_01.jpg", downloadUrl: "/uploads/convocation/farhan_master_01.jpg" } },
+        },
+        include: { items: true },
+      });
 
-      const printOrderRes = await createPrintOrder({
+      const printOrderRes = await placePrintOrder({
         tenantId: apexTenant!.id,
         tenantSlug: "apex-media",
         projectId: project.id,
-        printSizeId: printSize!.id,
-        frameDesignId: frameDesign!.id,
-        matBoardType: "WHITE_2INCH",
-        orientation: "PORTRAIT",
-        photoUrl: "/uploads/convocation/farhan_master_01.jpg",
-        photoTitle: "Farhan Hakim Official Convocation Portrait",
-        clientName: "Farhan Hakim",
-        clientEmail: "farhan@utm.my",
+        items: [{ kind: "PAID", deliverableItemId: gallery.items[0]!.id, orientation: "PORTRAIT", printSizeId: printSize!.id, frameDesignId: frameDesign!.id, matBoardType: "WHITE_2INCH" }],
+        fulfilment: "PICKUP",
       });
 
-      harness.assert(printOrderRes.success === true, "S4.2-5: Wall art visualizer 1-click print order created");
-      harness.assert(Boolean(printOrderRes.invoiceId), "S4.2-5: Print & frame invoice generated");
+      if (!printOrderRes.success) throw new Error("S4.2-5: placePrintOrder failed: " + JSON.stringify(printOrderRes));
+      const printOrder = await db.printOrder.findUniqueOrThrow({ where: { id: printOrderRes.orderId } });
+      harness.assert(Boolean(printOrder.invoiceId), "S4.2-5: Print & frame invoice generated");
 
       // 6. Online Card Settlement of Print Order
       const printCardPay = await processInvoicePayment({
         tenantId: apexTenant!.id,
         tenantSlug: "apex-media",
-        invoiceId: printOrderRes.invoiceId!,
+        invoiceId: printOrder.invoiceId!,
         paymentMethod: "CARD",
       });
 
       harness.assert(printCardPay.success === true, "S4.2-6: Framed print order paid via Card");
-      const paidPrintInv = await db.milestoneInvoice.findUnique({ where: { id: printOrderRes.invoiceId! } });
+      const paidPrintInv = await db.milestoneInvoice.findUnique({ where: { id: printOrder.invoiceId! } });
       harness.assertEqual(paidPrintInv?.status, "PAID", "S4.2-6: Print invoice marked PAID");
 
       // Clean up Scenario 4.2
-      await db.milestoneInvoice.delete({ where: { id: printOrderRes.invoiceId! } });
+      await db.printOrder.delete({ where: { id: printOrder.id } });
+      await db.milestoneInvoice.delete({ where: { id: printOrder.invoiceId! } });
+      await db.clientDeliverable.delete({ where: { id: gallery.id } });
       await db.milestoneInvoice.delete({ where: { id: cashInvoice.id } });
       await db.project.delete({ where: { id: project.id } });
       await db.clientBooking.deleteMany({ where: { slotId: slot.id } });

@@ -31,7 +31,9 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import type { ClientBooking, BookingSlot, MilestoneInvoice, Proposal } from "@prisma/client";
-import { formatMoney } from "@/lib/money";
+import { currencySymbol, formatMoney } from "@/lib/money";
+import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
+import type { FramedPrintsData } from "@/lib/prints/gallery";
 import { milestoneLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +53,8 @@ interface DeliverableItemRow {
 
 interface ProjectRow {
   id: string;
+  /** Included prints and print orders; absent where the page doesn't load them. */
+  framedPrints?: FramedPrintsData;
   title: string;
   projectNumber: string;
   status: string;
@@ -90,7 +94,7 @@ interface InvoiceRow extends MilestoneInvoice {
 
 interface ClientDashboardProps {
   /** releaseFilesBeforePayment: the studio gives full-resolution files on upload, before the balance is paid. */
-  tenant: { name: string; slug: string; currency: string; releaseFilesBeforePayment?: boolean };
+  tenant: { id: string; name: string; slug: string; currency: string; releaseFilesBeforePayment?: boolean };
   client: { name: string; email: string; phone: string | null };
   bookings: BookingRow[];
   invoices: InvoiceRow[];
@@ -1053,6 +1057,20 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                           </Link>
                         </div>
                       </div>
+
+                      {p.framedPrints && (p.framedPrints.lines.length > 0 || p.framedPrints.orders.length > 0) && (
+                        <FramedPrintsSection
+                          compact
+                          tenantId={tenant.id}
+                          tenantSlug={tenant.slug}
+                          currency={currencySymbol(tenant.currency)}
+                          projectId={p.id}
+                          lines={p.framedPrints.lines}
+                          unlocked={p.framedPrints.unlocked}
+                          hasPhotos={p.framedPrints.hasPhotos}
+                          orders={p.framedPrints.orders}
+                        />
+                      )}
                     </div>
                   );
                 })}

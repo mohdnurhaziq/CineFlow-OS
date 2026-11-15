@@ -25,7 +25,6 @@
  *    - Atomic post-shoot return with damage flag: CHECKED_OUT -> RETURNED / MAINTENANCE / DAMAGED
  *    - Clean post-shoot return: CHECKED_OUT -> RETURNED / AVAILABLE
  *    - Cross-tenant reservation and inspection rejection
- * 5. Wall Visualizer Isolation & Invoicing (lib/actions/visualizer.ts)
  *    - Cross-tenant frame and print size isolation
  *    - Atomic MilestoneInvoice creation with PRINT_FRAME_ORDER
  */
@@ -43,7 +42,6 @@ import {
   logPreShootInspection,
   logPostShootInspection,
 } from "../lib/actions/gear";
-import { createPrintOrder } from "../lib/actions/visualizer";
 import { invalid } from "./e2e/result-helpers";
 
 let assertionsPassed = 0;
@@ -69,7 +67,6 @@ async function runChallengerSuite() {
     throw new Error("Lumina or Apex tenant record missing from database.");
   }
   const luminaId = luminaTenant.id;
-  const apexId = apexTenant.id;
 
   // ===========================================================================
   // 1. SOLAR ENGINE STRESS & BOUNDARY TESTING (lib/solar.ts)
@@ -502,58 +499,7 @@ async function runChallengerSuite() {
   assert(crossTenantRes.error === "ITEM_NOT_FOUND", "Reported ITEM_NOT_FOUND for item belonging to another tenant");
 
 
-  // ===========================================================================
-  // 5. WALL VISUALIZER INVOICING & ISOLATION (lib/actions/visualizer.ts)
-  // ===========================================================================
-  console.log("\n--- 5. Wall Visualizer Invoicing & Multi-Tenant Isolation ---");
-
-  const apexFrame = await db.frameDesign.findFirst({ where: { tenantId: apexId } });
-  const luminaPrint = await db.printSize.findFirst({ where: { tenantId: luminaId } });
-
-  assert(apexFrame !== null && luminaPrint !== null, "Apex frame and Lumina print size identified");
-
-  const crossTenantPrintOrder = await createPrintOrder({
-    tenantId: luminaId,
-    tenantSlug: "lumina-cine",
-    printSizeId: luminaPrint!.id,
-    frameDesignId: apexFrame!.id, // Apex frame design!
-    matBoardType: "NONE",
-    orientation: "LANDSCAPE",
-    photoUrl: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    clientName: "Cross Tenant Test",
-    clientEmail: "challenger@example.com",
-  });
-  assert(!crossTenantPrintOrder.success, "Cross-tenant frame design order rejected");
-  assert(crossTenantPrintOrder.error === "FRAME_DESIGN_NOT_FOUND", "Reported FRAME_DESIGN_NOT_FOUND for cross-tenant frame");
-
-  // 5.2 Valid Print Order Invoicing & Math Invariant
-  const luminaFrame = await db.frameDesign.findFirst({ where: { tenantId: luminaId } });
-  const validOrder = await createPrintOrder({
-    tenantId: luminaId,
-    tenantSlug: "lumina-cine",
-    printSizeId: luminaPrint!.id,
-    frameDesignId: luminaFrame!.id,
-    matBoardType: "OFFWHITE_2INCH", // +$25
-    orientation: "PORTRAIT",
-    photoUrl: "/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg",
-    photoTitle: "Aurora Architectural Study",
-    clientName: "Challenger Verification Client",
-    clientEmail: "challenger.client@example.com",
-    clientPhone: "+1 (555) 999-8877",
-    notes: "Gallery UV anti-reflective glass requested.",
-  });
-  assert(validOrder.success, "Valid print order created");
-  const expectedTotal = luminaPrint!.basePrice + luminaFrame!.priceOffset + 25.0;
-  assert(validOrder.totalAmount === expectedTotal, `Total amount mathematically exact ($${expectedTotal})`);
-
-  const createdInv = await db.milestoneInvoice.findUnique({
-    where: { id: validOrder.invoiceId },
-  });
-  assert(createdInv !== null, "MilestoneInvoice record found in database");
-  assert(createdInv?.milestoneType === "PRINT_FRAME_ORDER", "Invoice milestoneType is PRINT_FRAME_ORDER");
-  assert(createdInv?.status === "PENDING", "Invoice initial status is PENDING");
-  assert(validOrder.checkoutUrl === `/lumina-cine/checkout?invoiceId=${createdInv?.id}`, "Checkout URL properly routed with invoiceId");
-
+  // Wall Art print ordering is covered by the E2E suite (Tier 20 and Tier 1 Feature 39).
 
   // ===========================================================================
   // CLEAN UP TEST RECORDS (Idempotency)
@@ -567,9 +513,6 @@ async function runChallengerSuite() {
   });
   await db.inventoryItem.deleteMany({
     where: { id: { in: [testGearItem.id, item1.item!.id, item2.item!.id] } },
-  });
-  await db.milestoneInvoice.delete({
-    where: { id: validOrder.invoiceId },
   });
   console.log("✓ Temporary test entities cleanly purged from database.");
 
