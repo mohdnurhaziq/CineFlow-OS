@@ -397,11 +397,11 @@ export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ succe
           refuse("ORDER_CHANGED", "This order changed just now. Refresh and try again.");
         }
         if (voided.count === 0) {
-          // Staff cancelled a paid order: leave a lasting note of the refund owed on both records.
-          const invoice = await tx.milestoneInvoice.findUnique({ where: { id: order.invoiceId }, select: { status: true, verifiedBy: true } });
+          // Staff cancelled a paid order: leave a lasting note of the refund owed on the order (admin-only).
+          // Not on the invoice: its verifiedBy prints on the client's receipt as "Received by".
+          const invoice = await tx.milestoneInvoice.findUnique({ where: { id: order.invoiceId }, select: { status: true } });
           if (invoice?.status === "PAID") {
             const note = `Refund owed: order ${order.orderNumber} cancelled by ${session.name} on ${formatStudioDate(new Date())}`;
-            await tx.milestoneInvoice.update({ where: { id: order.invoiceId }, data: { verifiedBy: appendNote(invoice.verifiedBy, note) } });
             await tx.printOrder.update({ where: { id: order.id }, data: { notes: appendNote(order.notes, note) } });
           }
         }

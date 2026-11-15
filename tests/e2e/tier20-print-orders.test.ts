@@ -869,7 +869,8 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const inv = await db.milestoneInvoice.findUniqueOrThrow({ where: { id: a.invoice.id } });
     const note = `Refund owed: order ${order.orderNumber} cancelled by ${owner.name}`;
     harness.assertEqual(order.notes?.startsWith(note), true, "Refund owed noted on the order");
-    harness.assertEqual(inv.verifiedBy?.startsWith(paidBy ? `${paidBy}\n${note}` : note), true, "Refund owed appended to the invoice record");
+    // The invoice's verifiedBy prints on the client's receipt ("Received by"), so the internal note stays off it.
+    harness.assertEqual(inv.verifiedBy, paidBy, "Client receipt unchanged: no internal refund note on the invoice");
   });
 
   const photographerRow = await db.user.findFirst({ where: { tenantId: lumina.id, role: "PHOTOGRAPHER" } });
