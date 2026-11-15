@@ -306,7 +306,8 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
                           <Link
                             href={`/${t.slug}`}
                             className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-                            title="Open Showcase"
+                            title="View studio website"
+                            aria-label="View studio website"
                           >
                             <ExternalLink className="size-3.5" />
                           </Link>

@@ -241,7 +241,7 @@ export function CinemaBookingShell({
             className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="size-3.5" />
-            Back to {tenant.name} Showcase
+            Back to studio website
           </Link>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Cinema-Style Soundstage Calendar

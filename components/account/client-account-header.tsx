@@ -2,7 +2,7 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
-import { CalendarPlus, ArrowUpRight } from "lucide-react";
+import { CalendarPlus } from "lucide-react";
 import { ClientNavBar } from "./client-nav-bar";
 import { ClientUserNav } from "./client-user-nav";
 import { disciplineLabel } from "@/lib/labels";
@@ -66,7 +66,7 @@ export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHea
             )}
           </div>
 
-          {/* Right Header Actions: Quick Book, Public Showcase & Client Menu */}
+          {/* Right Header Actions: Quick Book & Client Menu (studio website link lives in the menu) */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Link
               href={`/${tenant.slug}/book`}
@@ -76,16 +76,6 @@ export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHea
               <span className="hidden sm:inline">Book Session</span>
               <span className="sm:hidden">Book</span>
             </Link>
-
-            <Link
-              href={`/${tenant.slug}`}
-              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-colors"
-            >
-              <span>Showcase</span>
-              <ArrowUpRight className="size-3 text-zinc-500" />
-            </Link>
-
-            <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
 
             <ClientUserNav tenantSlug={tenant.slug} client={client} />
           </div>

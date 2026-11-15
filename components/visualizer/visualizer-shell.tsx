@@ -116,7 +116,7 @@ export function VisualizerShell({
               className="text-xs font-mono text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
             >
               <ArrowLeft className="size-3" />
-              <span>Back to Showcase</span>
+              <span>Back to studio website</span>
             </Link>
             <span className="text-zinc-600 text-xs">•</span>
             <span className="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">

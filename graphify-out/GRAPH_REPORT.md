@@ -1,7 +1,7 @@
 # Graph Report - CineFlow-OS  (2026-11-15)
 
 ## Corpus Check
-- 523 files · ~1,105,831 words
+- 523 files · ~1,105,810 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 16 file(s) not represented in the graph (top: .css 10, (none) 4, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3e66c09b`
+- Built from commit: `5af77850`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -301,16 +301,16 @@
 10. `useDialog()` - 56 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `BUG-20261105-13: Rejecting a slip cancelled the whole booking` --references--> `expireUnpaidDeposits()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/bookings/expiry.ts
-- `Global Constraints` --references--> `isProjectCategorySlug()`  [INFERRED]
-  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/bookings/project-promotion.ts
 - `BUG-20261105-08: Modals ignored Escape and weren't announced as dialogs` --references--> `useDialog()`  [INFERRED]
   docs/BUG_FIX_LOG.md → lib/use-dialog.ts
-- `BUG-20261105-20: Staff could approve payments and change prices` --references--> `requireOwner()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/auth/guard.ts
+- `BUG-20261105-13: Rejecting a slip cancelled the whole booking` --references--> `expireUnpaidDeposits()`  [INFERRED]
+  docs/BUG_FIX_LOG.md → lib/bookings/expiry.ts
 - `2026-11-05: Client walkthrough (Haz Creatives Studio)` --references--> `formatMoney()`  [INFERRED]
   docs/BUG_FIX_LOG.md → lib/money.ts
+- `Task 4: Projects page tabs` --references--> `projectListWhere()`  [INFERRED]
+  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/projects/list.ts
+- `Global Constraints` --references--> `isProjectCategorySlug()`  [INFERRED]
+  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/bookings/project-promotion.ts
 
 ## Import Cycles
 - None detected.
@@ -1359,17 +1359,17 @@ Nodes (7): Approaches considered, Design, Every booking gets a gallery — desig
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `react` to `PageHeader`, `Skeleton`, `[clientId]/page.tsx`, `.claude/skills/shadcn/assets/showcase/color-pair.tsx`, `admin-booking-lifecycle.ts`, `settings-ui.tsx`, `Step 4: Map Tokens to the Theme`, `visualizer-shell.tsx`, `project-workspace.tsx`, `action-error.ts`, `actions/password-reset.ts`, `bookings-console.tsx`, `Critical Rules`, `admin-verification-console.tsx`, `.agents/skills/shadcn/assets/showcase/color-pair.tsx`, `Styling & Customization`, `buttonVariants`, `Step 4: Map Tokens to the Theme`, `Critical Rules`, `Styling & Customization`, `next`, `auth/session.ts`?**
-  _High betweenness centrality (0.132) - this node is a cross-community bridge._
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
 - **What connects `RFC-4180`, `Multi-Tenant Seed Script (prisma/seed.ts)`, `Local File Upload Route (app/api/upload/route.ts)` to the rest of the system?**
   _25 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.agents/skills/design-taste-frontend/scripts/assets.mjs` be split into smaller, more focused modules?**
   _Cohesion score 0.06648426812585499 - nodes in this community are weakly interconnected._
 - **Why does `next` connect `next` to `PageHeader`, `admin-verification.ts`, `[clientId]/page.tsx`, `actions/admin-cms.ts`, `admin-booking-lifecycle.ts`, `tenant.ts`, `labels.ts`, `proposal-viewer.tsx`, `settings-ui.tsx`, `package.json`, `visualizer-shell.tsx`, `db.ts`, `action-error.ts`, `actions/password-reset.ts`, `lucide-react`, `project-workspace.tsx`, `[tenantSlug]/page.tsx`, `my-booking.ts`, `bookings-console.tsx`, `showcase-shell.tsx`, `admin-services.ts`, `getCurrentUser`, `admin/page.tsx`, `proposal-admin-dashboard.tsx`, `cinema-booking-shell.tsx`, `actions/admin-frames.ts`, `admin-proposals.ts`, `booking.ts`, `admin-verification-console.tsx`, `.agents/skills/shadcn/assets/showcase/color-pair.tsx`, `calendar-admin-dashboard.tsx`, `actions/gear.ts`, `sonner`, `(saas)/page.tsx`, `getSessionClient`, `tier9-toyyibpay-gateway.test.ts`, `dependencies`, `buttonVariants`, `checkout/page.tsx`, `actions/logistics.ts`, `requireStaff`, `tier10-authorization.test.ts`, `ref_node_path`, `super-admin.ts`, `app/layout.tsx`, `admin-verification.ts`, `react`, `tier10-authorization.test.ts`, `actions/gear.ts`, `storage.ts`, `middleware.ts`, `admin-clients.ts`, `auth/session.ts`?**
-  _High betweenness centrality (0.091) - this node is a cross-community bridge._
+  _High betweenness centrality (0.079) - this node is a cross-community bridge._
 - **Should `admin-verification.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.06857142857142857 - nodes in this community are weakly interconnected._
-- **Why does `Styling & Customization` connect `Styling & Customization` to `shadcn/SKILL.md`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+- **Why does `CineFlow OS — Server Actions & API Specification` connect `CineFlow OS — Server Actions & API Specification` to `6. Deliverables Vault & Print Visualizer Actions (`src/server/actions/deliverables.ts`)`, `2. Cinema-Style Booking Actions (`src/server/actions/booking.ts`)`, `requireStaff`?**
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._

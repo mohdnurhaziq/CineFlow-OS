@@ -11,7 +11,7 @@ import {
   FolderLock,
   CalendarClock,
   Receipt,
-  ExternalLink,
+  Globe,
   UserCheck,
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
@@ -139,7 +139,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
 
           <div className="h-px bg-zinc-800/80 my-1" />
 
-          {/* External Public Showcase Link */}
+          {/* The studio's public website (portfolio, packages, wall art) */}
           <DropdownMenu.Item asChild>
             <Link
               href={`/${tenantSlug}`}
@@ -147,8 +147,8 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
               className="flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
             >
               <span className="flex items-center gap-2.5">
-                <ExternalLink className="size-3.5 text-zinc-400" />
-                <span>Studio Showcase</span>
+                <Globe className="size-3.5 text-zinc-400" />
+                <span>Studio website</span>
               </span>
               <span className="text-[10px] font-mono text-zinc-500">Public</span>
             </Link>

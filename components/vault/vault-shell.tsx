@@ -78,7 +78,7 @@ export function VaultShell({
             className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="size-3.5" />
-            <span>Back to {tenant.name} Showcase</span>
+            <span>Back to studio website</span>
           </Link>
 
           <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">

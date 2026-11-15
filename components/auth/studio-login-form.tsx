@@ -222,7 +222,7 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
           href={`/${tenantSlug}`}
           className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
         >
-          ← Return to Public Studio Showcase
+          ← Back to studio website
         </Link>
       </div>
     </div>

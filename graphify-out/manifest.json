@@ -240,9 +240,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/layout.tsx": {
-    "mtime": 1794586465.0494366,
-    "seen": 1794593067.0820699,
-    "ast_hash": "a1292fcb551426594b3551de4a395052",
+    "mtime": 1794704567.9598765,
+    "seen": 1794704590.127313,
+    "ast_hash": "559697df6090428414dd42c6d6b781b0",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/loading.tsx": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "components/admin/cms/cms-manager.tsx": {
-    "mtime": 1794696297.2454808,
-    "seen": 1794698956.5284233,
-    "ast_hash": "1ec5063c857341916dfa1ced6aae10ea",
+    "mtime": 1794704559.7779255,
+    "seen": 1794704590.1274374,
+    "ast_hash": "ba7b4ff8981fd65da864c9a7ad60fbc4",
     "semantic_hash": ""
   },
   "components/admin/cms/showcase-item-dialog.tsx": {
@@ -564,9 +564,9 @@
     "semantic_hash": ""
   },
   "components/auth/studio-login-form.tsx": {
-    "mtime": 1794698720.3951862,
-    "seen": 1794698956.5285156,
-    "ast_hash": "7b6c926451d010826e0e4a2b5cb3069d",
+    "mtime": 1794704559.488176,
+    "seen": 1794704590.1275094,
+    "ast_hash": "a8eb121fb25860c509c7161fccde6f85",
     "semantic_hash": ""
   },
   "components/booking/booking-intake-modal.tsx": {
@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "components/booking/cinema-booking-shell.tsx": {
-    "mtime": 1794698719.510317,
-    "seen": 1794698956.5285199,
-    "ast_hash": "919022b67eb44471d28abb38bf791dc0",
+    "mtime": 1794704559.5624156,
+    "seen": 1794704590.1275127,
+    "ast_hash": "d24a8667e43d02f92cabd2bfd4a32351",
     "semantic_hash": ""
   },
   "components/booking/cinema-slot-grid.tsx": {
@@ -780,9 +780,9 @@
     "semantic_hash": ""
   },
   "components/saas/studio-switcher.tsx": {
-    "mtime": 1794641511.5587785,
-    "seen": 1794645051.4778545,
-    "ast_hash": "c16bb71b3ef67841091018f2f3439e2e",
+    "mtime": 1794704559.8582551,
+    "seen": 1794704590.1275916,
+    "ast_hash": "fbef68c730ef3d0e8484a7face4b500f",
     "semantic_hash": ""
   },
   "components/showcase/category-filter-bar.tsx": {
@@ -852,9 +852,9 @@
     "semantic_hash": ""
   },
   "components/super-admin/super-admin-view.tsx": {
-    "mtime": 1794698719.5574548,
-    "seen": 1794698956.5286565,
-    "ast_hash": "ed08a54b57ad0543c931658efdb9637a",
+    "mtime": 1794704559.9350827,
+    "seen": 1794704590.1276119,
+    "ast_hash": "000d5bdb887d7b2f760f0b4e324dbdee",
     "semantic_hash": ""
   },
   "components/ui/badge.tsx": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "components/vault/vault-shell.tsx": {
-    "mtime": 1794698719.804598,
-    "seen": 1794698956.5286887,
-    "ast_hash": "833f5ab8fb1b380d878fa3671a335d28",
+    "mtime": 1794704559.6045167,
+    "seen": 1794704590.1276379,
+    "ast_hash": "44f64a51432611d8718e360a5ba7f1c5",
     "semantic_hash": ""
   },
   "components/vault/video-player-card.tsx": {
@@ -948,9 +948,9 @@
     "semantic_hash": ""
   },
   "components/visualizer/visualizer-shell.tsx": {
-    "mtime": 1794698719.3513865,
-    "seen": 1794698956.5287037,
-    "ast_hash": "a0ace760fc4ccb524c2192a8988f9a83",
+    "mtime": 1794704559.702502,
+    "seen": 1794704590.1276498,
+    "ast_hash": "ef04cd6a1a2f6944868bc11157f1ba65",
     "semantic_hash": ""
   },
   "lib/actions/admin-analytics.ts": {
@@ -1536,9 +1536,9 @@
     "semantic_hash": ""
   },
   "components/auth/client-register-card.tsx": {
-    "mtime": 1794698720.5572686,
-    "seen": 1794698956.5284984,
-    "ast_hash": "88b6274e829fe080fef3676dd8b9bfbd",
+    "mtime": 1794704559.3868978,
+    "seen": 1794704590.1274965,
+    "ast_hash": "6743b24d8b8a25f57fa4387d2ee01cd6",
     "semantic_hash": ""
   },
   "components/booking/my-booking-lookup.tsx": {
@@ -2904,9 +2904,9 @@
     "semantic_hash": ""
   },
   "components/account/client-account-header.tsx": {
-    "mtime": 1794699000.9699628,
-    "seen": 1794699054.9343936,
-    "ast_hash": "1f9e965922b80ad8ff161ab1cc318fd1",
+    "mtime": 1794704339.740871,
+    "seen": 1794704367.1566792,
+    "ast_hash": "d7d6434b3ac84bd3eba148a8e6947d5a",
     "semantic_hash": ""
   },
   "components/account/client-nav-bar.tsx": {
@@ -2916,9 +2916,9 @@
     "semantic_hash": ""
   },
   "components/account/client-user-nav.tsx": {
-    "mtime": 1794651982.4001963,
-    "seen": 1794652869.1325395,
-    "ast_hash": "ec060f46fd86e89e5c32e7158dc9d708",
+    "mtime": 1794704339.9892142,
+    "seen": 1794704367.156687,
+    "ast_hash": "be043861251d7f11d4684250f5b80639",
     "semantic_hash": ""
   },
   "components/gear/gear-scanner-console.tsx": {

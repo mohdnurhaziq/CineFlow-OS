@@ -55,7 +55,7 @@ export function ClientRegisterCard({
 
       <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
         <Link href={`/${tenantSlug}`} className="hover:text-zinc-300 transition-colors">
-          ← Studio showcase
+          ← Back to studio website
         </Link>
         <Link href={`/${tenantSlug}/login`} className="hover:text-zinc-300 transition-colors">
           Studio staff login

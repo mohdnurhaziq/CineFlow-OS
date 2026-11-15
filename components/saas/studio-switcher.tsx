@@ -144,7 +144,7 @@ export function StudioSwitcher() {
                   href={`/${activeStudio.slug}`}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs sm:text-sm font-semibold transition-all"
                 >
-                  View Showcase
+                  View studio website
                   <ExternalLink className="size-3.5" />
                 </Link>
 

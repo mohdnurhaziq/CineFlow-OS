@@ -139,7 +139,7 @@ export function CmsManager({
             className={buttonVariants({ variant: "secondary" })}
           >
             <Eye className="size-3.5" />
-            <span>View Public Showcase</span>
+            <span>View studio website</span>
             <ExternalLink className="size-3 text-amber-400" />
           </Link>
 
