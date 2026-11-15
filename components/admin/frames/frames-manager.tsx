@@ -24,6 +24,8 @@ import {
   deleteFrameDesign,
   toggleFrameAvailability,
   deletePrintSize,
+  togglePrintSizeAvailability,
+  updateMatBoardPrice,
 } from "@/lib/actions/admin-frames";
 import {
   FrameDesignDialog,
@@ -40,6 +42,7 @@ interface FramesManagerProps {
   tenantId: string;
   tenantSlug: string;
   currency: string;
+  matBoardPrice: number;
   initialFrames: FrameDesignRow[];
   initialSizes: PrintSizeRow[];
 }
@@ -48,6 +51,7 @@ export function FramesManager({
   tenantId,
   tenantSlug,
   currency,
+  matBoardPrice,
   initialFrames,
   initialSizes,
 }: FramesManagerProps) {
@@ -65,6 +69,38 @@ export function FramesManager({
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [matPrice, setMatPrice] = useState(String(matBoardPrice));
+  const [matSaving, setMatSaving] = useState(false);
+
+  const handleSaveMatPrice = async () => {
+    const parsed = parseFloat(matPrice);
+    if (isNaN(parsed) || parsed < 0) {
+      setErrorMessage("Enter a mat board price of 0 or more.");
+      return;
+    }
+    setMatSaving(true);
+    setErrorMessage(null);
+    try {
+      const res = await updateMatBoardPrice({ tenantId, tenantSlug, price: parsed });
+      if (!res.success) setErrorMessage(res.message || "Failed to save the mat board price.");
+      else handleSuccess();
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "An unexpected error occurred.");
+    } finally {
+      setMatSaving(false);
+    }
+  };
+
+  const handleToggleSize = async (size: PrintSizeRow) => {
+    try {
+      const res = await togglePrintSizeAvailability({ id: size.id, tenantId, tenantSlug, isAvailable: !size.isAvailable });
+      if (!res.success) setErrorMessage(res.message || "Failed to change print size availability.");
+      else handleSuccess();
+    } catch (err) {
+      setErrorMessage(errorMessageOf(err) || "Failed to change print size availability.");
+    }
+  };
 
   const handleSuccess = () => {
     router.refresh();
@@ -211,6 +247,34 @@ export function FramesManager({
           <span>Open Visualizer</span>
           <ExternalLink className="size-3.5" />
         </Link>
+      </div>
+
+      {/* Mat board price: one price per studio, added to any framed print with a mat */}
+      <div className="p-4 rounded-2xl border border-zinc-800 bg-[#0d0d10] flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="flex-1">
+          <label htmlFor="mat-board-price" className="text-xs font-mono text-zinc-400 block mb-1">
+            Mat board price ({currency})
+          </label>
+          <input
+            id="mat-board-price"
+            type="number"
+            step="0.01"
+            min="0"
+            value={matPrice}
+            onChange={(e) => setMatPrice(e.target.value)}
+            className="w-full sm:max-w-40 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
+          />
+          <p className="text-[11px] text-zinc-400 mt-1">Added to a framed print when the client chooses a mat board.</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleSaveMatPrice}
+          disabled={matSaving || parseFloat(matPrice) === matBoardPrice}
+          className={buttonVariants()}
+        >
+          {matSaving ? <Loader2 className="size-3.5 animate-spin" /> : null}
+          <span>Save mat price</span>
+        </button>
       </div>
 
       {/* KPI Metrics Summary Bar */}
@@ -402,6 +466,7 @@ export function FramesManager({
                       <th scope="col" className="px-4 py-3">Display Name</th>
                       <th scope="col" className="px-4 py-3">Dimensions (W x H)</th>
                       <th scope="col" className="px-4 py-3">Base Print Price</th>
+                      <th scope="col" className="px-4 py-3 text-center">Status</th>
                       <th scope="col" className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -421,6 +486,23 @@ export function FramesManager({
                         </td>
                         <td className="px-4 py-3 font-bold text-white">
                           {formatPrice(size.basePrice)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSize(size)}
+                            className="inline-flex items-center gap-1 transition-colors"
+                          >
+                            {size.isAvailable ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                                <CheckCircle className="size-3" /> Available
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 flex items-center gap-1">
+                                <XCircle className="size-3" /> Hidden
+                              </span>
+                            )}
+                          </button>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">

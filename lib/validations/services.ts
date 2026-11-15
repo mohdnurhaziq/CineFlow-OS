@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const MAX_INCLUDED_PRINT_LINES = 10;
+
+export const IncludedPrintLineSchema = z.object({
+  printSizeId: z.string().min(1, "Choose a print size"),
+  frameDesignId: z.string().min(1, "Choose a frame"),
+  quantity: z.coerce.number().int("Quantity must be a whole number").min(1, "Quantity must be at least 1").max(20, "Quantity can't be more than 20"),
+});
+
+export type IncludedPrintLineInput = z.infer<typeof IncludedPrintLineSchema>;
+
 const ServicePackageFields = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),
@@ -12,6 +22,8 @@ const ServicePackageFields = z.object({
   description: z.string().min(5, "Description must be at least 5 characters"),
   deliverables: z.string().min(3, "Deliverables scope must be specified"),
   isFeatured: z.boolean().default(false),
+  // Omitted = leave the package's included prints as they are.
+  includedPrints: z.array(IncludedPrintLineSchema).max(MAX_INCLUDED_PRINT_LINES, "A package can include at most 10 print lines").optional(),
 });
 
 /** A deposit is part of the price, so it can never be larger than it. */

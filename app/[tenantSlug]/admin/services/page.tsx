@@ -47,7 +47,27 @@ export default async function AdminServicesPage({ params }: ServicesPageProps) {
   const packages = await db.servicePackage.findMany({
     where: { tenantId: tenant.id },
     orderBy: [{ isFeatured: "desc" }, { price: "desc" }],
+    include: {
+      includedPrints: {
+        select: { printSizeId: true, frameDesignId: true, quantity: true },
+        orderBy: { id: "asc" },
+      },
+    },
   });
+
+  // Sizes and frames a package can include (only those on offer)
+  const [printSizes, frames] = await Promise.all([
+    db.printSize.findMany({
+      where: { tenantId: tenant.id, isAvailable: true },
+      orderBy: { widthInches: "asc" },
+      select: { id: true, code: true, name: true },
+    }),
+    db.frameDesign.findMany({
+      where: { tenantId: tenant.id, isAvailable: true },
+      orderBy: { priceOffset: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   // 3. Fetch scoped categories
   const categories = await db.campaignCategory.findMany({
@@ -63,6 +83,8 @@ export default async function AdminServicesPage({ params }: ServicesPageProps) {
         currency={tenant.currency}
         initialPackages={packages as unknown as PackageRow[]}
         initialCategories={categories as unknown as CategoryRow[]}
+        printSizes={printSizes}
+        frames={frames}
         isOwner={await currentUserIsOwner()}
       />
     </PageShell>

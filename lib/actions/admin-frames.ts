@@ -12,6 +12,8 @@ import {
   CreatePrintSizeSchema,
   UpdatePrintSizeSchema,
   DeletePrintSizeSchema,
+  TogglePrintSizeAvailabilitySchema,
+  UpdateMatBoardPriceSchema,
   type CreateFrameDesignInput,
   type UpdateFrameDesignInput,
   type DeleteFrameDesignInput,
@@ -19,6 +21,8 @@ import {
   type CreatePrintSizeInput,
   type UpdatePrintSizeInput,
   type DeletePrintSizeInput,
+  type TogglePrintSizeAvailabilityInput,
+  type UpdateMatBoardPriceInput,
 } from "@/lib/validations/admin-frames";
 import { errorMessageOf } from "@/lib/action-error";
 
@@ -28,6 +32,32 @@ function safeRevalidate(path: string) {
   } catch {
     // Non-request context fallback
   }
+}
+
+const IN_USE = {
+  success: false as const,
+  error: "IN_USE",
+  message: "This is used by a package or an order. Hide it instead.",
+};
+
+// Sizes and frames are referenced by plain-string ids (no foreign keys), so every place
+// that stores one is checked here before it can be deleted.
+async function sizeInUse(id: string): Promise<boolean> {
+  const counts = await Promise.all([
+    db.packageIncludedPrint.count({ where: { printSizeId: id } }),
+    db.bookingIncludedPrint.count({ where: { printSizeId: id } }),
+    db.printOrderItem.count({ where: { printSizeId: id } }),
+  ]);
+  return counts.some((n) => n > 0);
+}
+
+async function frameInUse(id: string): Promise<boolean> {
+  const counts = await Promise.all([
+    db.packageIncludedPrint.count({ where: { frameDesignId: id } }),
+    db.bookingIncludedPrint.count({ where: { frameDesignId: id } }),
+    db.printOrderItem.count({ where: { frameDesignId: id } }),
+  ]);
+  return counts.some((n) => n > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +152,8 @@ export async function deleteFrameDesign(input: DeleteFrameDesignInput) {
     if (!existing) {
       return { success: false, error: "FRAME_NOT_FOUND", message: "Frame design not found or does not belong to studio." };
     }
+
+    if (await frameInUse(id)) return IN_USE;
 
     await db.frameDesign.delete({
       where: { id },
@@ -283,6 +315,8 @@ export async function deletePrintSize(input: DeletePrintSizeInput) {
       return { success: false, error: "PRINT_SIZE_NOT_FOUND", message: "Print size not found or does not belong to studio." };
     }
 
+    if (await sizeInUse(id)) return IN_USE;
+
     await db.printSize.delete({
       where: { id },
     });
@@ -296,6 +330,62 @@ export async function deletePrintSize(input: DeletePrintSizeInput) {
       success: false,
       error: "DELETE_PRINT_SIZE_FAILED",
       message: errorMessageOf(error) || "Failed to delete print size.",
+    };
+  }
+}
+
+export async function togglePrintSizeAvailability(input: TogglePrintSizeAvailabilityInput) {
+  try {
+    const validated = TogglePrintSizeAvailabilitySchema.parse(input);
+    await requireStaff(validated.tenantId);
+    const { id, tenantId, tenantSlug, isAvailable } = validated;
+
+    const existing = await db.printSize.findFirst({ where: { id, tenantId } });
+    if (!existing) {
+      return { success: false, error: "PRINT_SIZE_NOT_FOUND", message: "Print size not found or does not belong to studio." };
+    }
+
+    const updated = await db.printSize.update({ where: { id }, data: { isAvailable } });
+
+    safeRevalidate(`/${tenantSlug}/admin/frames`);
+    safeRevalidate(`/${tenantSlug}/visualizer`);
+
+    return { success: true, printSize: updated };
+  } catch (error) {
+    return {
+      success: false,
+      error: "TOGGLE_PRINT_SIZE_FAILED",
+      message: errorMessageOf(error) || "Failed to change print size availability.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mat board price (one price per studio, added to any framed print with a mat)
+// ---------------------------------------------------------------------------
+
+export async function updateMatBoardPrice(input: UpdateMatBoardPriceInput) {
+  try {
+    const validated = UpdateMatBoardPriceSchema.parse(input);
+    await requireStaff(validated.tenantId);
+    const { tenantId, tenantSlug, price } = validated;
+
+    const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
+    if (!tenant) {
+      return { success: false, error: "TENANT_NOT_FOUND", message: "Studio tenant not found." };
+    }
+
+    await db.tenant.update({ where: { id: tenantId }, data: { matBoardPrice: price } });
+
+    safeRevalidate(`/${tenantSlug}/admin/frames`);
+    safeRevalidate(`/${tenantSlug}/visualizer`);
+
+    return { success: true, matBoardPrice: price };
+  } catch (error) {
+    return {
+      success: false,
+      error: "UPDATE_MAT_PRICE_FAILED",
+      message: errorMessageOf(error) || "Failed to save the mat board price.",
     };
   }
 }

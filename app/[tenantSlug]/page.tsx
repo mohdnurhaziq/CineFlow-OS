@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { includedPrintCount } from "@/lib/prints/pricing";
 import { db } from "@/lib/db";
 import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { getSessionClient } from "@/lib/clients";
@@ -87,7 +88,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
   });
 
   // 3. Fetch scoped Service Packages
-  const packages = await db.servicePackage.findMany({
+  const packageRows = await db.servicePackage.findMany({
     where: { tenantId: tenant.id },
     orderBy: [{ isFeatured: "desc" }, { price: "asc" }],
     select: {
@@ -101,8 +102,13 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
       deliverables: true,
       turnaround: true,
       isFeatured: true,
+      includedPrints: { select: { quantity: true } },
     },
   });
+  const packages = packageRows.map(({ includedPrints, ...pkg }) => ({
+    ...pkg,
+    includedPrintCount: includedPrintCount(includedPrints),
+  }));
 
   // 4. Fetch scoped Showcase Items
   const showcaseItems = await db.showcaseItem.findMany({

@@ -11,3 +11,8 @@ export function framedPrice(p: { sizePrice: number; framePrice: number; mat: Mat
 export function upgradeAmount(chosen: number, included: number): number {
   return Math.max(0, round2(chosen - included));
 }
+
+/** Total number of framed prints a package includes, across all its lines. */
+export function includedPrintCount(lines: { quantity: number }[]): number {
+  return lines.reduce((sum, l) => sum + l.quantity, 0);
+}

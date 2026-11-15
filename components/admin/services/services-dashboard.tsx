@@ -21,7 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { deleteServicePackage, togglePackageFeatured } from "@/lib/actions/admin-services";
-import { PackageDialog, type PackageRow } from "./package-dialog";
+import { PackageDialog, type PackageRow, type PrintOption, type FrameOption } from "./package-dialog";
 import { CategoryDialog, type CategoryRow } from "./category-dialog";
 import { CategoryList } from "./category-list";
 import { disciplineLabel } from "@/lib/labels";
@@ -33,6 +33,8 @@ interface ServicesDashboardProps {
   currency: string;
   initialPackages: PackageRow[];
   initialCategories: CategoryRow[];
+  printSizes?: PrintOption[];
+  frames?: FrameOption[];
   /** Studio owner: may create, edit and delete packages (prices) and delete categories. */
   isOwner?: boolean;
 }
@@ -43,6 +45,8 @@ export function ServicesDashboard({
   currency,
   initialPackages,
   initialCategories,
+  printSizes = [],
+  frames = [],
   isOwner = true,
 }: ServicesDashboardProps) {
   const { confirm, confirmDialog } = useConfirm();
@@ -443,6 +447,8 @@ export function ServicesDashboard({
           badgeIcon: c.badgeIcon,
         }))}
         packageToEdit={packageToEdit}
+        printSizes={printSizes}
+        frames={frames}
         onSuccess={handleSuccess}
       />
 

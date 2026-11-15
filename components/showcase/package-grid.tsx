@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Calendar, Clock, Sparkles } from "lucide-react";
+import { Check, Calendar, Clock, Sparkles, Frame } from "lucide-react";
 import { disciplineLabel, humanize } from "@/lib/labels";
 
 export interface ServicePackageItem {
@@ -15,6 +15,8 @@ export interface ServicePackageItem {
   deliverables: string;
   turnaround: string;
   isFeatured: boolean;
+  /** Total framed prints included with the package (0 = softcopy only). */
+  includedPrintCount?: number;
 }
 
 interface PackageGridProps {
@@ -101,6 +103,13 @@ export function PackageGrid({
                     </span>
                   </div>
                 </div>
+
+                {(pkg.includedPrintCount ?? 0) > 0 && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-[11px] font-mono text-amber-300">
+                    <Frame className="size-3.5" />
+                    <span>Includes {pkg.includedPrintCount} framed {pkg.includedPrintCount === 1 ? "print" : "prints"}</span>
+                  </div>
+                )}
 
                 {/* Turnaround Badge */}
                 <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">

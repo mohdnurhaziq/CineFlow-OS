@@ -2,11 +2,29 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Sparkles, Loader2 } from "lucide-react";
+import { X, Plus, Edit2, AlertCircle, Sparkles, Loader2, Frame } from "lucide-react";
 import { createServicePackage, updateServicePackage } from "@/lib/actions/admin-services";
 import { useDialog } from "@/lib/use-dialog";
 import { disciplineLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
+import { includedPrintCount } from "@/lib/prints/pricing";
+
+export interface IncludedPrintLine {
+  printSizeId: string;
+  frameDesignId: string;
+  quantity: number;
+}
+
+export interface PrintOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface FrameOption {
+  id: string;
+  name: string;
+}
 
 export interface PackageRow {
   id: string;
@@ -19,6 +37,7 @@ export interface PackageRow {
   deliverables: string;
   turnaround: string;
   isFeatured: boolean;
+  includedPrints?: IncludedPrintLine[];
 }
 
 export interface CategoryOption {
@@ -35,11 +54,14 @@ interface PackageDialogProps {
   tenantSlug: string;
   currency: string;
   categories: CategoryOption[];
+  printSizes?: PrintOption[];
+  frames?: FrameOption[];
   packageToEdit?: PackageRow | null;
   onSuccess?: () => void;
 }
 
 const DISCIPLINES = ["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"];
+const MAX_PRINT_LINES = 10;
 
 export function PackageDialog({
   isOpen,
@@ -48,6 +70,8 @@ export function PackageDialog({
   tenantSlug,
   currency,
   categories,
+  printSizes = [],
+  frames = [],
   packageToEdit,
   onSuccess,
 }: PackageDialogProps) {
@@ -64,6 +88,7 @@ export function PackageDialog({
   const [description, setDescription] = useState(packageToEdit?.description || "");
   const [deliverables, setDeliverables] = useState(packageToEdit?.deliverables || "");
   const [isFeatured, setIsFeatured] = useState(packageToEdit?.isFeatured || false);
+  const [prints, setPrints] = useState<IncludedPrintLine[]>(packageToEdit?.includedPrints ?? []);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -79,6 +104,7 @@ export function PackageDialog({
       setDescription(packageToEdit.description);
       setDeliverables(packageToEdit.deliverables);
       setIsFeatured(packageToEdit.isFeatured);
+      setPrints(packageToEdit.includedPrints ?? []);
     } else {
       setName("");
       setCategory(categories[0]?.slug || "STUDIO_PORTRAIT");
@@ -89,12 +115,25 @@ export function PackageDialog({
       setDescription("");
       setDeliverables("");
       setIsFeatured(false);
+      setPrints([]);
     }
     setErrorMessage(null);
   }, [packageToEdit, categories, isOpen]);
 
   const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
+
+  const canAddPrint = printSizes.length > 0 && frames.length > 0 && prints.length < MAX_PRINT_LINES;
+  const addPrint = () => {
+    const size = printSizes[0];
+    const frame = frames[0];
+    if (!size || !frame) return;
+    setPrints((rows) => [...rows, { printSizeId: size.id, frameDesignId: frame.id, quantity: 1 }]);
+  };
+  const updatePrint = (index: number, patch: Partial<IncludedPrintLine>) =>
+    setPrints((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  const removePrint = (index: number) => setPrints((rows) => rows.filter((_, i) => i !== index));
+  const printTotal = includedPrintCount(prints);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +174,7 @@ export function PackageDialog({
           description,
           deliverables,
           isFeatured,
+          includedPrints: prints,
         });
 
         if (!res.success) {
@@ -155,6 +195,7 @@ export function PackageDialog({
           description,
           deliverables,
           isFeatured,
+          includedPrints: prints,
         });
 
         if (!res.success) {
@@ -332,6 +373,88 @@ export function PackageDialog({
               placeholder="Detailed description of coverage hours, crew count, post-production color grading, and deliverables..."
               className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
             />
+          </div>
+
+          {/* Included framed prints */}
+          <div className="space-y-2 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
+            <div className="flex items-center gap-2">
+              <Frame className="size-4 text-amber-400" />
+              <span className="text-xs font-medium text-white">Included framed prints</span>
+            </div>
+
+            {prints.map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_4.5rem_auto] gap-2 items-center">
+                {/* A line's current choice stays listed even if it has since been hidden. */}
+                <select
+                  aria-label={`Print size for line ${i + 1}`}
+                  value={row.printSizeId}
+                  onChange={(e) => updatePrint(i, { printSizeId: e.target.value })}
+                  className="w-full min-w-0 px-2 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 transition-colors"
+                >
+                  {!printSizes.some((s) => s.id === row.printSizeId) && (
+                    <option value={row.printSizeId}>Hidden size</option>
+                  )}
+                  {printSizes.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <select
+                  aria-label={`Frame for line ${i + 1}`}
+                  value={row.frameDesignId}
+                  onChange={(e) => updatePrint(i, { frameDesignId: e.target.value })}
+                  className="w-full min-w-0 px-2 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white focus:outline-none focus:border-amber-500 transition-colors"
+                >
+                  {!frames.some((f) => f.id === row.frameDesignId) && (
+                    <option value={row.frameDesignId}>Hidden frame</option>
+                  )}
+                  {frames.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  aria-label={`Quantity for line ${i + 1}`}
+                  min={1}
+                  max={20}
+                  step={1}
+                  value={row.quantity}
+                  onChange={(e) =>
+                    updatePrint(i, { quantity: Math.min(20, Math.max(1, Math.floor(Number(e.target.value)) || 1)) })
+                  }
+                  className="w-full px-2 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePrint(i)}
+                  aria-label={`Remove print line ${i + 1}`}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={addPrint}
+                disabled={!canAddPrint}
+                className="inline-flex items-center gap-1 text-xs font-mono text-amber-400 hover:text-amber-300 disabled:opacity-40 transition-colors"
+              >
+                <Plus className="size-3.5" />
+                <span>Add framed print</span>
+              </button>
+              <span className="text-[11px] text-zinc-400 text-right">
+                {printTotal > 0
+                  ? `Shown to clients as: "${printTotal} framed ${printTotal === 1 ? "print" : "prints"} included"`
+                  : "Softcopy only: no prints included"}
+              </span>
+            </div>
+            {(printSizes.length === 0 || frames.length === 0) && (
+              <p className="text-[11px] text-zinc-400">
+                Add a print size and a frame under Frames &amp; prints to include prints.
+              </p>
+            )}
           </div>
 
           {/* Featured Toggle */}

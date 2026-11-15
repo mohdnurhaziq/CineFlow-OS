@@ -26,6 +26,22 @@ import {
   type ToggleCategoryActiveInput,
 } from "@/lib/validations/services";
 
+type IncludedPrintLine = { printSizeId: string; frameDesignId: string; quantity: number };
+
+/** Each size and frame must belong to the studio and still be on offer. Returns an error message, or null. */
+async function includedPrintsError(tenantId: string, lines: IncludedPrintLine[]): Promise<string | null> {
+  if (lines.length === 0) return null;
+  const sizeIds = [...new Set(lines.map((l) => l.printSizeId))];
+  const frameIds = [...new Set(lines.map((l) => l.frameDesignId))];
+  const [sizes, frames] = await Promise.all([
+    db.printSize.count({ where: { tenantId, isAvailable: true, id: { in: sizeIds } } }),
+    db.frameDesign.count({ where: { tenantId, isAvailable: true, id: { in: frameIds } } }),
+  ]);
+  if (sizes !== sizeIds.length) return "One of the print sizes is not available for this studio.";
+  if (frames !== frameIds.length) return "One of the frames is not available for this studio.";
+  return null;
+}
+
 function safeRevalidate(path: string) {
   try {
     revalidatePath(path);
@@ -54,6 +70,7 @@ export async function createServicePackage(input: CreateServicePackageInput) {
       description,
       deliverables,
       isFeatured,
+      includedPrints,
     } = validated;
 
     // Verify tenant exists
@@ -64,8 +81,14 @@ export async function createServicePackage(input: CreateServicePackageInput) {
       return { success: false, error: "TENANT_NOT_FOUND", message: "Studio tenant not found." };
     }
 
+    const printsError = await includedPrintsError(tenantId, includedPrints ?? []);
+    if (printsError) {
+      return { success: false, error: "INVALID_INCLUDED_PRINTS", message: printsError };
+    }
+
     const newPackage = await db.servicePackage.create({
       data: {
+        includedPrints: { create: includedPrints ?? [] },
         tenantId,
         name,
         category,
@@ -110,6 +133,7 @@ export async function updateServicePackage(input: UpdateServicePackageInput) {
       description,
       deliverables,
       isFeatured,
+      includedPrints,
     } = validated;
 
     // Check ownership
@@ -120,9 +144,16 @@ export async function updateServicePackage(input: UpdateServicePackageInput) {
       return { success: false, error: "PACKAGE_NOT_FOUND", message: "Service package not found or does not belong to studio." };
     }
 
+    const printsError = await includedPrintsError(tenantId, includedPrints ?? []);
+    if (printsError) {
+      return { success: false, error: "INVALID_INCLUDED_PRINTS", message: printsError };
+    }
+
+    // Lines are replaced wholesale, in the same transaction as the package edit.
     const updatedPackage = await db.servicePackage.update({
       where: { id },
       data: {
+        ...(includedPrints ? { includedPrints: { deleteMany: {}, create: includedPrints } } : {}),
         name,
         category,
         discipline,

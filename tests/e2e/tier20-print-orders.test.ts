@@ -10,6 +10,9 @@ import { TestHarness } from "./test-harness";
 import { framedPrice, upgradeAmount } from "@/lib/prints/pricing";
 import { zoneForState, parseZoneStates } from "@/lib/prints/zones";
 import { MY_STATES } from "@/lib/prints/states";
+import { includedPrintCount } from "@/lib/prints/pricing";
+import { createServicePackage, updateServicePackage } from "@/lib/actions/admin-services";
+import { deleteFrameDesign, deletePrintSize, togglePrintSizeAvailability, updateMatBoardPrice } from "@/lib/actions/admin-frames";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
   harness.setSuite("Tier 20", "Wall Art Print Orders: Schema, Pricing & Zones");
@@ -54,5 +57,112 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(lines[0]?.printSizeId, "psz_lum_8r", "Smallest size");
     harness.assertEqual(lines[0]?.frameDesignId, "frm_lum_black", "First frame");
     harness.assertEqual(lumina.matBoardPrice, 25, "Mat price default");
+  });
+
+  // ---- Package included prints (admin) and delete-protection ----
+  const pkgBase = {
+    tenantId: lumina.id,
+    tenantSlug: "lumina-cine",
+    name: "T20 Print Pkg",
+    category: "COMMERCIAL",
+    discipline: "PHOTOGRAPHY" as const,
+    price: 500,
+    depositPrice: 100,
+    turnaround: "5 days",
+    description: "Test package for prints",
+    deliverables: "10 stills",
+    isFeatured: false,
+  };
+  const t20Frame = await db.frameDesign.create({
+    data: { tenantId: lumina.id, name: "T20 Frame", material: "Wood", moldingWidth: 1, frameColor: "#000000", previewAsset: "/x.png", priceOffset: 0 },
+  });
+  const t20Size = await db.printSize.create({
+    data: { tenantId: lumina.id, code: "T20S", name: "T20 Size", widthInches: 5, heightInches: 7, basePrice: 10 },
+  });
+  const t20PkgIds: string[] = [];
+  harness.registerTeardown(async () => {
+    await db.servicePackage.deleteMany({ where: { name: "T20 Print Pkg" } });
+    await db.frameDesign.deleteMany({ where: { id: t20Frame.id } });
+    await db.printSize.deleteMany({ where: { id: t20Size.id } });
+    await db.tenant.update({ where: { id: lumina.id }, data: { matBoardPrice: 25 } });
+  });
+
+  await harness.test("T20-PKG-01: a package saves its included print lines and counts the prints", async () => {
+    const created = await createServicePackage({ ...pkgBase, includedPrints: [] });
+    if (!created.success || !created.package) throw new Error("create failed");
+    t20PkgIds.push(created.package.id);
+    const res = await updateServicePackage({
+      ...pkgBase,
+      id: created.package.id,
+      includedPrints: [
+        { printSizeId: "psz_lum_8r", frameDesignId: "frm_lum_black", quantity: 1 },
+        { printSizeId: t20Size.id, frameDesignId: t20Frame.id, quantity: 2 },
+      ],
+    });
+    harness.assertEqual(res.success, true, "Update succeeds");
+    const lines = await db.packageIncludedPrint.findMany({ where: { packageId: created.package.id } });
+    harness.assertEqual(lines.length, 2, "Two lines");
+    harness.assertEqual(includedPrintCount(lines), 3, "Three prints");
+    await updateServicePackage({ ...pkgBase, id: created.package.id, includedPrints: [{ printSizeId: "psz_lum_8r", frameDesignId: "frm_lum_black", quantity: 4 }] });
+    const after = await db.packageIncludedPrint.findMany({ where: { packageId: created.package.id } });
+    harness.assertEqual(after.length, 1, "Lines are replaced, not appended");
+    harness.assertEqual(includedPrintCount(after), 4, "Now four");
+  });
+
+  await harness.test("T20-PKG-02: another studio's print size or frame is rejected", async () => {
+    const created = await createServicePackage({ ...pkgBase, includedPrints: [] });
+    if (!created.success || !created.package) throw new Error("create failed");
+    t20PkgIds.push(created.package.id);
+    const badSize = await updateServicePackage({
+      ...pkgBase,
+      id: created.package.id,
+      includedPrints: [{ printSizeId: "psz_apx_8r", frameDesignId: "frm_lum_black", quantity: 1 }],
+    });
+    harness.assertEqual(badSize.success, false, "Foreign size rejected");
+    const badFrame = await createServicePackage({
+      ...pkgBase,
+      includedPrints: [{ printSizeId: "psz_lum_8r", frameDesignId: "frm_apx_black", quantity: 1 }],
+    });
+    harness.assertEqual(badFrame.success, false, "Foreign frame rejected on create");
+    const none = await db.packageIncludedPrint.count({ where: { packageId: created.package.id } });
+    harness.assertEqual(none, 0, "Nothing saved");
+  });
+
+  await harness.test("T20-PKG-03: a frame or size used by a package line cannot be deleted", async () => {
+    const created = await createServicePackage({
+      ...pkgBase,
+      includedPrints: [{ printSizeId: t20Size.id, frameDesignId: t20Frame.id, quantity: 1 }],
+    });
+    if (!created.success || !created.package) throw new Error("create failed");
+    t20PkgIds.push(created.package.id);
+    const f = await deleteFrameDesign({ id: t20Frame.id, tenantId: lumina.id, tenantSlug: "lumina-cine" });
+    harness.assertEqual(f.success, false, "Frame delete refused");
+    harness.assertEqual("error" in f ? f.error : "", "IN_USE", "Frame IN_USE");
+    harness.assertEqual("message" in f ? f.message : "", "This is used by a package or an order. Hide it instead.", "Frame message");
+    const s = await deletePrintSize({ id: t20Size.id, tenantId: lumina.id, tenantSlug: "lumina-cine" });
+    harness.assertEqual("error" in s ? s.error : "", "IN_USE", "Size IN_USE");
+    harness.assertEqual(await db.frameDesign.count({ where: { id: t20Frame.id } }), 1, "Frame still exists");
+    harness.assertEqual(await db.printSize.count({ where: { id: t20Size.id } }), 1, "Size still exists");
+  });
+
+  await harness.test("T20-PKG-05: a size can be hidden and shown again", async () => {
+    const hide = await togglePrintSizeAvailability({ id: t20Size.id, tenantId: lumina.id, tenantSlug: "lumina-cine", isAvailable: false });
+    harness.assertEqual(hide.success, true, "Hide ok");
+    harness.assertEqual((await db.printSize.findUnique({ where: { id: t20Size.id } }))?.isAvailable, false, "Hidden");
+    const refused = await updateServicePackage({
+      ...pkgBase,
+      id: t20PkgIds[0]!,
+      includedPrints: [{ printSizeId: t20Size.id, frameDesignId: "frm_lum_black", quantity: 1 }],
+    });
+    harness.assertEqual(refused.success, false, "A hidden size can't be added to a package");
+    await togglePrintSizeAvailability({ id: t20Size.id, tenantId: lumina.id, tenantSlug: "lumina-cine", isAvailable: true });
+  });
+
+  await harness.test("T20-PKG-04: the studio's mat board price can be changed", async () => {
+    const res = await updateMatBoardPrice({ tenantId: lumina.id, tenantSlug: "lumina-cine", price: 30 });
+    harness.assertEqual(res.success, true, "Saved");
+    harness.assertEqual((await db.tenant.findUnique({ where: { id: lumina.id } }))?.matBoardPrice, 30, "Tenant has 30");
+    const bad = await updateMatBoardPrice({ tenantId: lumina.id, tenantSlug: "lumina-cine", price: -1 });
+    harness.assertEqual(bad.success, false, "Negative price refused");
   });
 }

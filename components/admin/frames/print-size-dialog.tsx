@@ -14,6 +14,7 @@ export interface PrintSizeRow {
   widthInches: number;
   heightInches: number;
   basePrice: number;
+  isAvailable: boolean;
 }
 
 interface PrintSizeDialogProps {

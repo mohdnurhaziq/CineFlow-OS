@@ -62,3 +62,20 @@ export const DeletePrintSizeSchema = z.object({
 });
 
 export type DeletePrintSizeInput = z.infer<typeof DeletePrintSizeSchema>;
+
+export const TogglePrintSizeAvailabilitySchema = z.object({
+  id: z.string().min(1, "Print size ID is required"),
+  tenantId: z.string().min(1, "Tenant ID is required"),
+  tenantSlug: z.string().min(1, "Tenant slug is required"),
+  isAvailable: z.boolean(),
+});
+
+export type TogglePrintSizeAvailabilityInput = z.infer<typeof TogglePrintSizeAvailabilitySchema>;
+
+export const UpdateMatBoardPriceSchema = z.object({
+  tenantId: z.string().min(1, "Tenant ID is required"),
+  tenantSlug: z.string().min(1, "Tenant slug is required"),
+  price: z.coerce.number().min(0, "Mat board price cannot be negative").max(100000),
+});
+
+export type UpdateMatBoardPriceInput = z.infer<typeof UpdateMatBoardPriceSchema>;

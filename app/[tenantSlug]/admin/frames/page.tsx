@@ -36,6 +36,7 @@ export default async function AdminFramesPage({ params }: FramesPageProps) {
       name: true,
       slug: true,
       currency: true,
+      matBoardPrice: true,
     },
   });
 
@@ -59,6 +60,7 @@ export default async function AdminFramesPage({ params }: FramesPageProps) {
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         currency={tenant.currency}
+        matBoardPrice={tenant.matBoardPrice}
         initialFrames={frames as unknown as FrameDesignRow[]}
         initialSizes={printSizes as unknown as PrintSizeRow[]}
       />
