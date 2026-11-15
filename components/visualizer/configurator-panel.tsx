@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import type { MatBoardType } from "@/lib/prints/pricing";
+import { matInchesFor } from "@/lib/prints/orientation";
 import {
   Image as ImageIcon,
   Maximize,
@@ -93,9 +94,9 @@ export function ConfiguratorPanel({
 }: ConfiguratorPanelProps) {
   const [activeTab, setActiveTab] = useState<"PHOTO" | "SIZE" | "FRAME" | "MAT">("SIZE");
 
-  const matInches = matBoard === "NONE" ? 0 : 2.0;
-  const totalW = printW + matInches * 2 + selectedFrameDesign.moldingWidth * 2;
-  const totalH = printH + matInches * 2 + selectedFrameDesign.moldingWidth * 2;
+  const mat = matInchesFor(matBoard, printW, printH);
+  const totalW = printW + mat.x * 2 + selectedFrameDesign.moldingWidth * 2;
+  const totalH = printH + mat.y * 2 + selectedFrameDesign.moldingWidth * 2;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -375,7 +376,7 @@ export function ConfiguratorPanel({
                   <div>
                     <div className="font-bold text-sm text-white">2&quot; Pure Archival White</div>
                     <div className="text-xs text-zinc-400 mt-0.5">
-                      45° beveled acid-free core (+4&quot; total frame size)
+                      45° beveled acid-free core — shaped to your photo
                     </div>
                   </div>
                 </div>
@@ -399,7 +400,7 @@ export function ConfiguratorPanel({
                   <div>
                     <div className="font-bold text-sm text-white">2&quot; Warm Gallery Off-White</div>
                     <div className="text-xs text-zinc-400 mt-0.5">
-                      Warm museum matting (+4&quot; total frame size)
+                      Warm museum matting — shaped to your photo
                     </div>
                   </div>
                 </div>

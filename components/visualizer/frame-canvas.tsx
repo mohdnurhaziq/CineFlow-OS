@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { MatBoardType } from "@/lib/prints/pricing";
+import { matInchesFor } from "@/lib/prints/orientation";
 
 interface FrameCanvasProps {
   pixelsPerInch: number;
@@ -37,17 +38,19 @@ export function FrameCanvas({
   showDimensions = true,
 }: FrameCanvasProps) {
   // Mat dimensions in inches
-  const matInches = matBoardType === "NONE" ? 0 : 2.0;
+  // The mat follows the print's shape (wider beside the long edges), so the outline matches the photo.
+  const mat = matInchesFor(matBoardType, printWidthInches, printHeightInches);
 
   // Total Exterior Dimensions (inches)
-  const totalWidthInches = printWidthInches + matInches * 2 + moldingWidthInches * 2;
-  const totalHeightInches = printHeightInches + matInches * 2 + moldingWidthInches * 2;
+  const totalWidthInches = printWidthInches + mat.x * 2 + moldingWidthInches * 2;
+  const totalHeightInches = printHeightInches + mat.y * 2 + moldingWidthInches * 2;
 
   // Dimensions in Pixels
   const totalWidthPx = Math.round(totalWidthInches * pixelsPerInch);
   const totalHeightPx = Math.round(totalHeightInches * pixelsPerInch);
   const moldingWidthPx = Math.max(4, Math.round(moldingWidthInches * pixelsPerInch));
-  const matWidthPx = Math.round(matInches * pixelsPerInch);
+  const matXPx = Math.round(mat.x * pixelsPerInch);
+  const matYPx = Math.round(mat.y * pixelsPerInch);
 
   // Percentage of 84" sofa width
   const percentOfSofa = Math.round((totalWidthInches / 84) * 100);
@@ -118,7 +121,7 @@ export function FrameCanvas({
             matStyle
               ? {
                   ...matStyle,
-                  padding: `${matWidthPx}px`,
+                  padding: `${matYPx}px ${matXPx}px`,
                 }
               : {}
           }

@@ -33,7 +33,7 @@ import ProjectVaultPage from "@/app/[tenantSlug]/vault/[projectId]/page";
 import AdminProjectPrintsPage from "@/app/[tenantSlug]/admin/projects/[projectId]/prints/page";
 import nodemailer, { type Transporter } from "nodemailer";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
-import { orientationFor, orientPhotoSize, parseResolution, printDimensionsFor } from "@/lib/prints/orientation";
+import { matInchesFor, orientationFor, orientPhotoSize, parseResolution, printDimensionsFor } from "@/lib/prints/orientation";
 import { loadPrintOrderPreviews } from "@/lib/prints/order-preview";
 import { loadFramedPrints } from "@/lib/prints/gallery";
 import { deleteDeliverableFiles, storeDeliverablePhoto } from "@/lib/deliverables/storage";
@@ -62,6 +62,16 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(orientationFor(4000, 6000), "PORTRAIT", "Tall photo");
     harness.assertEqual(orientationFor(6000, 4000), "LANDSCAPE", "Wide photo");
     harness.assertEqual(orientationFor(3000, 3000), "PORTRAIT", "Square photo");
+  });
+
+  await harness.test("T20-MAT-01: a mat keeps the photo's shape (2\" on the short sides of the print, wider on the long)", async () => {
+    harness.assertEqual(JSON.stringify(matInchesFor("NONE", 12, 8)), JSON.stringify({ x: 0, y: 0 }), "No mat: nothing");
+    const wide = matInchesFor("WHITE_2INCH", 12, 8);
+    harness.assertEqual(JSON.stringify(wide), JSON.stringify({ x: 3, y: 2 }), "12×8 print: 3\" left/right, 2\" top/bottom");
+    harness.assertEqual((12 + 2 * wide.x) / (8 + 2 * wide.y), 12 / 8, "Matted outline keeps 3:2");
+    const tall = matInchesFor("OFFWHITE_2INCH", 8, 12);
+    harness.assertEqual(JSON.stringify(tall), JSON.stringify({ x: 2, y: 3 }), "8×12 print: 2\" left/right, 3\" top/bottom");
+    harness.assertEqual(JSON.stringify(matInchesFor("WHITE_2INCH", 8, 8)), JSON.stringify({ x: 2, y: 2 }), "Square: 2\" all round");
   });
 
   await harness.test("T20-RATIO-01: the print keeps the size's short side and follows the photo's shape", async () => {

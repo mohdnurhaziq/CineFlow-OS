@@ -87,7 +87,7 @@ export function VisualizerShell({
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoOption>(defaultPhoto);
   const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSizeOption>(claimLine?.size ?? defaultPrintSize);
   const [selectedFrameDesign, setSelectedFrameDesign] = useState<FrameDesignOption>(claimLine?.frame ?? defaultFrameDesign);
-  const [matBoard, setMatBoard] = useState<MatBoardType>(claimLine ? "NONE" : "WHITE_2INCH");
+  const [matBoard, setMatBoard] = useState<MatBoardType>("NONE");
   const [wallColor, setWallColor] = useState<WallColorKey>("WARM_GRAY");
   const [zoomMode, setZoomMode] = useState<"ROOM" | "DETAIL">("ROOM");
   /** The included print being claimed, if any: its size and frame are the starting point. */

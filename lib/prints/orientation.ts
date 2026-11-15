@@ -38,6 +38,18 @@ export function orientPhotoSize(photo: PhotoSize, orientation: string | null | u
   return photo;
 }
 
+/**
+ * A mat's width on each side, in inches, so the matted outline keeps the print's (= photo's) shape:
+ * 2" beside the print's short edges, wider beside its long edges. `x` is left/right, `y` top/bottom.
+ */
+export function matInchesFor(mat: string, printWidthInches: number, printHeightInches: number): { x: number; y: number } {
+  if (mat === "NONE") return { x: 0, y: 0 };
+  const base = 2;
+  const short = Math.min(printWidthInches, printHeightInches);
+  if (short <= 0) return { x: base, y: base };
+  return { x: (base * printWidthInches) / short, y: (base * printHeightInches) / short };
+}
+
 /** A stored resolution ("6000 × 4000", "6000x4000") as pixels; null when missing or unreadable. */
 export function parseResolution(resolution: string | null | undefined): PhotoSize | null {
   const m = resolution?.match(/(\d+)\s*[×xX*]\s*(\d+)/);
