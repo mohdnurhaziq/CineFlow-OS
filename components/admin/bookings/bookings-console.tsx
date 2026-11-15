@@ -1,5 +1,6 @@
 "use client";
 
+import { chipClass, chipCountClass, chipListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
 import { useMemo, useState, type ComponentProps } from "react";
@@ -137,7 +138,7 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
         {...newBooking}
       />
 
-      <div role="tablist" aria-label="Filter bookings" className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+      <div role="tablist" aria-label="Filter bookings" className={chipListClass}>
         {tabs.map((t) => {
           const active = filter === t.id;
           const count = groups[t.id].length;
@@ -148,17 +149,11 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
               role="tab"
               aria-selected={active}
               onClick={() => setFilter(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border whitespace-nowrap transition-colors ${
-                active
-                  ? "bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-zinc-800"
-              }`}
+              className={chipClass(active)}
             >
               {t.label}
               <span
-                className={`px-1.5 rounded-full text-[10px] tabular-nums ${
-                  t.id === "verify" && count > 0 ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-400"
-                }`}
+                className={chipCountClass(active, t.id === "verify" && count > 0)}
               >
                 {count}
               </span>

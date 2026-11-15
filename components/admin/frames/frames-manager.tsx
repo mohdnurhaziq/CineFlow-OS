@@ -1,5 +1,6 @@
 "use client";
 
+import { tabClass, tabListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -256,15 +257,11 @@ export function FramesManager({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-zinc-800">
+      <div className={tabListClass}>
         <button
           type="button"
           onClick={() => setActiveTab("frames")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-mono font-medium border-b-2 transition-colors ${
-            activeTab === "frames"
-              ? "border-amber-400 text-amber-400 bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "frames")}
         >
           <Frame className="size-4" />
           <span>Frame Moldings ({initialFrames.length})</span>
@@ -272,11 +269,7 @@ export function FramesManager({
         <button
           type="button"
           onClick={() => setActiveTab("sizes")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-mono font-medium border-b-2 transition-colors ${
-            activeTab === "sizes"
-              ? "border-amber-400 text-amber-400 bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "sizes")}
         >
           <Layers className="size-4" />
           <span>Print Dimensions ({initialSizes.length})</span>

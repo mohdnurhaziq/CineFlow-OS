@@ -1,3 +1,4 @@
+import { chipClass, chipCountClass, chipListClass } from "@/components/ui/tabs";
 import { PageHeader, PageShell } from "@/components/ui/page";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -58,17 +59,15 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
         description="Every confirmed booking and signed proposal has a gallery: upload the client&apos;s photos here. Productions also get shoot-day planning."
       />
 
-      <nav aria-label="Project kinds" className="flex flex-wrap gap-1.5">
+      <nav aria-label="Project kinds" className={chipListClass}>
         {PROJECT_LIST_TABS.map((t) => (
           <Link
             key={t}
             href={t === "productions" ? `/${tenant.slug}/admin/projects` : `/${tenant.slug}/admin/projects?tab=${t}`}
             aria-current={t === tab ? "page" : undefined}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-              t === tab ? "bg-amber-500 text-black border-amber-500" : "border-zinc-800 text-zinc-300 hover:border-zinc-600"
-            }`}
+            className={chipClass(t === tab)}
           >
-            {TAB_LABELS[t]} <span className="opacity-70">({counts[t]})</span>
+            {TAB_LABELS[t]} <span className={chipCountClass(t === tab)}>{counts[t]}</span>
           </Link>
         ))}
       </nav>

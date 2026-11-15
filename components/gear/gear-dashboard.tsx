@@ -1,5 +1,6 @@
 "use client";
 
+import { tabClass, tabListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -246,15 +247,11 @@ export function GearDashboard({
       />
 
       {/* Main Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-zinc-800 pb-px text-xs font-mono font-medium overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0">
+      <div className={tabListClass}>
         <button
           type="button"
           onClick={() => setActiveTab("ITEMS")}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all cursor-pointer ${
-            activeTab === "ITEMS"
-              ? "border-amber-400 text-amber-400 font-bold bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "ITEMS")}
         >
           <Layers className="size-4" />
           <span>Equipment ({items.length})</span>
@@ -263,11 +260,7 @@ export function GearDashboard({
         <button
           type="button"
           onClick={() => setActiveTab("BUNDLES")}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all cursor-pointer ${
-            activeTab === "BUNDLES"
-              ? "border-amber-400 text-amber-400 font-bold bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "BUNDLES")}
         >
           <Package className="size-4" />
           <span>Kits ({bundles.length})</span>
@@ -276,11 +269,7 @@ export function GearDashboard({
         <button
           type="button"
           onClick={() => setActiveTab("RESERVATIONS")}
-          className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all cursor-pointer ${
-            activeTab === "RESERVATIONS"
-              ? "border-amber-400 text-amber-400 font-bold bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "RESERVATIONS")}
         >
           <ClipboardCheck className="size-4" />
           <span>Reservations &amp; checks ({reservations.length})</span>

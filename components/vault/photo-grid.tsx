@@ -1,5 +1,6 @@
 "use client";
 
+import { chipClass, chipListClass } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -104,15 +105,11 @@ export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
         {/* Actions & Filter Switch */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Filter Switch */}
-          <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+          <div className={chipListClass}>
             <button
               type="button"
               onClick={() => setFilterFavsOnly(false)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-                !filterFavsOnly
-                  ? "bg-amber-500 text-black font-bold shadow-sm"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              className={chipClass(!filterFavsOnly)}
             >
               All Proofs ({activeItems.length})
             </button>
@@ -120,11 +117,7 @@ export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
             <button
               type="button"
               onClick={() => setFilterFavsOnly(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
-                filterFavsOnly
-                  ? "bg-amber-500 text-black font-bold shadow-sm"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              className={chipClass(filterFavsOnly)}
             >
               <Heart className="size-3 fill-red-500 text-red-500" />
               <span>Favorites ({totalFavs})</span>

@@ -1,9 +1,11 @@
 "use client";
 
+import { tabClass, tabListClass } from "@/components/ui/tabs";
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import { PageHeader } from "@/components/ui/page";
+import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { DirtyContext, type StudioTenantData } from "./settings-ui";
 import { StudioTab } from "./studio-tab";
@@ -54,7 +56,7 @@ export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData;
             sideways on a very narrow phone, with the scrollbar hidden. */}
         <nav
           aria-label="Settings sections"
-          className="flex gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shadow-[inset_0_-1px_0_#27272a] -mx-4 px-4 sm:mx-0 sm:px-0"
+          className={cn(tabListClass, "-mx-4 px-4 sm:mx-0 sm:px-0")}
         >
           {SETTINGS_TABS.map((t) => (
             <a
@@ -66,9 +68,7 @@ export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData;
                 void go(t.id);
               }}
               aria-current={t.id === tab ? "page" : undefined}
-              className={`shrink-0 px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                t.id === tab ? "border-amber-500 text-white" : "border-transparent text-zinc-400 hover:text-white"
-              }`}
+              className={tabClass(t.id === tab)}
             >
               {t.label}
             </a>

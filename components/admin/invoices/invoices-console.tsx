@@ -1,5 +1,6 @@
 "use client";
 
+import { chipClass, chipCountClass, chipListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -123,7 +124,7 @@ export function InvoicesConsole({
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div role="tablist" aria-label="Filter invoices by status" className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+        <div role="tablist" aria-label="Filter invoices by status" className={chipListClass}>
           {FILTERS.map((f) => {
             const active = filter === f.id;
             return (
@@ -133,17 +134,11 @@ export function InvoicesConsole({
                 role="tab"
                 aria-selected={active}
                 onClick={() => setFilter(f.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border whitespace-nowrap transition-colors ${
-                  active
-                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-zinc-800"
-                }`}
+                className={chipClass(active)}
               >
                 {f.label}
                 <span
-                  className={`px-1.5 rounded-full text-[10px] tabular-nums ${
-                    f.id === "review" && counts.review > 0 ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-400"
-                  }`}
+                  className={chipCountClass(active, f.id === "review" && counts.review > 0)}
                 >
                   {counts[f.id]}
                 </span>

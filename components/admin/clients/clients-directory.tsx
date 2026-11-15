@@ -1,5 +1,6 @@
 "use client";
 
+import { chipClass, chipCountClass, chipListClass } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
 import { useMemo, useState } from "react";
@@ -110,22 +111,17 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
       />
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
-      <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Filter clients">
+      <div className={chipListClass} role="group" aria-label="Filter clients">
         {filters.map((f) => (
           <button
             key={f.id}
             type="button"
             onClick={() => setFilter(f.id)}
             aria-pressed={filter === f.id}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors",
-              filter === f.id
-                ? "bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-zinc-800"
-            )}
+            className={chipClass(filter === f.id)}
           >
             {f.label}
-            <span className={cn("text-[10px]", filter === f.id ? "text-amber-300" : "text-zinc-500")}>{counts[f.id]}</span>
+            <span className={chipCountClass(filter === f.id)}>{counts[f.id]}</span>
           </button>
         ))}
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { tabClass, tabListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
@@ -164,15 +165,11 @@ export function ProposalAdminDashboard({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-zinc-800">
+      <div className={tabListClass}>
         <button
           type="button"
           onClick={() => setActiveTab("templates")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-mono font-medium border-b-2 transition-colors ${
-            activeTab === "templates"
-              ? "border-amber-400 text-amber-400 bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "templates")}
         >
           <Layers className="size-4" />
           <span>Add-On Catalog ({initialTemplates.length})</span>
@@ -180,11 +177,7 @@ export function ProposalAdminDashboard({
         <button
           type="button"
           onClick={() => setActiveTab("pipeline")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-mono font-medium border-b-2 transition-colors ${
-            activeTab === "pipeline"
-              ? "border-amber-400 text-amber-400 bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "pipeline")}
         >
           <FileText className="size-4" />
           <span>Client Proposals Pipeline ({initialProposals.length})</span>

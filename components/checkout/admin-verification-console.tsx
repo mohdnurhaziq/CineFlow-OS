@@ -1,5 +1,6 @@
 "use client";
 
+import { chipClass, chipListClass } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
 import { useState, useTransition } from "react";
@@ -285,15 +286,11 @@ export function AdminVerificationConsole({
       {/* Control Bar: Tabs & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-900 border border-zinc-800 overflow-x-auto">
+        <div className={chipListClass}>
           <button
             type="button"
             onClick={() => setActiveTab("ALL")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-              activeTab === "ALL"
-                ? "bg-amber-500 text-black font-bold"
-                : "text-zinc-400 hover:text-white"
-            }`}
+            className={chipClass(activeTab === "ALL")}
           >
             All Pending ({initialPending.length})
           </button>
@@ -301,11 +298,7 @@ export function AdminVerificationConsole({
           <button
             type="button"
             onClick={() => setActiveTab("QR")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-              activeTab === "QR"
-                ? "bg-amber-500 text-black font-bold"
-                : "text-zinc-400 hover:text-white"
-            }`}
+            className={chipClass(activeTab === "QR")}
           >
             QR Slips ({qrPending.length})
           </button>
@@ -313,11 +306,7 @@ export function AdminVerificationConsole({
           <button
             type="button"
             onClick={() => setActiveTab("CASH")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-              activeTab === "CASH"
-                ? "bg-amber-500 text-black font-bold"
-                : "text-zinc-400 hover:text-white"
-            }`}
+            className={chipClass(activeTab === "CASH")}
           >
             Cash Counter ({cashPending.length})
           </button>
@@ -325,11 +314,7 @@ export function AdminVerificationConsole({
           <button
             type="button"
             onClick={() => setActiveTab("HISTORY")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer ${
-              activeTab === "HISTORY"
-                ? "bg-amber-500 text-black font-bold"
-                : "text-zinc-400 hover:text-white"
-            }`}
+            className={chipClass(activeTab === "HISTORY")}
           >
             Settlement History ({initialHistory.length})
           </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { chipClass, chipListClass } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import {
@@ -223,48 +224,32 @@ export function ShotListHud({
       {/* Filter and Control Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-zinc-800/80">
         {/* Status Tabs */}
-        <div className="flex items-center gap-1 bg-zinc-900/90 p-1 rounded-xl border border-zinc-800 text-xs font-medium">
+        <div className={chipListClass}>
           <button
             type="button"
             onClick={() => setStatusFilter("ALL")}
-            className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-              statusFilter === "ALL"
-                ? "bg-zinc-800 text-white shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
+            className={chipClass(statusFilter === "ALL")}
           >
             All ({total})
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter("PENDING")}
-            className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-              statusFilter === "PENDING"
-                ? "bg-zinc-800 text-amber-300 shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
+            className={chipClass(statusFilter === "PENDING")}
           >
             Pending ({pending})
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter("IN_PROGRESS")}
-            className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-              statusFilter === "IN_PROGRESS"
-                ? "bg-zinc-800 text-indigo-300 shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
+            className={chipClass(statusFilter === "IN_PROGRESS")}
           >
             In Progress ({inProgress})
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter("COMPLETED")}
-            className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-              statusFilter === "COMPLETED"
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
+            className={chipClass(statusFilter === "COMPLETED")}
           >
             Completed ({completed})
           </button>

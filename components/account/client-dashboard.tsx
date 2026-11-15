@@ -1,5 +1,6 @@
 "use client";
 
+import { chipClass, chipListClass } from "@/components/ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
@@ -20,7 +21,6 @@ import {
   FolderLock,
   Heart,
   Image as ImageIcon,
-  LayoutDashboard,
   Lock,
   LockOpen,
   MapPin,
@@ -566,38 +566,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           </button>
         </div>
 
-        {/* Section Navigation Tabs */}
-        <div className="border-b border-zinc-800 flex items-center gap-1 overflow-x-auto scrollbar-none pb-px">
-          {[
-            { id: "overview" as const, label: "Overview", icon: LayoutDashboard },
-            { id: "projects" as const, label: `Galleries & Vault (${projects.length})`, icon: FolderLock },
-            { id: "bookings" as const, label: `Bookings (${bookings.length})`, icon: CalendarClock },
-            { id: "invoices" as const, label: `Invoices & Receipts (${invoices.length})`, icon: Receipt },
-            ...(proposals.length > 0
-              ? [{ id: "proposals" as const, label: `Proposals (${proposals.length})`, icon: FileText }]
-              : []),
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => switchTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-2 px-3.5 py-2.5 text-xs font-mono transition-colors border-b-2 whitespace-nowrap",
-                  isActive
-                    ? "border-amber-400 text-amber-400 font-bold"
-                    : "border-transparent text-zinc-400 hover:text-white hover:border-zinc-700"
-                )}
-              >
-                <Icon className="size-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
         {/* ======================================================== */}
         {/* TAB 1: OVERVIEW DIGEST (EXECUTIVE SNAPSHOT)                */}
         {/* ======================================================== */}
@@ -1110,34 +1078,25 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               </div>
 
               {/* Sub-filter pills */}
-              <div className="flex items-center gap-1 bg-zinc-900/80 p-1 rounded-lg border border-zinc-800 self-start sm:self-auto text-xs font-mono">
+              <div className={cn(chipListClass, "self-start sm:self-auto")}>
                 <button
                   type="button"
                   onClick={() => setBookingFilter("all")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    bookingFilter === "all" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
-                  )}
+                  className={chipClass(bookingFilter === "all")}
                 >
                   All ({bookings.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setBookingFilter("upcoming")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    bookingFilter === "upcoming" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
-                  )}
+                  className={chipClass(bookingFilter === "upcoming")}
                 >
                   Upcoming ({upcomingBookings.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setBookingFilter("past")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    bookingFilter === "past" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
-                  )}
+                  className={chipClass(bookingFilter === "past")}
                 >
                   Past ({pastBookings.length})
                 </button>
@@ -1265,34 +1224,25 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               </div>
 
               {/* Filter pills */}
-              <div className="flex items-center gap-1 bg-zinc-900/80 p-1 rounded-lg border border-zinc-800 self-start sm:self-auto text-xs font-mono">
+              <div className={cn(chipListClass, "self-start sm:self-auto")}>
                 <button
                   type="button"
                   onClick={() => setInvoiceFilter("all")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    invoiceFilter === "all" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
-                  )}
+                  className={chipClass(invoiceFilter === "all")}
                 >
                   All
                 </button>
                 <button
                   type="button"
                   onClick={() => setInvoiceFilter("unpaid")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    invoiceFilter === "unpaid" ? "bg-amber-500/20 text-amber-300 font-bold" : "text-zinc-400 hover:text-white"
-                  )}
+                  className={chipClass(invoiceFilter === "unpaid")}
                 >
                   Unpaid ({unpaidInvoices.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setInvoiceFilter("paid")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    invoiceFilter === "paid" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-white"
-                  )}
+                  className={chipClass(invoiceFilter === "paid")}
                 >
                   Paid ({paidInvoices.length})
                 </button>

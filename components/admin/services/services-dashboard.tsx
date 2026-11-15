@@ -1,5 +1,6 @@
 "use client";
 
+import { tabClass, tabListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
@@ -208,15 +209,11 @@ export function ServicesDashboard({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-zinc-800">
+      <div className={tabListClass}>
         <button
           type="button"
           onClick={() => setActiveTab("packages")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-mono font-medium border-b-2 transition-colors ${
-            activeTab === "packages"
-              ? "border-amber-400 text-amber-400 bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "packages")}
         >
           <Package className="size-4" />
           <span>Service Packages ({initialPackages.length})</span>
@@ -224,11 +221,7 @@ export function ServicesDashboard({
         <button
           type="button"
           onClick={() => setActiveTab("categories")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-mono font-medium border-b-2 transition-colors ${
-            activeTab === "categories"
-              ? "border-amber-400 text-amber-400 bg-amber-500/5"
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
+          className={tabClass(activeTab === "categories")}
         >
           <Layers className="size-4" />
           <span>Campaign Categories ({initialCategories.length})</span>
