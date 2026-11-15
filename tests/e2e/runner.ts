@@ -37,6 +37,7 @@ import { runTier16OnboardingGuideTests } from "./tier16-onboarding-guide.test";
 import { runTier17ClientsTests } from "./tier17-clients.test";
 import { runTier18PaymentConfirmationTests } from "./tier18-payment-confirmation.test";
 import { runTier19PasswordResetTests } from "./tier19-password-reset.test";
+import { runTier20PrintOrderTests } from "./tier20-print-orders.test";
 
 // The suite creates and mutates lots of records; refuse to run against anything but the
 // throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
@@ -172,6 +173,11 @@ async function runMasterTestSuite() {
     // Tier 19: Forgot password (request, email link, reset, sign-out everywhere)
     // --------------------------------------------------------------------------
     await runTier19PasswordResetTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 20: Wall art print orders (schema, pricing, shipping zones)
+    // --------------------------------------------------------------------------
+    await runTier20PrintOrderTests(harness);
   } catch (err) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {

@@ -43,6 +43,10 @@ model Tenant {
   kitBundles             KitBundle[]
   frameDesigns           FrameDesign[]
   printSizes             PrintSize[]
+  matBoardPrice          Float               @default(25)
+  shippingZones          ShippingZone[]
+  bookingIncludedPrints  BookingIncludedPrint[]
+  printOrders            PrintOrder[]
   clientBookings         ClientBooking[]
   bookingSlots           BookingSlot[]
   servicePackages        ServicePackage[]
@@ -132,6 +136,7 @@ model PrintSize {
   widthInches  Float
   heightInches Float
   basePrice    Float
+  isAvailable  Boolean  @default(true)
 
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -161,6 +166,14 @@ model User {
   passwordResetExpires DateTime?
   // Sessions signed in before this time are no longer accepted (set when the password is reset).
   sessionsValidAfter   DateTime?
+  // Last delivery address used for wall art print orders.
+  shipRecipient        String?
+  shipPhone            String?
+  shipLine1            String?
+  shipLine2            String?
+  shipPostcode         String?
+  shipCity             String?
+  shipState            String?
   // Onboarding guide on the admin dashboard: set when the owner closes the setup checklist,
   // and when this user finishes or skips the dashboard tour. Null = not yet.
   onboardingChecklistDismissedAt DateTime?
@@ -175,6 +188,7 @@ model User {
   clientProjects     Project[]           @relation("ClientProjects")
   studioProjects     Project[]           @relation("StudioProjects")
   invoices           MilestoneInvoice[]
+  printOrders        PrintOrder[]        @relation("PrintOrderClient")
 
   // One account per email per studio, so the same person can be a client of several studios.
   @@unique([tenantId, email])
@@ -263,6 +277,7 @@ model MilestoneInvoice {
   project          Project?  @relation(fields: [projectId], references: [id])
   client           User      @relation(fields: [clientId], references: [id])
   booking          ClientBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  printOrder       PrintOrder?
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
@@ -308,6 +323,7 @@ model Project {
   deliverables       ClientDeliverable[]
   invoices           MilestoneInvoice[]
   reservations       EquipmentReservation[]
+  printOrders        PrintOrder[]
 
   @@index([tenantId])
   @@index([clientId])
@@ -548,6 +564,7 @@ model ClientBooking {
   package        ServicePackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   invoices       MilestoneInvoice[]
   project        Project?
+  includedPrints BookingIncludedPrint[]
 
   @@index([tenantId])
   @@index([userId])
@@ -571,6 +588,7 @@ model ServicePackage {
   tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   showcases    ShowcaseItem[]
   bookings     ClientBooking[]
+  includedPrints PackageIncludedPrint[]
 
   @@index([tenantId])
   @@index([tenantId, category])
@@ -598,4 +616,126 @@ model ShowcaseItem {
   @@index([servicePackageId])
   @@index([tenantId, category, sortOrder])
   @@index([tenantId, isFeatured])
+}
+
+// ==============================================================================
+// WALL ART PRINT ORDERS
+// ==============================================================================
+
+model PackageIncludedPrint {
+  id            String         @id @default(cuid())
+  packageId     String
+  printSizeId   String
+  frameDesignId String
+  quantity      Int
+
+  package       ServicePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId])
+}
+
+model BookingIncludedPrint {
+  id            String        @id @default(cuid())
+  tenantId      String
+  bookingId     String
+  printSizeId   String
+  frameDesignId String
+  quantity      Int
+  // Snapshot of the size and frame at the time the print was granted
+  sizeCode      String
+  sizeName      String
+  widthInches   Float
+  heightInches  Float
+  frameName     String
+  source        String        // PACKAGE, BACKFILL, MANUAL
+  grantedById   String?
+  note          String?
+  createdAt     DateTime      @default(now())
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking       ClientBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([bookingId])
+}
+
+model PrintOrder {
+  id               String            @id @default(cuid())
+  tenantId         String
+  clientId         String
+  projectId        String
+  orderNumber      String            @unique
+  fulfilment       String            // SHIP, PICKUP
+  recipientName    String?
+  recipientPhone   String?
+  line1            String?
+  line2            String?
+  postcode         String?
+  city             String?
+  state            String?
+  country          String            @default("Malaysia")
+  shippingZoneName String?
+  shippingFee      Float             @default(0)
+  itemsTotal       Float
+  totalAmount      Float
+  status           String            @default("NEW")
+  courier          String?
+  trackingNumber   String?
+  invoiceId        String?           @unique
+  placedById       String
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client           User              @relation("PrintOrderClient", fields: [clientId], references: [id])
+  project          Project           @relation(fields: [projectId], references: [id])
+  invoice          MilestoneInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  items            PrintOrderItem[]
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([projectId])
+  @@index([tenantId, status])
+}
+
+model PrintOrderItem {
+  id                     String     @id @default(cuid())
+  orderId                String
+  kind                   String     // INCLUDED, PAID
+  bookingIncludedPrintId String?
+  deliverableItemId      String?
+  photoUrl               String
+  photoTitle             String
+  orientation            String
+  printSizeId            String
+  sizeCode               String
+  sizeName               String
+  widthInches            Float
+  heightInches           Float
+  sizePrice              Float
+  frameDesignId          String
+  frameName              String
+  framePrice             Float
+  matBoardType           String
+  matPrice               Float
+  upgradeAmount          Float
+  lineAmount             Float
+
+  order                  PrintOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model ShippingZone {
+  id         String @id @default(cuid())
+  tenantId   String
+  name       String
+  fee        Float
+  statesJson String // JSON array of state names
+  sortOrder  Int    @default(0)
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }

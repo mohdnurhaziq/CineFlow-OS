@@ -15,6 +15,7 @@ import { createPrintOrder } from "@/lib/actions/visualizer";
 import type { PrintSizeOption, FrameDesignOption, PhotoOption } from "./configurator-panel";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import type { MatBoardType } from "@/lib/prints/pricing";
 
 /** A client orders for themselves; studio staff order on a client's behalf. */
 export type PrintOrderer = { kind: "client" | "staff"; name: string; email: string; phone: string };
@@ -30,7 +31,7 @@ interface OrderModalProps {
   selectedPhoto: PhotoOption;
   selectedPrintSize: PrintSizeOption;
   selectedFrameDesign: FrameDesignOption;
-  matBoard: "NONE" | "WHITE_2INCH" | "OFFWHITE_2INCH";
+  matBoard: MatBoardType;
   orientation: "PORTRAIT" | "LANDSCAPE";
   totalPrice: number;
 }

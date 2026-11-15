@@ -267,6 +267,10 @@ async function main() {
     },
   });
 
+  await prisma.packageIncludedPrint.create({
+    data: { packageId: "pkg_lumina_comm", printSizeId: "psz_lum_8r", frameDesignId: "frm_lum_black", quantity: 1 },
+  });
+
   const pkgLuminaWed = await prisma.servicePackage.create({
     data: {
       id: "pkg_lumina_wed",
@@ -394,6 +398,24 @@ async function main() {
       { id: "psz_apx_12r", tenantId: apexTenant.id, code: "12R", name: "12R (12 x 18 in)", widthInches: 12.0, heightInches: 18.0, basePrice: 130.0 },
       { id: "psz_apx_16r", tenantId: apexTenant.id, code: "16R", name: "16R (16 x 24 in)", widthInches: 16.0, heightInches: 210.0, basePrice: 210.0 },
       { id: "psz_apx_20r", tenantId: apexTenant.id, code: "20R", name: "20R (20 x 30 in)", widthInches: 20.0, heightInches: 30.0, basePrice: 350.0 },
+    ],
+  });
+
+  // Shipping zones (Lumina) and the print included with the commercial package
+  await prisma.shippingZone.createMany({
+    data: [
+      { tenantId: luminaTenant.id, name: "Local", fee: 10, statesJson: JSON.stringify(["Sarawak"]), sortOrder: 0 },
+      { tenantId: luminaTenant.id, name: "Sabah", fee: 20, statesJson: JSON.stringify(["Sabah", "Labuan"]), sortOrder: 1 },
+      {
+        tenantId: luminaTenant.id,
+        name: "Peninsular",
+        fee: 30,
+        statesJson: JSON.stringify([
+          "Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan", "Pahang", "Perak", "Perlis",
+          "Pulau Pinang", "Selangor", "Terengganu", "Kuala Lumpur", "Putrajaya",
+        ]),
+        sortOrder: 2,
+      },
     ],
   });
 
