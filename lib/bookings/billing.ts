@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
+import { markPrintOrderPaid } from "@/lib/prints/orders";
 
 /**
  * Follow-up invoices issued when a payment is confirmed.
@@ -8,6 +9,7 @@ import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
  *    due 7 days after the session (the balance is settled after the shoot).
  *  - Project retainer paid -> FINAL_BALANCE_50 invoice for (project budget - retainer).
  *    Paying it unlocks the client's master files in the delivery vault.
+ *  - Print order invoice paid -> no follow-up invoice; the order moves to NEW.
  *
  * Every path that marks an invoice PAID calls onInvoicePaid inside the same
  * transaction. It is idempotent: a follow-up invoice is never issued twice.
@@ -78,10 +80,14 @@ export interface PaidInvoice {
   paymentReference: string | null;
 }
 
-/** Issues the follow-up invoice for a just-paid invoice, if one is due. Returns it, or null. */
+/**
+ * Issues the follow-up invoice for a just-paid invoice, if one is due, and moves a paid print
+ * order on to NEW. Returns the follow-up invoice, or null.
+ */
 export async function onInvoicePaid(tx: Tx, invoice: PaidInvoice) {
   if (invoice.milestoneType === "BOOKING_DEPOSIT") return issueBookingBalance(tx, invoice);
   if (invoice.milestoneType === "RETAINER_50") return issueProjectFinalBalance(tx, invoice);
+  if (invoice.milestoneType === "PRINT_FRAME_ORDER") return markPrintOrderPaid(tx, invoice.id);
   return null;
 }
 

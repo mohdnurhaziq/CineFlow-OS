@@ -86,9 +86,18 @@ export async function voidInvoice(input: z.input<typeof VoidSchema>): Promise<Re
         return fail("BOOKING_ACTIVE", "This is the deposit for a booking that is still active. Cancel the booking instead (Bookings).");
       }
     }
-    await db.milestoneInvoice.update({
-      where: { id: invoice.id },
-      data: { status: "VOID", verifiedBy: `Cancelled by ${session.name}: ${data.reason}` },
+    await db.$transaction(async (tx) => {
+      await tx.milestoneInvoice.update({
+        where: { id: invoice.id },
+        data: { status: "VOID", verifiedBy: `Cancelled by ${session.name}: ${data.reason}` },
+      });
+      // A print order's invoice: the order is cancelled with it, which returns its included prints.
+      if (invoice.milestoneType === "PRINT_FRAME_ORDER") {
+        await tx.printOrder.updateMany({
+          where: { invoiceId: invoice.id, status: "AWAITING_PAYMENT" },
+          data: { status: "CANCELLED" },
+        });
+      }
     });
     revalidate(data.tenantSlug, invoice.id);
     return { success: true };

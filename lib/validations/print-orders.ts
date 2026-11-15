@@ -44,3 +44,11 @@ export const PlaceOrderSchema = z
 export type CartItemInput = z.input<typeof CartItemSchema>;
 export type PlaceOrderInput = z.input<typeof PlaceOrderSchema>;
 export type PlaceOrderValues = z.output<typeof PlaceOrderSchema>;
+
+export const CancelOrderSchema = z.object({
+  tenantId: z.string().min(1),
+  tenantSlug: z.string().min(1),
+  orderId: z.string().min(1),
+});
+
+export type CancelOrderInput = z.input<typeof CancelOrderSchema>;

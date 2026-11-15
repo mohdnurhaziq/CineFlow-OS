@@ -361,7 +361,8 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
         },
       });
 
-      // A simulated card payment is confirmed on the spot: issue any follow-up invoice.
+      // A simulated card payment is confirmed on the spot: issue any follow-up invoice
+      // (and move a print order on to NEW).
       if (isCard) {
         await onInvoicePaid(tx, invoice);
       }

@@ -115,7 +115,8 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
     }
 
     // Retainer paid online: issue the project's final balance invoice.
-    if (invoice.milestoneType === "RETAINER_50") {
+    // Print order paid online: the order moves on to NEW.
+    if (invoice.milestoneType === "RETAINER_50" || invoice.milestoneType === "PRINT_FRAME_ORDER") {
       await onInvoicePaid(tx, invoice);
     }
 

@@ -6,12 +6,20 @@ import { ZodError } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { canAccessClientRecord } from "@/lib/auth/project-access";
+import { STAFF_ROLES } from "@/lib/auth/guard";
 import { nextInvoiceNumber, nextPrintOrderNumber } from "@/lib/bookings/billing";
 import { remainingForLines } from "@/lib/prints/entitlements";
 import { orderTotals, priceCartLine, type PricedCartLine } from "@/lib/prints/pricing";
 import { zoneForState } from "@/lib/prints/zones";
 import { actionErrorMessage } from "@/lib/action-error";
-import { PlaceOrderSchema, type PlaceOrderInput, type PlaceOrderValues } from "@/lib/validations/print-orders";
+import { SENT_ORDER_STATUSES, UNPAID_INVOICE_STATUSES } from "@/lib/prints/orders";
+import {
+  CancelOrderSchema,
+  PlaceOrderSchema,
+  type CancelOrderInput,
+  type PlaceOrderInput,
+  type PlaceOrderValues,
+} from "@/lib/validations/print-orders";
 
 type Tx = Prisma.TransactionClient;
 
@@ -312,5 +320,56 @@ export async function placePrintOrder(
     };
   } catch (err) {
     return failFrom(err, "Couldn't place this order.");
+  }
+}
+
+/**
+ * Cancels a print order, which returns its included prints. The client may cancel their own order
+ * while it awaits payment; the studio's staff may cancel until the prints are shipped or collected.
+ * An unpaid linked invoice is voided with it. A paid invoice stays paid (any refund is settled
+ * outside the app).
+ */
+export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ success: true } | Fail> {
+  try {
+    const v = CancelOrderSchema.parse(input);
+    const session = await getCurrentUser();
+    if (!session) refuse("UNAUTHENTICATED", "Please sign in to cancel an order.");
+
+    const order = await db.printOrder.findFirst({ where: { id: v.orderId, tenantId: v.tenantId } });
+    // Someone else's order is reported as missing, so its existence isn't revealed.
+    if (!order || !canAccessClientRecord(session, v.tenantId, order.clientId)) {
+      refuse("NOT_FOUND", "Order not found.");
+    }
+    if (order.status === "CANCELLED") refuse("ALREADY_CANCELLED", "This order is already cancelled.");
+    if (STAFF_ROLES.has(session.role)) {
+      if (SENT_ORDER_STATUSES.includes(order.status)) {
+        refuse("NOT_CANCELLABLE", "These prints have already gone out, so the order can't be cancelled.");
+      }
+    } else if (order.status !== "AWAITING_PAYMENT") {
+      refuse("NOT_CANCELLABLE", "This order is paid. Contact the studio to change it.");
+    }
+
+    await db.$transaction(async (tx) => {
+      // Only from the status just checked: a payment or another cancel in between wins.
+      const won = await tx.printOrder.updateMany({
+        where: { id: order.id, status: order.status },
+        data: { status: "CANCELLED" },
+      });
+      if (won.count === 0) refuse("ORDER_CHANGED", "This order changed just now. Refresh and try again.");
+      if (order.invoiceId) {
+        await tx.milestoneInvoice.updateMany({
+          where: { id: order.invoiceId, status: { in: UNPAID_INVOICE_STATUSES } },
+          data: { status: "VOID", verifiedBy: `Cancelled with print order ${order.orderNumber} by ${session.name}` },
+        });
+      }
+    });
+
+    safeRevalidate(`/${v.tenantSlug}/visualizer`);
+    safeRevalidate(`/${v.tenantSlug}/vault/${order.projectId}`);
+    safeRevalidate(`/${v.tenantSlug}/account`);
+    safeRevalidate(`/${v.tenantSlug}/admin/invoices`);
+    return { success: true };
+  } catch (err) {
+    return failFrom(err, "Couldn't cancel this order.");
   }
 }

@@ -13,13 +13,18 @@ import { MY_STATES } from "@/lib/prints/states";
 import { includedPrintCount } from "@/lib/prints/pricing";
 import { createServicePackage, updateServicePackage } from "@/lib/actions/admin-services";
 import { withSession } from "./mocks/session";
-import { processBookingCheckout } from "@/lib/actions/checkout";
+import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import { snapshotIncludedPrints, loadProjectEntitlements, remainingForLines } from "@/lib/prints/entitlements";
 import { grantIncludedPrint, removeIncludedPrint } from "@/lib/actions/admin-included-prints";
 import { backfillIncludedPrints } from "../../prisma/backfill-included-prints";
 import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { deleteFrameDesign, deletePrintSize, togglePrintSizeAvailability, updateMatBoardPrice } from "@/lib/actions/admin-frames";
-import { placePrintOrder, quotePrintOrder } from "@/lib/actions/print-orders";
+import { cancelPrintOrder, placePrintOrder, quotePrintOrder } from "@/lib/actions/print-orders";
+import { approvePaymentVerification } from "@/lib/actions/admin-verification";
+import { voidInvoice } from "@/lib/actions/admin-invoices";
+import { settleToyyibpayBill } from "@/lib/payments/settle";
+import { markPrintOrderPaid } from "@/lib/prints/orders";
+import { encryptSecret } from "../../lib/crypto/secret-box";
 import type { PlaceOrderInput } from "@/lib/validations/print-orders";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
@@ -664,5 +669,157 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(u.shipState, "Sabah", "State");
     const order = await db.printOrder.findUniqueOrThrow({ where: { id: res.orderId } });
     harness.assertEqual(order.shippingFee, 20, "Sabah zone fee");
+  });
+
+  // ---- Payment, cancel and void ----
+  /** An order from ORDER-05's cart: upgraded included print shipped to Sarawak, so it awaits payment. */
+  const placeAwaiting = async () => {
+    const p = await makeOrderProject(true);
+    const res = await withSession(p.session, () =>
+      placePrintOrder({
+        ...orderBase, projectId: p.project.id, fulfilment: "SHIP", address: address("Sarawak"),
+        items: [{ ...includedItem(p), printSizeId: "psz_lum_12r", matBoardType: "WHITE_2INCH" }],
+      })
+    );
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const order = await db.printOrder.findUniqueOrThrow({ where: { id: res.orderId }, include: { invoice: true } });
+    if (order.status !== "AWAITING_PAYMENT" || !order.invoice) throw new Error("expected an order awaiting payment");
+    return { p, orderId: order.id, invoice: order.invoice };
+  };
+  type Awaiting = Awaited<ReturnType<typeof placeAwaiting>>;
+  const orderStatus = async (id: string) => (await db.printOrder.findUniqueOrThrow({ where: { id } })).status;
+  const invoiceStatus = async (id: string) => (await db.milestoneInvoice.findUniqueOrThrow({ where: { id } })).status;
+  const remainingOf = async (p: OrderProject) => (await remainingForLines(db, [p.line.id])).get(p.line.id);
+  const payByCard = async (a: Awaiting) => {
+    const prev = process.env.ALLOW_SIMULATED_CARD_PAYMENTS;
+    process.env.ALLOW_SIMULATED_CARD_PAYMENTS = "true";
+    try {
+      return await withSession(a.p.session, () =>
+        processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "CARD" })
+      );
+    } finally {
+      process.env.ALLOW_SIMULATED_CARD_PAYMENTS = prev;
+    }
+  };
+
+  await harness.test("T20-PAY-01: paying the order's invoice by card moves the order to NEW", async () => {
+    const a = await placeAwaiting();
+    const res = await payByCard(a);
+    harness.assertEqual(res.success, true, "Card payment succeeds");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "Invoice PAID");
+    harness.assertEqual(await orderStatus(a.orderId), "NEW", "Order NEW");
+    await db.$transaction((tx) => markPrintOrderPaid(tx, a.invoice.id));
+    harness.assertEqual(await orderStatus(a.orderId), "NEW", "Marking paid again changes nothing");
+    harness.assertEqual(await remainingOf(a.p), 0, "Included print still claimed");
+  });
+
+  await harness.test("T20-PAY-02: a QR slip approved by the studio moves the order to NEW", async () => {
+    const a = await placeAwaiting();
+    const slip = await withSession(a.p.session, () =>
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+    );
+    harness.assertEqual(slip.success, true, "Slip sent");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "PENDING_VERIFICATION", "Invoice awaiting verification");
+    harness.assertEqual(await orderStatus(a.orderId), "AWAITING_PAYMENT", "Order still awaiting payment");
+    const approved = await withSession(ownerSession, () =>
+      approvePaymentVerification({ invoiceId: a.invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
+    );
+    harness.assertEqual(approved.success, true, "Approved");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "Invoice PAID");
+    harness.assertEqual(await orderStatus(a.orderId), "NEW", "Order NEW");
+  });
+
+  await harness.test("T20-PAY-03: a Toyyibpay payment settled for the invoice moves the order to NEW", async () => {
+    const a = await placeAwaiting();
+    const saved = await db.tenant.findUniqueOrThrow({ where: { id: lumina.id } });
+    const realFetch = globalThis.fetch;
+    const billCode = `t20bill${run}`;
+    await db.tenant.update({ where: { id: lumina.id }, data: { toyyibpaySecretEnc: encryptSecret("sk-t20"), toyyibpayCategoryCode: "cat-t20" } });
+    await db.milestoneInvoice.update({ where: { id: a.invoice.id }, data: { gatewayBillCode: billCode, paymentMethod: "CARD" } });
+    // The gateway's getBillTransactions answer: one successful payment of exactly this invoice.
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify([
+          { billpaymentStatus: "1", billpaymentAmount: a.invoice.amount.toFixed(2), billpaymentInvoiceNo: "TP-T20", billExternalReferenceNo: a.invoice.invoiceNumber },
+        ]),
+        { status: 200 }
+      )) as typeof fetch;
+    try {
+      const out = await settleToyyibpayBill(billCode);
+      harness.assertEqual(out.status, "PAID", "Settled");
+      harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "Invoice PAID");
+      harness.assertEqual(await orderStatus(a.orderId), "NEW", "Order NEW");
+      const again = await settleToyyibpayBill(billCode);
+      harness.assertEqual(again.status === "PAID" && again.alreadySettled, true, "Second settle is a no-op");
+      harness.assertEqual(await orderStatus(a.orderId), "NEW", "Still NEW");
+    } finally {
+      globalThis.fetch = realFetch;
+      await db.tenant.update({ where: { id: lumina.id }, data: { toyyibpaySecretEnc: saved.toyyibpaySecretEnc, toyyibpayCategoryCode: saved.toyyibpayCategoryCode } });
+    }
+  });
+
+  await harness.test("T20-CANCEL-01: the client cancels an unpaid order: CANCELLED, invoice VOID, the print is back", async () => {
+    const a = await placeAwaiting();
+    harness.assertEqual(await remainingOf(a.p), 0, "Print claimed");
+    const other = await withSession(unpaid.session, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(errOf(other), "NOT_FOUND", "Another client can't cancel it");
+    const signedOut = await withSession(null, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(errOf(signedOut), "UNAUTHENTICATED", "Signed out refused");
+    harness.assertEqual(await orderStatus(a.orderId), "AWAITING_PAYMENT", "Untouched by refused callers");
+
+    const res = await withSession(a.p.session, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(res.success, true, "Cancelled");
+    harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order CANCELLED");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Invoice VOID");
+    harness.assertEqual(await remainingOf(a.p), 1, "Included print returned");
+    const twice = await withSession(a.p.session, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(errOf(twice), "ALREADY_CANCELLED", "Second cancel refused");
+    const pay = await payByCard(a);
+    harness.assertEqual(errOf(pay), "INVOICE_VOID", "The voided invoice can't be paid");
+  });
+
+  await harness.test("T20-CANCEL-02: a paid order can't be cancelled by the client; staff can until it ships", async () => {
+    const a = await placeAwaiting();
+    harness.assertEqual((await payByCard(a)).success, true, "Paid");
+    const res = await withSession(a.p.session, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(errOf(res), "NOT_CANCELLABLE", "Client refused");
+    harness.assertEqual(msgOf(res), "This order is paid. Contact the studio to change it.", "Message");
+    harness.assertEqual(await orderStatus(a.orderId), "NEW", "Order still NEW");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "Invoice still PAID");
+
+    await db.printOrder.update({ where: { id: a.orderId }, data: { status: "SHIPPED" } });
+    const shipped = await withSession(ownerSession, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(errOf(shipped), "NOT_CANCELLABLE", "Staff can't cancel a shipped order");
+    harness.assertEqual(await orderStatus(a.orderId), "SHIPPED", "Still SHIPPED");
+
+    await db.printOrder.update({ where: { id: a.orderId }, data: { status: "IN_PRODUCTION" } });
+    const staff = await withSession(ownerSession, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(staff.success, true, "Staff cancel before shipping");
+    harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order CANCELLED");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "A paid invoice is never voided");
+    harness.assertEqual(await remainingOf(a.p), 1, "Included print returned");
+  });
+
+  await harness.test("T20-VOID-01: voiding the order's invoice cancels the order and returns the print", async () => {
+    const a = await placeAwaiting();
+    const res = await withSession(ownerSession, () =>
+      voidInvoice({ ...orderBase, invoiceId: a.invoice.id, reason: "Client changed their mind" })
+    );
+    harness.assertEqual(res.success, true, "Voided");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Invoice VOID");
+    harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order CANCELLED");
+    harness.assertEqual(await remainingOf(a.p), 1, "Included print returned");
+  });
+
+  await harness.test("T20-VOID-02: a paid invoice can't be voided and its order is unchanged", async () => {
+    const a = await placeAwaiting();
+    harness.assertEqual((await payByCard(a)).success, true, "Paid");
+    const res = await withSession(ownerSession, () =>
+      voidInvoice({ ...orderBase, invoiceId: a.invoice.id, reason: "Should not work" })
+    );
+    harness.assertEqual(errOf(res), "NOT_UNPAID", "NOT_UNPAID");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "Invoice still PAID");
+    harness.assertEqual(await orderStatus(a.orderId), "NEW", "Order still NEW");
+    harness.assertEqual(await remainingOf(a.p), 0, "Print still claimed");
   });
 }
