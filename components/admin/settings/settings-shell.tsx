@@ -10,7 +10,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { DirtyContext, type StudioTenantData } from "./settings-ui";
 import { StudioTab } from "./studio-tab";
 import { PaymentsTab } from "./payments-tab";
-import { DeliveryTab } from "./delivery-tab";
+import { DeliveryTab, type ShippingZoneRow } from "./delivery-tab";
 import { PlanTab } from "./plan-tab";
 import { SETTINGS_TABS, type SettingsTabId } from "./tabs";
 
@@ -18,7 +18,7 @@ import { SETTINGS_TABS, type SettingsTabId } from "./tabs";
 /**
  * Settings, one area per tab. Each tab has its own Save; switching away from unsaved edits asks first.
  */
-export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData; tab: SettingsTabId; host: string }) {
+export function SettingsShell({ tenant, tab, host, zones }: { tenant: StudioTenantData; tab: SettingsTabId; host: string; zones: ShippingZoneRow[] }) {
   const router = useRouter();
   const { confirm, confirmDialog } = useConfirm();
   const dirtyForms = useRef(new Set<string>());
@@ -79,7 +79,7 @@ export function SettingsShell({ tenant, tab, host }: { tenant: StudioTenantData;
         <div className="max-w-4xl space-y-6">
         {tab === "studio" && <StudioTab tenant={tenant} host={host} />}
         {tab === "payments" && <PaymentsTab tenant={tenant} />}
-        {tab === "delivery" && <DeliveryTab tenant={tenant} />}
+        {tab === "delivery" && <DeliveryTab tenant={tenant} zones={zones} />}
         {tab === "plan" && <PlanTab tenant={tenant} />}
         </div>
       </div>

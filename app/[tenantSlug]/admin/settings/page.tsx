@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { parseZoneStates } from "@/lib/prints/zones";
 import { SettingsShell } from "@/components/admin/settings/settings-shell";
 import { SETTINGS_TABS, type SettingsTabId } from "@/components/admin/settings/tabs";
 import type { StudioTenantData } from "@/components/admin/settings/settings-ui";
@@ -49,10 +50,13 @@ export default async function AdminSettingsPage({ params, searchParams }: Settin
     gatewayCategoryCode: toyyibpayCategoryCode,
   };
 
+  const zoneRows = await db.shippingZone.findMany({ where: { tenantId: tenant.id }, orderBy: { sortOrder: "asc" } });
+  const zones = zoneRows.map((z) => ({ name: z.name, fee: z.fee, states: parseZoneStates(z.statesJson) }));
+
   return (
     <PageShell>
       {/* key: a tab starts from the saved values each time it opens */}
-      <SettingsShell key={tab} tenant={data as unknown as StudioTenantData} tab={tab} host={host} />
+      <SettingsShell key={tab} tenant={data as unknown as StudioTenantData} tab={tab} host={host} zones={zones} />
     </PageShell>
   );
 }

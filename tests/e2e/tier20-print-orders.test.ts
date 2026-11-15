@@ -17,6 +17,7 @@ import { processBookingCheckout } from "@/lib/actions/checkout";
 import { snapshotIncludedPrints, loadProjectEntitlements, remainingForLines } from "@/lib/prints/entitlements";
 import { grantIncludedPrint, removeIncludedPrint } from "@/lib/actions/admin-included-prints";
 import { backfillIncludedPrints } from "../../prisma/backfill-included-prints";
+import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { deleteFrameDesign, deletePrintSize, togglePrintSizeAvailability, updateMatBoardPrice } from "@/lib/actions/admin-frames";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
@@ -352,5 +353,71 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const res = await deleteFrameDesign({ id: f.id, tenantId: lumina.id, tenantSlug: "lumina-cine" });
     harness.assertEqual("error" in res ? res.error : "", "IN_USE", "IN_USE");
     harness.assertEqual(await db.frameDesign.count({ where: { id: f.id } }), 1, "Frame kept");
+  });
+  // ---- Shipping zones (admin) ----
+  const seedZones = zones.map((z) => ({ name: z.name, fee: z.fee, states: parseZoneStates(z.statesJson) }));
+  harness.registerTeardown(async () => {
+    await withSession(ownerSession, () => saveShippingZones({ tenantId: lumina.id, tenantSlug: "lumina-cine", zones: seedZones }));
+  });
+  const zoneBase = { tenantId: lumina.id, tenantSlug: "lumina-cine" };
+
+  await harness.test("T20-ZONES-01: saving zones replaces the tenant's zones and zoneForState follows", async () => {
+    const res = await withSession(ownerSession, () =>
+      saveShippingZones({ ...zoneBase, zones: [
+        { name: "East", fee: 12.5, states: ["Sarawak", "Sabah"] },
+        { name: "West", fee: 25, states: ["Selangor"] },
+      ] })
+    );
+    harness.assertEqual(res.success, true, "Saved");
+    const rows = await db.shippingZone.findMany({ where: { tenantId: lumina.id }, orderBy: { sortOrder: "asc" } });
+    harness.assertEqual(rows.length, 2, "Old zones replaced");
+    harness.assertEqual(JSON.stringify(zoneForState(rows, "Sabah")), JSON.stringify({ name: "East", fee: 12.5 }), "Sabah");
+    harness.assertEqual(JSON.stringify(zoneForState(rows, "Selangor")), JSON.stringify({ name: "West", fee: 25 }), "Selangor");
+    harness.assertEqual(zoneForState(rows, "Johor"), null, "Uncovered state");
+    const none = await withSession(ownerSession, () => saveShippingZones({ ...zoneBase, zones: [] }));
+    harness.assertEqual(none.success, true, "Zero zones allowed");
+    harness.assertEqual(await db.shippingZone.count({ where: { tenantId: lumina.id } }), 0, "Pickup only");
+  });
+
+  await harness.test("T20-ZONES-02: a state in two zones is rejected and nothing changes", async () => {
+    await withSession(ownerSession, () => saveShippingZones({ ...zoneBase, zones: seedZones }));
+    const res = await withSession(ownerSession, () =>
+      saveShippingZones({ ...zoneBase, zones: [
+        { name: "A", fee: 10, states: ["Sabah", "Sarawak"] },
+        { name: "B", fee: 20, states: ["Sabah"] },
+      ] })
+    );
+    harness.assertEqual(res.success, false, "Rejected");
+    harness.assertEqual("message" in res ? res.message : "", "Sabah is in two zones.", "Message");
+    harness.assertEqual(await db.shippingZone.count({ where: { tenantId: lumina.id } }), 3, "Seed zones kept");
+    const bad = await withSession(ownerSession, () =>
+      saveShippingZones({ ...zoneBase, zones: [{ name: "A", fee: 10, states: ["Narnia"] }] })
+    );
+    harness.assertEqual(bad.success, false, "Unknown state rejected");
+  });
+
+  await harness.test("T20-ZONES-03: a zero fee or empty name is rejected", async () => {
+    const free = await withSession(ownerSession, () =>
+      saveShippingZones({ ...zoneBase, zones: [{ name: "Free", fee: 0, states: ["Sabah"] }] })
+    );
+    harness.assertEqual(free.success, false, "Rejected");
+    harness.assertEqual("message" in free ? free.message : "", "Shipping fee must be more than 0.", "Message");
+    const noName = await withSession(ownerSession, () =>
+      saveShippingZones({ ...zoneBase, zones: [{ name: "  ", fee: 5, states: ["Sabah"] }] })
+    );
+    harness.assertEqual(noName.success, false, "Empty name rejected");
+    harness.assertEqual(await db.shippingZone.count({ where: { tenantId: lumina.id } }), 3, "Zones untouched");
+  });
+
+  await harness.test("T20-ZONES-04: a client and another tenant's staff cannot save zones", async () => {
+    const apex = await db.tenant.findUnique({ where: { slug: "apex-media" } });
+    const apexOwner = apex && (await db.user.findFirst({ where: { tenantId: apex.id, role: "STUDIO_OWNER" } }));
+    if (!apex || !apexOwner) throw new Error("apex-media owner required");
+    const payload = { ...zoneBase, zones: [{ name: "Hack", fee: 1, states: ["Sabah"] }] };
+    const clientSession = { id: snapBooking.client.id, email: snapBooking.client.email, name: snapBooking.client.name, role: "CLIENT", tenantId: lumina.id, tenantSlug: "lumina-cine" };
+    const apexSession = { id: apexOwner.id, email: apexOwner.email, name: apexOwner.name, role: apexOwner.role, tenantId: apex.id, tenantSlug: "apex-media" };
+    harness.assertEqual((await withSession(clientSession, () => saveShippingZones(payload))).success, false, "Client refused");
+    harness.assertEqual((await withSession(apexSession, () => saveShippingZones(payload))).success, false, "Other tenant refused");
+    harness.assertEqual(await db.shippingZone.count({ where: { tenantId: lumina.id } }), 3, "Zones untouched");
   });
 }
