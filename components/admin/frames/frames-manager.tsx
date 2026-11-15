@@ -10,7 +10,6 @@ import Link from "next/link";
 import {
   Frame,
   Plus,
-  ExternalLink,
   Edit2,
   Trash2,
   CheckCircle,
@@ -240,12 +239,10 @@ export function FramesManager({
         </div>
 
         <Link
-          href={`/${tenantSlug}/visualizer`}
-          target="_blank"
+          href={`/${tenantSlug}/admin/frames/visualizer`}
           className={cn(buttonVariants({ size: "sm" }), "shrink-0")}
         >
           <span>Open Visualizer</span>
-          <ExternalLink className="size-3.5" />
         </Link>
       </div>
 
