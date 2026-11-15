@@ -1,92 +1,92 @@
 # Graph Report - CineFlow-OS  (2026-11-15)
 
 ## Corpus Check
-- 523 files · ~1,105,810 words
+- 556 files · ~1,135,627 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 16 file(s) not represented in the graph (top: .css 10, (none) 4, .example 1)
 
 ## Summary
-- 4206 nodes · 10432 edges · 276 communities (256 shown, 20 thin omitted)
-- Extraction: 97% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 260 edges (avg confidence: 0.87)
+- 4440 nodes · 11402 edges · 275 communities (257 shown, 18 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 288 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5af77850`
+- Built from commit: `f6313ab7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - .agents/skills/design-taste-frontend/scripts/assets.mjs
-- admin-verification.ts
+- notifications.ts
 - Skeleton
 - .agents/skills/design-taste-frontend/scripts/draw.mjs
-- requireStaff
+- actionErrorMessage
 - .claude/skills/design-taste-frontend/scripts/assets.mjs
 - .agents/skills/design-taste-frontend/scripts/inspect.mjs
-- .claude/skills/design-taste-frontend/scripts/lib/app-draw.mjs
-- admin-booking-lifecycle.ts
+- actions/print-orders.ts
+- getCurrentUser
 - package.json
 - labels.ts
-- proposal-viewer.tsx
+- admin-projects.ts
 - settings-ui.tsx
 - .agents/skills/design-taste-frontend/assets/charts.js
 - .claude/skills/design-taste-frontend/scripts/scenes.mjs
-- visualizer-shell.tsx
-- project-workspace.tsx
-- action-error.ts
-- actions/password-reset.ts
-- lucide-react
-- [tenantSlug]/page.tsx
+- gallery.ts
+- admin-proposals.ts
+- services-dashboard.tsx
+- actions/onboarding.ts
+- .agents/skills/design-taste-frontend/scripts/lib/app-draw.mjs
+- ui/page.tsx
 - showcase-shell.tsx
-- my-booking.ts
-- bookings-console.tsx
+- Design
+- actions/logistics.ts
 - compilerOptions
 - Animation Recipes
-- .agents/skills/design-taste-frontend/scripts/lib/app-draw.mjs
+- db.ts
 - 6. Recipes
-- getCurrentUser
+- ref_node_path
 - .claude/skills/design-taste-frontend/scripts/draw.mjs
-- admin/page.tsx
+- cn
 - enums.ts
-- proposal-admin-dashboard.tsx
+- utils.ts
 - components.json
-- cinema-booking-shell.tsx
+- admin-booking-lifecycle.ts
 - Animation Recipes
 - 6. Recipes
 - .claude/skills/design-taste-frontend/assets/charts.js
 - app
-- admin-proposals.ts
+- [clientId]/page.tsx
 - .claude/skills/design-taste-frontend/scripts/inspect.mjs
 - scripts
 - Imagery
 - CineFlow OS (Multi-Tenant Creative Operating System)
 - Foundations
-- .agents/skills/shadcn/assets/showcase/color-pair.tsx
-- actions/gear.ts
+- tier20-print-orders.test.ts
+- admin-verification-console.tsx
 - Imagery
-- sonner
-- tier17-clients.test.ts
+- prints/pricing.ts
+- client-auth.ts
 - Design Systems from DESIGN.md
-- Review Focus
+- cinema-booking-shell.tsx
 - Stage
 - .agents/skills/design-taste-frontend/scripts/lint.mjs
-- (saas)/page.tsx
-- getSessionClient
+- actions/checkout.ts
+- actions/password-reset.ts
 - CineFlow OS README (Complete OS for Photographers, Videographers and Studios)
 - System Documentation Suite (docs/)
 - tier9-toyyibpay-gateway.test.ts
 - Systematic Debugging & Error Triage Skill
 - buttonVariants
-- onboarding-guide.ts
-- checkout/page.tsx
+- proposal-viewer.tsx
+- .agents/skills/design-taste-frontend/scripts/scenes.mjs
 - 10-Minute Slot Holding Engine (atomic conditional hold)
-- actions/logistics.ts
+- admin/page.tsx
 - allowBuilds
 - Milestone M5 m5_admin_crud_production_verification (DONE)
 - 50% Final Balance Paywall (Project.isFinalBalancePaid)
 - app.json
 - interface
-- tier10-authorization.test.ts
+- admin-invoices.ts
 - CineFlow OS — Server Actions & API Specification
 - On-Set Call Sheet and Mobile Shot List HUD
 - Studio Manual Payment Verification Console
@@ -105,18 +105,18 @@
 - support
 - wallet
 - workspace
-- react
+- [tenantSlug]/page.tsx
 - interface
-- actions/gear.ts
+- 04-logistics-gear-wall.test.ts
 - Systematic Debugging & Error Triage Skill
-- storage.ts
+- bookings-console.tsx
 - interface
 - Gear Inventory and Kit Bundle BOM
 - postcss.config.mjs
 - 2. Model Definitions & Field Specifications
 - The run
 - 3. Core Transactional Sequence Flows
-- middleware.ts
+- ref_node_url
 - The Design System Page
 - Commands
 - The study
@@ -153,12 +153,12 @@
 - The run
 - Component Building Principles
 - Commands
-- @radix-ui/react-dialog
+- next
 - Forms & Inputs
 - Step 4: Map Tokens to the Theme
 - 1. The Client Journey: From Discovery to Master Delivery
 - tasteskill v2 (`design-taste-frontend`)
-- db.ts
+- visualizer-shell.tsx
 - admin-services.ts
 - docs/README.md
 - 9. Type and colour
@@ -178,16 +178,16 @@
 - 8. Forms and settings
 - Core Philosophy
 - Debugging Animations
-- actions/admin-frames.ts
+- errorMessageOf
 - Critical Rules
-- tier15-projects.test.ts
-- slot-time.ts
-- booking.ts
-- admin-verification-console.tsx
-- empirical-challenger-m1.ts
+- auth/session.ts
+- 2026-11-05: Owner walkthrough, remaining items (9–20)
+- actions/admin-frames.ts
+- .claude/skills/design-taste-frontend/scripts/lib/app-draw.mjs
+- project-promotion.ts
 - Accessible UI Component Design & Styling Skill
 - 2. Cinema-Style Booking Actions (`src/server/actions/booking.ts`)
-- calendar-admin-dashboard.tsx
+- single-slot-dialog.tsx
 - Database Schema Design & Migrations Skill
 - Find Skills
 - Customization & Theming
@@ -198,7 +198,7 @@
 - Styling & Customization
 - Colour
 - Scroll scenes
-- .claude/skills/design-taste-frontend/scripts/lint.mjs
+- my-booking.ts
 - Tools
 - dependencies
 - App screens
@@ -211,21 +211,21 @@
 - Words
 - Chat & Messaging
 - 6. Deliverables Vault & Print Visualizer Actions (`src/server/actions/deliverables.ts`)
-- requireStaff
+- [tenantSlug]/visualizer/page.tsx
 - Build Awwwards-Quality Sites
 - 2. The run for an app screen
 - Critique — judging the render
-- ref_node_path
-- super-admin.ts
+- .claude/skills/design-taste-frontend/scripts/lint.mjs
+- runner.ts
 - Design Engineering
-- app/layout.tsx
+- (saas)/page.tsx
 - Base vs Radix
 - Forms & Inputs
 - Component Building Principles
 - Foundations
 - Critical Rules
-- admin-verification.ts
-- room-scene.tsx
+- actions/admin-cms.ts
+- invoices-console.tsx
 - tasteskill v2 (`design-taste-frontend`)
 - .claude/skills/design-taste-frontend/library/app.json
 - 9. Type and colour
@@ -233,7 +233,7 @@
 - clip-path for Animation
 - Performance Rules
 - Gesture and Drag Interactions
-- tier10-authorization.test.ts
+- admin/page.tsx
 - CineFlow OS — Design System & UI Guidelines ("Nocturne Cine")
 - kinds
 - 3. The shell
@@ -259,58 +259,57 @@
 - Core Philosophy
 - Debugging Animations
 - Admin onboarding guide: design
-- next
-- 2026-11-05: Owner walkthrough, remaining items (9–20)
-- admin-clients.ts
-- auth/session.ts
-- 2026-11-05: Studio owner walkthrough (admin suite)
-- .agents/skills/design-taste-frontend/scripts/scenes.mjs
-- 2026-11-06: Page audit, client records need a signed-in owner
+- projects/page.tsx
+- tier15-projects.test.ts
+- proposal-admin-dashboard.tsx
+- admin-calendar.ts
+- Review Focus
+- empirical-challenger-m1.ts
+- payment-return/page.tsx
 - Project page: header, upload, notify — design
-- PageHeader
-- New booking from the Bookings page: design
-- Bug Fix Log
-- [clientId]/page.tsx
-- .claude/skills/shadcn/assets/showcase/color-pair.tsx
-- @prisma/client
-- New Booking from Bookings Implementation Plan
-- actions/admin-cms.ts
-- tenant.ts
-- driver.js
-- @radix-ui/react-checkbox@^1.1.4
-- Every booking gets a gallery — design
-- @radix-ui/react-dropdown-menu
-- @radix-ui/react-progress@^1.1.2
-- @radix-ui/react-select@^2.1.6
-- @radix-ui/react-separator@^1.1.2
-- @radix-ui/react-toggle@^1.1.2
-- @radix-ui/react-toggle-group@^1.1.2
 - react-dom@^19.0.0
+- New booking from the Bookings page: design
+- canvas-confetti
+- print-order-preview-dialog.tsx
+- @radix-ui/react-avatar@^1.1.3
+- @radix-ui/react-slider@^1.2.3
+- lucide-react
+- @radix-ui/react-slot
+- @radix-ui/react-tabs@^1.1.3
+- @radix-ui/react-toggle-group@^1.1.2
+- deliverables/route.ts
+- Every booking gets a gallery — design
+- @radix-ui/react-tooltip@^1.1.8
+- New Booking from Bookings Implementation Plan
+- ref_node_path
 - class-variance-authority
+- actionErrorMessage
+- actions/logistics.ts
+- @radix-ui/react-toggle@^1.1.2
 
 ## God Nodes (most connected - your core abstractions)
-1. `next` - 159 edges
-2. `errorMessageOf()` - 148 edges
-3. `lucide-react` - 136 edges
-4. `buttonVariants` - 133 edges
-5. `db` - 132 edges
-6. `react` - 114 edges
-7. `cn()` - 85 edges
-8. `requireStaff()` - 77 edges
-9. `getCurrentUser()` - 59 edges
-10. `useDialog()` - 56 edges
+1. `next` - 171 edges
+2. `errorMessageOf()` - 152 edges
+3. `lucide-react` - 147 edges
+4. `db` - 146 edges
+5. `buttonVariants` - 145 edges
+6. `react` - 121 edges
+7. `cn()` - 92 edges
+8. `requireStaff()` - 86 edges
+9. `getCurrentUser()` - 61 edges
+10. `useDialog()` - 59 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `BUG-20261105-02: Online payments charged ringgit for every currency` --references--> `getCheckoutGateway()`  [INFERRED]
+  docs/BUG_FIX_LOG.md → lib/payments/settle.ts
+- `Task 1: Schema and pricing/zone helpers` --references--> `runTier20PrintOrderTests()`  [INFERRED]
+  docs/superpowers/plans/2026-11-15-wall-art-print-orders.md → tests/e2e/tier20-print-orders.test.ts
 - `BUG-20261105-08: Modals ignored Escape and weren't announced as dialogs` --references--> `useDialog()`  [INFERRED]
   docs/BUG_FIX_LOG.md → lib/use-dialog.ts
-- `BUG-20261105-13: Rejecting a slip cancelled the whole booking` --references--> `expireUnpaidDeposits()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/bookings/expiry.ts
-- `2026-11-05: Client walkthrough (Haz Creatives Studio)` --references--> `formatMoney()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/money.ts
-- `Task 4: Projects page tabs` --references--> `projectListWhere()`  [INFERRED]
-  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/projects/list.ts
 - `Global Constraints` --references--> `isProjectCategorySlug()`  [INFERRED]
   docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/bookings/project-promotion.ts
+- `BUG-20261106-08: Wrong currency symbol on Gear and Visualizer` --references--> `currencySymbol()`  [INFERRED]
+  docs/BUG_FIX_LOG.md → lib/money.ts
 
 ## Import Cycles
 - None detected.
@@ -320,15 +319,15 @@
 - **Final Balance Paywall Delivery Flow** — project_payment_verification_console, project_payment_paywall_contract, project_final_balance_paywall, project_download_route, project_delivery_vault [EXTRACTED 0.95]
 - **graphify Knowledge Graph Workflow** — claude_graphify_rules, claude_graphify_query_first, claude_graphify_update, claude_graphify_out, _claude_claude_graphify [INFERRED 0.85]
 
-## Communities (276 total, 20 thin omitted)
+## Communities (275 total, 18 thin omitted)
 
 ### Community 0 - ".agents/skills/design-taste-frontend/scripts/assets.mjs"
 Cohesion: 0.07
 Nodes (85): AIC_FIELDS, AIC_HEADERS, applyThumb(), ARCHIVE_LICENCE, args, argv, base(), clock() (+77 more)
 
-### Community 1 - "admin-verification.ts"
-Cohesion: 0.07
-Nodes (40): ApprovePaymentVerificationInput, ApprovePaymentVerificationSchema, rejectPaymentVerification(), RejectPaymentVerificationInput, RejectPaymentVerificationSchema, safeRevalidate(), hashToken(), inviteMatches() (+32 more)
+### Community 1 - "notifications.ts"
+Cohesion: 0.10
+Nodes (29): issueClientInvite(), sendBookingConfirmation(), DEFAULT_NO_AUTH_FROM, deliverViaSmtp(), formatFrom(), SmtpConfig, smtpConfigFromEnv(), smtpFailureReason() (+21 more)
 
 ### Community 2 - "Skeleton"
 Cohesion: 0.18
@@ -338,9 +337,9 @@ Nodes (11): SaasLoading(), AdminLoading(), BookLoading(), CheckoutLoading(), Ten
 Cohesion: 0.10
 Nodes (41): adjustments(), argv, assetQueries(), ASSETS_PATH, briefStop(), briefWords(), deal(), dealHero() (+33 more)
 
-### Community 4 - "requireStaff"
-Cohesion: 0.19
-Nodes (53): BookingClientLink(), SlotTable(), 7. Dynamic Settings CRUD Actions (`src/server/actions/settings.ts`), actionErrorMessage(), batchDeleteBookingSlots(), batchGenerateBookingSlots(), cleanupExpiredHolds(), createSingleBookingSlot() (+45 more)
+### Community 4 - "actionErrorMessage"
+Cohesion: 0.23
+Nodes (36): 7. Dynamic Settings CRUD Actions (`src/server/actions/settings.ts`), Task 2: Package included prints (admin) and delete-protection, deleteBookingSlot(), toggleBlockBookingSlot(), createShowcaseItem(), deleteShowcaseItem(), safeRevalidate(), toggleShowcaseFeatured() (+28 more)
 
 ### Community 5 - ".claude/skills/design-taste-frontend/scripts/assets.mjs"
 Cohesion: 0.07
@@ -350,29 +349,29 @@ Nodes (85): AIC_FIELDS, AIC_HEADERS, applyThumb(), ARCHIVE_LICENCE, args, argv, 
 Cohesion: 0.07
 Nodes (29): allow, appMode, args, asJson, dealtFonts, fails, film, HEIGHT (+21 more)
 
-### Community 7 - ".claude/skills/design-taste-frontend/scripts/lib/app-draw.mjs"
-Cohesion: 0.12
-Nodes (22): argv, deal(), dealScreen(), dealShell(), dealStyle(), fontLink(), HERE, kebab() (+14 more)
+### Community 7 - "actions/print-orders.ts"
+Cohesion: 0.08
+Nodes (40): MOVE_LABELS, PrintOrderActions(), PrintOrderActionsProps, Button, appendNote(), cancelPrintOrder(), Fail, failFrom() (+32 more)
 
-### Community 8 - "admin-booking-lifecycle.ts"
-Cohesion: 0.16
-Nodes (24): BookingActions(), BookingActionsProps, Mode, quiet, BookingDetailView(), BookingDetailsDialogProps, Base, cancelBooking() (+16 more)
+### Community 8 - "getCurrentUser"
+Cohesion: 0.10
+Nodes (24): AdminVerificationPage(), VerificationPageProps, BookingPageProps, dynamic, revalidate, CheckoutPage(), CheckoutPageProps, dynamic (+16 more)
 
 ### Community 9 - "package.json"
 Cohesion: 0.08
 Nodes (35): devDependencies, eslint@^9.19.0, eslint-config-next@^15.1.0, @eslint/eslintrc@3.3.7, postcss@^8.5.1, prisma@^6.3.0, tailwindcss@^4.0.0, @tailwindcss/postcss@^4.0.0 (+27 more)
 
 ### Community 10 - "labels.ts"
-Cohesion: 0.09
-Nodes (43): InventoryPage(), InventoryPageProps, GearDashboard(), GearDashboardProps, CATEGORIES, CONDITIONS, DISCIPLINES, GearItemDialog() (+35 more)
+Cohesion: 0.08
+Nodes (56): GearDashboard(), GearDashboardProps, CATEGORIES, CONDITIONS, DISCIPLINES, GearItemDialog(), GearItemDialogProps, InventoryItemRow (+48 more)
 
-### Community 11 - "proposal-viewer.tsx"
-Cohesion: 0.16
-Nodes (12): AddOnItem, AddonsSelector(), AddonsSelectorProps, PricingBreakdown(), PricingBreakdownProps, ProposalViewerProps, Point, SignaturePad() (+4 more)
+### Community 11 - "admin-projects.ts"
+Cohesion: 0.07
+Nodes (51): DeliverPanel(), JobBooking, JobHeader(), JobPayment, SESSION_STEPS, Stage, PHOTO_TYPES, PhotoUploader() (+43 more)
 
 ### Community 12 - "settings-ui.tsx"
-Cohesion: 0.13
-Nodes (34): AdminSettingsPage(), SettingsPageProps, DeliveryTab(), OPTIONS, CURRENCIES, Currency, OnlinePayments(), PaymentsTab() (+26 more)
+Cohesion: 0.09
+Nodes (46): AdminSettingsPage(), SettingsPageProps, DeliveryTab(), DraftZone, OPTIONS, ShippingZoneRow, ShippingZonesForm(), submit() (+38 more)
 
 ### Community 13 - ".agents/skills/design-taste-frontend/assets/charts.js"
 Cohesion: 0.21
@@ -382,41 +381,41 @@ Nodes (24): axes(), bars(), dayHeads(), diverging(), frame(), hits(), kindStyle(
 Cohesion: 0.11
 Nodes (15): alive(), Browser, findChrome(), Page, sleep(), sweepProfiles(), args, go() (+7 more)
 
-### Community 15 - "visualizer-shell.tsx"
+### Community 15 - "gallery.ts"
 Cohesion: 0.33
-Nodes (10): VisualizerPageProps, ConfiguratorPanel(), ConfiguratorPanelProps, FrameDesignOption, PhotoOption, PrintSizeOption, OrderModalProps, PrintOrderer (+2 more)
+Nodes (8): FramedPrintsSectionProps, filesReleased(), FramedPrintLine, FramedPrintOrder, galleryPhotoUrl(), loadItemPhotos(), photoViewUrl(), parseResolution()
 
-### Community 16 - "project-workspace.tsx"
+### Community 16 - "admin-proposals.ts"
+Cohesion: 0.32
+Nodes (10): CreateProposalAddOnTemplateInput, CreateProposalAddOnTemplateSchema, DeleteProposalAddOnTemplateInput, DeleteProposalAddOnTemplateSchema, ToggleTemplateActiveInput, ToggleTemplateActiveSchema, ToggleTemplateDefaultInput, ToggleTemplateDefaultSchema (+2 more)
+
+### Community 17 - "services-dashboard.tsx"
+Cohesion: 0.16
+Nodes (20): CategoryDialog(), CategoryDialogProps, CategoryRow, EMOJI_PRESETS, CategoryList(), CategoryListProps, CategoryOption, DISCIPLINES (+12 more)
+
+### Community 18 - "actions/onboarding.ts"
+Cohesion: 0.05
+Nodes (60): dynamic, metadata, SuperAdminPage(), SuperAdminView(), SuperAdminViewProps, TenantSummaryItem, createClientBooking(), getTenantBookingSlots() (+52 more)
+
+### Community 19 - ".agents/skills/design-taste-frontend/scripts/lib/app-draw.mjs"
+Cohesion: 0.12
+Nodes (22): argv, deal(), dealScreen(), dealShell(), dealStyle(), fontLink(), HERE, kebab() (+14 more)
+
+### Community 20 - "ui/page.tsx"
 Cohesion: 0.08
-Nodes (33): AdminProjectsPage(), ProjectsPageProps, TAB_LABELS, ProjectPageProps, DeliverItem, DeliverPanel(), JobBooking, JobHeader() (+25 more)
-
-### Community 17 - "action-error.ts"
-Cohesion: 0.10
-Nodes (32): AdminFramesPage(), FramesPageProps, FrameDesignDialog(), FrameDesignDialogProps, FrameDesignRow, MATERIALS, PRESET_COLORS, FramesManager() (+24 more)
-
-### Community 18 - "actions/password-reset.ts"
-Cohesion: 0.07
-Nodes (35): ALLOWED_FOLDERS, ANONYMOUS_FOLDERS, ANONYMOUS_TYPES, EXTENSION_BY_TYPE, MAX_BYTES_BY_KIND, maxBytesFor(), POST(), STAFF_ROLES (+27 more)
-
-### Community 19 - "lucide-react"
-Cohesion: 0.09
-Nodes (30): NewBookingDialogProps, BookForCustomerDialog(), BookForCustomerDialogProps, ClientOption, CalendarAdminDashboard(), CalendarAdminDashboardProps, ForceReleaseDialog(), ForceReleaseDialogProps (+22 more)
-
-### Community 20 - "[tenantSlug]/page.tsx"
-Cohesion: 0.18
-Nodes (12): dynamic, PageProps, revalidate, TenantShowcasePage(), ClientAccountMenu(), ClientAccountMenuProps, initials(), ShowcaseFooter() (+4 more)
+Nodes (31): AdminBookingsPage(), BookingsPageProps, todayIso(), AdminCalendarPage(), CalendarPageProps, AdminCmsPage(), CmsPageProps, AdminPrintOrderPage() (+23 more)
 
 ### Community 21 - "showcase-shell.tsx"
-Cohesion: 0.15
-Nodes (20): CategoryFilterBar(), CategoryFilterBarProps, CategoryItem, LightboxItem, MediaLightboxModal(), MediaLightboxModalProps, PackageGrid(), PackageGridProps (+12 more)
+Cohesion: 0.13
+Nodes (22): CategoryFilterBar(), CategoryFilterBarProps, CategoryItem, LightboxItem, MediaLightboxModal(), MediaLightboxModalProps, PackageGrid(), PackageGridProps (+14 more)
 
-### Community 22 - "my-booking.ts"
+### Community 22 - "Design"
+Cohesion: 0.10
+Nodes (19): Anti-goals (would be a failure even if it works), Approaches considered, Cart, Client experience, Current state (what exists today), Data, Design, Goals (+11 more)
+
+### Community 23 - "actions/logistics.ts"
 Cohesion: 0.14
-Nodes (14): AdminProjectPage(), ProjectVaultPage(), VaultPageProps, attempts, isThrottled(), lookupMyBooking(), LookupResult, LookupSchema (+6 more)
-
-### Community 23 - "bookings-console.tsx"
-Cohesion: 0.23
-Nodes (18): BookingDetailsBody(), BookingDetailsDialog(), BookingStage, bookingStage(), BookingStageBadge(), formatDateTime(), formatPaymentMethod(), formatSessionDate() (+10 more)
+Nodes (22): CallSheetDetails, CallSheetShell(), CallSheetShellProps, CrewRosterCard(), CrewRosterCardProps, FRAMING_PRESETS, LENS_PRESETS, LIGHTING_PRESETS (+14 more)
 
 ### Community 24 - "compilerOptions"
 Cohesion: 0.09
@@ -426,41 +425,41 @@ Nodes (21): compilerOptions, allowJs, esModuleInterop, forceConsistentCasingInFi
 Cohesion: 0.06
 Nodes (31): Accordion / collapse, Animation Recipes, Button press, Drag to dismiss, Drawer / sheet, Dropdown, popover, menu, select, Hold to confirm, Masking a crossfade that won't settle (+23 more)
 
-### Community 26 - ".agents/skills/design-taste-frontend/scripts/lib/app-draw.mjs"
-Cohesion: 0.12
-Nodes (22): argv, deal(), dealScreen(), dealShell(), dealStyle(), fontLink(), HERE, kebab() (+14 more)
+### Community 26 - "db.ts"
+Cohesion: 0.09
+Nodes (21): dynamic, AdminBookingPage(), BookingPageProps, ProposalPageProps, BookingDetailView(), DEV_FALLBACK_AUTH_SECRET, BookingInvoiceSummary, loadBookingDetails() (+13 more)
 
 ### Community 27 - "6. Recipes"
 Cohesion: 0.06
 Nodes (31): 10. Rules for motion, 1. The budget, 2. What strong pages do with motion, 3. Four questions before any animation, 4. Tokens, 5. Scroll behaviours, ranked, 6. Recipes, 7. Signature moves (+23 more)
 
-### Community 28 - "getCurrentUser"
+### Community 28 - "ref_node_path"
 Cohesion: 0.13
-Nodes (14): ClientAccountLayout(), ClientAccountLayoutProps, AdminVerificationPage(), VerificationPageProps, BookingPageProps, dynamic, revalidate, dynamic (+6 more)
+Nodes (16): ALLOWED_FOLDERS, ANONYMOUS_FOLDERS, ANONYMOUS_TYPES, EXTENSION_BY_TYPE, MAX_BYTES_BY_KIND, maxBytesFor(), POST(), STAFF_ROLES (+8 more)
 
 ### Community 29 - ".claude/skills/design-taste-frontend/scripts/draw.mjs"
 Cohesion: 0.10
 Nodes (41): adjustments(), argv, assetQueries(), ASSETS_PATH, briefStop(), briefWords(), deal(), dealHero() (+33 more)
 
-### Community 30 - "admin/page.tsx"
-Cohesion: 0.17
-Nodes (12): AdminDashboardPage(), AdminPageProps, onboardingFor(), DashboardTour(), DashboardTourProps, STOPS, SetupChecklistProps, getSetupChecklist() (+4 more)
+### Community 30 - "cn"
+Cohesion: 0.06
+Nodes (50): ColorPair(), contrast(), luminance(), toHex(), toRgb(), defaultStates, StateMatrix(), SaasError() (+42 more)
 
 ### Community 31 - "enums.ts"
 Cohesion: 0.11
 Nodes (18): BookingStatus, DeliverableItemType, DeliverableStatus, InventoryCondition, InventoryStatus, InvoiceStatus, MilestoneType, PaymentMethod (+10 more)
 
-### Community 32 - "proposal-admin-dashboard.tsx"
+### Community 32 - "utils.ts"
 Cohesion: 0.19
-Nodes (15): AdminProposalsPage(), ProposalsPageProps, AddOnTemplateDialog(), AddOnTemplateDialogProps, AddOnUnit, ProposalAddOnTemplateRow, UNITS, AddOnTemplateTable() (+7 more)
+Nodes (16): ClientInvoicePage(), ClientInvoicePageProps, AdminInvoicePage(), AdminInvoicePageProps, day(), InvoiceDocumentView(), invoiceStatus(), method() (+8 more)
 
 ### Community 33 - "components.json"
 Cohesion: 0.11
 Nodes (17): aliases, components, hooks, lib, ui, utils, iconLibrary, rsc (+9 more)
 
-### Community 34 - "cinema-booking-shell.tsx"
-Cohesion: 0.16
-Nodes (15): day(), BookingIntakeModal(), CategoryData, CinemaBookingShell(), CinemaBookingShellProps, TenantData, BookingSlotItem, CinemaStageIndicator() (+7 more)
+### Community 34 - "admin-booking-lifecycle.ts"
+Cohesion: 0.17
+Nodes (26): BookingActions(), Mode, quiet, CinemaSlotGrid(), CinemaSlotGridProps, Base, cancelBooking(), CancelSchema (+18 more)
 
 ### Community 35 - "Animation Recipes"
 Cohesion: 0.06
@@ -478,9 +477,9 @@ Nodes (24): axes(), bars(), dayHeads(), diverging(), frame(), hits(), kindStyle(
 Cohesion: 0.07
 Nodes (28): build, container_name, depends_on, env_file, environment, image, ports, restart (+20 more)
 
-### Community 39 - "admin-proposals.ts"
-Cohesion: 0.32
-Nodes (10): CreateProposalAddOnTemplateInput, CreateProposalAddOnTemplateSchema, DeleteProposalAddOnTemplateInput, DeleteProposalAddOnTemplateSchema, ToggleTemplateActiveInput, ToggleTemplateActiveSchema, ToggleTemplateDefaultInput, ToggleTemplateDefaultSchema (+2 more)
+### Community 39 - "[clientId]/page.tsx"
+Cohesion: 0.07
+Nodes (51): AdminClientPage(), BOOKING_STATUS_LABELS, ClientPageProps, formatDate(), Row(), Section(), StatusPill(), statusTone() (+43 more)
 
 ### Community 40 - ".claude/skills/design-taste-frontend/scripts/inspect.mjs"
 Cohesion: 0.07
@@ -488,7 +487,7 @@ Nodes (29): allow, appMode, args, asJson, dealtFonts, fails, film, HEIGHT (+21 m
 
 ### Community 41 - "scripts"
 Cohesion: 0.12
-Nodes (16): scripts, build, db:backfill-booking-projects, db:backfill-invoice-bookings, db:push, db:seed, db:studio, dev (+8 more)
+Nodes (17): scripts, build, db:backfill-booking-projects, db:backfill-included-prints, db:backfill-invoice-bookings, db:push, db:seed, db:studio (+9 more)
 
 ### Community 42 - "Imagery"
 Cohesion: 0.09
@@ -502,45 +501,45 @@ Nodes (11): CineFlow OS (Multi-Tenant Creative Operating System), Local Media St
 Cohesion: 0.25
 Nodes (8): Color roles, Elevation, Foundations, Motion and icons, Palette, Radius, Spacing, Typography
 
-### Community 45 - ".agents/skills/shadcn/assets/showcase/color-pair.tsx"
-Cohesion: 0.27
-Nodes (8): ColorPair(), contrast(), luminance(), toHex(), toRgb(), SaasLayout(), SaasFooter(), SaasNavbar()
+### Community 45 - "tier20-print-orders.test.ts"
+Cohesion: 0.15
+Nodes (26): ProjectVaultPage(), IncludedPrintsCard(), Task 3: Booking snapshot, launch backfill, manual grants, fail(), grantIncludedPrint(), GrantSchema, removeIncludedPrint(), RemoveSchema (+18 more)
 
-### Community 46 - "actions/gear.ts"
-Cohesion: 0.22
-Nodes (15): CreateGearItemInput, CreateGearItemSchema, CreateKitBundleInput, CreateKitBundleSchema, CreateReservationInput, CreateReservationSchema, KitBundleItemInputSchema, LogPostShootInspectionInput (+7 more)
+### Community 46 - "admin-verification-console.tsx"
+Cohesion: 0.14
+Nodes (21): PrintOrderPreviewDialog(), PrintOrderPreviewDialogProps, FilterId, FILTERS, AdminVerificationConsole(), AdminVerificationConsoleProps, ReceiptLightboxModal(), ReceiptLightboxModalProps (+13 more)
 
 ### Community 47 - "Imagery"
 Cohesion: 0.09
 Nodes (22): 10. Markup and credits, 11. Video, 12. Where pictures and footage go, 1. What the study measured, 2. Decide what imagery exists, 3. Real pictures from the open collections, 4. The dealt photographs, 5. Cropping and placing (+14 more)
 
-### Community 48 - "sonner"
-Cohesion: 0.15
-Nodes (19): CallSheetDetails, CallSheetShell(), CallSheetShellProps, CrewRosterCard(), CrewRosterCardProps, FRAMING_PRESETS, LENS_PRESETS, LIGHTING_PRESETS (+11 more)
+### Community 48 - "prints/pricing.ts"
+Cohesion: 0.18
+Nodes (15): ConfiguratorPanelProps, FrameCanvasProps, RoomSceneProps, WALL_COLORS, WallColorKey, WallColorOption, SofaMockup(), SofaMockupProps (+7 more)
 
-### Community 49 - "tier17-clients.test.ts"
-Cohesion: 0.19
-Nodes (15): exportCsv(), RFC-4180, bookingSelect, clientAccountStatus(), ClientMoneySummary, ClientProfile, latest(), loadClientDirectory() (+7 more)
+### Community 49 - "client-auth.ts"
+Cohesion: 0.14
+Nodes (17): ClientRegisterPage(), metadata, RegisterPageProps, ClientAuthPanel(), ClientAuthPanelProps, Field(), ClientRegisterCard(), ClientRegisterCardProps (+9 more)
 
 ### Community 50 - "Design Systems from DESIGN.md"
 Cohesion: 0.15
 Nodes (13): Contents, Coverage check, Design Systems from DESIGN.md, Inputs to Confirm, Known traps, Picking a style, Report Back, Step 1: Scaffold (+5 more)
 
-### Community 51 - "Review Focus"
-Cohesion: 0.29
-Nodes (6): Every Booking Gets a Gallery Implementation Plan, Global Constraints, Review Focus, Task 2: Category setting becomes Session / Production, Task 3: Backfill projects for existing bookings, Task 4: Projects page tabs
+### Community 51 - "cinema-booking-shell.tsx"
+Cohesion: 0.17
+Nodes (16): BookingIntakeModal(), BookingIntakeModalProps, CategoryData, CinemaBookingShell(), CinemaBookingShellProps, TenantData, BookingSlotItem, CinemaStageIndicator() (+8 more)
 
 ### Community 53 - ".agents/skills/design-taste-frontend/scripts/lint.mjs"
 Cohesion: 0.14
 Nodes (13): APP_LEVEL, appMode, args, asJson, byId, EXT, files, findings (+5 more)
 
-### Community 54 - "(saas)/page.tsx"
-Cohesion: 0.24
-Nodes (9): metadata, SaasLandingPage(), FeaturesGrid(), PILLARS, InteractiveTeasers(), PricingTiers(), TIERS, SaasHero() (+1 more)
+### Community 54 - "actions/checkout.ts"
+Cohesion: 0.12
+Nodes (26): AdminCreateBookingInput, AdminCreateBookingSchema, createBookingForCustomer(), highestInvoiceSeq(), issueBookingBalance(), issueProjectFinalBalance(), nextInvoiceNumber(), nextPrintOrderNumber() (+18 more)
 
-### Community 55 - "getSessionClient"
-Cohesion: 0.15
-Nodes (15): dynamic, LoginPageProps, revalidate, StudioLoginPage(), ClientRegisterPage(), metadata, RegisterPageProps, ClientAuthPanel() (+7 more)
+### Community 55 - "actions/password-reset.ts"
+Cohesion: 0.23
+Nodes (13): afterResponse(), INVALID_LINK, requestPasswordReset(), RequestSchema, resetPassword(), ResetSchema, SENT, findStudioAccount() (+5 more)
 
 ### Community 56 - "CineFlow OS README (Complete OS for Photographers, Videographers and Studios)"
 Cohesion: 0.24
@@ -551,32 +550,32 @@ Cohesion: 0.20
 Nodes (10): docs/01 Product Requirements Specification, docs/02 System Architecture and Data Flows, docs/03 Database Schema and Data Models, docs/04 Server Actions and API Specification, docs/05 Design System and UI Guidelines, docs/06 User Journey and Operations Manual, docs/07 Deployment and Configuration Guide, docs/ARCHITECTURE_PLAN Detailed Architecture Plan (+2 more)
 
 ### Community 58 - "tier9-toyyibpay-gateway.test.ts"
-Cohesion: 0.12
-Nodes (34): dynamic, POST(), Task 1: Project kind + provision every confirmed booking, promoteBookingToProjectAction(), processBookingCheckout(), safeRevalidate(), provisionProjectForBooking(), findOrCreateGuestClient() (+26 more)
+Cohesion: 0.14
+Nodes (26): dynamic, POST(), decryptSecret(), encryptSecret(), key(), BookingWithSlot, getGatewayCredentials(), SettleOutcome (+18 more)
 
 ### Community 59 - "Systematic Debugging & Error Triage Skill"
 Cohesion: 0.11
 Nodes (18): 1. Objectives, 2. Triggers, 3. Inputs & Prerequisites, 4. Step-by-Step Triage Procedure (5-Step Framework), 5.1 React Hydration Mismatches, 5.2 Database Connection Pool Exhaustion, 5.3 Next.js Server Action State Desynchronization, 5. Common Full-Stack Failure Modes & Remediation Guide (+10 more)
 
 ### Community 60 - "buttonVariants"
-Cohesion: 0.13
-Nodes (22): GlobalError(), MyBookingPage(), MyBookingPageProps, LogoutButton(), humanize(), MyBookingLookup(), MyBookingLookupProps, STATUS_STYLES (+14 more)
+Cohesion: 0.10
+Nodes (28): GlobalError(), LogoutButton(), inDays(), NewInvoiceButton(), NewInvoiceButtonProps, DeliverItem, NewProposalButtonProps, ExistingRelease (+20 more)
 
-### Community 61 - "onboarding-guide.ts"
-Cohesion: 0.21
-Nodes (13): Admin Onboarding Guide Implementation Plan, Global Constraints, Review Focus, Task 1: Data, checklist status and server actions, Task 2: Setup checklist card on the dashboard, Task 3: Dashboard tour, Task 4: Ship check, dismissSetupChecklist() (+5 more)
+### Community 61 - "proposal-viewer.tsx"
+Cohesion: 0.19
+Nodes (12): AddOnItem, AddonsSelector(), AddonsSelectorProps, PricingBreakdown(), PricingBreakdownProps, ProposalViewer(), ProposalViewerProps, Point (+4 more)
 
-### Community 62 - "checkout/page.tsx"
-Cohesion: 0.15
-Nodes (14): CheckoutPage(), CheckoutPageProps, ProposalPage(), ProposalPageProps, ReleasesPage(), ReleasesPageProps, CheckoutAuthGate(), CheckoutAuthGateProps (+6 more)
+### Community 62 - ".agents/skills/design-taste-frontend/scripts/scenes.mjs"
+Cohesion: 0.11
+Nodes (15): alive(), Browser, findChrome(), Page, sleep(), sweepProfiles(), args, go() (+7 more)
 
 ### Community 63 - "10-Minute Slot Holding Engine (atomic conditional hold)"
 Cohesion: 0.25
 Nodes (7): Milestone M1 m1_scaffolding_database (DONE), Milestone M2 m2_saas_onboarding_showcase (DONE), Milestone M3 m3_checkout_proposals_vault (DONE), Milestone M4 m4_logistics_gear_wall (DONE), Slot Countdown Timer UI, Slot Holding Contract (HoldSlotInput, HoldSlotResult), Cinema-Style 10-Minute Slot Holding Engine
 
-### Community 64 - "actions/logistics.ts"
-Cohesion: 0.21
-Nodes (13): CreateShotItemInput, CreateShotItemSchema, DeleteShotItemInput, DeleteShotItemSchema, SubmitDigitalReleaseInput, SubmitDigitalReleaseSchema, ToggleShotCompletionInput, ToggleShotCompletionSchema (+5 more)
+### Community 64 - "admin/page.tsx"
+Cohesion: 0.16
+Nodes (16): DashboardTour(), DashboardTourProps, STOPS, Admin Onboarding Guide Implementation Plan, Global Constraints, Review Focus, Task 1: Data, checklist status and server actions, Task 2: Setup checklist card on the dashboard (+8 more)
 
 ### Community 65 - "allowBuilds"
 Cohesion: 0.29
@@ -598,9 +597,9 @@ Nodes (5): about, patterns, shells, styles, version
 Cohesion: 0.33
 Nodes (5): interface, display_name, icon_large, icon_small, short_description
 
-### Community 70 - "tier10-authorization.test.ts"
-Cohesion: 0.09
-Nodes (28): BUG-20261106-01: Proposals could be read and signed by anyone, acceptProposal(), getProposalBySlugAndId(), safeRevalidate(), signAndAcceptProposal, toggleProposalAddOn(), requireItemAccess(), SubmitRetouchNoteSchema (+20 more)
+### Community 70 - "admin-invoices.ts"
+Cohesion: 0.24
+Nodes (14): InvoiceAdminActions(), InvoiceAdminActionsProps, Mode, Base, createInvoice(), CreateSchema, fail(), recordInvoicePayment() (+6 more)
 
 ### Community 71 - "CineFlow OS — Server Actions & API Specification"
 Cohesion: 0.12
@@ -674,25 +673,25 @@ Nodes (4): wallet, note, screens, styles
 Cohesion: 0.50
 Nodes (4): workspace, note, screens, styles
 
-### Community 90 - "react"
-Cohesion: 0.06
-Nodes (48): defaultStates, StateMatrix(), COLOR_PRESETS, CreateStudioPage(), SaasError(), ForgotPasswordPage(), ForgotPasswordPageProps, defaultStates (+40 more)
+### Community 90 - "[tenantSlug]/page.tsx"
+Cohesion: 0.09
+Nodes (22): geistMono, geistSans, metadata, RootLayout(), viewport, dynamic, PageProps, revalidate (+14 more)
 
 ### Community 91 - "interface"
 Cohesion: 0.33
 Nodes (5): interface, display_name, icon_large, icon_small, short_description
 
-### Community 92 - "actions/gear.ts"
-Cohesion: 0.10
-Nodes (63): GET(), SetHudPage(), SetHudPageProps, errorMessageOf(), getStudioAnalytics(), processInvoicePayment(), checkBundleAvailability(), createEquipmentReservation() (+55 more)
+### Community 92 - "04-logistics-gear-wall.test.ts"
+Cohesion: 0.17
+Nodes (39): SetHudPage(), SetHudPageProps, checkBundleAvailability(), createEquipmentReservation(), createGearItem(), createKitBundle(), logPostShootInspection(), logPreShootInspection() (+31 more)
 
 ### Community 93 - "Systematic Debugging & Error Triage Skill"
 Cohesion: 0.11
 Nodes (18): 1. Objectives, 2. Triggers, 3. Inputs & Prerequisites, 4. Step-by-Step Triage Procedure (5-Step Framework), 5.1 React Hydration Mismatches, 5.2 Database Connection Pool Exhaustion, 5.3 Next.js Server Action State Desynchronization, 5. Common Full-Stack Failure Modes & Remediation Guide (+10 more)
 
-### Community 94 - "storage.ts"
-Cohesion: 0.16
-Nodes (18): findOrCreateAlbum(), PHOTO_TYPES, POST(), titleFrom(), VIDEO_TYPES, escapeXml(), humanSize(), PREVIEW_DIR (+10 more)
+### Community 94 - "bookings-console.tsx"
+Cohesion: 0.20
+Nodes (21): BookingActionsProps, BookingDetailsBody(), BookingDetailsDialog(), BookingDetailsDialogProps, BookingStage, bookingStage(), BookingStageBadge(), formatDateTime() (+13 more)
 
 ### Community 95 - "interface"
 Cohesion: 0.40
@@ -710,9 +709,9 @@ Nodes (17): 10. Report, 1. Read the brief and the project, 2. Write the argument
 Cohesion: 0.20
 Nodes (9): 1. High-Level System Architecture, 2. Multi-Tenant Custom Domain & Slug Resolution, 3. Core Transactional Sequence Flows, CineFlow OS — System Architecture & Data Flows, Flow 1: Cinema-Style Real-Time Slot Holding & Deposit Checkout, Flow 2: Interactive Proposal Customization & Retainer Milestone Billing, Flow 3: Direct-to-Client Delivery & Milestone Paywall Unlock, Flow 4: QR Code & Cash Manual Studio Verification Flow (+1 more)
 
-### Community 102 - "middleware.ts"
-Cohesion: 0.20
-Nodes (13): APP_BASE_DOMAIN, APP_DOMAIN, normalizeDomain(), PLATFORM_BASE_DOMAINS, platformSubdomainSlug(), cache, tenantSlugForDomain(), base64urlToBytes() (+5 more)
+### Community 102 - "ref_node_url"
+Cohesion: 0.17
+Nodes (5): compat, config, require, env, root
 
 ### Community 103 - "The Design System Page"
 Cohesion: 0.15
@@ -858,9 +857,9 @@ Nodes (8): Animate enter states with @starting-style, Buttons must feel responsi
 Cohesion: 0.12
 Nodes (17): `add` — Add components, `apply` — Apply a preset to an existing project, `build` — Build a custom registry, Commands, Contents, `diff` — Check for updates, `docs` — Get component documentation URLs, Dry-Run Mode (+9 more)
 
-### Community 139 - "@radix-ui/react-dialog"
-Cohesion: 0.14
-Nodes (8): next-themes@^0.4.4, @radix-ui/react-dialog@^1.1.6, @radix-ui/react-slider@^1.2.3, prisma, seed, next-themes, @radix-ui/react-dialog, @radix-ui/react-slider
+### Community 139 - "next"
+Cohesion: 0.09
+Nodes (15): SaasLayout(), AdminVisualizerPage(), AdminVisualizerPageProps, InventoryPage(), InventoryPageProps, AdminProjectPrintsPageProps, ForgotPasswordPage(), ForgotPasswordPageProps (+7 more)
 
 ### Community 140 - "Forms & Inputs"
 Cohesion: 0.25
@@ -878,13 +877,13 @@ Nodes (8): 1. The Client Journey: From Discovery to Master Delivery, Step 1: Bro
 Cohesion: 0.29
 Nodes (6): Contents, How it works, Install, Notes, Requirements, tasteskill v2 (`design-taste-frontend`)
 
-### Community 144 - "db.ts"
-Cohesion: 0.07
-Nodes (39): dynamic, AccountPageProps, ClientAccountPage(), dynamic, metadata, AdminBookingsPage(), BookingsPageProps, todayIso() (+31 more)
+### Community 144 - "visualizer-shell.tsx"
+Cohesion: 0.20
+Nodes (26): CartLine, cartStorageKey(), Catalog, CartDrawer(), CartDrawerProps, IncludedLineOption, loadCart(), money() (+18 more)
 
 ### Community 145 - "admin-services.ts"
-Cohesion: 0.11
-Nodes (27): staffSlotPricing(), CategoryTx, renameCategorySlug(), BookingPricing, packagesForCategory(), PricingResult, resolveBookingPricing(), sameCategory() (+19 more)
+Cohesion: 0.12
+Nodes (24): CategoryTx, IncludedPrintLine, renameCategorySlug(), CreateCampaignCategoryInput, CreateCampaignCategorySchema, CreateServicePackageInput, CreateServicePackageSchema, DeleteCampaignCategoryInput (+16 more)
 
 ### Community 146 - "docs/README.md"
 Cohesion: 0.13
@@ -958,33 +957,33 @@ Nodes (4): Beauty is leverage, Core Philosophy, Taste is trained, not innate, Un
 Cohesion: 0.50
 Nodes (4): Debugging Animations, Frame-by-frame inspection, Slow motion testing, Test on real devices
 
-### Community 164 - "actions/admin-frames.ts"
-Cohesion: 0.24
-Nodes (14): CreateFrameDesignInput, CreateFrameDesignSchema, CreatePrintSizeInput, CreatePrintSizeSchema, DeleteFrameDesignInput, DeleteFrameDesignSchema, DeletePrintSizeInput, DeletePrintSizeSchema (+6 more)
+### Community 164 - "errorMessageOf"
+Cohesion: 0.11
+Nodes (24): AdminFramesPage(), FramesPageProps, CmsManager(), CmsManagerProps, CategoryOption, DISCIPLINES, PackageOption, ShowcaseDiscipline (+16 more)
 
 ### Community 165 - "Critical Rules"
 Cohesion: 0.25
 Nodes (8): Chat & Messaging → [chat.md](./rules/chat.md), CLI, Component Structure → [composition.md](./rules/composition.md), Critical Rules, Forms & Inputs → [forms.md](./rules/forms.md), Icons → [icons.md](./rules/icons.md), Styling & Tailwind → [styling.md](./rules/styling.md), Use Components, Not Custom Markup → [composition.md](./rules/composition.md)
 
-### Community 166 - "tier15-projects.test.ts"
-Cohesion: 0.22
-Nodes (12): backfillBookingProjects(), BackfillResult, STAGE_FOR_BOOKING, generateProjectNumber(), isProjectCategorySlug(), LIGHTWEIGHT_CATEGORY_KEYWORDS, PROJECT_CATEGORY_KEYWORDS, ProjectKind (+4 more)
+### Community 166 - "auth/session.ts"
+Cohesion: 0.14
+Nodes (19): AdminLayout(), AdminLayoutProps, AdminNavBar(), AdminUserNav(), AdminUserNavProps, registerClient(), RegisterClientInput, RegisterClientResult (+11 more)
 
-### Community 167 - "slot-time.ts"
-Cohesion: 0.30
-Nodes (11): BookingPage(), CinemaSlotGrid(), CinemaSlotGridProps, Task 1: `loadBookableSlots`, findOverlap(), loadBookableSlots(), isSlotInPast(), minutesOfDay() (+3 more)
+### Community 167 - "2026-11-05: Owner walkthrough, remaining items (9–20)"
+Cohesion: 0.05
+Nodes (39): 2026-11-03, 2026-11-04, 2026-11-05: Client walkthrough (Haz Creatives Studio), 2026-11-05: First UI/UX inspection, 2026-11-05: Owner walkthrough, remaining items (9–20), 2026-11-05: Studio owner walkthrough (admin suite), 2026-11-06: Page audit, client records need a signed-in owner, BUG-20261105-01: The "Verified by" name could be faked (+31 more)
 
-### Community 168 - "booking.ts"
-Cohesion: 0.09
-Nodes (42): CreateBookingInputSchema, CreateBookingOutput, createClientBooking(), getTenantBookingSlots(), holdBookingSlot(), HoldSlotSchema, releaseBookingSlot(), ReleaseSlotSchema (+34 more)
+### Community 168 - "actions/admin-frames.ts"
+Cohesion: 0.16
+Nodes (21): frameInUse(), IN_USE, sizeInUse(), CreateFrameDesignInput, CreateFrameDesignSchema, CreatePrintSizeInput, CreatePrintSizeSchema, DeleteFrameDesignInput (+13 more)
 
-### Community 169 - "admin-verification-console.tsx"
+### Community 169 - ".claude/skills/design-taste-frontend/scripts/lib/app-draw.mjs"
 Cohesion: 0.12
-Nodes (21): BOOKING_STATUS_TEXT, BookingRow, ClientDashboard(), ClientDashboardProps, DeliverableItemRow, humanize(), InvoiceRow, ProjectRow (+13 more)
+Nodes (22): argv, deal(), dealScreen(), dealShell(), dealStyle(), fontLink(), HERE, kebab() (+14 more)
 
-### Community 170 - "empirical-challenger-m1.ts"
-Cohesion: 0.39
-Nodes (7): prisma, recordFail(), recordPass(), results, runEmpiricalStressSuite(), testFk(), TestResult
+### Community 170 - "project-promotion.ts"
+Cohesion: 0.23
+Nodes (15): Task 1: Project kind + provision every confirmed booking, promoteBookingToProjectAction(), backfillBookingProjects(), BackfillResult, STAGE_FOR_BOOKING, generateProjectNumber(), isProjectCategorySlug(), LIGHTWEIGHT_CATEGORY_KEYWORDS (+7 more)
 
 ### Community 171 - "Accessible UI Component Design & Styling Skill"
 Cohesion: 0.13
@@ -994,9 +993,9 @@ Nodes (14): 1. Objectives, 2. Triggers, 3. Inputs & Prerequisites, 4. Architectu
 Cohesion: 0.50
 Nodes (4): 2. Cinema-Style Booking Actions (`src/server/actions/booking.ts`), `confirmBookingWithDeposit(data: z.infer<typeof ConfirmBookingSchema>)`, `holdBookingSlot(slotId: string, sessionId: string)`, `releaseBookingSlot(slotId: string, sessionId: string)`
 
-### Community 173 - "calendar-admin-dashboard.tsx"
-Cohesion: 0.09
-Nodes (42): BatchGeneratorDialog(), BatchGeneratorDialogProps, DAYS, PackagePricingNote(), SingleSlotDialog(), SingleSlotDialogProps, DatePicker(), DatePickerProps (+34 more)
+### Community 173 - "single-slot-dialog.tsx"
+Cohesion: 0.10
+Nodes (42): NewBookingDialog(), NewBookingDialogProps, BatchGeneratorDialog(), BatchGeneratorDialogProps, DAYS, BookForCustomerDialog(), BookForCustomerDialogProps, ClientOption (+34 more)
 
 ### Community 174 - "Database Schema Design & Migrations Skill"
 Cohesion: 0.14
@@ -1038,9 +1037,9 @@ Nodes (11): 1. What the study measured, 2. The roles, 3. Proportion, 4. Surfaces
 Cohesion: 0.17
 Nodes (11): 1. What a scene is, 2. Putting a scene on a page, 3. Filling it, 4. Fitting it to the page, 5. The phone, reduced motion, no script, 6. Checking it, 7. Rules for scenes, 8. When no scene in the library fits (+3 more)
 
-### Community 184 - ".claude/skills/design-taste-frontend/scripts/lint.mjs"
-Cohesion: 0.14
-Nodes (13): APP_LEVEL, appMode, args, asJson, byId, EXT, files, findings (+5 more)
+### Community 184 - "my-booking.ts"
+Cohesion: 0.13
+Nodes (17): MyBookingPage(), MyBookingPageProps, humanize(), MyBookingLookup(), MyBookingLookupProps, STATUS_STYLES, StatusBadge(), attempts (+9 more)
 
 ### Community 185 - "Tools"
 Cohesion: 0.17
@@ -1048,7 +1047,7 @@ Nodes (11): Configuring Registries, Setup, `shadcn:get_add_command_for_items`, `
 
 ### Community 186 - "dependencies"
 Cohesion: 0.06
-Nodes (32): dependencies, bcryptjs@^2.4.3, canvas-confetti@^1.9.4, clsx@^2.1.1, date-fns@^4.1.0, lucide-react@^0.475.0, next@^15.1.0, nodemailer@^10.5.0 (+24 more)
+Nodes (35): dependencies, clsx@^2.1.1, date-fns@^4.1.0, driver.js@1.10.2, lucide-react@^0.475.0, next@^15.1.0, next-themes@^0.4.4, nodemailer@^10.5.0 (+27 more)
 
 ### Community 187 - "App screens"
 Cohesion: 0.18
@@ -1086,9 +1085,9 @@ Nodes (11): Assistant activity uses Trace, Attachments use Attachment, Chat & Me
 Cohesion: 0.50
 Nodes (4): 6. Deliverables Vault & Print Visualizer Actions (`src/server/actions/deliverables.ts`), `orderFramedPrint(data: z.infer<typeof FramedPrintOrderSchema>)`, `submitRetouchNote(itemId: string, note: string)`, `toggleClientFavorite(itemId: string, isFav: boolean)`
 
-### Community 197 - "requireStaff"
-Cohesion: 0.15
-Nodes (27): ProjectWorkspace(), Section(), Task 5: Booking → "Upload photos", session page, delivery marks the booking, CallSheetSchema, cancelEquipmentReservation(), CancelReservationSchema, createCallSheet(), createProposal() (+19 more)
+### Community 197 - "[tenantSlug]/visualizer/page.tsx"
+Cohesion: 0.21
+Nodes (13): ClientAccountLayout(), ClientAccountLayoutProps, AdminProjectPrintsPage(), VisualizerPage(), VisualizerPageProps, ClientAccountHeader(), ClientAccountHeaderProps, ClientNavBar() (+5 more)
 
 ### Community 198 - "Build Awwwards-Quality Sites"
 Cohesion: 0.22
@@ -1102,21 +1101,21 @@ Nodes (9): 2.1 Inventory the data and the jobs, 2.2 Name the screen's one questi
 Cohesion: 0.22
 Nodes (8): 1. How to look, 2. The score, 3. Caps, 4. Writing the critique, 5. What to fix first, 6. When to stop, Contents, Critique — judging the render
 
-### Community 201 - "ref_node_path"
-Cohesion: 0.06
-Nodes (23): components, missing, source, [uiArg, ...roots], uiDir, walk(), CONTENT_TYPE_BY_EXT, SAFE_HEADERS (+15 more)
+### Community 201 - ".claude/skills/design-taste-frontend/scripts/lint.mjs"
+Cohesion: 0.14
+Nodes (13): APP_LEVEL, appMode, args, asJson, byId, EXT, files, findings (+5 more)
 
-### Community 202 - "super-admin.ts"
-Cohesion: 0.29
-Nodes (10): dynamic, metadata, SuperAdminPage(), SuperAdminView(), SuperAdminViewProps, TenantSummaryItem, getAllTenantsSummary(), getPlatformMetrics() (+2 more)
+### Community 202 - "runner.ts"
+Cohesion: 0.12
+Nodes (42): robots(), sitemap(), BookingPage(), getStudioAnalytics(), loginWithCredentials(), COOKIE_NAME, createSessionToken(), setSmtpTransportForTests() (+34 more)
 
 ### Community 203 - "Design Engineering"
 Cohesion: 0.22
 Nodes (8): Accessibility, Design Engineering, Initial Response, prefers-reduced-motion, Review Checklist, Review Format (Required), Stagger Animations, Touch device hover states
 
-### Community 204 - "app/layout.tsx"
-Cohesion: 0.24
-Nodes (7): geistMono, geistSans, metadata, RootLayout(), viewport, SignedOutNotice(), SIGNED_OUT_PARAM
+### Community 204 - "(saas)/page.tsx"
+Cohesion: 0.19
+Nodes (11): metadata, SaasLandingPage(), FeaturesGrid(), PILLARS, InteractiveTeasers(), PricingTiers(), TIERS, SaasHero() (+3 more)
 
 ### Community 205 - "Base vs Radix"
 Cohesion: 0.22
@@ -1138,13 +1137,13 @@ Nodes (8): Color roles, Elevation, Foundations, Motion and icons, Palette, Radiu
 Cohesion: 0.25
 Nodes (8): Chat & Messaging → [chat.md](./rules/chat.md), CLI, Component Structure → [composition.md](./rules/composition.md), Critical Rules, Forms & Inputs → [forms.md](./rules/forms.md), Icons → [icons.md](./rules/icons.md), Styling & Tailwind → [styling.md](./rules/styling.md), Use Components, Not Custom Markup → [composition.md](./rules/composition.md)
 
-### Community 210 - "admin-verification.ts"
-Cohesion: 0.11
-Nodes (30): createBookingForCustomer(), Base, createInvoice(), CreateSchema, fail(), recordInvoicePayment(), RecordSchema, Result (+22 more)
+### Community 210 - "actions/admin-cms.ts"
+Cohesion: 0.21
+Nodes (11): safeRevalidate(), CreateShowcaseItemInput, CreateShowcaseItemSchema, DeleteShowcaseItemInput, DeleteShowcaseItemSchema, ToggleShowcaseFeaturedInput, ToggleShowcaseFeaturedSchema, UpdateShowcaseItemInput (+3 more)
 
-### Community 211 - "room-scene.tsx"
+### Community 211 - "invoices-console.tsx"
 Cohesion: 0.23
-Nodes (9): FrameCanvas(), FrameCanvasProps, RoomScene(), RoomSceneProps, WALL_COLORS, WallColorKey, WallColorOption, SofaMockup() (+1 more)
+Nodes (10): AdminInvoicesPage(), InvoicesPageProps, day(), FilterId, FILTERS, InvoiceRow, InvoicesConsole(), STATUS_STYLE (+2 more)
 
 ### Community 212 - "tasteskill v2 (`design-taste-frontend`)"
 Cohesion: 0.29
@@ -1174,9 +1173,9 @@ Nodes (6): CSS animations beat JS under load, CSS variables are inheritable, Fra
 Cohesion: 0.33
 Nodes (6): Damping at boundaries, Friction instead of hard stops, Gesture and Drag Interactions, Momentum-based dismissal, Multi-touch protection, Pointer capture for drag
 
-### Community 219 - "tier10-authorization.test.ts"
-Cohesion: 0.11
-Nodes (42): robots(), sitemap(), registerClient(), loginWithCredentials(), createSessionToken(), setSessionCookie(), setSmtpTransportForTests(), getNotificationHistory() (+34 more)
+### Community 219 - "admin/page.tsx"
+Cohesion: 0.19
+Nodes (12): AdminDashboardPage(), AdminPageProps, onboardingFor(), SetupChecklistProps, StudioDashboard(), StudioDashboardProps, StudioAnalyticsData, getSetupChecklist() (+4 more)
 
 ### Community 220 - "CineFlow OS — Design System & UI Guidelines ("Nocturne Cine")"
 Cohesion: 0.33
@@ -1278,73 +1277,77 @@ Nodes (4): Debugging Animations, Frame-by-frame inspection, Slow motion testing,
 Cohesion: 0.14
 Nodes (13): 1. Data, 2. Setup checklist (studio owner only), 3. Tour (all staff), 4. Server actions, Admin onboarding guide: design, Anti-goals, Approaches considered, Constraints (+5 more)
 
-### Community 246 - "next"
-Cohesion: 0.06
-Nodes (52): ClientInvoicePage(), ClientInvoicePageProps, AdminBookingPage(), BookingPageProps, AdminCalendarPage(), CalendarPageProps, AdminInvoicePage(), AdminInvoicePageProps (+44 more)
+### Community 246 - "projects/page.tsx"
+Cohesion: 0.09
+Nodes (30): AccountPageProps, ClientAccountPage(), dynamic, metadata, AdminProjectsPage(), ProjectsPageProps, TAB_LABELS, AdminProjectPage() (+22 more)
 
-### Community 247 - "2026-11-05: Owner walkthrough, remaining items (9–20)"
-Cohesion: 0.17
-Nodes (12): 2026-11-05: Owner walkthrough, remaining items (9–20), BUG-20261105-09: Bookings were view-only, BUG-20261105-10: Invoices were view-only, BUG-20261105-11: Proposals, projects, gear reservations, call sheets and photo delivery had no screens, BUG-20261105-12: Book for Customer was confusing, BUG-20261105-13: Rejecting a slip cancelled the whole booking, BUG-20261105-14: Raw codes showed in the UI, BUG-20261105-15: Inconsistent naming and jargon (+4 more)
+### Community 247 - "tier15-projects.test.ts"
+Cohesion: 0.07
+Nodes (59): GET(), BUG-20261106-01: Proposals could be read and signed by anyone, Task 6: Payment hooks, cancel and void, approvePaymentVerification(), ApprovePaymentVerificationInput, ApprovePaymentVerificationSchema, rejectPaymentVerification(), RejectPaymentVerificationInput (+51 more)
 
-### Community 248 - "admin-clients.ts"
-Cohesion: 0.28
-Nodes (8): save(), save(), ActionResult, ClientDetailsSchema, ClientNotesSchema, safeRevalidate(), updateClientDetails(), updateClientNotes()
-
-### Community 249 - "auth/session.ts"
-Cohesion: 0.21
-Nodes (12): AdminLayout(), AdminLayoutProps, ClientUserNav(), ClientUserNavProps, initials(), AdminNavBar(), AdminUserNav(), AdminUserNavProps (+4 more)
-
-### Community 251 - "2026-11-05: Studio owner walkthrough (admin suite)"
+### Community 248 - "proposal-admin-dashboard.tsx"
 Cohesion: 0.22
-Nodes (9): 2026-11-05: Studio owner walkthrough (admin suite), BUG-20261105-01: The "Verified by" name could be faked, BUG-20261105-02: Online payments charged ringgit for every currency, BUG-20261105-03: A deposit could be larger than the price, BUG-20261105-04: Slots could double-book the studio, BUG-20261105-05: Renaming a category's slug orphaned its records, BUG-20261105-06: The Custom Domain setting did nothing, BUG-20261105-07: Invoice numbers were random and inconsistent (+1 more)
+Nodes (13): AddOnTemplateDialog(), AddOnTemplateDialogProps, AddOnUnit, ProposalAddOnTemplateRow, UNITS, AddOnTemplateTable(), AddOnTemplateTableProps, ProposalAdminDashboard() (+5 more)
 
-### Community 253 - ".agents/skills/design-taste-frontend/scripts/scenes.mjs"
-Cohesion: 0.11
-Nodes (15): alive(), Browser, findChrome(), Page, sleep(), sweepProfiles(), args, go() (+7 more)
+### Community 249 - "admin-calendar.ts"
+Cohesion: 0.13
+Nodes (29): batchGenerateBookingSlots(), checkSlotTimes(), createSingleBookingSlot(), findOverlap(), overlapMessage(), safeRevalidate(), SlotCheck, staffSlotPricing() (+21 more)
 
-### Community 254 - "2026-11-06: Page audit, client records need a signed-in owner"
-Cohesion: 0.14
-Nodes (14): VisualizerPage(), 2026-11-06: Page audit, client records need a signed-in owner, BUG-20261106-02: Studio-created clients could never sign in, BUG-20261106-03: Vaults, master downloads and print previews were open to anyone, BUG-20261106-04: Releases and call sheets were public, and releases didn't record who took them, BUG-20261106-05: Password hashes sent to the browser, BUG-20261106-06: Print orders and invoice payments needed no sign-in, BUG-20261106-07: Visualizer showed another studio's photos (+6 more)
+### Community 251 - "Review Focus"
+Cohesion: 0.22
+Nodes (8): Global Constraints, Review Focus, Task 1: Schema and pricing/zone helpers, Task 4: Shipping zones in Settings → Delivery, Task 5: Placing an order, Task 7: Client experience (gallery section, project-scoped Wall Art, cart), Task 8: Admin print orders, status updates, emails, staff ordering, Wall Art Print Orders Implementation Plan
+
+### Community 253 - "empirical-challenger-m1.ts"
+Cohesion: 0.39
+Nodes (7): prisma, recordFail(), recordPass(), results, runEmpiricalStressSuite(), testFk(), TestResult
+
+### Community 254 - "payment-return/page.tsx"
+Cohesion: 0.40
+Nodes (4): dynamic, metadata, PaymentReturnPage(), Props
 
 ### Community 255 - "Project page: header, upload, notify — design"
 Cohesion: 0.40
 Nodes (4): Approaches considered, Design, Project page: header, upload, notify — design, Why
 
-### Community 256 - "PageHeader"
-Cohesion: 0.18
-Nodes (16): AdminCmsPage(), CmsPageProps, CmsManager(), CmsManagerProps, CategoryOption, DISCIPLINES, PackageOption, ShowcaseDiscipline (+8 more)
-
 ### Community 257 - "New booking from the Bookings page: design"
 Cohesion: 0.29
 Nodes (6): Approaches, Design, Goal / non-goals, Left to the builder, New booking from the Bookings page: design, Why
 
-### Community 258 - "Bug Fix Log"
-Cohesion: 0.29
-Nodes (6): 2026-11-03, 2026-11-04, 2026-11-05: Client walkthrough (Haz Creatives Studio), 2026-11-05: First UI/UX inspection, Bug Fix Log, Still open (found, not yet fixed)
+### Community 259 - "print-order-preview-dialog.tsx"
+Cohesion: 0.25
+Nodes (12): PrintFitInput, PrintFitNote(), usePrintFit(), FramedItem(), FrameCanvas(), usePhotoSize(), FALLBACK_FRAME, PrintOrderPreviewItem (+4 more)
 
-### Community 259 - "[clientId]/page.tsx"
-Cohesion: 0.10
-Nodes (23): AdminClientPage(), BOOKING_STATUS_LABELS, ClientPageProps, formatDate(), Row(), Section(), StatusPill(), statusTone() (+15 more)
+### Community 262 - "lucide-react"
+Cohesion: 0.09
+Nodes (22): COLOR_PRESETS, CreateStudioPage(), dynamic, ResetPasswordPage(), ResetPasswordPageProps, PasswordVisibilityToggle(), ResetPasswordForm(), ResetPasswordFormProps (+14 more)
 
-### Community 260 - ".claude/skills/shadcn/assets/showcase/color-pair.tsx"
-Cohesion: 0.60
-Nodes (5): ColorPair(), contrast(), luminance(), toHex(), toRgb()
-
-### Community 261 - "@prisma/client"
-Cohesion: 0.40
-Nodes (5): @prisma/client@^6.3.0, main(), prisma, setupPlaceholderAssets(), @prisma/client
-
-### Community 262 - "New Booking from Bookings Implementation Plan"
-Cohesion: 0.40
-Nodes (4): Global Constraints, New Booking from Bookings Implementation Plan, Review Focus, Task 2: dialog and page
-
-### Community 263 - "actions/admin-cms.ts"
-Cohesion: 0.21
-Nodes (11): safeRevalidate(), CreateShowcaseItemInput, CreateShowcaseItemSchema, DeleteShowcaseItemInput, DeleteShowcaseItemSchema, ToggleShowcaseFeaturedInput, ToggleShowcaseFeaturedSchema, UpdateShowcaseItemInput (+3 more)
+### Community 266 - "deliverables/route.ts"
+Cohesion: 0.20
+Nodes (16): findOrCreateAlbum(), PHOTO_TYPES, POST(), titleFrom(), VIDEO_TYPES, escapeXml(), humanSize(), PREVIEW_DIR (+8 more)
 
 ### Community 267 - "Every booking gets a gallery — design"
 Cohesion: 0.25
 Nodes (7): Approaches considered, Design, Every booking gets a gallery — design, Goals, Left to the builder, Non-goals / anti-goals, Why
+
+### Community 272 - "New Booking from Bookings Implementation Plan"
+Cohesion: 0.33
+Nodes (5): Global Constraints, New Booking from Bookings Implementation Plan, Review Focus, Task 1: `loadBookableSlots`, Task 2: dialog and page
+
+### Community 273 - "ref_node_path"
+Cohesion: 0.08
+Nodes (21): components, missing, source, [uiArg, ...roots], uiDir, walk(), CONTENT_TYPE_BY_EXT, SAFE_HEADERS (+13 more)
+
+### Community 274 - "class-variance-authority"
+Cohesion: 0.14
+Nodes (8): class-variance-authority@^0.7.1, @radix-ui/react-dialog@^1.1.6, sharp@0.35.5, prisma, seed, class-variance-authority, @radix-ui/react-dialog, sharp
+
+### Community 277 - "actionErrorMessage"
+Cohesion: 0.33
+Nodes (16): actionErrorMessage(), batchDeleteBookingSlots(), cleanupExpiredHolds(), forceReleaseHeldSlot(), createCampaignCategory(), createServicePackage(), deleteCampaignCategory(), deleteServicePackage() (+8 more)
+
+### Community 281 - "actions/logistics.ts"
+Cohesion: 0.22
+Nodes (12): CreateShotItemInput, CreateShotItemSchema, DeleteShotItemInput, DeleteShotItemSchema, SubmitDigitalReleaseInput, SubmitDigitalReleaseSchema, ToggleShotCompletionInput, ToggleShotCompletionSchema (+4 more)
 
 ## Ambiguous Edges - Review These
 - `24-Model Prisma Schema (SQLite dev.db)` → `docs/03 Database Schema and Data Models`  [AMBIGUOUS]
@@ -1352,23 +1355,23 @@ Nodes (7): Approaches considered, Design, Every booking gets a gallery — desig
 
 ## Knowledge Gaps
 - **25 isolated node(s):** `RFC-4180`, `Multi-Tenant Seed Script (prisma/seed.ts)`, `Local File Upload Route (app/api/upload/route.ts)`, `Frictionless 3-Field Client Onboarding`, `100% Dynamic Settings (Full CRUD)` (+20 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2072 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2133 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `react` to `PageHeader`, `Skeleton`, `[clientId]/page.tsx`, `.claude/skills/shadcn/assets/showcase/color-pair.tsx`, `admin-booking-lifecycle.ts`, `settings-ui.tsx`, `Step 4: Map Tokens to the Theme`, `visualizer-shell.tsx`, `project-workspace.tsx`, `action-error.ts`, `actions/password-reset.ts`, `bookings-console.tsx`, `Critical Rules`, `admin-verification-console.tsx`, `.agents/skills/shadcn/assets/showcase/color-pair.tsx`, `Styling & Customization`, `buttonVariants`, `Step 4: Map Tokens to the Theme`, `Critical Rules`, `Styling & Customization`, `next`, `auth/session.ts`?**
-  _High betweenness centrality (0.092) - this node is a cross-community bridge._
+- **Why does `cn()` connect `cn` to `Skeleton`, `lucide-react`, `actions/print-orders.ts`, `next`, `settings-ui.tsx`, `Step 4: Map Tokens to the Theme`, `visualizer-shell.tsx`, `ui/page.tsx`, `utils.ts`, `admin-booking-lifecycle.ts`, `errorMessageOf`, `Critical Rules`, `auth/session.ts`, `[clientId]/page.tsx`, `tier20-print-orders.test.ts`, `admin-verification-console.tsx`, `Styling & Customization`, `my-booking.ts`, `buttonVariants`, `Step 4: Map Tokens to the Theme`, `[tenantSlug]/visualizer/page.tsx`, `Critical Rules`, `invoices-console.tsx`, `bookings-console.tsx`, `Styling & Customization`, `projects/page.tsx`, `proposal-admin-dashboard.tsx`?**
+  _High betweenness centrality (0.101) - this node is a cross-community bridge._
 - **What connects `RFC-4180`, `Multi-Tenant Seed Script (prisma/seed.ts)`, `Local File Upload Route (app/api/upload/route.ts)` to the rest of the system?**
   _25 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.agents/skills/design-taste-frontend/scripts/assets.mjs` be split into smaller, more focused modules?**
   _Cohesion score 0.06648426812585499 - nodes in this community are weakly interconnected._
-- **Why does `next` connect `next` to `PageHeader`, `admin-verification.ts`, `[clientId]/page.tsx`, `actions/admin-cms.ts`, `admin-booking-lifecycle.ts`, `tenant.ts`, `labels.ts`, `proposal-viewer.tsx`, `settings-ui.tsx`, `package.json`, `visualizer-shell.tsx`, `db.ts`, `action-error.ts`, `actions/password-reset.ts`, `lucide-react`, `project-workspace.tsx`, `[tenantSlug]/page.tsx`, `my-booking.ts`, `bookings-console.tsx`, `showcase-shell.tsx`, `admin-services.ts`, `getCurrentUser`, `admin/page.tsx`, `proposal-admin-dashboard.tsx`, `cinema-booking-shell.tsx`, `actions/admin-frames.ts`, `admin-proposals.ts`, `booking.ts`, `admin-verification-console.tsx`, `.agents/skills/shadcn/assets/showcase/color-pair.tsx`, `calendar-admin-dashboard.tsx`, `actions/gear.ts`, `sonner`, `(saas)/page.tsx`, `getSessionClient`, `tier9-toyyibpay-gateway.test.ts`, `dependencies`, `buttonVariants`, `checkout/page.tsx`, `actions/logistics.ts`, `requireStaff`, `tier10-authorization.test.ts`, `ref_node_path`, `super-admin.ts`, `app/layout.tsx`, `admin-verification.ts`, `react`, `tier10-authorization.test.ts`, `actions/gear.ts`, `storage.ts`, `middleware.ts`, `admin-clients.ts`, `auth/session.ts`?**
-  _High betweenness centrality (0.079) - this node is a cross-community bridge._
-- **Should `admin-verification.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06857142857142857 - nodes in this community are weakly interconnected._
-- **Why does `CineFlow OS — Server Actions & API Specification` connect `CineFlow OS — Server Actions & API Specification` to `6. Deliverables Vault & Print Visualizer Actions (`src/server/actions/deliverables.ts`)`, `2. Cinema-Style Booking Actions (`src/server/actions/booking.ts`)`, `requireStaff`?**
+- **Why does `next` connect `next` to `print-order-preview-dialog.tsx`, `lucide-react`, `actions/print-orders.ts`, `getCurrentUser`, `package.json`, `deliverables/route.ts`, `admin-projects.ts`, `settings-ui.tsx`, `labels.ts`, `visualizer-shell.tsx`, `ref_node_path`, `actions/onboarding.ts`, `services-dashboard.tsx`, `ui/page.tsx`, `showcase-shell.tsx`, `admin-proposals.ts`, `actions/logistics.ts`, `admin-services.ts`, `actions/logistics.ts`, `db.ts`, `ref_node_path`, `cn`, `utils.ts`, `admin-booking-lifecycle.ts`, `errorMessageOf`, `auth/session.ts`, `[clientId]/page.tsx`, `actions/admin-frames.ts`, `project-promotion.ts`, `single-slot-dialog.tsx`, `admin-verification-console.tsx`, `tier20-print-orders.test.ts`, `client-auth.ts`, `cinema-booking-shell.tsx`, `actions/checkout.ts`, `actions/password-reset.ts`, `my-booking.ts`, `tier9-toyyibpay-gateway.test.ts`, `dependencies`, `buttonVariants`, `proposal-viewer.tsx`, `admin/page.tsx`, `[tenantSlug]/visualizer/page.tsx`, `admin-invoices.ts`, `(saas)/page.tsx`, `actions/admin-cms.ts`, `invoices-console.tsx`, `[tenantSlug]/page.tsx`, `admin/page.tsx`, `04-logistics-gear-wall.test.ts`, `bookings-console.tsx`, `projects/page.tsx`, `tier15-projects.test.ts`, `proposal-admin-dashboard.tsx`, `admin-calendar.ts`, `payment-return/page.tsx`?**
+  _High betweenness centrality (0.096) - this node is a cross-community bridge._
+- **Should `notifications.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.10416666666666667 - nodes in this community are weakly interconnected._
+- **Why does `CineFlow OS — Server Actions & API Specification` connect `CineFlow OS — Server Actions & API Specification` to `6. Deliverables Vault & Print Visualizer Actions (`src/server/actions/deliverables.ts`)`, `2. Cinema-Style Booking Actions (`src/server/actions/booking.ts`)`, `actionErrorMessage`?**
   _High betweenness centrality (0.050) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
