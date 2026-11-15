@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { RoomScene, type WallColorKey } from "./room-scene";
 import {
   ConfiguratorPanel,
@@ -111,14 +110,6 @@ export function VisualizerShell({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Link
-              href={`/${tenantSlug}`}
-              className="text-xs font-mono text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
-            >
-              <ArrowLeft className="size-3" />
-              <span>Back to studio website</span>
-            </Link>
-            <span className="text-zinc-600 text-xs">•</span>
             <span className="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">
               Wall Art Sizing Studio
             </span>

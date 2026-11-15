@@ -7,6 +7,8 @@ import { STAFF_ROLES } from "@/lib/auth/guard";
 import { currencySymbol } from "@/lib/money";
 import type { PrintOrderer } from "@/components/visualizer/order-modal";
 import { VisualizerShell } from "@/components/visualizer/visualizer-shell";
+import { ShowcaseNav } from "@/components/showcase/showcase-nav";
+import { getSessionClient } from "@/lib/clients";
 import type {
   PrintSizeOption,
   FrameDesignOption,
@@ -118,8 +120,27 @@ export default async function VisualizerPage({
     orderer = { kind: "staff", name: session.name, email: "", phone: "" };
   }
 
+  // The same studio top bar as the studio website, so visitors can still book, message or sign in.
+  const [studioLead, navClient] = await Promise.all([
+    db.user.findFirst({
+      where: { tenantId: tenant.id, role: "STUDIO_OWNER" },
+      select: { name: true, phone: true },
+    }),
+    getSessionClient(tenant.id),
+  ]);
+  const navStaff =
+    session && STAFF_ROLES.has(session.role) && (session.role === "SUPER_ADMIN" || session.tenantId === tenant.id)
+      ? { name: session.name, email: session.email, role: session.role }
+      : null;
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      <ShowcaseNav
+        tenant={tenant}
+        studioLead={studioLead}
+        client={navClient ? { name: navClient.name, email: navClient.email } : null}
+        staff={navStaff}
+      />
       <main className="py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <VisualizerShell
         tenantSlug={tenant.slug}
