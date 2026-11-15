@@ -25,3 +25,21 @@ export const PRINT_ORDER_STATUS_STYLES: Record<string, string> = {
 export function printOrderStatusLabel(status: string): string {
   return PRINT_ORDER_STATUS_LABELS[status] ?? status;
 }
+
+/** The moves staff make by hand, from each status, for each fulfilment (cancelling is separate). */
+const STAFF_MOVES: Record<string, Record<string, string[]>> = {
+  PICKUP: { NEW: ["IN_PRODUCTION"], IN_PRODUCTION: ["READY_FOR_PICKUP"], READY_FOR_PICKUP: ["COLLECTED"] },
+  SHIP: { NEW: ["IN_PRODUCTION"], IN_PRODUCTION: ["SHIPPED"], SHIPPED: ["DELIVERED"] },
+};
+
+/** Where staff can move an order next: nothing while it awaits payment, or once it's done or cancelled. */
+export function nextPrintOrderStatuses(fulfilment: string, status: string): string[] {
+  return STAFF_MOVES[fulfilment]?.[status] ?? [];
+}
+
+/** How each mat board choice is described to clients and staff. */
+export const MAT_BOARD_LABELS: Record<string, string> = {
+  NONE: "No mat",
+  WHITE_2INCH: '2" white mat',
+  OFFWHITE_2INCH: '2" off-white mat',
+};

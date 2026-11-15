@@ -19,7 +19,7 @@ interface CheckoutStepProps {
   catalog: Catalog;
   onBack: () => void;
   /** The order went in. `checkoutUrl` is null when nothing is left to pay. */
-  onPlaced: (placed: { orderNumber: string; checkoutUrl: string | null }) => void;
+  onPlaced: (placed: { orderId: string; orderNumber: string; checkoutUrl: string | null }) => void;
 }
 
 const EMPTY_ADDRESS: ShippingAddress = { recipientName: "", recipientPhone: "", line1: "", line2: "", postcode: "", city: "", state: "" };
@@ -141,7 +141,7 @@ export function CheckoutStep({ tenantId, tenantSlug, currency, ordering, cart, c
         setPlacing(false);
         return;
       }
-      onPlaced({ orderNumber: res.orderNumber, checkoutUrl: res.checkoutUrl });
+      onPlaced({ orderId: res.orderId, orderNumber: res.orderNumber, checkoutUrl: res.checkoutUrl });
     } catch (err) {
       setError(errorMessageOf(err) || "Couldn't place this order.");
       setPlacing(false);

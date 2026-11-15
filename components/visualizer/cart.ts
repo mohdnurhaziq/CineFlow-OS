@@ -38,6 +38,8 @@ export type OrderingContext = {
   savedAddress: ShippingAddress | null;
   /** The included line to start with (`&claim=`), when it still has prints left. */
   claimLineId: string | null;
+  /** Staff ordering for a client from the admin console: open the placed order there, not the client checkout. */
+  staffOrdersHref?: string;
 };
 
 export type CartLine = {

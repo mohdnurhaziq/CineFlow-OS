@@ -19,17 +19,20 @@ import { grantIncludedPrint, removeIncludedPrint } from "@/lib/actions/admin-inc
 import { backfillIncludedPrints } from "../../prisma/backfill-included-prints";
 import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { deleteFrameDesign, deletePrintSize, togglePrintSizeAvailability, updateMatBoardPrice } from "@/lib/actions/admin-frames";
-import { cancelPrintOrder, placePrintOrder, quotePrintOrder } from "@/lib/actions/print-orders";
+import { cancelPrintOrder, placePrintOrder, quotePrintOrder, updatePrintOrderStatus } from "@/lib/actions/print-orders";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { voidInvoice } from "@/lib/actions/admin-invoices";
 import { settleToyyibpayBill } from "@/lib/payments/settle";
 import { markPrintOrderPaid } from "@/lib/prints/orders";
 import { InvoiceNotPayableError, updatePayableInvoice } from "@/lib/bookings/billing";
 import { encryptSecret } from "../../lib/crypto/secret-box";
-import type { PlaceOrderInput } from "@/lib/validations/print-orders";
+import type { PlaceOrderInput, UpdateOrderStatusInput } from "@/lib/validations/print-orders";
 import { findProp, provideReactGlobal } from "./react-tree";
 import VisualizerPage from "@/app/[tenantSlug]/visualizer/page";
 import ProjectVaultPage from "@/app/[tenantSlug]/vault/[projectId]/page";
+import AdminProjectPrintsPage from "@/app/[tenantSlug]/admin/projects/[projectId]/prints/page";
+import nodemailer, { type Transporter } from "nodemailer";
+import { setSmtpTransportForTests } from "@/lib/email/smtp";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
   harness.setSuite("Tier 20", "Wall Art Print Orders: Schema, Pricing & Zones");
@@ -962,5 +965,166 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const lines = findProp<{ quantity: number; remaining: number }[]>(tree, "lines") ?? [];
     harness.assertEqual(lines.length, 1, "Lists the included line");
     harness.assertEqual(lines[0]?.remaining, 1, "Nothing claimed yet");
+  });
+  await harness.test("T20-UI-04: the studio's print ordering page opens only a paid project with photos for ordering", async () => {
+    const adminPrints = (projectId: string) =>
+      withSession(ownerSession, () => AdminProjectPrintsPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId }) }));
+    const locked = await adminPrints(unpaid.project.id);
+    harness.assertEqual(findProp<boolean>(locked, "canOrder"), false, "Unpaid project can't order");
+    const p = await makeOrderProject(true);
+    const tree = await adminPrints(p.project.id);
+    harness.assertEqual(findProp<boolean>(tree, "canOrder"), true, "Paid project with photos can order");
+    const photos = findProp<{ id: string; url: string }[]>(tree, "initialPhotos") ?? [];
+    harness.assertEqual(JSON.stringify(photos.map((x) => x.id)), JSON.stringify([p.photo.id]), "Only the project's PHOTO item");
+    const ordering = findProp<{ galleryHref: string; staffOrdersHref?: string }>(tree, "ordering");
+    harness.assertEqual(ordering?.galleryHref, `/lumina-cine/admin/projects/${p.project.id}`, "Back to the admin gallery");
+    harness.assertEqual(ordering?.staffOrdersHref, "/lumina-cine/admin/print-orders", "Placed orders open in the admin console");
+  });
+
+  // ---- Studio: print order status, tracking and client emails ----
+  type Mail = { to: string; subject: string; html: string; text: string };
+  const SMTP_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM_ADDRESS"] as const;
+  /** Runs `fn` with SMTP pointed at a capturing transport (or one that fails), then puts SMTP back. */
+  const withInbox = async (fn: (inbox: Mail[]) => Promise<void>, fail = false) => {
+    const saved = Object.fromEntries(SMTP_KEYS.map((k) => [k, process.env[k]]));
+    for (const k of SMTP_KEYS) delete process.env[k];
+    process.env.SMTP_HOST = "mailpit";
+    process.env.SMTP_PORT = "1025";
+    const inbox: Mail[] = [];
+    const json = nodemailer.createTransport({ jsonTransport: true });
+    setSmtpTransportForTests({
+      sendMail: async (mail: Mail) => {
+        if (fail) throw Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+        inbox.push(mail);
+        return json.sendMail(mail);
+      },
+    } as unknown as Transporter);
+    const quiet = console.error;
+    if (fail) console.error = () => undefined;
+    try {
+      await fn(inbox);
+    } finally {
+      console.error = quiet;
+      // A late email (e.g. a booking confirmation still in flight) lands nowhere instead of a real server.
+      setSmtpTransportForTests(json);
+      for (const k of SMTP_KEYS) {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      }
+    }
+  };
+  type AnySession = Parameters<typeof withSession>[0];
+  const move = (orderId: string, status: UpdateOrderStatusInput["status"], extra: { courier?: string; trackingNumber?: string } = {}, session: AnySession = ownerSession) =>
+    withSession(session, () => updatePrintOrderStatus({ ...orderBase, orderId, status, ...extra }));
+  const placePickup = async () => {
+    const p = await makeOrderProject(true);
+    const res = await withSession(p.session, () =>
+      placePrintOrder({ ...orderBase, projectId: p.project.id, items: [includedItem(p)], fulfilment: "PICKUP" })
+    );
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    return { p, orderId: res.orderId };
+  };
+
+  await harness.test("T20-ADMIN-01: a shipped order needs a courier and tracking number, then the client gets one shipped email", async () => {
+    await withInbox(async (all) => {
+      // Only this order's print emails: setting up the booking sends its own confirmation, possibly late.
+      const mine = () => all.filter((m) => /framed prints/i.test(m.subject));
+      const a = await placeAwaiting();
+      const early = await move(a.orderId, "IN_PRODUCTION");
+      harness.assertEqual(errOf(early), "BAD_TRANSITION", "An unpaid order can't go into production");
+      harness.assertEqual(await orderStatus(a.orderId), "AWAITING_PAYMENT", "Still awaiting payment");
+      harness.assertEqual((await payByCard(a)).success, true, "Paid");
+
+      harness.assertEqual((await move(a.orderId, "IN_PRODUCTION")).success, true, "NEW -> IN_PRODUCTION");
+      harness.assertEqual(await orderStatus(a.orderId), "IN_PRODUCTION", "In production");
+      harness.assertEqual(mine().length, 0, "No email for going into production");
+
+      const bare = await move(a.orderId, "SHIPPED");
+      harness.assertEqual(errOf(bare), "TRACKING_REQUIRED", "No courier or tracking refused");
+      const half = await move(a.orderId, "SHIPPED", { courier: "J&T Express", trackingNumber: "   " });
+      harness.assertEqual(errOf(half), "TRACKING_REQUIRED", "Blank tracking refused");
+      harness.assertEqual(await orderStatus(a.orderId), "IN_PRODUCTION", "Still in production");
+      harness.assertEqual(mine().length, 0, "No email for a refused move");
+
+      const shipped = await move(a.orderId, "SHIPPED", { courier: "J&T Express", trackingNumber: "JT1234567" });
+      harness.assertEqual(shipped.success, true, "IN_PRODUCTION -> SHIPPED");
+      const order = await db.printOrder.findUniqueOrThrow({ where: { id: a.orderId } });
+      harness.assertEqual(order.status, "SHIPPED", "SHIPPED");
+      harness.assertEqual(order.courier, "J&T Express", "Courier stored");
+      harness.assertEqual(order.trackingNumber, "JT1234567", "Tracking stored");
+      harness.assertEqual(mine().length, 1, "One shipped email");
+      harness.assertEqual(mine()[0]?.to, a.p.client.email, "Sent to the client");
+      harness.assertEqual(/shipped/i.test(mine()[0]?.subject ?? ""), true, "Subject says shipped");
+      harness.assertEqual(
+        (mine()[0]?.html ?? "").includes("JT1234567") && (mine()[0]?.html ?? "").includes(order.orderNumber),
+        true,
+        "Tracking and order number in the email"
+      );
+
+      const back = await move(a.orderId, "IN_PRODUCTION");
+      harness.assertEqual(errOf(back), "BAD_TRANSITION", "Can't move a shipped order back");
+      const collected = await move(a.orderId, "COLLECTED");
+      harness.assertEqual(errOf(collected), "BAD_TRANSITION", "A shipped order is delivered, not collected");
+      harness.assertEqual((await move(a.orderId, "DELIVERED")).success, true, "SHIPPED -> DELIVERED");
+      harness.assertEqual(await orderStatus(a.orderId), "DELIVERED", "DELIVERED");
+      harness.assertEqual(mine().length, 1, "Still one email");
+    });
+  });
+
+  await harness.test("T20-ADMIN-02: a pickup order can't be shipped; ready for pickup sends one ready email", async () => {
+    await withInbox(async (all) => {
+      // Only this order's print emails: setting up the booking sends its own confirmation, possibly late.
+      const mine = () => all.filter((m) => /framed prints/i.test(m.subject));
+      const { p, orderId } = await placePickup();
+      harness.assertEqual(await orderStatus(orderId), "NEW", "Free pickup order is NEW");
+      const skip = await move(orderId, "READY_FOR_PICKUP");
+      harness.assertEqual(errOf(skip), "BAD_TRANSITION", "NEW can't skip production");
+      harness.assertEqual((await move(orderId, "IN_PRODUCTION")).success, true, "NEW -> IN_PRODUCTION");
+      const ship = await move(orderId, "SHIPPED", { courier: "Pos Laju", trackingNumber: "PL1" });
+      harness.assertEqual(errOf(ship), "BAD_TRANSITION", "A pickup order can't be shipped");
+      harness.assertEqual(await orderStatus(orderId), "IN_PRODUCTION", "Still in production");
+
+      harness.assertEqual((await move(orderId, "READY_FOR_PICKUP")).success, true, "IN_PRODUCTION -> READY_FOR_PICKUP");
+      harness.assertEqual(await orderStatus(orderId), "READY_FOR_PICKUP", "Ready for pickup");
+      harness.assertEqual(mine().length, 1, "One ready email");
+      harness.assertEqual(mine()[0]?.to, p.client.email, "Sent to the client");
+      harness.assertEqual(/ready/i.test(mine()[0]?.subject ?? ""), true, "Subject says ready");
+      harness.assertEqual((await move(orderId, "COLLECTED")).success, true, "READY_FOR_PICKUP -> COLLECTED");
+      harness.assertEqual(await orderStatus(orderId), "COLLECTED", "COLLECTED");
+      harness.assertEqual(mine().length, 1, "Still one email");
+    });
+  });
+
+  await harness.test("T20-ADMIN-03: a client, or nobody signed in, can't change an order's status", async () => {
+    const { p, orderId } = await placePickup();
+    const asClient = await move(orderId, "IN_PRODUCTION", {}, p.session);
+    harness.assertEqual(errOf(asClient), "FORBIDDEN", "Client refused");
+    const signedOut = await move(orderId, "IN_PRODUCTION", {}, null);
+    harness.assertEqual(errOf(signedOut), "UNAUTHENTICATED", "Signed out refused");
+    harness.assertEqual(await orderStatus(orderId), "NEW", "Order unchanged");
+  });
+
+  await harness.test("T20-ADMIN-04: another studio's staff can't change an order's status", async () => {
+    const apex = await db.tenant.findUniqueOrThrow({ where: { slug: "apex-media" } });
+    const apexOwner = await db.user.findFirstOrThrow({ where: { tenantId: apex.id, role: "STUDIO_OWNER" } });
+    const apexSession = { id: apexOwner.id, email: apexOwner.email, name: apexOwner.name, role: apexOwner.role, tenantId: apex.id, tenantSlug: "apex-media" };
+    const { orderId } = await placePickup();
+    const res = await move(orderId, "IN_PRODUCTION", {}, apexSession);
+    harness.assertEqual(errOf(res), "FORBIDDEN", "Other tenant's staff refused");
+    const ownTenant = await withSession(apexSession, () =>
+      updatePrintOrderStatus({ tenantId: apex.id, tenantSlug: "apex-media", orderId, status: "IN_PRODUCTION" })
+    );
+    harness.assertEqual(errOf(ownTenant), "NOT_FOUND", "Not found under their own studio");
+    harness.assertEqual(await orderStatus(orderId), "NEW", "Order unchanged");
+  });
+
+  await harness.test("T20-ADMIN-05: a failed email doesn't undo the status change", async () => {
+    await withInbox(async () => {
+      const { orderId } = await placePickup();
+      await move(orderId, "IN_PRODUCTION");
+      const res = await move(orderId, "READY_FOR_PICKUP");
+      harness.assertEqual(res.success, true, "Status change succeeds");
+      harness.assertEqual(await orderStatus(orderId), "READY_FOR_PICKUP", "Ready for pickup");
+    }, true);
   });
 }

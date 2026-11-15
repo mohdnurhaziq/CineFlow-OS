@@ -52,3 +52,17 @@ export const CancelOrderSchema = z.object({
 });
 
 export type CancelOrderInput = z.input<typeof CancelOrderSchema>;
+
+/** The statuses staff move an order to by hand (cancelling has its own action). */
+export const STAFF_ORDER_MOVES = ["IN_PRODUCTION", "READY_FOR_PICKUP", "SHIPPED", "COLLECTED", "DELIVERED"] as const;
+
+export const UpdateOrderStatusSchema = z.object({
+  tenantId: z.string().min(1),
+  tenantSlug: z.string().min(1),
+  orderId: z.string().min(1),
+  status: z.enum(STAFF_ORDER_MOVES, { message: "Choose a valid order status." }),
+  courier: z.string().trim().max(100).optional(),
+  trackingNumber: z.string().trim().max(100).optional(),
+});
+
+export type UpdateOrderStatusInput = z.input<typeof UpdateOrderStatusSchema>;

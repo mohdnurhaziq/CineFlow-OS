@@ -8,12 +8,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { useDialog } from "@/lib/use-dialog";
 import { CheckoutStep } from "./checkout-step";
 import { priceLabel, priceLine, type CartLine, type Catalog, type OrderingContext } from "./cart";
+import { MAT_BOARD_LABELS } from "@/lib/prints/status";
 
-const MAT_LABELS: Record<string, string> = {
-  NONE: "No mat",
-  WHITE_2INCH: '2" white mat',
-  OFFWHITE_2INCH: '2" off-white mat',
-};
 
 interface CartDrawerProps {
   open: boolean;
@@ -45,8 +41,13 @@ export function CartDrawer({ open, onClose, tenantId, tenantSlug, currency, orde
     onClose();
   };
 
-  const handlePlaced = ({ orderNumber, checkoutUrl }: { orderNumber: string; checkoutUrl: string | null }) => {
+  const handlePlaced = ({ orderId, orderNumber, checkoutUrl }: { orderId: string; orderNumber: string; checkoutUrl: string | null }) => {
     onOrdered();
+    // Staff stay in the admin console: the order page links its invoice for recording the payment.
+    if (ordering.staffOrdersHref) {
+      window.location.assign(`${ordering.staffOrdersHref}/${orderId}`);
+      return;
+    }
     if (checkoutUrl) {
       window.location.assign(checkoutUrl);
       return;
@@ -117,7 +118,7 @@ export function CartDrawer({ open, onClose, tenantId, tenantSlug, currency, orde
                         {size?.name ?? "Size unavailable"} · {frame?.name ?? "Frame unavailable"}
                       </p>
                       <p className="text-xs text-zinc-500">
-                        {MAT_LABELS[line.matBoardType]} · {line.orientation === "PORTRAIT" ? "Portrait" : "Landscape"}
+                        {MAT_BOARD_LABELS[line.matBoardType]} · {line.orientation === "PORTRAIT" ? "Portrait" : "Landscape"}
                       </p>
                       <p className={cn("text-xs font-mono font-semibold", line.kind === "INCLUDED" ? "text-emerald-400" : "text-white")}>
                         {priceLabel(line, priced, currency)}

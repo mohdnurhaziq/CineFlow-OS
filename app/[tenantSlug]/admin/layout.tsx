@@ -44,13 +44,16 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
   // Release slots whose QR/cash deposit went unpaid for 24 hours, before counting.
   await expireUnpaidDeposits(tenant.id);
 
-  // Get live pending verification count for badge
-  const pendingCount = await db.milestoneInvoice.count({
-    where: {
-      tenantId: tenant.id,
-      status: "PENDING_VERIFICATION",
-    },
-  });
+  // Live counts for the nav badges: payments to verify, print orders to start.
+  const [pendingCount, newPrintOrderCount] = await Promise.all([
+    db.milestoneInvoice.count({
+      where: {
+        tenantId: tenant.id,
+        status: "PENDING_VERIFICATION",
+      },
+    }),
+    db.printOrder.count({ where: { tenantId: tenant.id, status: "NEW" } }),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-amber-500/20 selection:text-amber-400 print:bg-white print:min-h-0">
@@ -103,6 +106,7 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
             <AdminNavBar
               tenantSlug={tenant.slug}
               pendingVerificationCount={pendingCount}
+              newPrintOrderCount={newPrintOrderCount}
             />
           </div>
         </div>

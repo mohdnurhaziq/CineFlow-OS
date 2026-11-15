@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ExternalLink, Film, ImagePlus, Layers, Loader2, Receipt, Trash2, Heart, MessageSquare } from "lucide-react";
+import { CalendarDays, ExternalLink, Film, Frame, ImagePlus, Layers, Loader2, Receipt, Trash2, Heart, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import {
   createCallSheet,
@@ -405,9 +405,14 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
         icon={ImagePlus}
         title={`Photos for ${project.client.name.split(/\s+/)[0]} (${fileCount})`}
         aside={
-          <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
-            See what the client sees <ExternalLink className="size-3.5" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href={`/${tenantSlug}/admin/projects/${project.id}/prints`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
+              <Frame className="size-3.5" /> Order framed prints for client
+            </Link>
+            <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
+              See what the client sees <ExternalLink className="size-3.5" />
+            </Link>
+          </div>
         }
       >
         <PhotoUploader projectId={project.id} albums={project.galleries.map((g) => g.title)} />

@@ -6,16 +6,20 @@ import { ZodError } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { canAccessClientRecord } from "@/lib/auth/project-access";
-import { STAFF_ROLES } from "@/lib/auth/guard";
+import { AuthorizationError, requireStaff, STAFF_ROLES } from "@/lib/auth/guard";
 import { nextInvoiceNumber, nextPrintOrderNumber, UNPAID_INVOICE_STATUSES } from "@/lib/bookings/billing";
 import { remainingForLines } from "@/lib/prints/entitlements";
 import { orderTotals, priceCartLine, type PricedCartLine } from "@/lib/prints/pricing";
 import { zoneForState } from "@/lib/prints/zones";
 import { actionErrorMessage } from "@/lib/action-error";
 import { SENT_ORDER_STATUSES } from "@/lib/prints/orders";
+import { nextPrintOrderStatuses } from "@/lib/prints/status";
+import { sendPrintOrderReadyEmail, sendPrintOrderShippedEmail } from "@/lib/email/print-order-emails";
 import {
   CancelOrderSchema,
   PlaceOrderSchema,
+  UpdateOrderStatusSchema,
+  type UpdateOrderStatusInput,
   type CancelOrderInput,
   type PlaceOrderInput,
   type PlaceOrderValues,
@@ -49,6 +53,13 @@ type Fail = { success: false; error: string; message: string };
 
 function failFrom(err: unknown, fallback: string): Fail {
   if (err instanceof OrderRefusal) return { success: false, error: err.code, message: err.message };
+  if (err instanceof AuthorizationError) {
+    return {
+      success: false,
+      error: err.message.startsWith("UNAUTHENTICATED") ? "UNAUTHENTICATED" : "FORBIDDEN",
+      message: err.message.replace(/^[A-Z_]+: /, ""),
+    };
+  }
   if (err instanceof ZodError) return { success: false, error: "INVALID", message: actionErrorMessage(err, fallback) };
   console.error("print order error:", err);
   return { success: false, error: "ORDER_FAILED", message: fallback };
@@ -311,6 +322,7 @@ export async function placePrintOrder(
     safeRevalidate(`/${v.tenantSlug}/visualizer`);
     safeRevalidate(`/${v.tenantSlug}/vault/${v.projectId}`);
     safeRevalidate(`/${v.tenantSlug}/admin/invoices`);
+    safeRevalidate(`/${v.tenantSlug}/admin/print-orders`);
 
     return {
       success: true,
@@ -380,8 +392,51 @@ export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ succe
     safeRevalidate(`/${v.tenantSlug}/vault/${order.projectId}`);
     safeRevalidate(`/${v.tenantSlug}/account`);
     safeRevalidate(`/${v.tenantSlug}/admin/invoices`);
+    safeRevalidate(`/${v.tenantSlug}/admin/print-orders`);
     return { success: true };
   } catch (err) {
     return failFrom(err, "Couldn't cancel this order.");
+  }
+}
+
+/**
+ * Moves a print order along: NEW -> IN_PRODUCTION -> READY_FOR_PICKUP -> COLLECTED for pickup,
+ * NEW -> IN_PRODUCTION -> SHIPPED (with courier and tracking number) -> DELIVERED for delivery.
+ * Studio staff only. The client is emailed when the prints are ready or have shipped, after the
+ * change is saved; a mail problem never undoes it.
+ */
+export async function updatePrintOrderStatus(input: UpdateOrderStatusInput): Promise<{ success: true } | Fail> {
+  try {
+    const v = UpdateOrderStatusSchema.parse(input);
+    await requireStaff(v.tenantId);
+
+    const order = await db.printOrder.findFirst({ where: { id: v.orderId, tenantId: v.tenantId } });
+    if (!order) refuse("NOT_FOUND", "Order not found.");
+    if (!nextPrintOrderStatuses(order.fulfilment, order.status).includes(v.status)) {
+      refuse("BAD_TRANSITION", `A ${order.fulfilment === "SHIP" ? "delivery" : "pickup"} order that is ${order.status.toLowerCase().replace(/_/g, " ")} can't be marked ${v.status.toLowerCase().replace(/_/g, " ")}.`);
+    }
+    const courier = v.courier?.trim() ?? "";
+    const trackingNumber = v.trackingNumber?.trim() ?? "";
+    if (v.status === "SHIPPED" && (!courier || !trackingNumber)) {
+      refuse("TRACKING_REQUIRED", "Enter the courier and tracking number to mark this order shipped.");
+    }
+
+    // Only from the status just checked: a cancel or another move in between wins.
+    const won = await db.printOrder.updateMany({
+      where: { id: order.id, tenantId: v.tenantId, status: order.status },
+      data: { status: v.status, ...(v.status === "SHIPPED" ? { courier, trackingNumber } : {}) },
+    });
+    if (won.count === 0) refuse("ORDER_CHANGED", "This order changed just now. Refresh and try again.");
+
+    if (v.status === "READY_FOR_PICKUP") await sendPrintOrderReadyEmail(order.id);
+    if (v.status === "SHIPPED") await sendPrintOrderShippedEmail(order.id);
+
+    safeRevalidate(`/${v.tenantSlug}/admin/print-orders`);
+    safeRevalidate(`/${v.tenantSlug}/admin/print-orders/${order.id}`);
+    safeRevalidate(`/${v.tenantSlug}/vault/${order.projectId}`);
+    safeRevalidate(`/${v.tenantSlug}/account`);
+    return { success: true };
+  } catch (err) {
+    return failFrom(err, "Couldn't update this order.");
   }
 }

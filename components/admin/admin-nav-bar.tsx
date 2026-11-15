@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils";
 interface AdminNavBarProps {
   tenantSlug: string;
   pendingVerificationCount: number;
+  /** Print orders paid (or free) and waiting for the studio to start. */
+  newPrintOrderCount?: number;
 }
 
 interface NavSubItem {
@@ -44,7 +46,7 @@ interface NavDomain {
   badge?: number | null;
 }
 
-export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBarProps) {
+export function AdminNavBar({ tenantSlug, pendingVerificationCount, newPrintOrderCount = 0 }: AdminNavBarProps) {
   const pathname = usePathname();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -54,6 +56,7 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
         id: "production",
         label: "Production",
         icon: Clapperboard,
+        badge: newPrintOrderCount > 0 ? newPrintOrderCount : null,
         items: [
           {
             href: `/${tenantSlug}/admin/projects`,
@@ -66,6 +69,13 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
             label: "Bookings",
             description: "Client session appointments, deposits & statuses",
             icon: CalendarCheck,
+          },
+          {
+            href: `/${tenantSlug}/admin/print-orders`,
+            label: "Print orders",
+            description: "Framed prints to produce, ship or hand over",
+            icon: Frame,
+            badge: newPrintOrderCount > 0 ? newPrintOrderCount : null,
           },
           {
             href: `/${tenantSlug}/admin/calendar`,
@@ -134,7 +144,7 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount }: AdminNavBa
         ],
       },
     ],
-    [tenantSlug, pendingVerificationCount]
+    [tenantSlug, pendingVerificationCount, newPrintOrderCount]
   );
 
   // Determine active domain

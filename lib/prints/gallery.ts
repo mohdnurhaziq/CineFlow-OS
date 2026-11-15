@@ -39,6 +39,17 @@ export type FramedPrintsData = {
   orders: FramedPrintOrder[];
 };
 
+/**
+ * The gallery preview (thumbnail, else preview) of each order item's photo, by deliverable item id.
+ * Never the print master. UNSCOPED: pass only ids from orders the caller may see.
+ */
+export async function loadItemPreviews(deliverableItemIds: (string | null)[]): Promise<Map<string, string>> {
+  const ids = [...new Set(deliverableItemIds.filter((id): id is string => !!id))];
+  if (ids.length === 0) return new Map();
+  const previews = await db.deliverableItem.findMany({ where: { id: { in: ids } }, select: { id: true, previewUrl: true, thumbnailUrl: true } });
+  return new Map(previews.map((p) => [p.id, p.thumbnailUrl || p.previewUrl]));
+}
+
 export async function loadFramedPrints(projectId: string): Promise<FramedPrintsData> {
   const [entitlements, orders] = await Promise.all([
     loadProjectEntitlements(projectId),
@@ -49,11 +60,7 @@ export async function loadFramedPrints(projectId: string): Promise<FramedPrintsD
     }),
   ]);
 
-  const itemIds = [...new Set(orders.flatMap((o) => o.items.map((i) => i.deliverableItemId)).filter((id): id is string => !!id))];
-  const previews = itemIds.length
-    ? await db.deliverableItem.findMany({ where: { id: { in: itemIds } }, select: { id: true, previewUrl: true, thumbnailUrl: true } })
-    : [];
-  const previewById = new Map(previews.map((p) => [p.id, p.thumbnailUrl || p.previewUrl]));
+  const previewById = await loadItemPreviews(orders.flatMap((o) => o.items.map((i) => i.deliverableItemId)));
 
   return {
     lines: entitlements.lines.map((l) => ({
