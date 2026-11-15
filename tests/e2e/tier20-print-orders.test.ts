@@ -165,4 +165,31 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const bad = await updateMatBoardPrice({ tenantId: lumina.id, tenantSlug: "lumina-cine", price: -1 });
     harness.assertEqual(bad.success, false, "Negative price refused");
   });
+
+  await harness.test("T20-PKG-06: a package keeps a since-hidden line when edited, but cannot add a new hidden one", async () => {
+    const hiddenFrame = await db.frameDesign.create({
+      data: { tenantId: lumina.id, name: "T20 Hidden Frame", material: "Wood", moldingWidth: 1, frameColor: "#111111", previewAsset: "/x.png", priceOffset: 0 },
+    });
+    harness.registerTeardown(async () => {
+      await db.servicePackage.deleteMany({ where: { name: "T20 Print Pkg" } });
+      await db.frameDesign.deleteMany({ where: { id: hiddenFrame.id } });
+    });
+    const line = { printSizeId: "psz_lum_8r", frameDesignId: hiddenFrame.id, quantity: 2 };
+    const created = await createServicePackage({ ...pkgBase, includedPrints: [line] });
+    if (!created.success || !created.package) throw new Error("create failed");
+    await db.frameDesign.update({ where: { id: hiddenFrame.id }, data: { isAvailable: false } });
+    const edited = await updateServicePackage({ ...pkgBase, id: created.package.id, price: 600, includedPrints: [line] });
+    harness.assertEqual(edited.success, true, "Edit with the hidden line succeeds");
+    harness.assertEqual((await db.servicePackage.findUnique({ where: { id: created.package.id } }))?.price, 600, "Price changed");
+    const kept = await db.packageIncludedPrint.findMany({ where: { packageId: created.package.id } });
+    harness.assertEqual(kept.length, 1, "Line kept");
+    const added = await updateServicePackage({
+      ...pkgBase,
+      id: created.package.id,
+      includedPrints: [line, { printSizeId: "psz_lum_12r", frameDesignId: hiddenFrame.id, quantity: 1 }],
+    });
+    harness.assertEqual(added.success, false, "A new line with a hidden frame is refused");
+    const createHidden = await createServicePackage({ ...pkgBase, includedPrints: [line] });
+    harness.assertEqual(createHidden.success, false, "Create requires everything available");
+  });
 }

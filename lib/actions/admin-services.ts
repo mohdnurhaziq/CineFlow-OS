@@ -28,17 +28,33 @@ import {
 
 type IncludedPrintLine = { printSizeId: string; frameDesignId: string; quantity: number };
 
-/** Each size and frame must belong to the studio and still be on offer. Returns an error message, or null. */
-async function includedPrintsError(tenantId: string, lines: IncludedPrintLine[]): Promise<string | null> {
+/**
+ * Each size and frame must belong to the studio. Lines the package already has may point at
+ * something since hidden (so the package stays editable); any other line must be available.
+ * Returns an error message, or null.
+ */
+async function includedPrintsError(
+  tenantId: string,
+  lines: IncludedPrintLine[],
+  existing: IncludedPrintLine[] = [],
+): Promise<string | null> {
   if (lines.length === 0) return null;
+  const kept = new Set(existing.map((l) => `${l.printSizeId}|${l.frameDesignId}`));
+  const isNew = (l: IncludedPrintLine) => !kept.has(`${l.printSizeId}|${l.frameDesignId}`);
   const sizeIds = [...new Set(lines.map((l) => l.printSizeId))];
   const frameIds = [...new Set(lines.map((l) => l.frameDesignId))];
   const [sizes, frames] = await Promise.all([
-    db.printSize.count({ where: { tenantId, isAvailable: true, id: { in: sizeIds } } }),
-    db.frameDesign.count({ where: { tenantId, isAvailable: true, id: { in: frameIds } } }),
+    db.printSize.findMany({ where: { tenantId, id: { in: sizeIds } }, select: { id: true, isAvailable: true } }),
+    db.frameDesign.findMany({ where: { tenantId, id: { in: frameIds } }, select: { id: true, isAvailable: true } }),
   ]);
-  if (sizes !== sizeIds.length) return "One of the print sizes is not available for this studio.";
-  if (frames !== frameIds.length) return "One of the frames is not available for this studio.";
+  const sizeOk = new Map(sizes.map((s) => [s.id, s.isAvailable]));
+  const frameOk = new Map(frames.map((f) => [f.id, f.isAvailable]));
+  for (const l of lines) {
+    if (!sizeOk.has(l.printSizeId)) return "One of the print sizes is not available for this studio.";
+    if (!frameOk.has(l.frameDesignId)) return "One of the frames is not available for this studio.";
+    if (isNew(l) && !sizeOk.get(l.printSizeId)) return "One of the print sizes is not available for this studio.";
+    if (isNew(l) && !frameOk.get(l.frameDesignId)) return "One of the frames is not available for this studio.";
+  }
   return null;
 }
 
@@ -144,7 +160,11 @@ export async function updateServicePackage(input: UpdateServicePackageInput) {
       return { success: false, error: "PACKAGE_NOT_FOUND", message: "Service package not found or does not belong to studio." };
     }
 
-    const printsError = await includedPrintsError(tenantId, includedPrints ?? []);
+    const currentLines = await db.packageIncludedPrint.findMany({
+      where: { packageId: id },
+      select: { printSizeId: true, frameDesignId: true, quantity: true },
+    });
+    const printsError = await includedPrintsError(tenantId, includedPrints ?? [], currentLines);
     if (printsError) {
       return { success: false, error: "INVALID_INCLUDED_PRINTS", message: printsError };
     }
