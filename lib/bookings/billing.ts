@@ -144,3 +144,24 @@ async function issueProjectFinalBalance(tx: Tx, retainer: PaidInvoice) {
     },
   });
 }
+
+/**
+ * The next print order number: PO-<year>-<n>, 0001, 0002… counted from the orders placed that
+ * year. Order numbers are unique across every studio, so the count is too (a per-studio count
+ * would hand two studios the same number). Must run inside the transaction that creates the
+ * order, after it holds the write lock.
+ */
+export async function nextPrintOrderNumber(tx: Tx, tenantId: string, now: Date = new Date()): Promise<string> {
+  void tenantId; // Kept for symmetry with nextInvoiceNumber; see the note above.
+  const prefix = `PO-${now.getFullYear()}-`;
+  const rows = await tx.printOrder.findMany({
+    where: { orderNumber: { startsWith: prefix } },
+    select: { orderNumber: true },
+  });
+  let max = 0;
+  for (const { orderNumber } of rows) {
+    const suffix = orderNumber.slice(prefix.length);
+    if (/^\d+$/.test(suffix)) max = Math.max(max, Number(suffix));
+  }
+  return `${prefix}${String(max + 1).padStart(4, "0")}`;
+}

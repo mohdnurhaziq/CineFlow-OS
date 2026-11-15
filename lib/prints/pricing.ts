@@ -16,3 +16,40 @@ export function upgradeAmount(chosen: number, included: number): number {
 export function includedPrintCount(lines: { quantity: number }[]): number {
   return lines.reduce((sum, l) => sum + l.quantity, 0);
 }
+
+export type PricedCartLine = {
+  sizePrice: number;
+  framePrice: number;
+  matPrice: number;
+  upgradeAmount: number;
+  lineAmount: number;
+};
+
+/**
+ * What one framed print in a cart costs. A paid print costs its full framed price. An included
+ * print costs only the upgrade over its included line (that line's size + frame, no mat), both
+ * at the current catalog prices.
+ */
+export function priceCartLine(p: {
+  kind: "INCLUDED" | "PAID";
+  sizePrice: number;
+  framePrice: number;
+  mat: MatBoardType;
+  matBoardPrice: number;
+  included?: { sizePrice: number; framePrice: number };
+}): PricedCartLine {
+  const matPrice = p.mat === "NONE" ? 0 : p.matBoardPrice;
+  const chosen = framedPrice({ sizePrice: p.sizePrice, framePrice: p.framePrice, mat: p.mat, matBoardPrice: p.matBoardPrice });
+  const base = { sizePrice: p.sizePrice, framePrice: p.framePrice, matPrice };
+  if (p.kind === "PAID") return { ...base, upgradeAmount: 0, lineAmount: chosen };
+  if (!p.included) throw new Error("An included print needs its included line's price.");
+  const included = framedPrice({ ...p.included, mat: "NONE", matBoardPrice: p.matBoardPrice });
+  const upgrade = upgradeAmount(chosen, included);
+  return { ...base, upgradeAmount: upgrade, lineAmount: upgrade };
+}
+
+/** Items total and order total (items + the one shipping fee), rounded to cents. */
+export function orderTotals(lineAmounts: number[], shippingFee: number): { itemsTotal: number; total: number } {
+  const itemsTotal = round2(lineAmounts.reduce((sum, a) => sum + a, 0));
+  return { itemsTotal, total: round2(itemsTotal + shippingFee) };
+}

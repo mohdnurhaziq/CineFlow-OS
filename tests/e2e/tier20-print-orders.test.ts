@@ -19,6 +19,8 @@ import { grantIncludedPrint, removeIncludedPrint } from "@/lib/actions/admin-inc
 import { backfillIncludedPrints } from "../../prisma/backfill-included-prints";
 import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { deleteFrameDesign, deletePrintSize, togglePrintSizeAvailability, updateMatBoardPrice } from "@/lib/actions/admin-frames";
+import { placePrintOrder, quotePrintOrder } from "@/lib/actions/print-orders";
+import type { PlaceOrderInput } from "@/lib/validations/print-orders";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
   harness.setSuite("Tier 20", "Wall Art Print Orders: Schema, Pricing & Zones");
@@ -419,5 +421,248 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual((await withSession(clientSession, () => saveShippingZones(payload))).success, false, "Client refused");
     harness.assertEqual((await withSession(apexSession, () => saveShippingZones(payload))).success, false, "Other tenant refused");
     harness.assertEqual(await db.shippingZone.count({ where: { tenantId: lumina.id } }), 3, "Zones untouched");
+  });
+
+  // ---- Placing an order ----
+  harness.registerTeardown(async () => {
+    await db.printOrder.deleteMany({ where: { client: { email: { startsWith: "t20-" } } } });
+  });
+  const sessionOf = (u: { id: string; email: string; name: string }) => ({
+    id: u.id, email: u.email, name: u.name, role: "CLIENT", tenantId: lumina.id, tenantSlug: "lumina-cine",
+  });
+  /** A booking from the seed package (one included 8R + black frame) with its gallery holding one photo. */
+  const makeOrderProject = async (paid: boolean) => {
+    const { booking, client } = await bookT20();
+    const project = await db.project.create({
+      data: {
+        tenantId: lumina.id, projectNumber: `T20O-${run}-${Math.random().toString(36).slice(2, 8)}`, title: "T20 Order Project",
+        clientId: client.id, studioLeadId: owner.id, discipline: "PHOTOGRAPHY", bookingId: booking.id, budget: 100, isFinalBalancePaid: paid,
+      },
+    });
+    const deliverable = await db.clientDeliverable.create({
+      data: {
+        projectId: project.id, title: "T20 Gallery", discipline: "PHOTOGRAPHY",
+        items: { create: [
+          { itemType: "PHOTO", title: "Photo One", previewUrl: "/t20/p1-preview.jpg", downloadUrl: "/t20/p1-master.jpg" },
+          { itemType: "VIDEO", title: "Film", previewUrl: "/t20/v.mp4", downloadUrl: "/t20/v.mp4" },
+        ] },
+      },
+      include: { items: true },
+    });
+    const photo = deliverable.items.find((i) => i.itemType === "PHOTO")!;
+    const video = deliverable.items.find((i) => i.itemType === "VIDEO")!;
+    const line = await db.bookingIncludedPrint.findFirstOrThrow({ where: { bookingId: booking.id } });
+    return { project, client, session: sessionOf(client), photo, video, line };
+  };
+  type OrderProject = Awaited<ReturnType<typeof makeOrderProject>>;
+  const orderBase = { tenantId: lumina.id, tenantSlug: "lumina-cine" };
+  const includedItem = (p: OrderProject) => ({
+    kind: "INCLUDED" as const, bookingIncludedPrintId: p.line.id, deliverableItemId: p.photo.id, orientation: "PORTRAIT" as const,
+    printSizeId: "psz_lum_8r", frameDesignId: "frm_lum_black", matBoardType: "NONE" as const,
+  });
+  const paidItem = (p: OrderProject, printSizeId = "psz_lum_12r", frameDesignId = "frm_lum_walnut") => ({
+    kind: "PAID" as const, deliverableItemId: p.photo.id, orientation: "LANDSCAPE" as const,
+    printSizeId, frameDesignId, matBoardType: "NONE" as const,
+  });
+  const address = (state: (typeof MY_STATES)[number]) => ({
+    recipientName: "Print Client", recipientPhone: "0123456789", line1: "1 Jalan Test", postcode: "93000", city: "Kuching", state,
+  });
+  const errOf = (r: { success: boolean }) => ("error" in r ? (r as { error: string }).error : "");
+  const msgOf = (r: { success: boolean }) => ("message" in r ? (r as { message: string }).message : "");
+
+  const unpaid = await makeOrderProject(false);
+  const paidA = await makeOrderProject(true);
+
+  await harness.test("T20-ORDER-01: an unpaid project is locked for the client and for staff", async () => {
+    const input: PlaceOrderInput = { ...orderBase, projectId: unpaid.project.id, items: [includedItem(unpaid)], fulfilment: "PICKUP" };
+    const asClient = await withSession(unpaid.session, () => placePrintOrder(input));
+    harness.assertEqual(errOf(asClient), "LOCKED", "Client LOCKED");
+    harness.assertEqual(msgOf(asClient), "Framed prints unlock when your balance is paid.", "Message");
+    const asStaff = await withSession(ownerSession, () => placePrintOrder(input));
+    harness.assertEqual(errOf(asStaff), "LOCKED", "Staff LOCKED too");
+    harness.assertEqual(await db.printOrder.count({ where: { projectId: unpaid.project.id } }), 0, "No order");
+  });
+
+  let order02Id = "";
+  await harness.test("T20-ORDER-02: a free included pickup order is NEW with no invoice and uses up the line", async () => {
+    const res = await withSession(paidA.session, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [includedItem(paidA)], fulfilment: "PICKUP" })
+    );
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    order02Id = res.orderId;
+    harness.assertEqual(res.checkoutUrl, null, "No checkout");
+    harness.assertEqual(/^PO-\d{4}-\d{4}$/.test(res.orderNumber), true, "Order number format");
+    const order = await db.printOrder.findUniqueOrThrow({ where: { id: res.orderId }, include: { items: true } });
+    harness.assertEqual(order.status, "NEW", "Status NEW");
+    harness.assertEqual(order.invoiceId, null, "No invoice");
+    harness.assertEqual(order.totalAmount, 0, "Total 0");
+    harness.assertEqual(order.clientId, paidA.client.id, "Client");
+    harness.assertEqual(order.placedById, paidA.client.id, "Placed by client");
+    harness.assertEqual(order.items.length, 1, "One item");
+    harness.assertEqual(order.items[0]?.kind, "INCLUDED", "Included item");
+    harness.assertEqual(order.items[0]?.photoTitle, "Photo One", "Photo snapshotted");
+    harness.assertEqual(order.items[0]?.sizeCode, "8R", "Size snapshotted");
+    const map = await remainingForLines(db, [paidA.line.id]);
+    harness.assertEqual(map.get(paidA.line.id), 0, "Remaining 0");
+  });
+
+  await harness.test("T20-ORDER-03: the same included line again is refused", async () => {
+    const res = await withSession(paidA.session, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [includedItem(paidA)], fulfilment: "PICKUP" })
+    );
+    harness.assertEqual(errOf(res), "NONE_LEFT", "NONE_LEFT");
+    harness.assertEqual(msgOf(res), "You've already claimed all of these prints.", "Message");
+    const twice = await withSession(ownerSession, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [includedItem(paidA), includedItem(paidA)], fulfilment: "PICKUP" })
+    );
+    harness.assertEqual(errOf(twice), "NONE_LEFT", "Two in one cart for one unit refused");
+  });
+
+  await harness.test("T20-ORDER-04: two orders racing for the last included print, exactly one wins", async () => {
+    await db.printOrder.update({ where: { id: order02Id }, data: { status: "CANCELLED" } });
+    harness.assertEqual((await remainingForLines(db, [paidA.line.id])).get(paidA.line.id), 1, "Cancel returns the print");
+    const input: PlaceOrderInput = { ...orderBase, projectId: paidA.project.id, items: [includedItem(paidA)], fulfilment: "PICKUP" };
+    const results = await withSession(paidA.session, () => Promise.all([placePrintOrder(input), placePrintOrder(input)]));
+    harness.assertEqual(results.filter((r) => r.success).length, 1, "Exactly one success");
+    harness.assertEqual(
+      await db.printOrderItem.count({ where: { bookingIncludedPrintId: paidA.line.id, order: { status: { not: "CANCELLED" } } } }),
+      1,
+      "One live claim"
+    );
+    harness.assertEqual((await remainingForLines(db, [paidA.line.id])).get(paidA.line.id), 0, "Remaining 0");
+  });
+
+  await harness.test("T20-ORDER-05: an upgraded included print shipped to Sarawak pays the upgrade plus the zone fee", async () => {
+    const p = await makeOrderProject(true);
+    const tenant = await db.tenant.findUniqueOrThrow({ where: { id: lumina.id } });
+    const [s8, s12, black] = await Promise.all([
+      db.printSize.findUniqueOrThrow({ where: { id: "psz_lum_8r" } }),
+      db.printSize.findUniqueOrThrow({ where: { id: "psz_lum_12r" } }),
+      db.frameDesign.findUniqueOrThrow({ where: { id: "frm_lum_black" } }),
+    ]);
+    const expected = upgradeAmount(
+      framedPrice({ sizePrice: s12.basePrice, framePrice: black.priceOffset, mat: "WHITE_2INCH", matBoardPrice: tenant.matBoardPrice }),
+      framedPrice({ sizePrice: s8.basePrice, framePrice: black.priceOffset, mat: "NONE", matBoardPrice: tenant.matBoardPrice })
+    );
+    harness.assertEqual(expected > 0, true, "A real upgrade");
+    const input: PlaceOrderInput = {
+      ...orderBase, projectId: p.project.id, fulfilment: "SHIP", address: address("Sarawak"),
+      items: [{ ...includedItem(p), printSizeId: "psz_lum_12r", matBoardType: "WHITE_2INCH" }],
+    };
+    const quote = await withSession(p.session, () => quotePrintOrder(input));
+    if (!quote.success) throw new Error("quote failed: " + JSON.stringify(quote));
+    harness.assertEqual(quote.items[0]?.upgradeAmount, expected, "Quoted upgrade");
+    harness.assertEqual(quote.shippingFee, 10, "Quoted fee");
+    harness.assertEqual(quote.total, expected + 10, "Quoted total");
+    harness.assertEqual(await db.printOrder.count({ where: { projectId: p.project.id } }), 0, "A quote places nothing");
+    const res = await withSession(p.session, () => placePrintOrder(input));
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const order = await db.printOrder.findUniqueOrThrow({ where: { id: res.orderId }, include: { items: true, invoice: true } });
+    harness.assertEqual(order.items[0]?.upgradeAmount, expected, "Upgrade amount");
+    harness.assertEqual(order.items[0]?.lineAmount, expected, "Line amount is the upgrade");
+    harness.assertEqual(order.shippingFee, 10, "Fee 10");
+    harness.assertEqual(order.shippingZoneName, "Local", "Zone snapshotted");
+    harness.assertEqual(order.state, "Sarawak", "Address snapshotted");
+    harness.assertEqual(order.status, "AWAITING_PAYMENT", "Awaiting payment");
+    harness.assertEqual(order.invoice?.amount, expected + 10, "Invoice amount");
+    harness.assertEqual(order.invoice?.milestoneType, "PRINT_FRAME_ORDER", "Invoice type");
+    harness.assertEqual(order.invoice?.status, "PENDING", "Invoice pending");
+    harness.assertEqual(order.invoice?.clientId, p.client.id, "Invoice client");
+    harness.assertEqual(order.invoice?.projectId, p.project.id, "Invoice project");
+    harness.assertEqual(order.invoice?.description, `Framed prints ${order.orderNumber}`, "Invoice description");
+    harness.assertEqual(res.checkoutUrl, `/lumina-cine/checkout?invoiceId=${order.invoiceId}`, "Checkout URL");
+  });
+
+  await harness.test("T20-ORDER-06: two paid prints and one included print ship as one order with one fee and one invoice", async () => {
+    const p = await makeOrderProject(true);
+    const tenant = await db.tenant.findUniqueOrThrow({ where: { id: lumina.id } });
+    const [s12, s16, walnut, gold] = await Promise.all([
+      db.printSize.findUniqueOrThrow({ where: { id: "psz_lum_12r" } }),
+      db.printSize.findUniqueOrThrow({ where: { id: "psz_lum_16r" } }),
+      db.frameDesign.findUniqueOrThrow({ where: { id: "frm_lum_walnut" } }),
+      db.frameDesign.findUniqueOrThrow({ where: { id: "frm_lum_gold" } }),
+    ]);
+    const paid1 = framedPrice({ sizePrice: s12.basePrice, framePrice: walnut.priceOffset, mat: "NONE", matBoardPrice: tenant.matBoardPrice });
+    const paid2 = framedPrice({ sizePrice: s16.basePrice, framePrice: gold.priceOffset, mat: "OFFWHITE_2INCH", matBoardPrice: tenant.matBoardPrice });
+    const res = await withSession(ownerSession, () =>
+      placePrintOrder({
+        ...orderBase, projectId: p.project.id, fulfilment: "SHIP", address: address("Selangor"),
+        items: [paidItem(p), { ...paidItem(p, "psz_lum_16r", "frm_lum_gold"), matBoardType: "OFFWHITE_2INCH" }, includedItem(p)],
+      })
+    );
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const orders = await db.printOrder.findMany({ where: { projectId: p.project.id }, include: { items: true, invoice: true } });
+    harness.assertEqual(orders.length, 1, "One order");
+    const order = orders[0]!;
+    harness.assertEqual(order.items.length, 3, "Three items");
+    harness.assertEqual(order.shippingFee, 30, "One fee 30");
+    harness.assertEqual(order.itemsTotal, paid1 + paid2, "Items total = paid prints, included free");
+    harness.assertEqual(order.totalAmount, paid1 + paid2 + 30, "Total");
+    harness.assertEqual(order.invoice?.amount, paid1 + paid2 + 30, "Invoice amount");
+    harness.assertEqual(await db.milestoneInvoice.count({ where: { projectId: p.project.id, milestoneType: "PRINT_FRAME_ORDER" } }), 1, "One invoice");
+    harness.assertEqual(order.placedById, owner.id, "Placed by staff");
+    harness.assertEqual(order.clientId, p.client.id, "For the project's client");
+  });
+
+  await harness.test("T20-ORDER-07: shipping to a state no zone covers is refused", async () => {
+    await withSession(ownerSession, () => saveShippingZones({ ...zoneBase, zones: seedZones.filter((z) => z.name !== "Peninsular") }));
+    try {
+      const res = await withSession(paidA.session, () =>
+        placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [paidItem(paidA)], fulfilment: "SHIP", address: address("Johor") })
+      );
+      harness.assertEqual(errOf(res), "NO_SHIPPING", "NO_SHIPPING");
+      harness.assertEqual(msgOf(res), "We don't ship to Johor yet. Choose pickup.", "Message");
+      const noAddress = await withSession(paidA.session, () =>
+        placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [paidItem(paidA)], fulfilment: "SHIP" })
+      );
+      harness.assertEqual(noAddress.success, false, "Ship without an address refused");
+    } finally {
+      await withSession(ownerSession, () => saveShippingZones({ ...zoneBase, zones: seedZones }));
+    }
+  });
+
+  await harness.test("T20-ORDER-08: another client, a foreign photo or a video is refused", async () => {
+    const before = await db.printOrder.count({ where: { projectId: paidA.project.id } });
+    const asOther = await withSession(unpaid.session, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [paidItem(paidA)], fulfilment: "PICKUP" })
+    );
+    harness.assertEqual(asOther.success, false, "Another client refused");
+    const foreignPhoto = await withSession(paidA.session, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [{ ...paidItem(paidA), deliverableItemId: unpaid.photo.id }], fulfilment: "PICKUP" })
+    );
+    harness.assertEqual(foreignPhoto.success, false, "Photo from another project refused");
+    const video = await withSession(paidA.session, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [{ ...paidItem(paidA), deliverableItemId: paidA.video.id }], fulfilment: "PICKUP" })
+    );
+    harness.assertEqual(video.success, false, "A video can't be printed");
+    const foreignLine = await withSession(ownerSession, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [{ ...includedItem(paidA), bookingIncludedPrintId: unpaid.line.id }], fulfilment: "PICKUP" })
+    );
+    harness.assertEqual(foreignLine.success, false, "Another booking's included print refused");
+    const signedOut = await withSession(null, () =>
+      placePrintOrder({ ...orderBase, projectId: paidA.project.id, items: [paidItem(paidA)], fulfilment: "PICKUP" })
+    );
+    harness.assertEqual(signedOut.success, false, "Signed out refused");
+    harness.assertEqual(await db.printOrder.count({ where: { projectId: paidA.project.id } }), before, "Nothing placed");
+  });
+
+  await harness.test("T20-ORDER-09: saveAddress stores the delivery address on the client", async () => {
+    const res = await withSession(paidA.session, () =>
+      placePrintOrder({
+        ...orderBase, projectId: paidA.project.id, items: [paidItem(paidA)], fulfilment: "SHIP",
+        address: { ...address("Sabah"), line2: "Taman Uji", city: "Kota Kinabalu", postcode: "88000" }, saveAddress: true,
+      })
+    );
+    if (!res.success) throw new Error("place failed: " + JSON.stringify(res));
+    const u = await db.user.findUniqueOrThrow({ where: { id: paidA.client.id } });
+    harness.assertEqual(u.shipRecipient, "Print Client", "Recipient");
+    harness.assertEqual(u.shipPhone, "0123456789", "Phone");
+    harness.assertEqual(u.shipLine1, "1 Jalan Test", "Line 1");
+    harness.assertEqual(u.shipLine2, "Taman Uji", "Line 2");
+    harness.assertEqual(u.shipPostcode, "88000", "Postcode");
+    harness.assertEqual(u.shipCity, "Kota Kinabalu", "City");
+    harness.assertEqual(u.shipState, "Sabah", "State");
+    const order = await db.printOrder.findUniqueOrThrow({ where: { id: res.orderId } });
+    harness.assertEqual(order.shippingFee, 20, "Sabah zone fee");
   });
 }
