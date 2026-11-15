@@ -21,7 +21,7 @@ export function StatusLegendBar({ brandColor }: StatusLegendBarProps) {
           className="size-3 rounded-md border animate-pulse"
           style={{ backgroundColor: activeColor, borderColor: activeColor }}
         />
-        <span className="text-white font-bold">Your Hold (Active)</span>
+        <span className="text-white font-bold">Your Selection</span>
       </div>
 
       {/* Held by Another */}
@@ -29,7 +29,7 @@ export function StatusLegendBar({ brandColor }: StatusLegendBarProps) {
         <span className="size-3 rounded-md bg-amber-500/20 border border-amber-500/40 relative overflow-hidden">
           <span className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(245,158,11,0.4)_50%,transparent_75%)] bg-[length:6px_6px]" />
         </span>
-        <span>Held by Another</span>
+        <span>Being Booked</span>
       </div>
 
       {/* Booked */}

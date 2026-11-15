@@ -11,15 +11,6 @@ export default function BookLoading() {
           <Skeleton className="h-4 w-96 mx-auto max-w-full bg-zinc-850" />
         </div>
 
-        {/* 10-Minute Pessimistic Hold Warning Banner Skeleton */}
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Skeleton className="size-5 rounded-full bg-amber-500/30" />
-            <Skeleton className="h-4 w-64 bg-amber-500/20" />
-          </div>
-          <Skeleton className="h-4 w-24 bg-amber-500/20" />
-        </div>
-
         {/* Two-Column Grid: Packages on left, Calendar slots on right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 space-y-4">

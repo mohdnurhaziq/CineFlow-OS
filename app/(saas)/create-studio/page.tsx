@@ -172,7 +172,7 @@ export default function CreateStudioPage() {
             Launch Your Studio Digital Workspace
           </h1>
           <p className="text-sm text-zinc-400">
-            Provision your branded showcase, 10-minute cinema booking engine, and delivery paywall in 60 seconds.
+            Provision your branded showcase, online booking calendar, and delivery paywall in 60 seconds.
           </p>
         </div>
 
@@ -606,7 +606,7 @@ export default function CreateStudioPage() {
 
                 <div className="space-y-3">
                   {[
-                    { id: "STARTER", name: "Starter", price: "$29/mo", detail: "Solo lead, branded showcase, 10-min slot hold" },
+                    { id: "STARTER", name: "Starter", price: "$29/mo", detail: "Solo lead, branded showcase, online booking" },
                     { id: "PRO", name: "Pro Studio", price: "$79/mo", detail: "Up to 5 crew, custom domain, proposals, solar HUD" },
                     { id: "STUDIO_UNLIMITED", name: "Studio Unlimited", price: "$199/mo", detail: "Unlimited crew, living room wall visualizer, print orders" },
                   ].map((tier) => (
@@ -654,7 +654,7 @@ export default function CreateStudioPage() {
                     <div>✓ 3 Wall Print Sizing Specs (8R, 12R, 16R)</div>
                     <div>✓ 4 Proposal Add-On Templates</div>
                     <div>✓ 1 Seed Starter Service Package</div>
-                    <div>✓ 10-Minute Slot Holding Engine</div>
+                    <div>✓ Clash-Free Online Booking Calendar</div>
                   </div>
                 </div>
 

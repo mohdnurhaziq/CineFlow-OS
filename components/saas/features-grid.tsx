@@ -12,10 +12,10 @@ import {
 const PILLARS = [
   {
     icon: Clock,
-    title: "Cinema-Style Slot Holding",
+    title: "Clash-Free Online Booking",
     badge: "0% Double Bookings",
     description:
-      "Atomic conditional database updates lock calendar slots for exactly 10 minutes with live countdown timers, preventing double bookings during peak graduation and festive seasons.",
+      "Clients pick a time and pay their deposit online. Each slot can only be booked by one client, even during peak graduation and festive seasons.",
   },
   {
     icon: CreditCard,

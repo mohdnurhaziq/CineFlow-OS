@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { CinemaStageIndicator } from "./cinema-stage-indicator";
 import { StatusLegendBar } from "./status-legend-bar";
 import { CinemaSlotGrid, type BookingSlotItem } from "./cinema-slot-grid";
-import { SlotCountdownTimer } from "./slot-countdown-timer";
+import { SlotHoldWatcher } from "./slot-hold-watcher";
 import { BookingIntakeModal } from "./booking-intake-modal";
 import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
@@ -86,7 +86,7 @@ export function CinemaBookingShell({
     }
   }, [initialSlots]);
 
-  // Handle slot selection (Atomic 10-Minute Hold)
+  // Handle slot selection (reserves the slot briefly so two clients can't book it at once)
   const handleSlotClick = (slot: BookingSlotItem) => {
     if (!sessionId) return;
 
@@ -106,7 +106,7 @@ export function CinemaBookingShell({
     });
   };
 
-  // Request the atomic 10-minute hold for a slot (releasing any previous hold).
+  // Reserve a slot for this client while they book (releasing any previous one).
   const holdSlot = async (slot: BookingSlotItem) => {
     const res = await holdBookingSlot({
       tenantId: tenant.id,
@@ -116,7 +116,7 @@ export function CinemaBookingShell({
     });
 
     if (res.success && res.slot && res.heldUntil) {
-      toast.success(`Slot locked for 10 minutes! (${slot.startTime})`);
+      toast.success(`Time selected: ${slot.startTime}`);
       setHeldSlot(res.slot);
       setHeldUntil(res.heldUntil);
 
@@ -143,7 +143,7 @@ export function CinemaBookingShell({
         })
       );
     } else {
-      toast.error(res.message || "Failed to hold slot. It may have just been claimed.");
+      toast.error(res.message || "That time could not be selected. Someone may have just taken it.");
       // If conflict occurred, reload slots state
       if (res.error === "SLOT_ALREADY_HELD" || res.error === "SLOT_ALREADY_BOOKED") {
         setSlots((prev) =>
@@ -166,7 +166,7 @@ export function CinemaBookingShell({
       });
 
       if (res.success) {
-        toast.info("Slot hold released back to calendar.");
+        toast.info("Selection cleared.");
         setHeldSlot(null);
         setHeldUntil(null);
         setSlots((prev) =>
@@ -176,9 +176,9 @@ export function CinemaBookingShell({
     });
   };
 
-  // When 10-minute hold expires
+  // When the brief reservation runs out
   const handleHoldExpired = () => {
-    toast.error("⏱️ Your 10-minute hold has expired. The slot has been returned to the calendar.");
+    toast.error("This time is no longer reserved for you. Please select it again to continue.");
     if (heldSlot) {
       const expiredId = heldSlot.id;
       setHeldSlot(null);
@@ -247,7 +247,7 @@ export function CinemaBookingShell({
             Cinema-Style Soundstage Calendar
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400">
-            Select an available production slot to lock it exclusively for 10 minutes. Zero double-booking guarantee.
+            Pick an available time to start your booking.
           </p>
         </div>
 
@@ -393,7 +393,7 @@ export function CinemaBookingShell({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500 text-black uppercase">
-                    Slot Held
+                    Selected
                   </span>
                   <span className="text-sm font-bold text-white">
                     {formatSlotDate(heldSlot.date, { weekday: "short", day: "numeric", month: "short" })}{" "}
@@ -407,20 +407,16 @@ export function CinemaBookingShell({
               </div>
             </div>
 
-            {/* Countdown & Action Buttons */}
+            {/* Action Buttons (plus a nudge when the reservation is about to run out) */}
             <div className="flex items-center gap-3">
-              <SlotCountdownTimer
-                heldUntil={heldUntil}
-                onExpired={handleHoldExpired}
-                brandColor={tenant.brandColor}
-              />
+              <SlotHoldWatcher heldUntil={heldUntil} onExpired={handleHoldExpired} />
 
               <button
                 type="button"
                 onClick={handleRelease}
                 className={buttonVariants({ variant: "secondary" })}
               >
-                Release Slot
+                Clear selection
               </button>
 
               <button

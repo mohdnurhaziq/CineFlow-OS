@@ -96,7 +96,7 @@ export async function holdBookingSlot(input: z.infer<typeof HoldSlotSchema>) {
       return {
         success: false,
         error: "SLOT_ALREADY_HELD",
-        message: "This slot was just held by another client. Please choose another time or check back shortly.",
+        message: "Someone else is booking this time right now. Please choose another time or check back shortly.",
       };
     }
 
@@ -132,7 +132,7 @@ export async function holdBookingSlot(input: z.infer<typeof HoldSlotSchema>) {
     return {
       success: false,
       error: "INTERNAL_ERROR",
-      message: errorMessageOf(err) || "Failed to hold slot",
+      message: errorMessageOf(err) || "That time could not be selected. Please try again.",
     };
   }
 }

@@ -3,7 +3,7 @@ import { Star } from "lucide-react";
 const TESTIMONIALS = [
   {
     quote:
-      "The 10-minute slot hold gave us complete peace of mind during the intense graduation booking rush. The delivery vault and uncompressed master downloads were impeccable.",
+      "Booking online was quick and stress-free, even during the intense graduation rush. The delivery vault and uncompressed master downloads were impeccable.",
     client: "Dr. Aiman Farhan",
     campaign: "University Convocation Special",
     rating: 5,

@@ -11,7 +11,7 @@ const TIERS = [
     description: "Ideal for solo portrait photographers and independent creators launching their branded digital studio.",
     features: [
       "Custom branded public showcase",
-      "Cinema-style 10-min slot hold",
+      "Online booking with no double bookings",
       "Card, QR code & cash checkout",
       "50% milestone paywall vault",
       "Standard client deliverable storage",

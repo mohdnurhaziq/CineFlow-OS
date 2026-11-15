@@ -7,7 +7,7 @@ import { PricingTiers } from "@/components/saas/pricing-tiers";
 export const metadata = {
   title: { absolute: "CineFlow OS — The Multi-Tenant Creative Operating System" },
   description:
-    "The all-in-one platform unifying public showcases, 10-minute cinema slot holds, dynamic proposal signing, automated 50% milestone paywalls, and solar-timed on-set logistics.",
+    "The all-in-one platform unifying public showcases, clash-free online booking, dynamic proposal signing, automated 50% milestone paywalls, and solar-timed on-set logistics.",
 };
 
 export default function SaasLandingPage() {

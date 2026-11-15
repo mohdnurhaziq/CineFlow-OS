@@ -131,18 +131,18 @@ export function CinemaSlotGrid({
                   {isPending && (
                     <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
                       <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
-                      HOLDING
+                      SELECTING
                     </span>
                   )}
 
                   {isHeldByMe && !isPending && (
                     <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500 text-black animate-pulse">
-                      YOUR HOLD
+                      SELECTED
                     </span>
                   )}
                   {isHeldByOther && (
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
-                      HELD
+                      BEING BOOKED
                     </span>
                   )}
                   {isBooked && (

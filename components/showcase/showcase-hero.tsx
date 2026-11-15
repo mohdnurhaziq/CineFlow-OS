@@ -51,8 +51,8 @@ export function ShowcaseHero({ tenant }: ShowcaseHeroProps) {
         {/* Booking promise (true of every studio; no studio-specific claims here) */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-400">
           <div className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">10-Min</span>
-            <span>Cinema Booking Hold Active</span>
+            <span className="text-emerald-400 font-bold">Online Booking</span>
+            <span>Pick a date and time that suits you</span>
           </div>
         </div>
       </div>

@@ -23,7 +23,7 @@ export function CheckoutAuthGate({ tenantSlug, tenantName }: CheckoutAuthGatePro
           <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
           <p className="text-xs text-zinc-400">
             Create a quick account (name, email, phone and password) or sign in to complete this
-            booking. Your slot hold stays active while you do.
+            booking. Your selected time is kept for you while you do.
           </p>
         </div>
 

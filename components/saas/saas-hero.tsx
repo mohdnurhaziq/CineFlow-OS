@@ -24,7 +24,7 @@ export function SaasHero() {
 
         {/* Editorial subtitle */}
         <p className="max-w-3xl mx-auto text-lg sm:text-xl text-zinc-400 leading-relaxed font-light">
-          The all-in-one multi-tenant creative operating system unifying public showcases, 10-minute cinema slot holds, dynamic proposal signing, automated 50% milestone paywalls, and solar-timed on-set logistics.
+          The all-in-one multi-tenant creative operating system unifying public showcases, clash-free online booking, dynamic proposal signing, automated 50% milestone paywalls, and solar-timed on-set logistics.
         </p>
 
         {/* Dual Call to Action */}
@@ -51,10 +51,10 @@ export function SaasHero() {
           <div className="p-4 rounded-xl border border-zinc-800/80 bg-[#121215]/80 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-amber-400 mb-1">
               <Clock className="size-4" />
-              <span className="font-mono text-xs uppercase tracking-wider">Zero Double-Bookings</span>
+              <span className="font-mono text-xs uppercase tracking-wider">Online Booking</span>
             </div>
-            <div className="font-mono text-2xl font-bold text-white tracking-tight">10-Min Hold</div>
-            <p className="text-xs text-zinc-400 mt-1">Atomic database locks with live tabular countdown timer.</p>
+            <div className="font-mono text-2xl font-bold text-white tracking-tight">Clash-Free</div>
+            <p className="text-xs text-zinc-400 mt-1">Each time slot can only be booked by one client.</p>
           </div>
 
           <div className="p-4 rounded-xl border border-zinc-800/80 bg-[#121215]/80 backdrop-blur-sm">

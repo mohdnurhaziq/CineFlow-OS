@@ -81,7 +81,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
       return {
         success: false,
         error: "SLOT_EXPIRED_OR_UNAVAILABLE",
-        message: "Your slot hold has expired or this slot was claimed by another client.",
+        message: "This time slot is no longer reserved for you. Please go back and select a time again.",
       };
     }
 

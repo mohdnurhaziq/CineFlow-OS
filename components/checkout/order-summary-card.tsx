@@ -44,7 +44,7 @@ export function OrderSummaryCard({
 }: OrderSummaryCardProps) {
   const currencySymbol = currency === "MYR" ? "RM " : "$";
 
-  // Countdown timer for held slot
+  // Time left on the slot's brief reservation (never shown as a clock; see the nudge below)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(() => {
     if (!slot?.heldUntil) return null;
     const diff = Math.floor((new Date(slot.heldUntil).getTime() - Date.now()) / 1000);
@@ -68,8 +68,6 @@ export function OrderSummaryCard({
     return () => clearInterval(interval);
   }, [slot?.heldUntil, onHoldExpired]);
 
-  const minutes = secondsLeft !== null ? Math.floor(secondsLeft / 60) : null;
-  const seconds = secondsLeft !== null ? secondsLeft % 60 : null;
   const isUrgent = secondsLeft !== null && secondsLeft < 120; // under 2 mins
 
   const slotDateStr = slot?.date
@@ -92,20 +90,6 @@ export function OrderSummaryCard({
           <h3 className="text-base font-bold text-white tracking-tight">{tenantName}</h3>
         </div>
 
-        {secondsLeft !== null && secondsLeft > 0 && (
-          <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold border transition-colors ${
-              isUrgent
-                ? "bg-red-500/20 text-red-400 border-red-500/40 animate-pulse"
-                : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-            }`}
-          >
-            <Clock className="size-3.5" />
-            <span>
-              {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-            </span>
-          </div>
-        )}
       </div>
 
       <div className="p-6 space-y-6">
@@ -136,12 +120,12 @@ export function OrderSummaryCard({
               </div>
             </div>
 
-            {/* Hold Warning if under 2 mins */}
+            {/* Nudge when the reservation is about to run out */}
             {isUrgent && secondsLeft !== null && secondsLeft > 0 && (
               <div className="p-3 rounded-lg border border-red-500/30 bg-red-950/20 text-red-300 text-xs flex items-start gap-2">
                 <AlertCircle className="size-4 text-red-400 shrink-0 mt-0.5" />
                 <p className="leading-snug">
-                  Your 10-minute hold will expire in under 2 minutes. Complete payment to secure your time slot.
+                  Please complete your payment soon to keep this time slot.
                 </p>
               </div>
             )}
@@ -150,7 +134,7 @@ export function OrderSummaryCard({
               <div className="p-3 rounded-lg border border-red-500/30 bg-red-950/30 text-red-300 text-xs flex items-start gap-2">
                 <AlertCircle className="size-4 text-red-400 shrink-0 mt-0.5" />
                 <p className="leading-snug">
-                  Your hold has expired. The slot may have been released to other clients.
+                  This time slot is no longer reserved for you. It may have been taken by someone else.
                 </p>
               </div>
             )}
