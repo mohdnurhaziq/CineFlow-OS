@@ -62,7 +62,8 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
             {/* Brand & Studio Scope */}
             <div className="flex items-center gap-4">
               <Link
-                href={`/${tenant.slug}`}
+                href={`/${tenant.slug}/admin`}
+                title="Admin dashboard"
                 className="flex items-center gap-2 group text-zinc-400 hover:text-white transition-colors"
               >
                 <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
