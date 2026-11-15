@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Clock, Calendar, ShieldCheck, AlertCircle } from "lucide-react";
 import { milestoneLabel } from "@/lib/labels";
+import { SLOT_HOLD_NUDGE_SECONDS } from "@/lib/bookings/hold";
 
 interface OrderSummaryCardProps {
   tenantName: string;
@@ -68,7 +69,7 @@ export function OrderSummaryCard({
     return () => clearInterval(interval);
   }, [slot?.heldUntil, onHoldExpired]);
 
-  const isUrgent = secondsLeft !== null && secondsLeft < 120; // under 2 mins
+  const isUrgent = secondsLeft !== null && secondsLeft < SLOT_HOLD_NUDGE_SECONDS;
 
   const slotDateStr = slot?.date
     ? new Date(slot.date).toLocaleDateString("en-US", {

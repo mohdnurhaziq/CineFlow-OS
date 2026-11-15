@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { processBookingCheckout } from "@/lib/actions/checkout";
 import { isSlotInPast } from "@/lib/slot-time";
+import { SLOT_HOLD_MINUTES } from "@/lib/bookings/hold";
 import { errorMessageOf } from "@/lib/action-error";
 
 const HoldSlotSchema = z.object({
@@ -44,7 +45,7 @@ export async function holdBookingSlot(input: z.infer<typeof HoldSlotSchema>) {
     const { tenantId, slotId, sessionId, previousSlotId } = validated;
 
     const now = new Date();
-    const holdDurationMs = 10 * 60 * 1000; // Exactly 10 minutes
+    const holdDurationMs = SLOT_HOLD_MINUTES * 60_000;
     const heldUntil = new Date(Date.now() + holdDurationMs);
 
     // A session that has already started can't be held or booked.

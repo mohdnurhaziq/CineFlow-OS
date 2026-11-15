@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Calendar,
   Plus,
@@ -158,7 +159,14 @@ export function CalendarAdminDashboard({
       <PageHeader
         icon={Calendar}
         title="Calendar"
-        description="Open time slots for clients to book, block out days, and see who has booked. A slot is held for 10 minutes while a client checks out."
+        description={
+          <>
+            Open time slots for clients to book, block out days, and see who has booked.{" "}
+            <Link href={`/${tenantSlug}/admin/manual/slot-hold`} className="text-amber-400 hover:underline whitespace-nowrap">
+              How slot holds work
+            </Link>
+          </>
+        }
         actions={
           <>
           <button
@@ -166,7 +174,7 @@ export function CalendarAdminDashboard({
             onClick={handleCleanup}
             disabled={isCleaning}
             className={buttonVariants({ variant: "secondary" })}
-            title="Release any slots whose 10-minute hold window expired"
+            title="Open up any slots whose hold has already run out"
           >
             <RefreshCw className={`size-3.5 ${isCleaning ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Clean Expired Holds</span>

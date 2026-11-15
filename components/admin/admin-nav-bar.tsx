@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Users,
   Images,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -162,6 +163,8 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount, newPrintOrde
   const isClientsActive = pathname === clientsHref || pathname.startsWith(clientsHref + "/");
   const isSettingsActive =
     pathname === `/${tenantSlug}/admin/settings` || pathname.startsWith(`/${tenantSlug}/admin/settings/`);
+  const manualHref = `/${tenantSlug}/admin/manual`;
+  const isManualActive = pathname === manualHref || pathname.startsWith(manualHref + "/");
 
   return (
     <div className="space-y-2">
@@ -309,6 +312,21 @@ export function AdminNavBar({ tenantSlug, pendingVerificationCount, newPrintOrde
         >
           <Settings className={cn("size-3.5", isSettingsActive ? "text-amber-400" : "text-zinc-500")} />
           <span>Settings</span>
+        </Link>
+
+        {/* 6. Manual: how the system works, for the studio's team */}
+        <Link
+          href={manualHref}
+          aria-current={isManualActive ? "page" : undefined}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all border whitespace-nowrap",
+            isManualActive
+              ? "bg-amber-500/15 text-amber-400 border-amber-500/30 font-semibold shadow-sm shadow-amber-500/10"
+              : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-transparent"
+          )}
+        >
+          <BookOpen className={cn("size-3.5", isManualActive ? "text-amber-400" : "text-zinc-500")} />
+          <span>Manual</span>
         </Link>
       </nav>
 

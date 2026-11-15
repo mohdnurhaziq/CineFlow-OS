@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
+import { SLOT_HOLD_NUDGE_SECONDS } from "@/lib/bookings/hold";
 
 interface SlotHoldWatcherProps {
   heldUntil: string | Date;
   onExpired: () => void;
 }
-
-/** Seconds before the end at which the client gets a gentle nudge to finish. */
-const NUDGE_SECONDS = 120;
 
 /**
  * Watches the selected slot's reservation without showing a clock. The time limit is how the
@@ -17,8 +15,9 @@ const NUDGE_SECONDS = 120;
  * see a short nudge near the end, and `onExpired` tells the page when the time has run out.
  */
 export function SlotHoldWatcher({ heldUntil, onExpired }: SlotHoldWatcherProps) {
-  const secondsLeft = () => Math.max(0, Math.floor((new Date(heldUntil).getTime() - Date.now()) / 1000));
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(secondsLeft);
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(() =>
+    Math.max(0, Math.floor((new Date(heldUntil).getTime() - Date.now()) / 1000))
+  );
 
   useEffect(() => {
     const update = () => {
@@ -32,7 +31,7 @@ export function SlotHoldWatcher({ heldUntil, onExpired }: SlotHoldWatcherProps) 
     return () => clearInterval(interval);
   }, [heldUntil, onExpired]);
 
-  if (secondsRemaining <= 0 || secondsRemaining >= NUDGE_SECONDS) return null;
+  if (secondsRemaining <= 0 || secondsRemaining >= SLOT_HOLD_NUDGE_SECONDS) return null;
 
   return (
     <div
