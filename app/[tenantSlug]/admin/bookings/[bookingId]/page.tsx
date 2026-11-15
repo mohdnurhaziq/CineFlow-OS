@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { currentUserIsOwner } from "@/lib/auth/owner";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
+import { IncludedPrintsCard } from "@/components/admin/bookings/included-prints-card";
+import { remainingForLines } from "@/lib/prints/entitlements";
 import { BookingDetailView } from "@/components/admin/bookings/booking-detail-view";
 
 interface BookingPageProps {
@@ -35,6 +37,13 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
   const [booking] = await loadBookingDetails(tenant.id, { bookingId });
   if (!booking) notFound();
 
+  const [lines, sizes, frames] = await Promise.all([
+    db.bookingIncludedPrint.findMany({ where: { bookingId: booking.id, tenantId: tenant.id }, orderBy: { createdAt: "asc" } }),
+    db.printSize.findMany({ where: { tenantId: tenant.id, isAvailable: true }, orderBy: { basePrice: "asc" } }),
+    db.frameDesign.findMany({ where: { tenantId: tenant.id, isAvailable: true }, orderBy: { name: "asc" } }),
+  ]);
+  const remaining = await remainingForLines(db, lines.map((l) => l.id));
+
   return (
     <PageShell width="document" className="space-y-4">
       <AdminBreadcrumb
@@ -50,6 +59,23 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
         tenantSlug={tenant.slug}
         currency={tenant.currency}
         isOwner={await currentUserIsOwner()}
+      />
+      <IncludedPrintsCard
+        tenantId={tenant.id}
+        tenantSlug={tenant.slug}
+        bookingId={booking.id}
+        lines={lines.map((l) => ({
+          id: l.id,
+          sizeName: l.sizeName,
+          sizeCode: l.sizeCode,
+          frameName: l.frameName,
+          quantity: l.quantity,
+          source: l.source,
+          note: l.note,
+          claimed: l.quantity - (remaining.get(l.id) ?? 0),
+        }))}
+        sizes={sizes.map((s) => ({ id: s.id, label: `${s.name} (${s.widthInches}x${s.heightInches} in)` }))}
+        frames={frames.map((f) => ({ id: f.id, label: f.name }))}
       />
     </PageShell>
   );

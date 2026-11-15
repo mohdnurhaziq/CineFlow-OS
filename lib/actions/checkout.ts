@@ -21,6 +21,7 @@ import {
   type ProcessInvoicePaymentInput,
 } from "@/lib/validations/checkout";
 import { errorMessageOf } from "@/lib/action-error";
+import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
 
 function safeRevalidate(path: string) {
   try {
@@ -187,6 +188,8 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
           userId: user.id,
         },
       });
+
+      await snapshotIncludedPrints(tx, booking, "PACKAGE");
 
       // Link the deposit invoice to exactly this booking (the invoice is created first above).
       await tx.milestoneInvoice.update({ where: { id: invoice.id }, data: { bookingId: booking.id } });

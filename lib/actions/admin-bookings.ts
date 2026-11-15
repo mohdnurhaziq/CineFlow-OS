@@ -12,6 +12,7 @@ import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { errorMessageOf } from "@/lib/action-error";
+import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
 
 
 const AdminCreateBookingSchema = z
@@ -148,6 +149,8 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
           userId: customer.id,
         },
       });
+
+      await snapshotIncludedPrints(tx, booking, "PACKAGE");
 
       // Every booking carries its deposit invoice: unpaid ones are what the
       // Verification console lists for approval; paid ones keep the ledger complete.

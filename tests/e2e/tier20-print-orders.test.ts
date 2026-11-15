@@ -12,6 +12,11 @@ import { zoneForState, parseZoneStates } from "@/lib/prints/zones";
 import { MY_STATES } from "@/lib/prints/states";
 import { includedPrintCount } from "@/lib/prints/pricing";
 import { createServicePackage, updateServicePackage } from "@/lib/actions/admin-services";
+import { withSession } from "./mocks/session";
+import { processBookingCheckout } from "@/lib/actions/checkout";
+import { snapshotIncludedPrints, loadProjectEntitlements, remainingForLines } from "@/lib/prints/entitlements";
+import { grantIncludedPrint, removeIncludedPrint } from "@/lib/actions/admin-included-prints";
+import { backfillIncludedPrints } from "../../prisma/backfill-included-prints";
 import { deleteFrameDesign, deletePrintSize, togglePrintSizeAvailability, updateMatBoardPrice } from "@/lib/actions/admin-frames";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
@@ -191,5 +196,161 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(added.success, false, "A new line with a hidden frame is refused");
     const createHidden = await createServicePackage({ ...pkgBase, includedPrints: [line] });
     harness.assertEqual(createHidden.success, false, "Create requires everything available");
+  });
+
+  // ---- Booking snapshot, backfill and manual grants ----
+  const DAY_MS = 86_400_000;
+  const run = Date.now().toString(36);
+  const slotIds: string[] = [];
+  const owner = await db.user.findFirst({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } });
+  if (!owner) throw new Error("Seed owner required");
+  const ownerSession = { id: owner.id, email: owner.email, name: owner.name, role: owner.role, tenantId: owner.tenantId, tenantSlug: "lumina-cine" };
+  harness.registerTeardown(async () => {
+    await db.project.deleteMany({ where: { client: { email: { startsWith: "t20-" } } } });
+    await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t20-" } } } });
+    await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t20-" } } });
+    await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
+    await db.user.deleteMany({ where: { email: { startsWith: "t20-" } } });
+  });
+  let seq = 0;
+  const bookT20 = async () => {
+    seq += 1;
+    const slot = await db.bookingSlot.create({
+      data: { tenantId: lumina.id, category: "commercial", date: new Date(Date.now() + (200 + seq) * DAY_MS), startTime: "10:00 AM", endTime: "11:00 AM", status: "AVAILABLE", price: 0, depositRequired: 100 },
+    });
+    slotIds.push(slot.id);
+    const clientEmail = `t20-${run}-${seq}@example.test`;
+    const res = await withSession(null, () =>
+      processBookingCheckout({
+        tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: slot.id, sessionId: `t20-${run}-${seq}`,
+        clientName: "Print Client", clientEmail, clientPhone: "0123456789", paymentMethod: "CASH", packageId: "pkg_lumina_comm",
+      })
+    );
+    if (!res.success) throw new Error("checkout failed: " + JSON.stringify(res));
+    const booking = await db.clientBooking.findFirstOrThrow({ where: { trackingCode: res.trackingCode! } });
+    const client = await db.user.findFirstOrThrow({ where: { tenantId: lumina.id, email: clientEmail } });
+    return { booking, client };
+  };
+  const snapBooking = await bookT20();
+
+  await harness.test("T20-SNAP-01: a package booking snapshots its included prints", async () => {
+    const rows = await db.bookingIncludedPrint.findMany({ where: { bookingId: snapBooking.booking.id } });
+    harness.assertEqual(rows.length, 1, "One line");
+    harness.assertEqual(rows[0]?.source, "PACKAGE", "Source PACKAGE");
+    harness.assertEqual(rows[0]?.quantity, 1, "Quantity 1");
+    const frame = await db.frameDesign.findUniqueOrThrow({ where: { id: "frm_lum_black" } });
+    harness.assertEqual(rows[0]?.frameName, frame.name, "Frame name snapshotted");
+    harness.assertEqual(rows[0]?.printSizeId, "psz_lum_8r", "Size id");
+    harness.assertEqual((rows[0]?.sizeCode.length ?? 0) > 0, true, "Size code snapshotted");
+    const again = await db.$transaction((tx) => snapshotIncludedPrints(tx, snapBooking.booking, "PACKAGE"));
+    harness.assertEqual(again, 0, "No-op when rows already exist");
+  });
+
+  await harness.test("T20-SNAP-02: changing the package later leaves the booking's prints alone", async () => {
+    const pkg = await db.servicePackage.findUniqueOrThrow({ where: { id: "pkg_lumina_comm" } });
+    const original = await db.packageIncludedPrint.findMany({ where: { packageId: pkg.id } });
+    try {
+      const res = await updateServicePackage({
+        tenantId: lumina.id, tenantSlug: "lumina-cine", id: pkg.id, name: pkg.name, category: pkg.category,
+        discipline: pkg.discipline as "PHOTOGRAPHY", price: pkg.price, depositPrice: pkg.depositPrice, turnaround: pkg.turnaround,
+        description: pkg.description, deliverables: pkg.deliverables, isFeatured: pkg.isFeatured,
+        includedPrints: [{ printSizeId: "psz_lum_12r", frameDesignId: "frm_lum_black", quantity: 5 }],
+      });
+      harness.assertEqual(res.success, true, "Package updated");
+      const rows = await db.bookingIncludedPrint.findMany({ where: { bookingId: snapBooking.booking.id } });
+      harness.assertEqual(rows.length, 1, "Still one line");
+      harness.assertEqual(rows[0]?.printSizeId, "psz_lum_8r", "Still the old size");
+      harness.assertEqual(rows[0]?.quantity, 1, "Still quantity 1");
+    } finally {
+      await db.packageIncludedPrint.deleteMany({ where: { packageId: pkg.id } });
+      await db.packageIncludedPrint.createMany({ data: original.map(({ packageId, printSizeId, frameDesignId, quantity }) => ({ packageId, printSizeId, frameDesignId, quantity })) });
+    }
+  });
+
+  await harness.test("T20-SNAP-03: hiding the frame does not remove the line from the entitlements", async () => {
+    const project = await db.project.create({
+      data: {
+        tenantId: lumina.id, projectNumber: `T20-${run}-${Math.random().toString(36).slice(2, 6)}`, title: "T20 Project",
+        clientId: snapBooking.client.id, studioLeadId: owner.id, discipline: "PHOTOGRAPHY", bookingId: snapBooking.booking.id, budget: 100,
+      },
+    });
+    await db.frameDesign.update({ where: { id: "frm_lum_black" }, data: { isAvailable: false } });
+    try {
+      const ent = await loadProjectEntitlements(project.id);
+      harness.assertEqual(ent.lines.length, 1, "Line still listed");
+      harness.assertEqual(ent.lines[0]?.remaining, 1, "Remaining 1");
+      harness.assertEqual(ent.unlocked, false, "Not unlocked");
+      harness.assertEqual(ent.hasPhotos, false, "No photos");
+      const map = await remainingForLines(db, [ent.lines[0]!.id]);
+      harness.assertEqual(map.get(ent.lines[0]!.id), 1, "remainingForLines");
+    } finally {
+      await db.frameDesign.update({ where: { id: "frm_lum_black" }, data: { isAvailable: true } });
+    }
+  });
+
+  await harness.test("T20-BACKFILL-01: backfill recreates missing lines once", async () => {
+    const b = await bookT20();
+    await db.bookingIncludedPrint.deleteMany({ where: { bookingId: b.booking.id } });
+    const first = await backfillIncludedPrints();
+    harness.assertEqual(first.bookings >= 1, true, "At least this booking");
+    const rows = await db.bookingIncludedPrint.findMany({ where: { bookingId: b.booking.id } });
+    harness.assertEqual(rows.length, 1, "Line recreated");
+    harness.assertEqual(rows[0]?.source, "BACKFILL", "Source BACKFILL");
+    const second = await backfillIncludedPrints();
+    harness.assertEqual(second.lines, 0, "Second run creates nothing");
+    harness.assertEqual(await db.bookingIncludedPrint.count({ where: { bookingId: b.booking.id } }), 1, "Still one line");
+  });
+
+  await harness.test("T20-GRANT-01: staff can grant and remove a manual included print", async () => {
+    const base = { tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: snapBooking.booking.id };
+    const res = await withSession(ownerSession, () =>
+      grantIncludedPrint({ ...base, printSizeId: "psz_lum_12r", frameDesignId: "frm_lum_black", quantity: 2, note: "Goodwill" })
+    );
+    harness.assertEqual(res.success, true, "Granted");
+    const line = await db.bookingIncludedPrint.findFirstOrThrow({ where: { bookingId: base.bookingId, source: "MANUAL" } });
+    harness.assertEqual(line.quantity, 2, "Quantity 2");
+    harness.assertEqual(line.grantedById, owner.id, "Granted by staff");
+    harness.assertEqual(line.note, "Goodwill", "Note");
+    const map = await remainingForLines(db, [line.id]);
+    harness.assertEqual(map.get(line.id), 2, "Remaining 2");
+    const bad = await withSession(ownerSession, () =>
+      grantIncludedPrint({ ...base, printSizeId: "psz_apx_8r", frameDesignId: "frm_lum_black", quantity: 1 })
+    );
+    harness.assertEqual(bad.success, false, "Another studio's size refused");
+    const rm = await withSession(ownerSession, () => removeIncludedPrint({ tenantId: lumina.id, tenantSlug: "lumina-cine", lineId: line.id }));
+    harness.assertEqual(rm.success, true, "Removed");
+    harness.assertEqual(await db.bookingIncludedPrint.count({ where: { id: line.id } }), 0, "Gone");
+    const pkgLine = await db.bookingIncludedPrint.findFirstOrThrow({ where: { bookingId: base.bookingId, source: "PACKAGE" } });
+    const rmPkg = await withSession(ownerSession, () => removeIncludedPrint({ tenantId: lumina.id, tenantSlug: "lumina-cine", lineId: pkgLine.id }));
+    harness.assertEqual(rmPkg.success, false, "Package lines cannot be removed");
+  });
+
+  await harness.test("T20-GRANT-02: a client cannot grant included prints", async () => {
+    const before = await db.bookingIncludedPrint.count({ where: { bookingId: snapBooking.booking.id } });
+    const clientSession = { id: snapBooking.client.id, email: snapBooking.client.email, name: snapBooking.client.name, role: "CLIENT", tenantId: lumina.id, tenantSlug: "lumina-cine" };
+    const res = await withSession(clientSession, () =>
+      grantIncludedPrint({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: snapBooking.booking.id, printSizeId: "psz_lum_8r", frameDesignId: "frm_lum_black", quantity: 1 })
+    );
+    harness.assertEqual(res.success, false, "Refused");
+    harness.assertEqual(await db.bookingIncludedPrint.count({ where: { bookingId: snapBooking.booking.id } }), before, "Nothing added");
+  });
+
+  await harness.test("T20-PKG-07: a frame used only by a booking's included print cannot be deleted", async () => {
+    const f = await db.frameDesign.create({
+      data: { tenantId: lumina.id, name: "T20 Booking Frame", material: "Wood", moldingWidth: 1, frameColor: "#222222", previewAsset: "/x.png", priceOffset: 0 },
+    });
+    harness.registerTeardown(async () => {
+      await db.bookingIncludedPrint.deleteMany({ where: { frameDesignId: f.id } });
+      await db.frameDesign.deleteMany({ where: { id: f.id } });
+    });
+    await db.bookingIncludedPrint.create({
+      data: {
+        tenantId: lumina.id, bookingId: snapBooking.booking.id, printSizeId: "psz_lum_8r", frameDesignId: f.id, quantity: 1,
+        sizeCode: "8R", sizeName: "8R", widthInches: 8, heightInches: 10, frameName: f.name, source: "MANUAL",
+      },
+    });
+    const res = await deleteFrameDesign({ id: f.id, tenantId: lumina.id, tenantSlug: "lumina-cine" });
+    harness.assertEqual("error" in res ? res.error : "", "IN_USE", "IN_USE");
+    harness.assertEqual(await db.frameDesign.count({ where: { id: f.id } }), 1, "Frame kept");
   });
 }
