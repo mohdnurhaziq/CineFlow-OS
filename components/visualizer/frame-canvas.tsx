@@ -14,9 +14,14 @@ interface FrameCanvasProps {
   frameColor: string;
   frameMaterial: string;
   matBoardType: MatBoardType;
-  orientation: "PORTRAIT" | "LANDSCAPE";
-  sofaWidthPx: number;
+  /** The size pill under the frame (inches and share of the 84" sofa). Off in small previews. */
+  showDimensions?: boolean;
 }
+
+/**
+ * A framed print to scale. The print box takes the print's real dimensions (which follow the
+ * photo's shape), and the photo is shown whole inside it: never cropped.
+ */
 
 export function FrameCanvas({
   pixelsPerInch,
@@ -29,6 +34,7 @@ export function FrameCanvas({
   frameColor,
   frameMaterial,
   matBoardType,
+  showDimensions = true,
 }: FrameCanvasProps) {
   // Mat dimensions in inches
   const matInches = matBoardType === "NONE" ? 0 : 2.0;
@@ -123,7 +129,7 @@ export function FrameCanvas({
             <img
               src={photoUrl}
               alt={photoTitle || "Custom Wall Art Print"}
-              className="w-full h-full object-cover select-none"
+              className="w-full h-full object-contain select-none"
               draggable={false}
             />
 
@@ -140,21 +146,23 @@ export function FrameCanvas({
       </div>
 
       {/* Floating Dimension Pill Badge */}
-      <div className="mt-3 opacity-90 group-hover:opacity-100 transition-opacity">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-zinc-700 text-white text-[10px] sm:text-[11px] font-mono shadow-xl">
-          <span className="font-bold text-amber-400">
-            {printWidthInches}&quot; × {printHeightInches}&quot; Print
-          </span>
-          <span className="text-zinc-500">•</span>
-          <span className="text-zinc-300">
-            {totalWidthInches.toFixed(1)}&quot; × {totalHeightInches.toFixed(1)}&quot; Frame
-          </span>
-          <span className="text-zinc-500">•</span>
-          <span className="text-emerald-400 font-semibold">
-            {percentOfSofa}% Sofa Width
-          </span>
+      {showDimensions && (
+        <div className="mt-3 opacity-90 group-hover:opacity-100 transition-opacity">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-zinc-700 text-white text-[10px] sm:text-[11px] font-mono shadow-xl">
+            <span className="font-bold text-amber-400">
+              {printWidthInches}&quot; × {printHeightInches}&quot; Print
+            </span>
+            <span className="text-zinc-500">•</span>
+            <span className="text-zinc-300">
+              {totalWidthInches.toFixed(1)}&quot; × {totalHeightInches.toFixed(1)}&quot; Frame
+            </span>
+            <span className="text-zinc-500">•</span>
+            <span className="text-emerald-400 font-semibold">
+              {percentOfSofa}% Sofa Width
+            </span>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -27,6 +27,7 @@ import { useDialog } from "@/lib/use-dialog";
 import { humanize, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
 import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import type { PrintOrderPreview } from "@/lib/prints/order-preview";
 
 export interface AdminVerificationConsoleProps {
   /** The signed-in staff member; the server records approvals and rejections under this name. */
@@ -73,6 +74,8 @@ export interface AdminVerificationConsoleProps {
         endTime: string;
       } | null;
     } | null;
+    /** The framed print order a print invoice pays for; null for other invoices. */
+    printOrder?: PrintOrderPreview | null;
   }>;
   historyInvoices: Array<{
     id: string;
@@ -349,6 +352,7 @@ export function AdminVerificationConsole({
           <VerificationQueue
             items={filteredPending}
             tenantSlug={tenant.slug}
+            currency={tenant.currency}
             currencySymbol={currencySymbol}
             isOwner={isOwner}
             isPending={isPending}

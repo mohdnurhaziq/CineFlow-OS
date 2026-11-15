@@ -299,9 +299,12 @@ export async function deleteCallSheet(input: z.input<typeof DeleteCallSheetSchem
 // Deliverables and gear
 // ---------------------------------------------------------------------------
 
+/** Print orders that no longer need their photos. */
+const FINISHED_PRINT_ORDER_STATUSES = ["CANCELLED", "COLLECTED", "DELIVERED"] as const;
+
 const DeleteItemSchema = z.object({ tenantId: z.string().min(1), itemId: z.string().min(1) });
 
-/** Removes a delivered file (and its stored master and preview). */
+/** Removes a delivered file (and its stored master and preview); refused while it is in an open print order. */
 export async function deleteDeliverableItem(input: z.input<typeof DeleteItemSchema>): Promise<Result> {
   try {
     const data = DeleteItemSchema.parse(input);
@@ -311,6 +314,11 @@ export async function deleteDeliverableItem(input: z.input<typeof DeleteItemSche
       include: { deliverable: { include: { project: { include: { tenant: { select: { slug: true } } } } } } },
     });
     if (!item) return fail("NOT_FOUND", "File not found.");
+    // The studio prints from this photo's master until the order is done or cancelled.
+    const inOpenOrder = await db.printOrderItem.count({
+      where: { deliverableItemId: item.id, order: { status: { notIn: [...FINISHED_PRINT_ORDER_STATUSES] } } },
+    });
+    if (inOpenOrder > 0) return fail("IN_PRINT_ORDER", "This photo is in a print order. Cancel or finish that order first.");
     await db.deliverableItem.delete({ where: { id: item.id } });
     await deleteDeliverableFiles(item);
     const project = item.deliverable.project;

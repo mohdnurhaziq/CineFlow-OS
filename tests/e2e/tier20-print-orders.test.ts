@@ -33,6 +33,9 @@ import ProjectVaultPage from "@/app/[tenantSlug]/vault/[projectId]/page";
 import AdminProjectPrintsPage from "@/app/[tenantSlug]/admin/projects/[projectId]/prints/page";
 import nodemailer, { type Transporter } from "nodemailer";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
+import { orientationFor, printDimensionsFor } from "@/lib/prints/orientation";
+import { deleteDeliverableItem } from "@/lib/actions/admin-projects";
+import AdminVerificationPage from "@/app/[tenantSlug]/admin/verification/page";
 
 export async function runTier20PrintOrderTests(harness: TestHarness) {
   harness.setSuite("Tier 20", "Wall Art Print Orders: Schema, Pricing & Zones");
@@ -49,6 +52,19 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(upgradeAmount(80, 55), 25, "Pays the difference");
     harness.assertEqual(upgradeAmount(40, 55), 0, "Cheaper choice costs nothing");
     harness.assertEqual(upgradeAmount(55.1, 55), 0.1, "Rounded to cents");
+  });
+
+  await harness.test("T20-ORIENT-01: a photo's orientation follows its shape, a square is portrait", async () => {
+    harness.assertEqual(orientationFor(4000, 6000), "PORTRAIT", "Tall photo");
+    harness.assertEqual(orientationFor(6000, 4000), "LANDSCAPE", "Wide photo");
+    harness.assertEqual(orientationFor(3000, 3000), "PORTRAIT", "Square photo");
+  });
+
+  await harness.test("T20-RATIO-01: the print keeps the size's short side and follows the photo's shape", async () => {
+    const r8 = { widthInches: 8, heightInches: 10 };
+    harness.assertEqual(JSON.stringify(printDimensionsFor(r8, { width: 6000, height: 4000 })), JSON.stringify({ widthInches: 12, heightInches: 8, orientation: "LANDSCAPE" }), "3:2 wide on 8R");
+    harness.assertEqual(JSON.stringify(printDimensionsFor(r8, { width: 4000, height: 5000 })), JSON.stringify({ widthInches: 8, heightInches: 10, orientation: "PORTRAIT" }), "4:5 tall on 8R");
+    harness.assertEqual(JSON.stringify(printDimensionsFor(r8, { width: 3000, height: 3000 })), JSON.stringify({ widthInches: 8, heightInches: 8, orientation: "PORTRAIT" }), "Square on 8R");
   });
 
   const zones = await db.shippingZone.findMany({ where: { tenantId: lumina.id }, orderBy: { sortOrder: "asc" } });
@@ -1126,5 +1142,50 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
       harness.assertEqual(res.success, true, "Status change succeeds");
       harness.assertEqual(await orderStatus(orderId), "READY_FOR_PICKUP", "Ready for pickup");
     }, true);
+  });
+  // ---- Verification: framed preview of a print order's invoice ----
+  await harness.test("T20-VERIFY-01: the verification page passes the print order for a print invoice awaiting verification, nothing for others", async () => {
+    const a = await placeAwaiting();
+    await db.deliverableItem.update({ where: { id: a.p.photo.id }, data: { resolution: "6000 × 4000" } });
+    const slip = await withSession(a.p.session, () =>
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+    );
+    harness.assertEqual(slip.success, true, "Slip sent");
+    const other = await db.milestoneInvoice.create({
+      data: {
+        tenantId: lumina.id, invoiceNumber: `T20V-${run}-${Math.random().toString(36).slice(2, 8)}`, clientId: a.p.client.id,
+        milestoneType: "CUSTOM", description: "T20 other", amount: 5, status: "PENDING_VERIFICATION", paymentMethod: "CASH", dueDate: new Date(),
+      },
+    });
+    try {
+      const tree = await withSession(ownerSession, () => AdminVerificationPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }) }));
+      type Pending = { id: string; printOrder: null | { id: string; orderNumber: string; items: { previewUrl: string | null; photoWidth: number | null; photoHeight: number | null }[] } };
+      const pending = findProp<Pending[]>(tree, "pendingInvoices") ?? [];
+      const mine = pending.find((i) => i.id === a.invoice.id);
+      const order = await db.printOrder.findUniqueOrThrow({ where: { id: a.orderId } });
+      harness.assertEqual(mine?.printOrder?.id, a.orderId, "Print invoice carries its order");
+      harness.assertEqual(mine?.printOrder?.orderNumber, order.orderNumber, "Order number");
+      harness.assertEqual(mine?.printOrder?.items.length, 1, "With its items");
+      harness.assertEqual(mine?.printOrder?.items[0]?.previewUrl, "/t20/p1-preview.jpg", "Item preview, not the master");
+      harness.assertEqual(mine?.printOrder?.items[0]?.photoWidth, 6000, "Photo width from its resolution");
+      harness.assertEqual(mine?.printOrder?.items[0]?.photoHeight, 4000, "Photo height from its resolution");
+      harness.assertEqual(pending.find((i) => i.id === other.id)?.printOrder, null, "Other invoice types carry nothing");
+    } finally {
+      await db.milestoneInvoice.delete({ where: { id: other.id } });
+    }
+  });
+
+  // ---- A photo in a print order can't be deleted ----
+  await harness.test("T20-PROTECT-01: a photo in an open print order can't be deleted until the order is cancelled", async () => {
+    const { p, orderId } = await placePickup();
+    const refused = await withSession(ownerSession, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: p.photo.id }));
+    harness.assertEqual(errOf(refused), "IN_PRINT_ORDER", "Refused while the order is NEW");
+    harness.assertEqual(msgOf(refused), "This photo is in a print order. Cancel or finish that order first.", "Message");
+    harness.assertEqual(await db.deliverableItem.count({ where: { id: p.photo.id } }), 1, "Photo still there");
+    const cancelled = await withSession(ownerSession, () => cancelPrintOrder({ ...orderBase, orderId }));
+    harness.assertEqual(cancelled.success, true, "Order cancelled");
+    const deleted = await withSession(ownerSession, () => deleteDeliverableItem({ tenantId: lumina.id, itemId: p.photo.id }));
+    harness.assertEqual(deleted.success, true, "Delete succeeds after cancelling");
+    harness.assertEqual(await db.deliverableItem.count({ where: { id: p.photo.id } }), 0, "Photo gone");
   });
 }

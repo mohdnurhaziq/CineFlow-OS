@@ -50,7 +50,11 @@ export type CartLine = {
   photoTitle: string;
   /** The gallery preview, for the cart list (the order itself prints from the master). */
   photoUrl: string;
+  /** Detected from the photo's shape. */
   orientation: "PORTRAIT" | "LANDSCAPE";
+  /** The photo's pixel size when added (older saved carts lack it): the print's real shape. */
+  photoWidth?: number;
+  photoHeight?: number;
   printSizeId: string;
   frameDesignId: string;
   matBoardType: MatBoardType;

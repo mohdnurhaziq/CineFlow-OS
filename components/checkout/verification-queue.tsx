@@ -3,10 +3,12 @@
 import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Banknote, CheckCircle2, Eye, Loader2, MessageSquare, XCircle } from "lucide-react";
+import { ArrowLeft, Banknote, CheckCircle2, Eye, Frame, Loader2, MessageSquare, XCircle } from "lucide-react";
 import { milestoneLabel, paymentMethodLabel } from "@/lib/labels";
 import { formatSlotDate, STUDIO_TIME_ZONE } from "@/lib/slot-time";
 import type { AdminVerificationConsoleProps } from "./admin-verification-console";
+import type { PrintOrderPreview } from "@/lib/prints/order-preview";
+import { PrintOrderPreviewDialog } from "@/components/admin/print-orders/print-order-preview-dialog";
 
 export type PendingItem = AdminVerificationConsoleProps["pendingInvoices"][number];
 
@@ -14,6 +16,8 @@ interface VerificationQueueProps {
   /** Pending payments in the current tab/search, any order (shown oldest first). */
   items: PendingItem[];
   tenantSlug: string;
+  /** ISO currency code, for the print order preview. */
+  currency: string;
   currencySymbol: string;
   isOwner: boolean;
   isPending: boolean;
@@ -44,6 +48,24 @@ function MethodBadge({ method, short = false }: { method: string | null; short?:
   );
 }
 
+/** "Framed prints · PO-2026-0001 · 2 prints" and a View order button, for a print order's invoice. */
+function PrintOrderLine({ order, onView }: { order: PrintOrderPreview; onView: () => void }) {
+  const n = order.items.length;
+  return (
+    <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-zinc-400 min-w-0">
+      <span className="flex items-center gap-1.5 min-w-0">
+        <Frame className="size-3 shrink-0 text-amber-400" aria-hidden="true" />
+        <span className="truncate">
+          Framed prints · {order.orderNumber} · {n} print{n === 1 ? "" : "s"}
+        </span>
+      </span>
+      <button type="button" onClick={onView} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+        View order
+      </button>
+    </div>
+  );
+}
+
 /**
  * The pending-payments queue: a compact list (oldest first) beside one payment under review.
  * After Approve or Reject the server refreshes the list; the payment drops out and the one that
@@ -53,6 +75,7 @@ function MethodBadge({ method, short = false }: { method: string | null; short?:
 export function VerificationQueue({
   items,
   tenantSlug,
+  currency,
   currencySymbol,
   isOwner,
   isPending,
@@ -70,6 +93,7 @@ export function VerificationQueue({
   const [reviewOpen, setReviewOpen] = useState(false);
   const lastIndex = useRef(0);
   const reviewRef = useRef<HTMLElement>(null);
+  const [viewOrder, setViewOrder] = useState<PrintOrderPreview | null>(null);
 
   const index = queue.findIndex((i) => i.id === selectedId);
   if (index >= 0) lastIndex.current = index;
@@ -135,6 +159,11 @@ export function VerificationQueue({
                     <MethodBadge method={item.paymentMethod} short />
                   </div>
                 </button>
+                {item.printOrder && (
+                  <div className="px-4 pb-3 -mt-1">
+                    <PrintOrderLine order={item.printOrder} onView={() => setViewOrder(item.printOrder!)} />
+                  </div>
+                )}
               </li>
             );
           })}
@@ -233,6 +262,10 @@ export function VerificationQueue({
                 )}
               </div>
 
+              {selected.printOrder && (
+                <PrintOrderLine order={selected.printOrder} onView={() => setViewOrder(selected.printOrder!)} />
+              )}
+
               {selected.paymentReference && (
                 <div className="text-[11px] font-mono text-zinc-400 bg-zinc-900/60 p-2 rounded-lg border border-zinc-800/80 break-words">
                   <span className="text-zinc-500 uppercase">Payment note / ref: </span>
@@ -307,6 +340,10 @@ export function VerificationQueue({
             )}
           </div>
         </section>
+      )}
+
+      {viewOrder && (
+        <PrintOrderPreviewDialog order={viewOrder} tenantSlug={tenantSlug} currency={currency} onClose={() => setViewOrder(null)} />
       )}
     </div>
   );

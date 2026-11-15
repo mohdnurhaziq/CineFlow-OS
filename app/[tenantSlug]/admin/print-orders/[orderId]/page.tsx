@@ -5,12 +5,14 @@ import { Download, ExternalLink, Frame, MapPin, Store } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 import { formatStudioDate } from "@/lib/slot-time";
-import { loadItemPreviews } from "@/lib/prints/gallery";
+import { loadItemPhotos } from "@/lib/prints/gallery";
+import { orderAddressLines } from "@/lib/prints/order-preview";
 import { MAT_BOARD_LABELS, PRINT_ORDER_STATUS_STYLES, printOrderStatusLabel } from "@/lib/prints/status";
 import { PageHeader, PageShell } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
 import { CopyButton } from "@/components/admin/print-orders/copy-button";
 import { PrintOrderActions } from "@/components/admin/print-orders/print-order-actions";
+import { PrintFitNote } from "@/components/admin/print-orders/print-fit";
 
 interface PrintOrderPageProps {
   params: Promise<{ tenantSlug: string; orderId: string }>;
@@ -46,25 +48,13 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
   });
   if (!order) notFound();
 
-  const previewById = await loadItemPreviews(order.items.map((i) => i.deliverableItemId));
+  const photoById = await loadItemPhotos(order.items.map((i) => i.deliverableItemId));
   const money = (n: number) => formatCurrency(n, tenant.currency);
   const ship = order.fulfilment === "SHIP";
-  const address = ship
-    ? [
-        order.recipientName,
-        order.recipientPhone,
-        order.line1,
-        order.line2,
-        [order.postcode, order.city].filter(Boolean).join(" "),
-        order.state,
-        order.country,
-      ].filter((l): l is string => !!l)
-    : [];
+  const address = orderAddressLines(order);
   // The full-resolution master, through the gallery download route (same access checks as the gallery).
-  const downloadHref = (item: (typeof order.items)[number]) =>
-    item.deliverableItemId
-      ? `/api/download?projectId=${order.projectId}&type=photo_master&assetId=${item.deliverableItemId}`
-      : item.photoUrl;
+  const downloadHref = (deliverableItemId: string) =>
+    `/api/download?projectId=${order.projectId}&type=photo_master&assetId=${deliverableItemId}`;
 
   return (
     <PageShell width="detail">
@@ -97,13 +87,14 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
           </h2>
           <ul className="divide-y divide-zinc-800/70">
             {order.items.map((item) => {
-              const preview = item.deliverableItemId ? previewById.get(item.deliverableItemId) : undefined;
+              const photo = item.deliverableItemId ? photoById.get(item.deliverableItemId) : undefined;
+              const preview = photo?.previewUrl;
               return (
                 <li key={item.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
                   <div className="size-16 shrink-0 overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
                     {preview && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={preview} alt="" className="size-full object-cover" />
+                      <img src={preview} alt="" className="size-full object-contain" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
@@ -117,10 +108,27 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
                     <p className="text-[11px] font-mono text-zinc-500">
                       {item.kind === "INCLUDED" ? `Included${item.upgradeAmount > 0 ? ` + ${money(item.upgradeAmount)} upgrade` : ""}` : money(item.lineAmount)}
                     </p>
+                    <PrintFitNote
+                      item={{
+                        previewUrl: preview ?? null,
+                        photoWidth: photo?.photo?.width ?? null,
+                        photoHeight: photo?.photo?.height ?? null,
+                        widthInches: item.widthInches,
+                        heightInches: item.heightInches,
+                      }}
+                    />
                   </div>
-                  <a href={downloadHref(item)} className={`${buttonVariants({ variant: "secondary", size: "sm" })} self-center`} download>
-                    <Download /> <span className="hidden sm:inline">Full-res</span>
-                  </a>
+                  {item.deliverableItemId ? (
+                    <a
+                      href={downloadHref(item.deliverableItemId)}
+                      className={`${buttonVariants({ variant: "secondary", size: "sm" })} self-center`}
+                      download
+                    >
+                      <Download /> <span className="hidden sm:inline">Full-res</span>
+                    </a>
+                  ) : (
+                    <span className="self-center text-[11px] text-zinc-500 text-right max-w-24">Original file not available</span>
+                  )}
                 </li>
               );
             })}
@@ -157,6 +165,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
             status={order.status}
             fulfilment={order.fulfilment}
             paid={order.invoice?.status === "PAID"}
+            hasInvoice={!!order.invoice}
           />
 
           <section className={card} aria-label="Fulfilment">

@@ -46,7 +46,9 @@ interface ConfiguratorPanelProps {
   selectedPrintSize: PrintSizeOption;
   selectedFrameDesign: FrameDesignOption;
   matBoard: MatBoardType;
-  orientation: "PORTRAIT" | "LANDSCAPE";
+  /** The print's real size, following the selected photo's shape. */
+  printWidthInches: number;
+  printHeightInches: number;
   currency: string;
   /** The studio's mat board price (Tenant.matBoardPrice). */
   matBoardPrice: number;
@@ -74,7 +76,8 @@ export function ConfiguratorPanel({
   selectedPrintSize,
   selectedFrameDesign,
   matBoard,
-  orientation,
+  printWidthInches: printW,
+  printHeightInches: printH,
   currency,
   matBoardPrice,
   totalPrice,
@@ -91,8 +94,6 @@ export function ConfiguratorPanel({
   const [activeTab, setActiveTab] = useState<"PHOTO" | "SIZE" | "FRAME" | "MAT">("SIZE");
 
   const matInches = matBoard === "NONE" ? 0 : 2.0;
-  const printW = orientation === "PORTRAIT" ? selectedPrintSize.widthInches : selectedPrintSize.heightInches;
-  const printH = orientation === "PORTRAIT" ? selectedPrintSize.heightInches : selectedPrintSize.widthInches;
   const totalW = printW + matInches * 2 + selectedFrameDesign.moldingWidth * 2;
   const totalH = printH + matInches * 2 + selectedFrameDesign.moldingWidth * 2;
 

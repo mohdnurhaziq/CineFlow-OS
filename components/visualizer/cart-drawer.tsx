@@ -9,6 +9,7 @@ import { useDialog } from "@/lib/use-dialog";
 import { CheckoutStep } from "./checkout-step";
 import { priceLabel, priceLine, type CartLine, type Catalog, type OrderingContext } from "./cart";
 import { MAT_BOARD_LABELS } from "@/lib/prints/status";
+import { formatPrintInches, printDimensionsFor } from "@/lib/prints/orientation";
 
 
 interface CartDrawerProps {
@@ -115,7 +116,12 @@ export function CartDrawer({ open, onClose, tenantId, tenantSlug, currency, orde
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <p className="text-sm font-semibold text-white truncate">{line.photoTitle}</p>
                       <p className="text-xs text-zinc-400">
-                        {size?.name ?? "Size unavailable"} · {frame?.name ?? "Frame unavailable"}
+                        {size
+                          ? line.photoWidth && line.photoHeight
+                            ? `${size.code} · ${formatPrintInches(printDimensionsFor(size, { width: line.photoWidth, height: line.photoHeight }))}`
+                            : size.name
+                          : "Size unavailable"}{" "}
+                        · {frame?.name ?? "Frame unavailable"}
                       </p>
                       <p className="text-xs text-zinc-500">
                         {MAT_BOARD_LABELS[line.matBoardType]} · {line.orientation === "PORTRAIT" ? "Portrait" : "Landscape"}

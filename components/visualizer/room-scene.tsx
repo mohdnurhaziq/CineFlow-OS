@@ -1,8 +1,7 @@
 "use client";
 
-import { buttonVariants } from "@/components/ui/button";
 import { useMemo } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, Palette } from "lucide-react";
+import { ZoomIn, ZoomOut, Palette } from "lucide-react";
 import { SofaMockup } from "./sofa-mockup";
 import { FrameCanvas } from "./frame-canvas";
 import type { MatBoardType } from "@/lib/prints/pricing";
@@ -32,12 +31,12 @@ interface RoomSceneProps {
   frameColor: string;
   frameMaterial: string;
   matBoardType: MatBoardType;
+  /** Follows the photo's shape (shown, not chosen). */
   orientation: "PORTRAIT" | "LANDSCAPE";
   wallColor: WallColorKey;
   zoomMode: "ROOM" | "DETAIL";
   onWallColorChange: (color: WallColorKey) => void;
   onZoomToggle: () => void;
-  onOrientationToggle: () => void;
 }
 
 export function RoomScene({
@@ -55,7 +54,6 @@ export function RoomScene({
   zoomMode,
   onWallColorChange,
   onZoomToggle,
-  onOrientationToggle,
 }: RoomSceneProps) {
   const selectedWall = useMemo(() => {
     return WALL_COLORS.find((w) => w.key === wallColor) || WALL_COLORS[0]!;
@@ -99,15 +97,10 @@ export function RoomScene({
 
         {/* View Controls: Orientation & Zoom */}
         <div className="flex items-center gap-2">
-          {/* Orientation Toggle */}
-          <button
-            type="button"
-            onClick={onOrientationToggle}
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            <RotateCcw className="size-3 text-amber-400" />
-            <span>{orientation === "PORTRAIT" ? "Portrait" : "Landscape"}</span>
-          </button>
+          {/* Orientation: follows the photo */}
+          <span className="px-2.5 py-1.5 rounded-xl border border-zinc-800 bg-zinc-900 text-xs font-mono text-zinc-400">
+            {orientation === "PORTRAIT" ? "Portrait" : "Landscape"} · from photo
+          </span>
 
           {/* Zoom Toggle */}
           <button
@@ -161,8 +154,6 @@ export function RoomScene({
             frameColor={frameColor}
             frameMaterial={frameMaterial}
             matBoardType={matBoardType}
-            orientation={orientation}
-            sofaWidthPx={effectiveSofaWidth}
           />
         </div>
 

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { loadProjectEntitlements } from "@/lib/prints/entitlements";
+import { parseResolution, type PhotoSize } from "@/lib/prints/orientation";
 
 /**
  * What a gallery's "Framed prints" section shows: the included prints with what is left of each,
@@ -44,10 +45,24 @@ export type FramedPrintsData = {
  * Never the print master. UNSCOPED: pass only ids from orders the caller may see.
  */
 export async function loadItemPreviews(deliverableItemIds: (string | null)[]): Promise<Map<string, string>> {
+  const photos = await loadItemPhotos(deliverableItemIds);
+  return new Map([...photos].map(([id, p]) => [id, p.previewUrl]));
+}
+
+/**
+ * Each order item photo's gallery preview (as loadItemPreviews) and its master's pixel size from
+ * the stored resolution (null when unknown), by deliverable item id. UNSCOPED, as loadItemPreviews.
+ */
+export async function loadItemPhotos(
+  deliverableItemIds: (string | null)[]
+): Promise<Map<string, { previewUrl: string; photo: PhotoSize | null }>> {
   const ids = [...new Set(deliverableItemIds.filter((id): id is string => !!id))];
   if (ids.length === 0) return new Map();
-  const previews = await db.deliverableItem.findMany({ where: { id: { in: ids } }, select: { id: true, previewUrl: true, thumbnailUrl: true } });
-  return new Map(previews.map((p) => [p.id, p.thumbnailUrl || p.previewUrl]));
+  const items = await db.deliverableItem.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, previewUrl: true, thumbnailUrl: true, resolution: true },
+  });
+  return new Map(items.map((p) => [p.id, { previewUrl: p.thumbnailUrl || p.previewUrl, photo: parseResolution(p.resolution) }]));
 }
 
 export async function loadFramedPrints(projectId: string): Promise<FramedPrintsData> {

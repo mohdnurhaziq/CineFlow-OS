@@ -18,6 +18,8 @@ interface PrintOrderActionsProps {
   fulfilment: string;
   /** The order's invoice is paid: cancelling keeps the money, so the refund happens outside the app. */
   paid: boolean;
+  /** The order has an invoice (an order of only free included prints has none). */
+  hasInvoice: boolean;
 }
 
 const MOVE_LABELS: Record<string, string> = {
@@ -32,7 +34,7 @@ const field =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 
 /** Move the order along, add courier and tracking when it ships, or cancel it (confirmed in place). */
-export function PrintOrderActions({ tenantId, tenantSlug, orderId, status, fulfilment, paid }: PrintOrderActionsProps) {
+export function PrintOrderActions({ tenantId, tenantSlug, orderId, status, fulfilment, paid, hasInvoice }: PrintOrderActionsProps) {
   const router = useRouter();
   const [courier, setCourier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -113,7 +115,7 @@ export function PrintOrderActions({ tenantId, tenantSlug, orderId, status, fulfi
           )}
           {confirmCancel ? (
             <div className="space-y-2" role="group" aria-label="Confirm cancelling the order">
-              <p className="text-xs text-zinc-300">Cancel this order? Any included prints go back to the client{paid ? "" : " and an unpaid invoice is cancelled"}.</p>
+              <p className="text-xs text-zinc-300">Cancel this order? Any included prints go back to the client{hasInvoice && !paid ? " and its unpaid invoice is cancelled" : ""}.</p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="destructive" disabled={pending} onClick={() => run(() => cancelPrintOrder({ tenantId, tenantSlug, orderId }), "Order cancelled.")}>
                   {pending && <Loader2 className="animate-spin" />}

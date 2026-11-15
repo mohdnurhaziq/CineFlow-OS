@@ -6,6 +6,7 @@ import { AdminVerificationConsole } from "@/components/checkout/admin-verificati
 import { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/session";
 import { OWNER_ROLES } from "@/lib/auth/guard";
+import { loadPrintOrderPreviews } from "@/lib/prints/order-preview";
 
 interface VerificationPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -56,6 +57,12 @@ export default async function AdminVerificationPage({ params }: VerificationPage
     orderBy: { createdAt: "desc" },
   });
 
+  // The framed print order each print invoice pays for, for its "View order" preview.
+  const printOrders = await loadPrintOrderPreviews(
+    tenant.id,
+    pendingInvoices.filter((inv) => inv.milestoneType === "PRINT_FRAME_ORDER").map((inv) => inv.id)
+  );
+
   // 3. The booking each deposit invoice pays for (explicit link; resolved for older invoices)
   const enrichedPending = await Promise.all(
     pendingInvoices.map(async (inv) => {
@@ -64,6 +71,7 @@ export default async function AdminVerificationPage({ params }: VerificationPage
       const { booking: _omit, ...rest } = inv;
       return {
         ...rest,
+        printOrder: printOrders.get(inv.id) ?? null,
         booking: linked
           ? {
               id: linked.id,

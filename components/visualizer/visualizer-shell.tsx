@@ -7,6 +7,7 @@ import { Gift, Lock, Plus, ShoppingBag, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { framedPrice, type MatBoardType } from "@/lib/prints/pricing";
+import { printDimensionsFor } from "@/lib/prints/orientation";
 import { RoomScene, type WallColorKey } from "./room-scene";
 import {
   ConfiguratorPanel,
@@ -15,6 +16,7 @@ import {
   type PhotoOption,
 } from "./configurator-panel";
 import { CartDrawer } from "./cart-drawer";
+import { usePhotoSize } from "./use-photo-size";
 import { loadCart, money, priceLabel, priceLine, saveCart, type CartLine, type Catalog, type OrderingContext } from "./cart";
 
 interface VisualizerShellProps {
@@ -86,7 +88,6 @@ export function VisualizerShell({
   const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSizeOption>(claimLine?.size ?? defaultPrintSize);
   const [selectedFrameDesign, setSelectedFrameDesign] = useState<FrameDesignOption>(claimLine?.frame ?? defaultFrameDesign);
   const [matBoard, setMatBoard] = useState<MatBoardType>(claimLine ? "NONE" : "WHITE_2INCH");
-  const [orientation, setOrientation] = useState<"PORTRAIT" | "LANDSCAPE">("LANDSCAPE");
   const [wallColor, setWallColor] = useState<WallColorKey>("WARM_GRAY");
   const [zoomMode, setZoomMode] = useState<"ROOM" | "DETAIL">("ROOM");
   /** The included print being claimed, if any: its size and frame are the starting point. */
@@ -142,9 +143,17 @@ export function VisualizerShell({
   };
   const includedPriced = activeLine ? priceLine({ ...current, kind: "INCLUDED", bookingIncludedPrintId: activeLine.id }, catalog) : null;
 
-  // Print dimensions based on orientation
-  const printWidthInches = orientation === "PORTRAIT" ? selectedPrintSize.widthInches : selectedPrintSize.heightInches;
-  const printHeightInches = orientation === "PORTRAIT" ? selectedPrintSize.heightInches : selectedPrintSize.widthInches;
+  // The print follows the photo's shape: the size's short side as listed, the long side to match
+  // the photo, so the photo fills it with no crop. Until the photo has loaded, the last photo's shape.
+  const photo = usePhotoSize(selectedPhoto.url);
+  const printDims = photo.size
+    ? printDimensionsFor(selectedPrintSize, photo.size)
+    : {
+        widthInches: Math.max(selectedPrintSize.widthInches, selectedPrintSize.heightInches),
+        heightInches: Math.min(selectedPrintSize.widthInches, selectedPrintSize.heightInches),
+        orientation: "LANDSCAPE" as const,
+      };
+  const { widthInches: printWidthInches, heightInches: printHeightInches, orientation } = printDims;
 
   const handleCustomPhotoUpload = (file: File) => {
     const objectUrl = URL.createObjectURL(file);
@@ -172,7 +181,7 @@ export function VisualizerShell({
 
   const isGalleryPhoto = initialPhotos.some((p) => p.id === selectedPhoto.id);
   const addToCart = (kind: "INCLUDED" | "PAID") => {
-    if (!isGalleryPhoto) return;
+    if (!isGalleryPhoto || !photo.ready || !photo.size) return;
     if (kind === "INCLUDED" && (!activeLine || remainingFor(activeLine.id) <= 0)) return;
     const line: CartLine = {
       key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -182,6 +191,8 @@ export function VisualizerShell({
       photoTitle: selectedPhoto.title,
       photoUrl: selectedPhoto.url,
       orientation,
+      photoWidth: photo.size.width,
+      photoHeight: photo.size.height,
       ...current,
     };
     setCart((c) => [...c, line]);
@@ -207,7 +218,7 @@ export function VisualizerShell({
         <button
           type="button"
           onClick={() => addToCart("INCLUDED")}
-          disabled={!isGalleryPhoto || remainingFor(activeLine.id) <= 0}
+          disabled={!isGalleryPhoto || !photo.ready || remainingFor(activeLine.id) <= 0}
           className={cn(buttonVariants({ size: "lg" }), "w-full min-h-12")}
         >
           <Gift className="size-4" />
@@ -217,7 +228,7 @@ export function VisualizerShell({
       <button
         type="button"
         onClick={() => addToCart("PAID")}
-        disabled={!isGalleryPhoto}
+        disabled={!isGalleryPhoto || !photo.ready}
         className={cn(buttonVariants({ variant: activeLine ? "secondary" : "primary", size: "lg" }), "w-full min-h-12")}
       >
         <Plus className="size-4" />
@@ -325,7 +336,6 @@ export function VisualizerShell({
             zoomMode={zoomMode}
             onWallColorChange={(color) => setWallColor(color)}
             onZoomToggle={() => setZoomMode((prev) => (prev === "ROOM" ? "DETAIL" : "ROOM"))}
-            onOrientationToggle={() => setOrientation((prev) => (prev === "PORTRAIT" ? "LANDSCAPE" : "PORTRAIT"))}
           />
         </div>
 
@@ -339,7 +349,8 @@ export function VisualizerShell({
             selectedPrintSize={selectedPrintSize}
             selectedFrameDesign={selectedFrameDesign}
             matBoard={matBoard}
-            orientation={orientation}
+            printWidthInches={printWidthInches}
+            printHeightInches={printHeightInches}
             currency={currency}
             matBoardPrice={matBoardPrice}
             totalPrice={totalPrice}
