@@ -24,6 +24,20 @@ export function printDimensionsFor(size: { widthInches: number; heightInches: nu
     : { widthInches: long, heightInches: short, orientation };
 }
 
+/**
+ * A photo's size turned to match an order item's orientation. Older uploads stored the sensor's
+ * size, ignoring EXIF rotation, so a portrait phone photo may read as landscape: the item's
+ * orientation (taken from the photo as seen) wins. Any other orientation leaves the size alone.
+ */
+export function orientPhotoSize(photo: PhotoSize, orientation: string | null | undefined): PhotoSize {
+  const wide = photo.width > photo.height;
+  const tall = photo.height > photo.width;
+  if ((orientation === "PORTRAIT" && wide) || (orientation === "LANDSCAPE" && tall)) {
+    return { width: photo.height, height: photo.width };
+  }
+  return photo;
+}
+
 /** A stored resolution ("6000 × 4000", "6000x4000") as pixels; null when missing or unreadable. */
 export function parseResolution(resolution: string | null | undefined): PhotoSize | null {
   const m = resolution?.match(/(\d+)\s*[×xX*]\s*(\d+)/);

@@ -7,6 +7,7 @@ import { VaultShell } from "@/components/vault/vault-shell";
 import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
 import { loadFramedPrints } from "@/lib/prints/gallery";
 import { currencySymbol } from "@/lib/money";
+import { STAFF_ROLES } from "@/lib/auth/guard";
 
 interface VaultPageProps {
   params: Promise<{
@@ -92,7 +93,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
   if (!project) notFound();
 
   // The project's client or the studio's staff, signed in.
-  await requirePageAccess({
+  const viewer = await requirePageAccess({
     tenantSlug: tenant.slug,
     tenantId: tenant.id,
     clientId: project.client.id,
@@ -170,6 +171,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
             unlocked={framedPrints.unlocked}
             hasPhotos={framedPrints.hasPhotos}
             orders={framedPrints.orders}
+            {...(STAFF_ROLES.has(viewer.role) ? { staffOrderHref: `/${tenant.slug}/admin/projects/${project.id}/prints` } : {})}
           />
         )}
       </VaultShell>

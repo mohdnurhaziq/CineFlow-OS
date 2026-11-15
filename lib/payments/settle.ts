@@ -103,14 +103,21 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       data: { status: "PAID", paymentMethod: "CARD", paymentReference: gatewayRef, verifiedBy: "Toyyibpay", paidAt: new Date() },
     });
     if (won.count === 0) {
-      const now = await tx.milestoneInvoice.findUnique({ where: { id: invoice.id }, select: { status: true, paymentReference: true } });
+      const now = await tx.milestoneInvoice.findUnique({
+        where: { id: invoice.id },
+        select: { status: true, paymentReference: true, verifiedBy: true },
+      });
       if (now?.status === "VOID") {
         const noted = now.paymentReference === gatewayRef;
         // Money received for a cancelled invoice: keep it VOID, note the payment, flag the refund.
         if (!noted) {
           await tx.milestoneInvoice.update({
             where: { id: invoice.id },
-            data: { paymentReference: gatewayRef, verifiedBy: "Toyyibpay - REFUND REQUIRED (paid after the invoice was cancelled)" },
+            // Appended, so who cancelled it (and why) stays on record.
+            data: {
+              paymentReference: gatewayRef,
+              verifiedBy: [now.verifiedBy?.trim(), "Toyyibpay - REFUND REQUIRED (paid after the invoice was cancelled)"].filter(Boolean).join("\n"),
+            },
           });
         }
         return { alreadySettled: noted, refundRequired: true, cancelledInvoice: true, unlockedDownloads: false, booking: null as BookingWithSlot | null, slot: null as BookingSlot | null };

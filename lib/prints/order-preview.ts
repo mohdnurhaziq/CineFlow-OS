@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { loadItemPhotos } from "@/lib/prints/gallery";
+import { orientPhotoSize } from "@/lib/prints/orientation";
 
 /**
  * A print order as the studio's framed preview shows it (Verification's "View order"): each print
@@ -12,7 +13,7 @@ export type PrintOrderPreviewItem = {
   photoTitle: string;
   /** The gallery preview (never the master); null when the photo is gone. */
   previewUrl: string | null;
-  /** The master's pixel size from its stored resolution; null when unknown (read from the preview instead). */
+  /** The master's pixel size from its stored resolution, turned to the item's orientation; null when unknown (read from the preview instead). */
   photoWidth: number | null;
   photoHeight: number | null;
   orientation: string;
@@ -99,13 +100,14 @@ export async function loadPrintOrderPreviews(tenantId: string, invoiceIds: strin
         items: o.items.map((i) => {
           const photo = i.deliverableItemId ? photos.get(i.deliverableItemId) : undefined;
           const frame = frameById.get(i.frameDesignId) ?? FALLBACK_FRAME;
+          const size = photo?.photo ? orientPhotoSize(photo.photo, i.orientation) : null;
           return {
             id: i.id,
             kind: i.kind,
             photoTitle: i.photoTitle,
             previewUrl: photo?.previewUrl ?? null,
-            photoWidth: photo?.photo?.width ?? null,
-            photoHeight: photo?.photo?.height ?? null,
+            photoWidth: size?.width ?? null,
+            photoHeight: size?.height ?? null,
             orientation: i.orientation,
             sizeCode: i.sizeCode,
             sizeName: i.sizeName,

@@ -93,7 +93,8 @@ export async function storeDeliverablePhoto(opts: {
     downloadUrl: await saveMaster(opts.tenantId, opts.projectId, opts.data, opts.ext),
     previewUrl: `/uploads/deliverables/previews/${previewName}`,
     viewUrl: await saveMaster(opts.tenantId, opts.projectId, clean, ".jpg"),
-    resolution: `${meta.width} × ${meta.height}`,
+    // As the photo is seen: EXIF orientations 5-8 turn it a quarter, swapping width and height.
+    resolution: (meta.orientation ?? 1) >= 5 ? `${meta.height} × ${meta.width}` : `${meta.width} × ${meta.height}`,
     fileSize: humanSize(opts.data.length),
   };
 }

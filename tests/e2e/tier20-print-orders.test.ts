@@ -33,7 +33,11 @@ import ProjectVaultPage from "@/app/[tenantSlug]/vault/[projectId]/page";
 import AdminProjectPrintsPage from "@/app/[tenantSlug]/admin/projects/[projectId]/prints/page";
 import nodemailer, { type Transporter } from "nodemailer";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
-import { orientationFor, printDimensionsFor } from "@/lib/prints/orientation";
+import { orientationFor, orientPhotoSize, parseResolution, printDimensionsFor } from "@/lib/prints/orientation";
+import { loadPrintOrderPreviews } from "@/lib/prints/order-preview";
+import { loadFramedPrints } from "@/lib/prints/gallery";
+import { deleteDeliverableFiles, storeDeliverablePhoto } from "@/lib/deliverables/storage";
+import sharp from "sharp";
 import { deleteDeliverableItem } from "@/lib/actions/admin-projects";
 import AdminVerificationPage from "@/app/[tenantSlug]/admin/verification/page";
 
@@ -65,6 +69,29 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(JSON.stringify(printDimensionsFor(r8, { width: 6000, height: 4000 })), JSON.stringify({ widthInches: 12, heightInches: 8, orientation: "LANDSCAPE" }), "3:2 wide on 8R");
     harness.assertEqual(JSON.stringify(printDimensionsFor(r8, { width: 4000, height: 5000 })), JSON.stringify({ widthInches: 8, heightInches: 10, orientation: "PORTRAIT" }), "4:5 tall on 8R");
     harness.assertEqual(JSON.stringify(printDimensionsFor(r8, { width: 3000, height: 3000 })), JSON.stringify({ widthInches: 8, heightInches: 8, orientation: "PORTRAIT" }), "Square on 8R");
+  });
+
+  await harness.test("T20-RATIO-02: a stored size that disagrees with the item's orientation is turned to match", async () => {
+    const r8 = { widthInches: 8, heightInches: 10 };
+    const stored = parseResolution("600 × 400")!;
+    const portrait = printDimensionsFor(r8, orientPhotoSize(stored, "PORTRAIT"));
+    harness.assertEqual(JSON.stringify(portrait), JSON.stringify({ widthInches: 8, heightInches: 12, orientation: "PORTRAIT" }), "Portrait item prints 8 × 12");
+    harness.assertEqual(JSON.stringify(orientPhotoSize(stored, "LANDSCAPE")), JSON.stringify({ width: 600, height: 400 }), "Landscape item keeps it");
+    harness.assertEqual(JSON.stringify(orientPhotoSize({ width: 400, height: 600 }, "LANDSCAPE")), JSON.stringify({ width: 600, height: 400 }), "Tall size on a landscape item turns");
+    harness.assertEqual(JSON.stringify(orientPhotoSize({ width: 500, height: 500 }, "LANDSCAPE")), JSON.stringify({ width: 500, height: 500 }), "Square unchanged");
+  });
+
+  await harness.test("T20-RATIO-03: an uploaded photo with EXIF orientation 6 stores its size as seen (portrait)", async () => {
+    const data = await sharp({ create: { width: 600, height: 400, channels: 3, background: "#888888" } })
+      .jpeg()
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+    const stored = await storeDeliverablePhoto({ tenantId: lumina.id, projectId: "t20-exif", data, ext: ".jpg", watermark: "T20" });
+    try {
+      harness.assertEqual(stored.resolution, "400 × 600", "Width and height swapped for a rotated photo");
+    } finally {
+      await deleteDeliverableFiles(stored);
+    }
   });
 
   const zones = await db.shippingZone.findMany({ where: { tenantId: lumina.id }, orderBy: { sortOrder: "asc" } });
@@ -330,6 +357,22 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const second = await backfillIncludedPrints();
     harness.assertEqual(second.lines, 0, "Second run creates nothing");
     harness.assertEqual(await db.bookingIncludedPrint.count({ where: { bookingId: b.booking.id } }), 1, "Still one line");
+  });
+
+  await harness.test("T20-BACKFILL-02: a manual grant made first doesn't stop the backfill adding the package's prints", async () => {
+    const b = await bookT20();
+    await db.bookingIncludedPrint.deleteMany({ where: { bookingId: b.booking.id } });
+    const granted = await withSession(ownerSession, () =>
+      grantIncludedPrint({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: b.booking.id, printSizeId: "psz_lum_12r", frameDesignId: "frm_lum_black", quantity: 1 })
+    );
+    harness.assertEqual(granted.success, true, "Manual line granted");
+    await backfillIncludedPrints();
+    const rows = await db.bookingIncludedPrint.findMany({ where: { bookingId: b.booking.id } });
+    harness.assertEqual(JSON.stringify(rows.map((r) => r.source).sort()), JSON.stringify(["BACKFILL", "MANUAL"]), "Package prints backfilled beside the manual line");
+    await backfillIncludedPrints();
+    harness.assertEqual(await db.bookingIncludedPrint.count({ where: { bookingId: b.booking.id } }), 2, "Running again adds nothing");
+    const again = await db.$transaction((tx) => snapshotIncludedPrints(tx, b.booking, "PACKAGE"));
+    harness.assertEqual(again, 0, "Snapshot is a no-op once package prints exist");
   });
 
   await harness.test("T20-GRANT-01: staff can grant and remove a manual included print", async () => {
@@ -816,11 +859,51 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(await orderStatus(a.orderId), "SHIPPED", "Still SHIPPED");
 
     await db.printOrder.update({ where: { id: a.orderId }, data: { status: "IN_PRODUCTION" } });
+    const paidBy = (await db.milestoneInvoice.findUniqueOrThrow({ where: { id: a.invoice.id } })).verifiedBy;
     const staff = await withSession(ownerSession, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
     harness.assertEqual(staff.success, true, "Staff cancel before shipping");
     harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order CANCELLED");
     harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "A paid invoice is never voided");
     harness.assertEqual(await remainingOf(a.p), 1, "Included print returned");
+    const order = await db.printOrder.findUniqueOrThrow({ where: { id: a.orderId } });
+    const inv = await db.milestoneInvoice.findUniqueOrThrow({ where: { id: a.invoice.id } });
+    const note = `Refund owed: order ${order.orderNumber} cancelled by ${owner.name}`;
+    harness.assertEqual(order.notes?.startsWith(note), true, "Refund owed noted on the order");
+    harness.assertEqual(inv.verifiedBy?.startsWith(paidBy ? `${paidBy}\n${note}` : note), true, "Refund owed appended to the invoice record");
+  });
+
+  const photographerRow = await db.user.findFirst({ where: { tenantId: lumina.id, role: "PHOTOGRAPHER" } });
+  const photographerSession = {
+    id: photographerRow?.id ?? "t20-photographer", email: photographerRow?.email ?? "t20-photographer@example.test",
+    name: photographerRow?.name ?? "T20 Photographer", role: "PHOTOGRAPHER", tenantId: lumina.id, tenantSlug: "lumina-cine",
+  };
+
+  await harness.test("T20-CANCEL-05: only the owner cancels an order with an invoice; other staff can cancel free orders", async () => {
+    const a = await placeAwaiting();
+    const unpaidRes = await withSession(photographerSession, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(errOf(unpaidRes), "OWNER_ONLY", "Photographer can't void the unpaid invoice");
+    harness.assertEqual(msgOf(unpaidRes), "Only the studio owner can cancel an order that has a payment.", "Message");
+    harness.assertEqual(await orderStatus(a.orderId), "AWAITING_PAYMENT", "Order unchanged");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), a.invoice.status, "Invoice unchanged");
+
+    const b = await placeAwaiting();
+    harness.assertEqual((await payByCard(b)).success, true, "Paid");
+    const paidRes = await withSession(photographerSession, () => cancelPrintOrder({ ...orderBase, orderId: b.orderId }));
+    harness.assertEqual(errOf(paidRes), "OWNER_ONLY", "Photographer can't cancel a paid order");
+    harness.assertEqual(await orderStatus(b.orderId), "NEW", "Paid order unchanged");
+
+    const asOwner = await withSession(ownerSession, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(asOwner.success, true, "Owner cancels");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Invoice VOID");
+
+    const free = await makeOrderProject(true);
+    const placed = await withSession(free.session, () =>
+      placePrintOrder({ ...orderBase, projectId: free.project.id, items: [includedItem(free)], fulfilment: "PICKUP" })
+    );
+    if (!placed.success) throw new Error("place failed: " + JSON.stringify(placed));
+    const freeRes = await withSession(photographerSession, () => cancelPrintOrder({ ...orderBase, orderId: placed.orderId }));
+    harness.assertEqual(freeRes.success, true, "Photographer cancels a free order");
+    harness.assertEqual(await orderStatus(placed.orderId), "CANCELLED", "Free order CANCELLED");
   });
 
   await harness.test("T20-VOID-01: voiding the order's invoice cancels the order and returns the print", async () => {
@@ -881,7 +964,12 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
       const inv = await db.milestoneInvoice.findUniqueOrThrow({ where: { id: a.invoice.id } });
       harness.assertEqual(inv.status, "VOID", "Invoice still VOID");
       harness.assertEqual(inv.paymentReference, "TOYYIBPAY-TP-LATE", "Gateway reference recorded");
-      harness.assertEqual(inv.verifiedBy, "Toyyibpay - REFUND REQUIRED (paid after the invoice was cancelled)", "Refund noted");
+      const cancelledOrder = await db.printOrder.findUniqueOrThrow({ where: { id: a.orderId } });
+      harness.assertEqual(
+        inv.verifiedBy,
+        `Cancelled with print order ${cancelledOrder.orderNumber} by ${a.p.client.name}\nToyyibpay - REFUND REQUIRED (paid after the invoice was cancelled)`,
+        "Refund noted after who cancelled it"
+      );
       harness.assertEqual(inv.paidAt, null, "Not marked paid");
       harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order still CANCELLED");
       const again = await settleToyyibpayBill(billCode!);
@@ -995,6 +1083,40 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const ordering = findProp<{ galleryHref: string; staffOrdersHref?: string }>(tree, "ordering");
     harness.assertEqual(ordering?.galleryHref, `/lumina-cine/admin/projects/${p.project.id}`, "Back to the admin gallery");
     harness.assertEqual(ordering?.staffOrdersHref, "/lumina-cine/admin/print-orders", "Placed orders open in the admin console");
+  });
+
+  await harness.test("T20-UI-05: a released project shows clean photo_view copies in Wall Art and order thumbnails, never proofs or masters", async () => {
+    const p = await makeOrderProject(true);
+    await db.deliverableItem.update({ where: { id: p.photo.id }, data: { viewUrl: "/t20/p1-view.jpg" } });
+    const clean = `/api/download?projectId=${p.project.id}&type=photo_view&assetId=${p.photo.id}`;
+    const asClient = await withSession(p.session, () => visualizer(p.project.id));
+    harness.assertEqual((findProp<{ url: string }[]>(asClient, "initialPhotos") ?? [])[0]?.url, clean, "Client's Wall Art shows the clean copy");
+    const asStaff = await withSession(ownerSession, () =>
+      AdminProjectPrintsPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: p.project.id }) })
+    );
+    harness.assertEqual((findProp<{ url: string }[]>(asStaff, "initialPhotos") ?? [])[0]?.url, clean, "Studio's print page shows the clean copy");
+
+    const placed = await withSession(p.session, () =>
+      placePrintOrder({ ...orderBase, projectId: p.project.id, items: [includedItem(p)], fulfilment: "PICKUP" })
+    );
+    if (!placed.success) throw new Error("place failed: " + JSON.stringify(placed));
+    const framed = await loadFramedPrints(p.project.id);
+    harness.assertEqual(JSON.stringify(framed.orders[0]?.thumbnails), JSON.stringify([clean]), "Order thumbnail is the clean copy");
+
+    const locked = await makeOrderProject(false);
+    await db.deliverableItem.update({ where: { id: locked.photo.id }, data: { viewUrl: "/t20/p1-view.jpg" } });
+    const lockedTree = await withSession(ownerSession, () =>
+      AdminProjectPrintsPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: locked.project.id }) })
+    );
+    harness.assertEqual((findProp<{ url: string }[]>(lockedTree, "initialPhotos") ?? [])[0]?.url, "/t20/p1-preview.jpg", "Unreleased: still the proof");
+  });
+
+  await harness.test("T20-UI-06: staff in the vault order framed prints from the studio's page; clients from Wall Art", async () => {
+    const p = await makeOrderProject(true);
+    const vault = (session: Parameters<typeof withSession>[0]) =>
+      withSession(session, () => ProjectVaultPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: p.project.id }) }));
+    harness.assertEqual(findProp<string>(await vault(ownerSession), "staffOrderHref"), `/lumina-cine/admin/projects/${p.project.id}/prints`, "Staff link");
+    harness.assertEqual(findProp<string>(await vault(p.session), "staffOrderHref"), undefined, "Client has no staff link");
   });
 
   // ---- Studio: print order status, tracking and client emails ----
@@ -1146,7 +1268,7 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
   // ---- Verification: framed preview of a print order's invoice ----
   await harness.test("T20-VERIFY-01: the verification page passes the print order for a print invoice awaiting verification, nothing for others", async () => {
     const a = await placeAwaiting();
-    await db.deliverableItem.update({ where: { id: a.p.photo.id }, data: { resolution: "6000 × 4000" } });
+    await db.deliverableItem.update({ where: { id: a.p.photo.id }, data: { resolution: "4000 × 6000" } });
     const slip = await withSession(a.p.session, () =>
       processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
     );
@@ -1167,12 +1289,24 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
       harness.assertEqual(mine?.printOrder?.orderNumber, order.orderNumber, "Order number");
       harness.assertEqual(mine?.printOrder?.items.length, 1, "With its items");
       harness.assertEqual(mine?.printOrder?.items[0]?.previewUrl, "/t20/p1-preview.jpg", "Item preview, not the master");
-      harness.assertEqual(mine?.printOrder?.items[0]?.photoWidth, 6000, "Photo width from its resolution");
-      harness.assertEqual(mine?.printOrder?.items[0]?.photoHeight, 4000, "Photo height from its resolution");
+      harness.assertEqual(mine?.printOrder?.items[0]?.photoWidth, 4000, "Photo width from its resolution");
+      harness.assertEqual(mine?.printOrder?.items[0]?.photoHeight, 6000, "Photo height from its resolution");
       harness.assertEqual(pending.find((i) => i.id === other.id)?.printOrder, null, "Other invoice types carry nothing");
     } finally {
       await db.milestoneInvoice.delete({ where: { id: other.id } });
     }
+  });
+
+  await harness.test("T20-VERIFY-02: an older photo stored as 600 × 400 on a portrait item previews portrait (8 × 12 on 8R)", async () => {
+    const a = await placeAwaiting();
+    await db.deliverableItem.update({ where: { id: a.p.photo.id }, data: { resolution: "600 × 400" } });
+    const preview = (await loadPrintOrderPreviews(lumina.id, [a.invoice.id])).get(a.invoice.id);
+    const item = preview?.items[0];
+    harness.assertEqual(item?.orientation, "PORTRAIT", "Portrait item");
+    harness.assertEqual(`${item?.photoWidth}x${item?.photoHeight}`, "400x600", "Size turned to the item's orientation");
+    const r8 = { widthInches: 8, heightInches: 10 };
+    const dims = printDimensionsFor(r8, { width: item?.photoWidth ?? 0, height: item?.photoHeight ?? 0 });
+    harness.assertEqual(JSON.stringify(dims), JSON.stringify({ widthInches: 8, heightInches: 12, orientation: "PORTRAIT" }), "Print at 8 × 12");
   });
 
   // ---- A photo in a print order can't be deleted ----

@@ -6,12 +6,13 @@ import { ZodError } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { canAccessClientRecord } from "@/lib/auth/project-access";
-import { AuthorizationError, requireStaff, STAFF_ROLES } from "@/lib/auth/guard";
+import { AuthorizationError, OWNER_ROLES, requireStaff, STAFF_ROLES } from "@/lib/auth/guard";
 import { nextInvoiceNumber, nextPrintOrderNumber, UNPAID_INVOICE_STATUSES } from "@/lib/bookings/billing";
 import { remainingForLines } from "@/lib/prints/entitlements";
 import { orderTotals, priceCartLine, type PricedCartLine } from "@/lib/prints/pricing";
 import { zoneForState } from "@/lib/prints/zones";
 import { actionErrorMessage } from "@/lib/action-error";
+import { formatStudioDate } from "@/lib/slot-time";
 import { SENT_ORDER_STATUSES } from "@/lib/prints/orders";
 import { nextPrintOrderStatuses } from "@/lib/prints/status";
 import { sendPrintOrderReadyEmail, sendPrintOrderShippedEmail } from "@/lib/email/print-order-emails";
@@ -63,6 +64,11 @@ function failFrom(err: unknown, fallback: string): Fail {
   if (err instanceof ZodError) return { success: false, error: "INVALID", message: actionErrorMessage(err, fallback) };
   console.error("print order error:", err);
   return { success: false, error: "ORDER_FAILED", message: fallback };
+}
+
+/** Adds a line to a free-text record without losing what was there. */
+function appendNote(existing: string | null, note: string): string {
+  return existing?.trim() ? `${existing.trim()}\n${note}` : note;
 }
 
 type OrderProject = { id: string; clientId: string; bookingId: string | null };
@@ -340,7 +346,8 @@ export async function placePrintOrder(
  * while it awaits payment (but not while a payment slip is being checked: the money may already be
  * with the studio); the studio's staff may cancel until the prints are shipped or collected.
  * An unpaid linked invoice is voided with it. A paid invoice stays paid (any refund is settled
- * outside the app).
+ * outside the app) and the refund owed is noted on the order and the invoice. Money rule: only the
+ * studio owner cancels an order that has an invoice; other staff can cancel free orders only.
  */
 export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ success: true } | Fail> {
   try {
@@ -358,6 +365,10 @@ export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ succe
     if (isStaff) {
       if (SENT_ORDER_STATUSES.includes(order.status)) {
         refuse("NOT_CANCELLABLE", "These prints have already gone out, so the order can't be cancelled.");
+      }
+      // Voiding an invoice or owing a refund is the owner's call, as with voidInvoice.
+      if (order.invoiceId && !OWNER_ROLES.has(session.role)) {
+        refuse("OWNER_ONLY", "Only the studio owner can cancel an order that has a payment.");
       }
     } else if (order.status !== "AWAITING_PAYMENT") {
       refuse("NOT_CANCELLABLE", "This order is paid. Contact the studio to change it.");
@@ -384,6 +395,15 @@ export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ succe
             refuse("PAYMENT_UNDER_REVIEW", "Your payment is being checked. Contact the studio to cancel.");
           }
           refuse("ORDER_CHANGED", "This order changed just now. Refresh and try again.");
+        }
+        if (voided.count === 0) {
+          // Staff cancelled a paid order: leave a lasting note of the refund owed on both records.
+          const invoice = await tx.milestoneInvoice.findUnique({ where: { id: order.invoiceId }, select: { status: true, verifiedBy: true } });
+          if (invoice?.status === "PAID") {
+            const note = `Refund owed: order ${order.orderNumber} cancelled by ${session.name} on ${formatStudioDate(new Date())}`;
+            await tx.milestoneInvoice.update({ where: { id: order.invoiceId }, data: { verifiedBy: appendNote(invoice.verifiedBy, note) } });
+            await tx.printOrder.update({ where: { id: order.id }, data: { notes: appendNote(order.notes, note) } });
+          }
         }
       }
     });

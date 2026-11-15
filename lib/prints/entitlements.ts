@@ -8,7 +8,8 @@ export type EntitlementLine = Prisma.BookingIncludedPrintGetPayload<object> & { 
 /**
  * Copy the package's included prints onto a booking, snapshotting the size and frame
  * details so later edits to the package, size or frame never change what was promised.
- * Does nothing if the booking already has lines. Returns how many rows were created.
+ * Does nothing if the booking already has package or backfilled lines (manual grants don't count:
+ * they are extra, not the package's prints). Returns how many rows were created.
  * Must run inside the transaction that creates the booking.
  *
  * Not a "use server" module.
@@ -19,7 +20,10 @@ export async function snapshotIncludedPrints(
   source: "PACKAGE" | "BACKFILL"
 ): Promise<number> {
   if (!booking.packageId) return 0;
-  if ((await tx.bookingIncludedPrint.count({ where: { bookingId: booking.id } })) > 0) return 0;
+  const existing = await tx.bookingIncludedPrint.count({
+    where: { bookingId: booking.id, source: { in: ["PACKAGE", "BACKFILL"] } },
+  });
+  if (existing > 0) return 0;
 
   const lines = await tx.packageIncludedPrint.findMany({ where: { packageId: booking.packageId } });
   if (lines.length === 0) return 0;

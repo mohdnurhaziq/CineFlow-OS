@@ -1,7 +1,8 @@
 /**
  * One-off backfill: give every existing package booking its included prints (as BACKFILL
  * lines), from the package's lines as they are today. Safe to repeat: bookings that
- * already have lines are skipped.
+ * already have package or backfilled lines are skipped. A manual grant alone doesn't count: it is
+ * extra, not the package's prints.
  *
  *   npm run db:backfill-included-prints
  */
@@ -10,7 +11,7 @@ import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
 
 export async function backfillIncludedPrints(): Promise<{ bookings: number; lines: number }> {
   const bookings = await db.clientBooking.findMany({
-    where: { packageId: { not: null }, includedPrints: { none: {} }, package: { includedPrints: { some: {} } } },
+    where: { packageId: { not: null }, includedPrints: { none: { source: { in: ["PACKAGE", "BACKFILL"] } } }, package: { includedPrints: { some: {} } } },
     select: { id: true, tenantId: true, packageId: true },
   });
   let lines = 0;

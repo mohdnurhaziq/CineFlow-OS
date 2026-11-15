@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { loadProjectEntitlements } from "@/lib/prints/entitlements";
 import { parseZoneStates } from "@/lib/prints/zones";
+import { galleryPhotoUrl } from "@/lib/prints/gallery";
+import { filesReleased } from "@/lib/deliverables/access";
 import type { OrderingContext } from "@/components/visualizer/cart";
 import type { FrameDesignOption, PhotoOption, PrintSizeOption } from "@/components/visualizer/configurator-panel";
 
@@ -59,12 +61,12 @@ export async function loadProjectOrdering(input: {
 }): Promise<{ photos: PhotoOption[]; ordering: OrderingContext }> {
   const { tenantId, project, claim } = input;
 
-  // That gallery's delivered photos only, shown as their previews.
-  const [items, entitlements, zones, client] = await Promise.all([
+  // That gallery's delivered photos only: clean copies once the files are released, else the proofs.
+  const [items, entitlements, zones, client, tenant] = await Promise.all([
     db.deliverableItem.findMany({
       where: { deliverable: { projectId: project.id }, itemType: "PHOTO" },
       orderBy: { id: "asc" },
-      select: { id: true, title: true, previewUrl: true },
+      select: { id: true, title: true, previewUrl: true, viewUrl: true },
     }),
     loadProjectEntitlements(project.id),
     db.shippingZone.findMany({ where: { tenantId }, orderBy: { sortOrder: "asc" } }),
@@ -72,8 +74,10 @@ export async function loadProjectOrdering(input: {
       where: { id: project.clientId, tenantId },
       select: { shipRecipient: true, shipPhone: true, shipLine1: true, shipLine2: true, shipPostcode: true, shipCity: true, shipState: true },
     }),
+    db.tenant.findUnique({ where: { id: tenantId }, select: { releaseFilesBeforePayment: true } }),
   ]);
-  const photos: PhotoOption[] = items.map((i) => ({ id: i.id, title: i.title, url: i.previewUrl }));
+  const released = filesReleased({ isFinalBalancePaid: entitlements.unlocked }, { releaseFilesBeforePayment: !!tenant?.releaseFilesBeforePayment });
+  const photos: PhotoOption[] = items.map((i) => ({ id: i.id, title: i.title, url: galleryPhotoUrl(i, project.id, released) }));
 
   // Included lines keep their own size and frame, even ones the studio has hidden since.
   const [lineSizes, lineFrames] = await Promise.all([

@@ -13,6 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { CopyButton } from "@/components/admin/print-orders/copy-button";
 import { PrintOrderActions } from "@/components/admin/print-orders/print-order-actions";
 import { PrintFitNote } from "@/components/admin/print-orders/print-fit";
+import { currentUserIsOwner } from "@/lib/auth/owner";
 
 interface PrintOrderPageProps {
   params: Promise<{ tenantSlug: string; orderId: string }>;
@@ -48,7 +49,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
   });
   if (!order) notFound();
 
-  const photoById = await loadItemPhotos(order.items.map((i) => i.deliverableItemId));
+  const [photoById, isOwner] = await Promise.all([loadItemPhotos(order.items.map((i) => i.deliverableItemId)), currentUserIsOwner()]);
   const money = (n: number) => formatCurrency(n, tenant.currency);
   const ship = order.fulfilment === "SHIP";
   const address = orderAddressLines(order);
@@ -100,7 +101,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="text-sm text-white truncate">{item.photoTitle}</p>
                     <p className="text-xs text-zinc-400">
-                      {item.sizeName} ({item.widthInches}×{item.heightInches} in) · {item.orientation === "PORTRAIT" ? "Portrait" : "Landscape"}
+                      Size ordered: {item.sizeName} ({item.widthInches} × {item.heightInches} in) · {item.orientation === "PORTRAIT" ? "Portrait" : "Landscape"}
                     </p>
                     <p className="text-xs text-zinc-400">
                       {item.frameName} · {MAT_BOARD_LABELS[item.matBoardType] ?? item.matBoardType}
@@ -113,6 +114,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
                         previewUrl: preview ?? null,
                         photoWidth: photo?.photo?.width ?? null,
                         photoHeight: photo?.photo?.height ?? null,
+                        orientation: item.orientation,
                         widthInches: item.widthInches,
                         heightInches: item.heightInches,
                       }}
@@ -151,7 +153,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
           </dl>
           {order.notes && (
             <div className="pt-3 border-t border-zinc-800">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Client notes</p>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Notes</p>
               <p className="text-xs text-zinc-300 whitespace-pre-line mt-1">{order.notes}</p>
             </div>
           )}
@@ -166,6 +168,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
             fulfilment={order.fulfilment}
             paid={order.invoice?.status === "PAID"}
             hasInvoice={!!order.invoice}
+            isOwner={isOwner}
           />
 
           <section className={card} aria-label="Fulfilment">

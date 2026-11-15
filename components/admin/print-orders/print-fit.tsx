@@ -1,6 +1,6 @@
 "use client";
 
-import { formatPrintInches, printDimensionsFor, type PrintDimensions } from "@/lib/prints/orientation";
+import { formatPrintInches, orientPhotoSize, printDimensionsFor, type PrintDimensions } from "@/lib/prints/orientation";
 import { usePhotoSize } from "@/components/visualizer/use-photo-size";
 
 export type PrintFitInput = {
@@ -8,6 +8,8 @@ export type PrintFitInput = {
   /** The master's stored pixel size, when known; otherwise read from the preview as it loads. */
   photoWidth: number | null;
   photoHeight: number | null;
+  /** The order item's orientation; a stored size that disagrees (EXIF-rotated photos) is turned to match. */
+  orientation?: string | null;
   /** The catalog size snapshotted on the order item. */
   widthInches: number;
   heightInches: number;
@@ -15,7 +17,8 @@ export type PrintFitInput = {
 
 /** The size to print an order item at, following its photo's shape; null until the photo's shape is known. */
 export function usePrintFit(item: PrintFitInput): PrintDimensions | null {
-  const known = item.photoWidth && item.photoHeight ? { width: item.photoWidth, height: item.photoHeight } : null;
+  const known =
+    item.photoWidth && item.photoHeight ? orientPhotoSize({ width: item.photoWidth, height: item.photoHeight }, item.orientation) : null;
   const { size } = usePhotoSize(item.previewUrl, known);
   return size ? printDimensionsFor(item, size) : null;
 }

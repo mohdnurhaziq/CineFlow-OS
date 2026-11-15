@@ -25,12 +25,25 @@ interface FramedPrintsSectionProps {
   orders: FramedPrintOrder[];
   /** Tighter layout for the account Galleries card. */
   compact?: boolean;
+  /** Set when the studio's staff view the gallery: ordering opens the studio's print ordering page instead of Wall Art. */
+  staffOrderHref?: string;
 }
 
 const formatMoney = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
 
 /** A gallery's framed prints: what the package includes, ordering, and past print orders. */
-export function FramedPrintsSection({ tenantId, tenantSlug, currency, projectId, lines, unlocked, hasPhotos, orders, compact }: FramedPrintsSectionProps) {
+export function FramedPrintsSection({
+  tenantId,
+  tenantSlug,
+  currency,
+  projectId,
+  lines,
+  unlocked,
+  hasPhotos,
+  orders,
+  compact,
+  staffOrderHref,
+}: FramedPrintsSectionProps) {
   const router = useRouter();
   const { confirm, confirmDialog } = useConfirm();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -39,6 +52,8 @@ export function FramedPrintsSection({ tenantId, tenantSlug, currency, projectId,
   const includedCount = lines.reduce((n, l) => n + l.quantity, 0);
   const canOrder = unlocked && hasPhotos;
   const wallArtHref = `/${tenantSlug}/visualizer?projectId=${projectId}`;
+  const orderHref = staffOrderHref ?? wallArtHref;
+  const claimHref = (lineId: string) => staffOrderHref ?? `${wallArtHref}&claim=${lineId}`;
   const lockedMessage = !unlocked
     ? includedCount > 0
       ? `${includedCount} framed print${includedCount === 1 ? "" : "s"} included, unlocks when your balance is paid`
@@ -79,7 +94,7 @@ export function FramedPrintsSection({ tenantId, tenantSlug, currency, projectId,
           Framed prints
         </h2>
         {canOrder ? (
-          <Link href={wallArtHref} className={buttonVariants({ size: compact ? "sm" : "md" })}>
+          <Link href={orderHref} className={buttonVariants({ size: compact ? "sm" : "md" })}>
             Order a framed print
           </Link>
         ) : (
@@ -108,7 +123,7 @@ export function FramedPrintsSection({ tenantId, tenantSlug, currency, projectId,
                 </span>
               </div>
               {canOrder && l.remaining > 0 && (
-                <Link href={`${wallArtHref}&claim=${l.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+                <Link href={claimHref(l.id)} className={buttonVariants({ variant: "secondary", size: "sm" })}>
                   Choose photo
                 </Link>
               )}
@@ -151,7 +166,7 @@ export function FramedPrintsSection({ tenantId, tenantSlug, currency, projectId,
                   </span>
                 </div>
 
-                {o.status === "SHIPPED" && (o.courier || o.trackingNumber) && (
+                {(o.status === "SHIPPED" || o.status === "DELIVERED") && (o.courier || o.trackingNumber) && (
                   <p className="flex items-center gap-1.5 text-xs text-zinc-300">
                     <Truck className="size-3.5 text-emerald-400" />
                     {o.courier ?? "Courier"}
@@ -162,6 +177,10 @@ export function FramedPrintsSection({ tenantId, tenantSlug, currency, projectId,
                       </>
                     )}
                   </p>
+                )}
+
+                {o.status === "NEW" && !o.invoiceId && !staffOrderHref && (
+                  <p className="text-xs text-zinc-400">To change this order, contact the studio.</p>
                 )}
 
                 {o.status === "AWAITING_PAYMENT" && (

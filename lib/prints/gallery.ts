@@ -1,6 +1,26 @@
 import { db } from "@/lib/db";
 import { loadProjectEntitlements } from "@/lib/prints/entitlements";
 import { parseResolution, type PhotoSize } from "@/lib/prints/orientation";
+import { filesReleased } from "@/lib/deliverables/access";
+
+/** The clean web-size copy of a gallery photo, through the access-checked download route (as the vault shows it). */
+export function photoViewUrl(projectId: string, deliverableItemId: string): string {
+  return `/api/download?projectId=${projectId}&type=photo_view&assetId=${deliverableItemId}`;
+}
+
+/**
+ * How a gallery photo is shown in Wall Art and print orders: once the files are released, its clean
+ * copy (same origin, so its pixel size can still be read); before that, the watermarked proof. A photo
+ * with no clean copy (older uploads) keeps its proof: the route would serve the master instead.
+ */
+export function galleryPhotoUrl(
+  item: { id: string; previewUrl: string; thumbnailUrl?: string | null; viewUrl: string | null },
+  projectId: string,
+  released: boolean
+): string {
+  if (released && item.viewUrl) return photoViewUrl(projectId, item.id);
+  return item.thumbnailUrl || item.previewUrl;
+}
 
 /**
  * What a gallery's "Framed prints" section shows: the included prints with what is left of each,
@@ -29,7 +49,7 @@ export type FramedPrintOrder = {
   invoiceId: string | null;
   createdAt: string;
   itemCount: number;
-  /** The items' gallery previews (never the print masters). */
+  /** The items' gallery photos: clean copies once released, else proofs (never the print masters). */
   thumbnails: string[];
 };
 
@@ -41,8 +61,9 @@ export type FramedPrintsData = {
 };
 
 /**
- * The gallery preview (thumbnail, else preview) of each order item's photo, by deliverable item id.
- * Never the print master. UNSCOPED: pass only ids from orders the caller may see.
+ * How each order item's photo is shown (galleryPhotoUrl: the clean copy once its project's files are
+ * released, else the thumbnail or watermarked preview), by deliverable item id. Never the print
+ * master. UNSCOPED: pass only ids from orders the caller may see.
  */
 export async function loadItemPreviews(deliverableItemIds: (string | null)[]): Promise<Map<string, string>> {
   const photos = await loadItemPhotos(deliverableItemIds);
@@ -60,9 +81,24 @@ export async function loadItemPhotos(
   if (ids.length === 0) return new Map();
   const items = await db.deliverableItem.findMany({
     where: { id: { in: ids } },
-    select: { id: true, previewUrl: true, thumbnailUrl: true, resolution: true },
+    select: {
+      id: true,
+      previewUrl: true,
+      thumbnailUrl: true,
+      viewUrl: true,
+      resolution: true,
+      deliverable: {
+        select: { project: { select: { id: true, isFinalBalancePaid: true, tenant: { select: { releaseFilesBeforePayment: true } } } } },
+      },
+    },
   });
-  return new Map(items.map((p) => [p.id, { previewUrl: p.thumbnailUrl || p.previewUrl, photo: parseResolution(p.resolution) }]));
+  return new Map(
+    items.map((p) => {
+      const project = p.deliverable.project;
+      const url = galleryPhotoUrl(p, project.id, filesReleased(project, project.tenant));
+      return [p.id, { previewUrl: url, photo: parseResolution(p.resolution) }];
+    })
+  );
 }
 
 export async function loadFramedPrints(projectId: string): Promise<FramedPrintsData> {
