@@ -62,6 +62,28 @@ async function highestInvoiceSeq(tx: Tx, tenantId: string, year: number): Promis
   return max;
 }
 
+/** Invoice statuses that still count as unpaid: they can be paid, or cancelled (voided). */
+export const UNPAID_INVOICE_STATUSES = ["PENDING", "OVERDUE", "PENDING_VERIFICATION", "REJECTED"];
+
+/** The invoice was paid or cancelled after the caller checked it. Thrown to roll the transaction back. */
+export class InvoiceNotPayableError extends Error {
+  constructor(public status: "PAID" | "VOID") {
+    super(status === "VOID" ? "This invoice was cancelled and can no longer be paid." : "Invoice is already paid.");
+  }
+}
+
+/**
+ * Updates an invoice that must still be payable (neither PAID nor VOID) at the moment of the
+ * write. Throws InvoiceNotPayableError otherwise, so a cancel or another payment that slipped in
+ * between the caller's check and its transaction wins.
+ */
+export async function updatePayableInvoice(tx: Tx, invoiceId: string, data: Prisma.MilestoneInvoiceUpdateManyMutationInput) {
+  const won = await tx.milestoneInvoice.updateMany({ where: { id: invoiceId, status: { notIn: ["PAID", "VOID"] } }, data });
+  if (won.count === 1) return;
+  const now = await tx.milestoneInvoice.findUnique({ where: { id: invoiceId }, select: { status: true } });
+  throw new InvoiceNotPayableError(now?.status === "PAID" ? "PAID" : "VOID");
+}
+
 /** Amount still owed; tiny float remainders count as nothing owed. */
 function owed(total: number, paid: number): number {
   const rest = Math.round((total - paid) * 100) / 100;

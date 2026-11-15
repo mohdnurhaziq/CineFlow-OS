@@ -4,7 +4,7 @@ import { requireOwner } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
-import { onInvoicePaid } from "@/lib/bookings/billing";
+import { InvoiceNotPayableError, onInvoicePaid, updatePayableInvoice } from "@/lib/bookings/billing";
 import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -55,85 +55,91 @@ export async function approvePaymentVerification(input: ApprovePaymentVerificati
 
     let unlockedDownloads = false;
 
-    await db.$transaction(async (tx) => {
-      // 1. Update Invoice to PAID
-      await tx.milestoneInvoice.update({
-        where: { id: invoiceId },
-        data: {
+    try {
+      await db.$transaction(async (tx) => {
+        // 1. Update Invoice to PAID, unless it was paid or cancelled since the checks above.
+        await updatePayableInvoice(tx, invoiceId, {
           status: "PAID",
           verifiedBy: staffName,
           paidAt: new Date(),
           paymentReference: notes
             ? `${invoice.paymentReference || "MANUAL_VERIFICATION"} | Note: ${notes}`
             : invoice.paymentReference,
-        },
-      });
+        });
 
-      // 2. If milestone is BOOKING_DEPOSIT, confirm booking and set slot to BOOKED
-      if (invoice.milestoneType === "BOOKING_DEPOSIT") {
-        // Exactly the booking this deposit pays for, never "the client's latest pending one".
-        const linked = await resolveInvoiceBooking(tx, invoice);
-        const booking = linked && ["PENDING", "PENDING_VERIFICATION"].includes(linked.status) ? linked : null;
+        // 2. If milestone is BOOKING_DEPOSIT, confirm booking and set slot to BOOKED
+        if (invoice.milestoneType === "BOOKING_DEPOSIT") {
+          // Exactly the booking this deposit pays for, never "the client's latest pending one".
+          const linked = await resolveInvoiceBooking(tx, invoice);
+          const booking = linked && ["PENDING", "PENDING_VERIFICATION"].includes(linked.status) ? linked : null;
 
-        if (booking) {
-          await tx.clientBooking.update({
-            where: { id: booking.id },
-            data: {
-              status: "CONFIRMED",
-              depositPaid: true,
-            },
-          });
-          // Deposit paid: issue the balance invoice for the rest of the session price.
-          await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
-
-          if (booking.slotId) {
-            await tx.bookingSlot.update({
-              where: { id: booking.slotId },
+          if (booking) {
+            await tx.clientBooking.update({
+              where: { id: booking.id },
               data: {
-                status: "BOOKED",
-                heldUntil: null,
-                heldBySessionId: null,
+                status: "CONFIRMED",
+                depositPaid: true,
               },
             });
+            // Deposit paid: issue the balance invoice for the rest of the session price.
+            await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
+
+            if (booking.slotId) {
+              await tx.bookingSlot.update({
+                where: { id: booking.slotId },
+                data: {
+                  status: "BOOKED",
+                  heldUntil: null,
+                  heldBySessionId: null,
+                },
+              });
+            }
+
+            // If this booking qualifies as a project (e.g. Wedding, Commercial, Event), auto-provision a Project
+            // Every confirmed booking gets its gallery (a Session or Production project).
+            await provisionProjectForBooking(tx, booking.id);
           }
-
-          // If this booking qualifies as a project (e.g. Wedding, Commercial, Event), auto-provision a Project
-          // Every confirmed booking gets its gallery (a Session or Production project).
-          await provisionProjectForBooking(tx, booking.id);
         }
-      }
 
-      // Retainer paid: issue the project's final balance invoice.
-      // Print order paid: the order moves on to NEW.
-      if (invoice.milestoneType === "RETAINER_50" || invoice.milestoneType === "PRINT_FRAME_ORDER") {
-        await onInvoicePaid(tx, invoice);
-      }
+        // Retainer paid: issue the project's final balance invoice.
+        // Print order paid: the order moves on to NEW.
+        if (invoice.milestoneType === "RETAINER_50" || invoice.milestoneType === "PRINT_FRAME_ORDER") {
+          await onInvoicePaid(tx, invoice);
+        }
 
-      // 3. If milestone is FINAL_BALANCE_50, unlock project paywall
-      if (invoice.milestoneType === "FINAL_BALANCE_50" && invoice.projectId) {
-        await tx.project.update({
-          where: { id: invoice.projectId },
-          data: { isFinalBalancePaid: true },
-        });
-        unlockedDownloads = true;
-      }
-
-      // 4. If milestone is BOOKING_BALANCE and the project is linked, unlock project paywall
-      if (invoice.milestoneType === "BOOKING_BALANCE") {
-        const projectId =
-          invoice.projectId ??
-          (invoice.bookingId
-            ? (await tx.project.findFirst({ where: { bookingId: invoice.bookingId }, select: { id: true } }))?.id
-            : null);
-        if (projectId) {
+        // 3. If milestone is FINAL_BALANCE_50, unlock project paywall
+        if (invoice.milestoneType === "FINAL_BALANCE_50" && invoice.projectId) {
           await tx.project.update({
-            where: { id: projectId },
+            where: { id: invoice.projectId },
             data: { isFinalBalancePaid: true },
           });
           unlockedDownloads = true;
         }
+
+        // 4. If milestone is BOOKING_BALANCE and the project is linked, unlock project paywall
+        if (invoice.milestoneType === "BOOKING_BALANCE") {
+          const projectId =
+            invoice.projectId ??
+            (invoice.bookingId
+              ? (await tx.project.findFirst({ where: { bookingId: invoice.bookingId }, select: { id: true } }))?.id
+              : null);
+          if (projectId) {
+            await tx.project.update({
+              where: { id: projectId },
+              data: { isFinalBalancePaid: true },
+            });
+            unlockedDownloads = true;
+          }
+        }
+      });
+    } catch (e) {
+      if (e instanceof InvoiceNotPayableError) {
+        return e.status === "VOID"
+          ? { success: false, error: "INVOICE_VOID", message: "This invoice was cancelled and can no longer be approved." }
+          : { success: false, error: "ALREADY_VERIFIED", message: "Invoice has already been marked as PAID." };
       }
-    });
+      throw e;
+    }
 
     safeRevalidate(`/${tenantSlug}/admin/verification`);
     safeRevalidate(`/${tenantSlug}/admin/projects`);

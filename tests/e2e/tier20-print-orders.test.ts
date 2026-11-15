@@ -24,6 +24,7 @@ import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { voidInvoice } from "@/lib/actions/admin-invoices";
 import { settleToyyibpayBill } from "@/lib/payments/settle";
 import { markPrintOrderPaid } from "@/lib/prints/orders";
+import { InvoiceNotPayableError, updatePayableInvoice } from "@/lib/bookings/billing";
 import { encryptSecret } from "../../lib/crypto/secret-box";
 import type { PlaceOrderInput } from "@/lib/validations/print-orders";
 
@@ -821,5 +822,103 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     harness.assertEqual(await invoiceStatus(a.invoice.id), "PAID", "Invoice still PAID");
     harness.assertEqual(await orderStatus(a.orderId), "NEW", "Order still NEW");
     harness.assertEqual(await remainingOf(a.p), 0, "Print still claimed");
+  });
+
+  await harness.test("T20-CANCEL-03: a bill paid after the client cancelled leaves the invoice VOID and flags a refund", async () => {
+    const a = await placeAwaiting();
+    const saved = await db.tenant.findUniqueOrThrow({ where: { id: lumina.id } });
+    const realFetch = globalThis.fetch;
+    // Toyyibpay only charges in ringgit, so the studio runs as MYR with a gateway for this test.
+    await db.tenant.update({
+      where: { id: lumina.id },
+      data: { currency: "MYR", toyyibpaySecretEnc: encryptSecret("sk-t20"), toyyibpayCategoryCode: "cat-t20" },
+    });
+    let txns: Record<string, string>[] = [];
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      if (String(url).endsWith("/createBill")) return new Response(JSON.stringify([{ BillCode: `t20late${run}` }]), { status: 200 });
+      return new Response(JSON.stringify(txns), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const pay = await withSession(a.p.session, () =>
+        processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "CARD" })
+      );
+      harness.assertEqual(pay.success === true && typeof pay.paymentUrl === "string", true, "Bill created, client sent to the gateway");
+      const billCode = (await db.milestoneInvoice.findUniqueOrThrow({ where: { id: a.invoice.id } })).gatewayBillCode;
+      harness.assertEqual(billCode, `t20late${run}`, "Bill code stored");
+
+      const cancel = await withSession(a.p.session, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+      harness.assertEqual(cancel.success, true, "Client cancels before paying");
+
+      txns = [{ billpaymentStatus: "1", billpaymentAmount: a.invoice.amount.toFixed(2), billpaymentInvoiceNo: "TP-LATE", billExternalReferenceNo: a.invoice.invoiceNumber }];
+      const quiet = console.error;
+      console.error = () => undefined;
+      const out = await settleToyyibpayBill(billCode!).finally(() => (console.error = quiet));
+      harness.assertEqual(out.status, "PAID", "Money received");
+      harness.assertEqual(out.status === "PAID" && out.refundRequired, true, "Refund required");
+      harness.assertEqual(out.status === "PAID" ? out.refundReason : "", "INVOICE_CANCELLED", "Refund reason");
+      const inv = await db.milestoneInvoice.findUniqueOrThrow({ where: { id: a.invoice.id } });
+      harness.assertEqual(inv.status, "VOID", "Invoice still VOID");
+      harness.assertEqual(inv.paymentReference, "TOYYIBPAY-TP-LATE", "Gateway reference recorded");
+      harness.assertEqual(inv.verifiedBy, "Toyyibpay - REFUND REQUIRED (paid after the invoice was cancelled)", "Refund noted");
+      harness.assertEqual(inv.paidAt, null, "Not marked paid");
+      harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order still CANCELLED");
+      const again = await settleToyyibpayBill(billCode!);
+      harness.assertEqual(again.status === "PAID" && again.refundRequired && again.alreadySettled, true, "Settling again reports the same, once");
+      harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Still VOID");
+    } finally {
+      globalThis.fetch = realFetch;
+      await db.tenant.update({
+        where: { id: lumina.id },
+        data: { currency: saved.currency, toyyibpaySecretEnc: saved.toyyibpaySecretEnc, toyyibpayCategoryCode: saved.toyyibpayCategoryCode },
+      });
+    }
+  });
+
+  await harness.test("T20-CANCEL-04: a client can't cancel while their payment slip is being checked; staff can", async () => {
+    const a = await placeAwaiting();
+    const slip = await withSession(a.p.session, () =>
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+    );
+    harness.assertEqual(slip.success, true, "Slip sent");
+    const res = await withSession(a.p.session, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(errOf(res), "PAYMENT_UNDER_REVIEW", "PAYMENT_UNDER_REVIEW");
+    harness.assertEqual(msgOf(res), "Your payment is being checked. Contact the studio to cancel.", "Message");
+    harness.assertEqual(await orderStatus(a.orderId), "AWAITING_PAYMENT", "Order unchanged");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "PENDING_VERIFICATION", "Invoice unchanged");
+    harness.assertEqual(await remainingOf(a.p), 0, "Print still claimed");
+
+    const staff = await withSession(ownerSession, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
+    harness.assertEqual(staff.success, true, "Staff cancel");
+    harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order CANCELLED");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Invoice VOID");
+    harness.assertEqual(await remainingOf(a.p), 1, "Included print returned");
+  });
+
+  await harness.test("T20-VOID-03: an invoice cancelled before approval can't be approved or paid", async () => {
+    const a = await placeAwaiting();
+    await withSession(a.p.session, () =>
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+    );
+    const voided = await withSession(ownerSession, () => voidInvoice({ ...orderBase, invoiceId: a.invoice.id, reason: "Duplicate order" }));
+    harness.assertEqual(voided.success, true, "Voided");
+    const approved = await withSession(ownerSession, () =>
+      approvePaymentVerification({ invoiceId: a.invoice.id, tenantId: lumina.id, tenantSlug: "lumina-cine" })
+    );
+    harness.assertEqual(errOf(approved), "INVOICE_VOID", "Approval refused");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Invoice stays VOID");
+    harness.assertEqual(await orderStatus(a.orderId), "CANCELLED", "Order stays CANCELLED");
+
+    // The check inside the payment transaction itself: a cancel landing after the caller's
+    // pre-check still stops the write and rolls the transaction back.
+    let thrown: unknown = null;
+    try {
+      await db.$transaction((tx) => updatePayableInvoice(tx, a.invoice.id, { status: "PAID", paidAt: new Date() }));
+    } catch (e) {
+      thrown = e;
+    }
+    harness.assertEqual(thrown instanceof InvoiceNotPayableError && thrown.status, "VOID", "In-transaction guard refuses a VOID invoice");
+    harness.assertEqual(await invoiceStatus(a.invoice.id), "VOID", "Still VOID");
+    const unvoid = await withSession(ownerSession, () => voidInvoice({ ...orderBase, invoiceId: a.invoice.id, reason: "Again" }));
+    harness.assertEqual(errOf(unvoid), "NOT_UNPAID", "Voiding twice refused");
   });
 }

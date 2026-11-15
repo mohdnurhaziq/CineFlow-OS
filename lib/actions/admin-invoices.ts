@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { requireOwner, requireStaff } from "@/lib/auth/guard";
 import { actionErrorMessage } from "@/lib/action-error";
-import { nextInvoiceNumber } from "@/lib/bookings/billing";
+import { nextInvoiceNumber, UNPAID_INVOICE_STATUSES } from "@/lib/bookings/billing";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { sendNotification } from "@/lib/notifications";
@@ -20,7 +20,7 @@ import { formatMoney } from "@/lib/money";
 type Result = { success: true; invoiceId?: string; invoiceNumber?: string } | { success: false; error: string; message: string };
 const fail = (error: string, message: string): Result => ({ success: false, error, message });
 
-const UNPAID = ["PENDING", "OVERDUE", "PENDING_VERIFICATION", "REJECTED"];
+const UNPAID = UNPAID_INVOICE_STATUSES;
 
 function revalidate(tenantSlug: string, invoiceId?: string) {
   const paths = [`/${tenantSlug}/admin/invoices`, `/${tenantSlug}/admin`, `/${tenantSlug}/admin/bookings`, `/${tenantSlug}/account`];
@@ -86,11 +86,13 @@ export async function voidInvoice(input: z.input<typeof VoidSchema>): Promise<Re
         return fail("BOOKING_ACTIVE", "This is the deposit for a booking that is still active. Cancel the booking instead (Bookings).");
       }
     }
-    await db.$transaction(async (tx) => {
-      await tx.milestoneInvoice.update({
-        where: { id: invoice.id },
+    const voided = await db.$transaction(async (tx) => {
+      // Only while still unpaid: a payment that landed since the check above wins.
+      const won = await tx.milestoneInvoice.updateMany({
+        where: { id: invoice.id, status: { in: UNPAID } },
         data: { status: "VOID", verifiedBy: `Cancelled by ${session.name}: ${data.reason}` },
       });
+      if (won.count === 0) return false;
       // A print order's invoice: the order is cancelled with it, which returns its included prints.
       if (invoice.milestoneType === "PRINT_FRAME_ORDER") {
         await tx.printOrder.updateMany({
@@ -98,7 +100,9 @@ export async function voidInvoice(input: z.input<typeof VoidSchema>): Promise<Re
           data: { status: "CANCELLED" },
         });
       }
+      return true;
     });
+    if (!voided) return fail("NOT_UNPAID", "Only unpaid invoices can be cancelled.");
     revalidate(data.tenantSlug, invoice.id);
     return { success: true };
   } catch (err) {

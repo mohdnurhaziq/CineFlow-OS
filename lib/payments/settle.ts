@@ -42,7 +42,18 @@ export function getCheckoutGateway(tenant: {
 }
 
 export type SettleOutcome =
-  | { status: "PAID"; invoiceId: string; invoiceNumber: string; tenantSlug: string; trackingCode?: string; unlockedDownloads: boolean; refundRequired: boolean; alreadySettled: boolean }
+  | {
+      status: "PAID";
+      invoiceId: string;
+      invoiceNumber: string;
+      tenantSlug: string;
+      trackingCode?: string;
+      unlockedDownloads: boolean;
+      refundRequired: boolean;
+      /** Why the money must go back: the slot was released, or the invoice was cancelled first. */
+      refundReason?: "SLOT_RELEASED" | "INVOICE_CANCELLED";
+      alreadySettled: boolean;
+    }
   | { status: "NOT_PAID"; reason: string }
   | { status: "MISMATCH"; reason: string }
   | { status: "NOT_FOUND" };
@@ -85,12 +96,27 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
   const gatewayRef = paid.invoiceNo ? `TOYYIBPAY-${paid.invoiceNo}` : `TOYYIBPAY-${billCode}`;
 
   const result = await db.$transaction(async (tx) => {
-    // Exactly one concurrent settler wins this update; the rest see count 0.
+    // Exactly one concurrent settler wins this update; the rest see count 0. A cancelled (VOID)
+    // invoice is never turned PAID: the bill was paid after the invoice was cancelled.
     const won = await tx.milestoneInvoice.updateMany({
-      where: { id: invoice.id, status: { not: "PAID" } },
+      where: { id: invoice.id, status: { notIn: ["PAID", "VOID"] } },
       data: { status: "PAID", paymentMethod: "CARD", paymentReference: gatewayRef, verifiedBy: "Toyyibpay", paidAt: new Date() },
     });
-    if (won.count === 0) return { alreadySettled: true, refundRequired: false, unlockedDownloads: false, booking: null as BookingWithSlot | null, slot: null as BookingSlot | null };
+    if (won.count === 0) {
+      const now = await tx.milestoneInvoice.findUnique({ where: { id: invoice.id }, select: { status: true, paymentReference: true } });
+      if (now?.status === "VOID") {
+        const noted = now.paymentReference === gatewayRef;
+        // Money received for a cancelled invoice: keep it VOID, note the payment, flag the refund.
+        if (!noted) {
+          await tx.milestoneInvoice.update({
+            where: { id: invoice.id },
+            data: { paymentReference: gatewayRef, verifiedBy: "Toyyibpay - REFUND REQUIRED (paid after the invoice was cancelled)" },
+          });
+        }
+        return { alreadySettled: noted, refundRequired: true, cancelledInvoice: true, unlockedDownloads: false, booking: null as BookingWithSlot | null, slot: null as BookingSlot | null };
+      }
+      return { alreadySettled: true, refundRequired: false, cancelledInvoice: false, unlockedDownloads: false, booking: null as BookingWithSlot | null, slot: null as BookingSlot | null };
+    }
 
     let refundRequired = false;
     let unlockedDownloads = false;
@@ -155,8 +181,12 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       }
     }
 
-    return { alreadySettled: false, refundRequired, unlockedDownloads, booking, slot };
+    return { alreadySettled: false, refundRequired, cancelledInvoice: false, unlockedDownloads, booking, slot };
   });
+
+  if (result.cancelledInvoice && !result.alreadySettled) {
+    console.error(`Toyyibpay settle: ${invoice.invoiceNumber} was paid after it was cancelled (${gatewayRef}); refund required`);
+  }
 
   if (!result.alreadySettled && result.booking && !result.refundRequired && result.booking.clientEmail) {
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -184,6 +214,7 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
     trackingCode: result.booking?.trackingCode,
     unlockedDownloads: result.unlockedDownloads,
     refundRequired: result.refundRequired,
+    ...(result.refundRequired ? { refundReason: result.cancelledInvoice ? ("INVOICE_CANCELLED" as const) : ("SLOT_RELEASED" as const) } : {}),
     alreadySettled: result.alreadySettled,
   };
 }

@@ -11,7 +11,7 @@ import { getCheckoutGateway, releaseAbandonedOnlineBooking, ONLINE_HOLD_MINUTES 
 import { isSlotInPast } from "@/lib/slot-time";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
-import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
+import { InvoiceNotPayableError, nextInvoiceNumber, onInvoicePaid, updatePayableInvoice } from "@/lib/bookings/billing";
 import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import {
@@ -346,10 +346,10 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
     const status = isCard ? "PAID" : "PENDING_VERIFICATION";
     let unlockedDownloads = false;
 
-    await db.$transaction(async (tx) => {
-      await tx.milestoneInvoice.update({
-        where: { id: invoiceId },
-        data: {
+    try {
+      await db.$transaction(async (tx) => {
+        // Unless the invoice was paid or cancelled since the checks above.
+        await updatePayableInvoice(tx, invoiceId, {
           status,
           paymentMethod,
           paymentProofUrl: paymentProofUrl || invoice.paymentProofUrl,
@@ -358,61 +358,68 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
             : (paymentReference || invoice.paymentReference),
           verifiedBy: isCard ? "System Auto" : null,
           paidAt: isCard ? new Date() : null,
-        },
-      });
+        });
 
-      // A simulated card payment is confirmed on the spot: issue any follow-up invoice
-      // (and move a print order on to NEW).
-      if (isCard) {
-        await onInvoicePaid(tx, invoice);
-      }
-
-      // If paying final balance with card, immediately unlock project paywall
-      if (
-        isCard &&
-        (invoice.milestoneType === "FINAL_BALANCE_50" || invoice.milestoneType === "BOOKING_BALANCE")
-      ) {
-        const projectId =
-          invoice.projectId ??
-          (invoice.bookingId
-            ? (await tx.project.findFirst({ where: { bookingId: invoice.bookingId }, select: { id: true } }))?.id
-            : null);
-        if (projectId) {
-          await tx.project.update({
-            where: { id: projectId },
-            data: { isFinalBalancePaid: true },
-          });
-          unlockedDownloads = true;
+        // A simulated card payment is confirmed on the spot: issue any follow-up invoice
+        // (and move a print order on to NEW).
+        if (isCard) {
+          await onInvoicePaid(tx, invoice);
         }
-      }
 
-      // If paying booking deposit with card, confirm any linked booking & slot
-      if (isCard && invoice.milestoneType === "BOOKING_DEPOSIT") {
-        const linked = await resolveInvoiceBooking(tx, invoice);
-        const booking = linked?.status === "PENDING" ? linked : null;
-
-        if (booking) {
-          await tx.clientBooking.update({
-            where: { id: booking.id },
-            data: { status: "CONFIRMED", depositPaid: true },
-          });
-
-          if (booking.slotId) {
-            await tx.bookingSlot.update({
-              where: { id: booking.slotId },
-              data: {
-                status: "BOOKED",
-                heldUntil: null,
-                heldBySessionId: null,
-              },
+        // If paying final balance with card, immediately unlock project paywall
+        if (
+          isCard &&
+          (invoice.milestoneType === "FINAL_BALANCE_50" || invoice.milestoneType === "BOOKING_BALANCE")
+        ) {
+          const projectId =
+            invoice.projectId ??
+            (invoice.bookingId
+              ? (await tx.project.findFirst({ where: { bookingId: invoice.bookingId }, select: { id: true } }))?.id
+              : null);
+          if (projectId) {
+            await tx.project.update({
+              where: { id: projectId },
+              data: { isFinalBalancePaid: true },
             });
+            unlockedDownloads = true;
           }
-
-          // Every confirmed booking gets its gallery (a Session or Production project).
-          await provisionProjectForBooking(tx, booking.id);
         }
+
+        // If paying booking deposit with card, confirm any linked booking & slot
+        if (isCard && invoice.milestoneType === "BOOKING_DEPOSIT") {
+          const linked = await resolveInvoiceBooking(tx, invoice);
+          const booking = linked?.status === "PENDING" ? linked : null;
+
+          if (booking) {
+            await tx.clientBooking.update({
+              where: { id: booking.id },
+              data: { status: "CONFIRMED", depositPaid: true },
+            });
+
+            if (booking.slotId) {
+              await tx.bookingSlot.update({
+                where: { id: booking.slotId },
+                data: {
+                  status: "BOOKED",
+                  heldUntil: null,
+                  heldBySessionId: null,
+                },
+              });
+            }
+
+            // Every confirmed booking gets its gallery (a Session or Production project).
+            await provisionProjectForBooking(tx, booking.id);
+          }
+        }
+      });
+    } catch (e) {
+      if (e instanceof InvoiceNotPayableError) {
+        return e.status === "VOID"
+          ? { success: false, error: "INVOICE_VOID", message: "This invoice was cancelled and can no longer be paid." }
+          : { success: false, error: "ALREADY_PAID", message: "Invoice is already paid." };
       }
-    });
+      throw e;
+    }
 
     safeRevalidate(`/${tenantSlug}/admin/verification`);
     safeRevalidate(`/${tenantSlug}/admin/projects`);

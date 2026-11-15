@@ -42,7 +42,9 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
 
   const message =
     outcome.status === "PAID"
-      ? "Your payment was received, but the time slot was released before it completed. The studio will contact you to arrange a refund or a new time."
+      ? outcome.refundReason === "INVOICE_CANCELLED"
+        ? "Your payment was received, but this invoice was cancelled before it completed. The studio will contact you to arrange a refund."
+        : "Your payment was received, but the time slot was released before it completed. The studio will contact you to arrange a refund or a new time."
       : outcome.status === "MISMATCH"
         ? "We received a payment that does not match this invoice. The studio has been flagged to review it."
         : "We have not received confirmation of your payment yet. If you completed it, this can take a minute.";

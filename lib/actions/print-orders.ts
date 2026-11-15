@@ -7,12 +7,12 @@ import { db } from "@/lib/db";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { canAccessClientRecord } from "@/lib/auth/project-access";
 import { STAFF_ROLES } from "@/lib/auth/guard";
-import { nextInvoiceNumber, nextPrintOrderNumber } from "@/lib/bookings/billing";
+import { nextInvoiceNumber, nextPrintOrderNumber, UNPAID_INVOICE_STATUSES } from "@/lib/bookings/billing";
 import { remainingForLines } from "@/lib/prints/entitlements";
 import { orderTotals, priceCartLine, type PricedCartLine } from "@/lib/prints/pricing";
 import { zoneForState } from "@/lib/prints/zones";
 import { actionErrorMessage } from "@/lib/action-error";
-import { SENT_ORDER_STATUSES, UNPAID_INVOICE_STATUSES } from "@/lib/prints/orders";
+import { SENT_ORDER_STATUSES } from "@/lib/prints/orders";
 import {
   CancelOrderSchema,
   PlaceOrderSchema,
@@ -325,7 +325,8 @@ export async function placePrintOrder(
 
 /**
  * Cancels a print order, which returns its included prints. The client may cancel their own order
- * while it awaits payment; the studio's staff may cancel until the prints are shipped or collected.
+ * while it awaits payment (but not while a payment slip is being checked: the money may already be
+ * with the studio); the studio's staff may cancel until the prints are shipped or collected.
  * An unpaid linked invoice is voided with it. A paid invoice stays paid (any refund is settled
  * outside the app).
  */
@@ -341,7 +342,8 @@ export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ succe
       refuse("NOT_FOUND", "Order not found.");
     }
     if (order.status === "CANCELLED") refuse("ALREADY_CANCELLED", "This order is already cancelled.");
-    if (STAFF_ROLES.has(session.role)) {
+    const isStaff = STAFF_ROLES.has(session.role);
+    if (isStaff) {
       if (SENT_ORDER_STATUSES.includes(order.status)) {
         refuse("NOT_CANCELLABLE", "These prints have already gone out, so the order can't be cancelled.");
       }
@@ -357,10 +359,20 @@ export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ succe
       });
       if (won.count === 0) refuse("ORDER_CHANGED", "This order changed just now. Refresh and try again.");
       if (order.invoiceId) {
-        await tx.milestoneInvoice.updateMany({
-          where: { id: order.invoiceId, status: { in: UNPAID_INVOICE_STATUSES } },
+        // The client can only drop an invoice nobody has paid or sent a slip for; staff can void
+        // any unpaid one. Checked in the write itself so a slip or payment in between wins.
+        const voidable = isStaff ? UNPAID_INVOICE_STATUSES : UNPAID_INVOICE_STATUSES.filter((s) => s !== "PENDING_VERIFICATION");
+        const voided = await tx.milestoneInvoice.updateMany({
+          where: { id: order.invoiceId, status: { in: voidable } },
           data: { status: "VOID", verifiedBy: `Cancelled with print order ${order.orderNumber} by ${session.name}` },
         });
+        if (voided.count === 0 && !isStaff) {
+          const invoice = await tx.milestoneInvoice.findUnique({ where: { id: order.invoiceId }, select: { status: true } });
+          if (invoice?.status === "PENDING_VERIFICATION") {
+            refuse("PAYMENT_UNDER_REVIEW", "Your payment is being checked. Contact the studio to cancel.");
+          }
+          refuse("ORDER_CHANGED", "This order changed just now. Refresh and try again.");
+        }
       }
     });
 

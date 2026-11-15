@@ -19,8 +19,5 @@ export async function markPrintOrderPaid(tx: Tx, invoiceId: string): Promise<nul
   return null;
 }
 
-/** Invoice statuses that still count as unpaid (and may be voided). */
-export const UNPAID_INVOICE_STATUSES = ["PENDING", "OVERDUE", "PENDING_VERIFICATION", "REJECTED"];
-
 /** Statuses after which the prints have left the studio: nobody can cancel the order any more. */
 export const SENT_ORDER_STATUSES = ["SHIPPED", "COLLECTED", "DELIVERED"];
