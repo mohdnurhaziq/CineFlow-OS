@@ -72,6 +72,51 @@ export async function canAccessProject(
   return project.bookingId ? isAssigned(user.id, project.bookingId) : false;
 }
 
+/** The two areas with "Only their own". */
+export type WorkArea = "bookings" | "galleries";
+
+const WORK_REFUSED = "FORBIDDEN: You can only change your own work here.";
+
+/**
+ * Staff of `tenantId` who may do the work in `area` (change a booking or a gallery): MANAGE, or
+ * OWN for their own records. VIEW is refused: it ranks above OWN for reading, but it is read-only.
+ * Follow it with `canWorkOn` for the record itself.
+ */
+export async function requireOwnOrManage(tenantId: string, area: WorkArea): Promise<WithAccess> {
+  const user = await staffWithAccess(tenantId);
+  const level = user.access.areas[area];
+  if (level !== "OWN" && level !== "MANAGE") throw new AuthorizationError(WORK_REFUSED);
+  return user;
+}
+
+/**
+ * Whether `user` may change record `recordId` (a booking or a project) of studio `tenantId`: at
+ * MANAGE any record of that studio, at OWN only their own (as canAccessBooking / canAccessProject),
+ * never at VIEW or NONE.
+ */
+export async function canWorkOn(
+  user: { id: string; access: AccessMap },
+  tenantId: string,
+  area: WorkArea,
+  recordId: string
+): Promise<boolean> {
+  const level = user.access.areas[area];
+  if (level !== "OWN" && level !== "MANAGE") return false;
+  return area === "bookings"
+    ? canAccessBooking(user, user.access, tenantId, recordId)
+    : canAccessProject(user, user.access, tenantId, recordId);
+}
+
+/** Throws FORBIDDEN unless `canWorkOn` allows it. */
+export async function assertCanWorkOn(
+  user: { id: string; access: AccessMap },
+  tenantId: string,
+  area: WorkArea,
+  recordId: string
+): Promise<void> {
+  if (!(await canWorkOn(user, tenantId, area, recordId))) throw new AuthorizationError(WORK_REFUSED);
+}
+
 async function isAssigned(userId: string, bookingId: string): Promise<boolean> {
   return !!(await db.bookingAssignment.findUnique({
     where: { bookingId_userId: { bookingId, userId } },

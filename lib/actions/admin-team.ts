@@ -292,8 +292,8 @@ export async function updateTeamMember(input: UpdateTeamMemberInput) {
 
 /**
  * Owner only: they can't sign in any more and every signed-in session ends now. Their name stays on
- * past records; bookings from today on (not cancelled) lose their assignment, and any open
- * set-password link stops working. Returns how many bookings were unassigned.
+ * past and finished work; bookings still to happen (pending or confirmed, from today on) lose their
+ * assignment, and any open set-password link stops working. Returns how many bookings were unassigned.
  */
 export async function removeTeamMember(input: TeamMemberRefInput) {
   try {
@@ -313,15 +313,16 @@ export async function removeTeamMember(input: TeamMemberRefInput) {
           passwordResetExpires: null,
         },
       });
+      // Only open bookings: done, delivered and no-show keep their name whatever the date (a shoot
+      // finished this morning is past work), and cancelled ones stay as they were.
       const assignments = await tx.bookingAssignment.findMany({
-        where: { userId: member.id, booking: { status: { not: "CANCELLED" } } },
-        select: { id: true, booking: { select: { status: true, targetDate: true, slot: { select: { date: true } } } } },
+        where: { userId: member.id, booking: { status: { in: ["PENDING", "CONFIRMED"] } } },
+        select: { id: true, booking: { select: { targetDate: true, slot: { select: { date: true } } } } },
       });
       const upcoming = assignments.filter(({ booking }) => {
         const day = sessionDay(booking);
-        // No date yet: still to come only while the booking is open.
-        if (!day) return booking.status === "PENDING" || booking.status === "CONFIRMED";
-        return day >= today;
+        // No date yet: still to come.
+        return !day || day >= today;
       });
       if (upcoming.length === 0) return 0;
       const { count } = await tx.bookingAssignment.deleteMany({ where: { id: { in: upcoming.map((a) => a.id) } } });

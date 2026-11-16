@@ -9,6 +9,8 @@ import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
 import { loadFramedPrints } from "@/lib/prints/gallery";
 import { currencySymbol } from "@/lib/money";
 import { STAFF_ROLES } from "@/lib/auth/guard";
+import { levelAtLeast, loadAccess } from "@/lib/auth/access";
+import { canWorkOn } from "@/lib/auth/access-guard";
 
 interface VaultPageProps {
   params: Promise<{
@@ -102,7 +104,13 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
     returnTo: `/${tenant.slug}/vault/${project.id}`,
   });
 
-  const finalInvoice = project.invoices[0] || null;
+  // The client sees their own balance and marks up their own photos. The team sees money only with
+  // Invoices VIEW, and marks up only a gallery they may work on (Galleries MANAGE, or OWN on their own).
+  const isStaff = STAFF_ROLES.has(viewer.role);
+  const access = isStaff ? await loadAccess({ id: viewer.id, role: viewer.role, tenantId: tenant.id }) : null;
+  const money = !access || levelAtLeast(access.areas.invoices, "VIEW");
+  const canMarkUp = !access || (await canWorkOn({ id: viewer.id, access }, tenant.id, "galleries", project.id));
+  const finalInvoice = money ? project.invoices[0] || null : null;
   const [framedPrints, orderableSizes] = await Promise.all([
     loadFramedPrints(project.id),
     db.printSize.count({ where: { tenantId: tenant.id, isAvailable: true } }),
@@ -148,7 +156,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
       <StudioPageHeader tenantSlug={tenant.slug} />
       <VaultShell
         back={
-          STAFF_ROLES.has(viewer.role)
+          isStaff
             ? { href: `/${tenant.slug}/admin/projects/${project.id}`, label: "Back to project" }
             : { href: `/${tenant.slug}/account?tab=projects`, label: "My galleries" }
         }
@@ -159,15 +167,17 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
           title: project.title,
           category: project.category,
           discipline: project.discipline,
-          isFinalBalancePaid: project.isFinalBalancePaid,
+          isFinalBalancePaid: money ? project.isFinalBalancePaid : false,
           filesReleased: released,
-          budget: project.budget,
+          budget: money ? project.budget : 0,
           client: project.client,
           studioLead: project.studioLead,
         }}
         finalInvoice={finalInvoice}
         photoItems={photoItems}
         videoItems={videoItems}
+        money={money}
+        canMarkUp={canMarkUp}
       >
         {showFramedPrints && (
           <FramedPrintsSection
@@ -179,7 +189,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
             unlocked={framedPrints.unlocked}
             hasPhotos={framedPrints.hasPhotos}
             orders={framedPrints.orders}
-            {...(STAFF_ROLES.has(viewer.role) ? { staffOrderHref: `/${tenant.slug}/admin/projects/${project.id}/prints` } : {})}
+            {...(isStaff ? { staffOrderHref: `/${tenant.slug}/admin/projects/${project.id}/prints` } : {})}
           />
         )}
       </VaultShell>

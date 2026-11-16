@@ -22,9 +22,11 @@ interface VideoPlayerCardProps {
   items: VideoItem[];
   projectId: string;
   filesReleased: boolean;
+  /** Revision notes: the client, or the team who may work on this gallery. */
+  canMarkUp: boolean;
 }
 
-export function VideoPlayerCard({ items, projectId, filesReleased }: VideoPlayerCardProps) {
+export function VideoPlayerCard({ items, projectId, filesReleased, canMarkUp }: VideoPlayerCardProps) {
   const [retouchTarget, setRetouchTarget] = useState<VideoItem | null>(null);
 
   if (items.length === 0) return null;
@@ -107,14 +109,16 @@ export function VideoPlayerCard({ items, projectId, filesReleased }: VideoPlayer
               {/* Actions */}
               <div className="flex items-center gap-2.5 shrink-0">
                 {/* Retouch button */}
-                <button
-                  type="button"
-                  onClick={() => setRetouchTarget(video)}
-                  className={buttonVariants({ variant: "secondary" })}
-                >
-                  <MessageSquare className="size-4 text-amber-400" />
-                  <span>Revision Note</span>
-                </button>
+                {canMarkUp && (
+                  <button
+                    type="button"
+                    onClick={() => setRetouchTarget(video)}
+                    className={buttonVariants({ variant: "secondary" })}
+                  >
+                    <MessageSquare className="size-4 text-amber-400" />
+                    <span>Revision Note</span>
+                  </button>
+                )}
 
                 {/* Master Download Button */}
                 {filesReleased ? (
@@ -143,7 +147,7 @@ export function VideoPlayerCard({ items, projectId, filesReleased }: VideoPlayer
       </div>
 
       {/* Retouch Modal */}
-      {retouchTarget && (
+      {canMarkUp && retouchTarget && (
         <RetouchNotesModal
           isOpen={true}
           onClose={() => setRetouchTarget(null)}

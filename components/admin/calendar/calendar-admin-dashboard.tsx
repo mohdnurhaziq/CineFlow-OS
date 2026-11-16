@@ -28,6 +28,7 @@ import { BookingDetailsDialog } from "@/components/admin/bookings/booking-detail
 import type { BookingPackageOption } from "@/components/booking/package-picker";
 import { getBookingDetails } from "@/lib/actions/admin-bookings";
 import type { BookingDetails } from "@/lib/bookings/details";
+import type { BookingActionPowers } from "@/lib/auth/page-powers";
 import { isSlotInPast } from "@/lib/slot-time";
 
 interface CalendarAdminDashboardProps {
@@ -44,6 +45,8 @@ interface CalendarAdminDashboardProps {
   canSetPrices: boolean;
   /** The recordPayments permission: may record a booking as paid. */
   canRecordPayments: boolean;
+  /** Mark done / no-show and create the gallery, in a booking's details. */
+  actionPowers: BookingActionPowers;
   /** Who can be added to a booking in its details (empty below Bookings MANAGE). */
   assignable: AssignableMember[];
 }
@@ -59,6 +62,7 @@ export function CalendarAdminDashboard({
   canManage,
   canSetPrices,
   canRecordPayments,
+  actionPowers,
   assignable,
 }: CalendarAdminDashboardProps) {
   const router = useRouter();
@@ -389,6 +393,7 @@ export function CalendarAdminDashboard({
         tenantId={tenantId}
         canManage={canManage}
         canRecordPayments={canRecordPayments}
+        actionPowers={actionPowers}
         assignable={assignable}
         onChanged={reloadViewedBooking}
       />

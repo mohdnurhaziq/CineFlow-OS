@@ -33,9 +33,11 @@ interface PhotoGridProps {
   items: PhotoItem[];
   projectId: string;
   filesReleased: boolean;
+  /** Favourites and retouch notes: the client, or the team who may work on this gallery. */
+  canMarkUp: boolean;
 }
 
-export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
+export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoGridProps) {
   const [filterFavsOnly, setFilterFavsOnly] = useState(false);
   const [activeItems, setActiveItems] = useState<PhotoItem[]>(items);
 
@@ -200,29 +202,39 @@ export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
 
                 {/* Top Action Floating Icons */}
                 <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
-                  {/* Favorite Heart Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFav(item.id, item.isClientFav)}
-                    className="p-1.5 rounded-lg bg-black/70 backdrop-blur-xs border border-white/10 hover:bg-black text-zinc-300 hover:text-white transition-colors cursor-pointer"
-                    title={item.isClientFav ? "Remove from favorites" : "Add to favorites"}
-                  >
-                    <Heart
-                      className={`size-4 ${
-                        item.isClientFav ? "fill-red-500 text-red-500" : "text-zinc-300"
-                      }`}
-                    />
-                  </button>
+                  {canMarkUp ? (
+                    <>
+                      {/* Favorite Heart Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFav(item.id, item.isClientFav)}
+                        className="p-1.5 rounded-lg bg-black/70 backdrop-blur-xs border border-white/10 hover:bg-black text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                        title={item.isClientFav ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        <Heart
+                          className={`size-4 ${
+                            item.isClientFav ? "fill-red-500 text-red-500" : "text-zinc-300"
+                          }`}
+                        />
+                      </button>
 
-                  {/* Retouch Feedback Button */}
-                  <button
-                    type="button"
-                    onClick={() => setRetouchTarget(item)}
-                    className="p-1.5 rounded-lg bg-black/70 backdrop-blur-xs border border-white/10 hover:bg-black text-zinc-300 hover:text-white transition-colors cursor-pointer"
-                    title="Add retouch feedback"
-                  >
-                    <MessageSquare className="size-4" />
-                  </button>
+                      {/* Retouch Feedback Button */}
+                      <button
+                        type="button"
+                        onClick={() => setRetouchTarget(item)}
+                        className="p-1.5 rounded-lg bg-black/70 backdrop-blur-xs border border-white/10 hover:bg-black text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                        title="Add retouch feedback"
+                      >
+                        <MessageSquare className="size-4" />
+                      </button>
+                    </>
+                  ) : (
+                    item.isClientFav && (
+                      <span className="p-1.5 rounded-lg bg-black/70 border border-white/10" title="A client favourite">
+                        <Heart className="size-4 fill-red-500 text-red-500" />
+                      </span>
+                    )
+                  )}
 
                   {/* Fullscreen Lightbox Button */}
                   <button
@@ -256,9 +268,11 @@ export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
                 {/* Retouch note preview tag */}
                 {item.clientNotes && (
                   <div
-                    onClick={() => setRetouchTarget(item)}
-                    className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 line-clamp-2 cursor-pointer hover:bg-amber-500/15"
-                    title="Click to edit feedback"
+                    onClick={canMarkUp ? () => setRetouchTarget(item) : undefined}
+                    className={`p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 line-clamp-2 ${
+                      canMarkUp ? "cursor-pointer hover:bg-amber-500/15" : ""
+                    }`}
+                    title={canMarkUp ? "Click to edit feedback" : undefined}
                   >
                     <span className="font-mono text-[9px] uppercase font-bold text-amber-400 block">
                       Retouch Note:
@@ -296,7 +310,7 @@ export function PhotoGrid({ items, projectId, filesReleased }: PhotoGridProps) {
       )}
 
       {/* Retouch Notes Modal */}
-      {retouchTarget && (
+      {canMarkUp && retouchTarget && (
         <RetouchNotesModal
           isOpen={true}
           onClose={() => setRetouchTarget(null)}

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { loadAssignableFor } from "@/lib/team/members";
+import { bookingActionPowers } from "@/lib/auth/page-powers";
 import { NoAccess } from "@/components/admin/no-access";
 import { CalendarAdminDashboard } from "@/components/admin/calendar/calendar-admin-dashboard";
 import type { BookingSlotRow, CategoryOption } from "@/components/admin/calendar/single-slot-dialog";
@@ -131,6 +132,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         assignable={assignable}
         canSetPrices={viewer.access.ticks.setPrices}
         canRecordPayments={viewer.access.ticks.recordPayments}
+        actionPowers={bookingActionPowers(viewer.access)}
       />
     </PageShell>
   );

@@ -46,7 +46,7 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "password-reset.resetPassword": "forgot password (needs the one-time emailed token; rate-limited)",
 };
 
-const GUARD_RE = /await (requireStaff|requireOwner|requireAccess|requireTick|requireSuperAdmin|requireStaffBySlug|assertOwner|requireRecordAccess|requireItemAccess)\(|await getCurrentUser\(\)/;
+const GUARD_RE = /await (requireStaff|requireOwner|requireAccess|requireOwnOrManage|requireTick|requireSuperAdmin|requireStaffBySlug|assertOwner|requireRecordAccess|requireItemAccess)\(|await getCurrentUser\(\)/;
 
 type Who = { id: string; email: string; name: string; role: string; tenantId: string | null; tenantSlug: string | null } | null;
 

@@ -4,7 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { getCurrentUser } from "@/lib/auth/session";
 import { STAFF_ROLES } from "@/lib/auth/guard";
-import { levelAtLeast, loadAccess, type AccessArea, type AccessLevel } from "@/lib/auth/access";
+import { loadAccess, type AccessArea, type AccessLevel } from "@/lib/auth/access";
 import { isRateLimited } from "@/lib/rate-limit";
 
 const ALLOWED_FOLDERS = new Set([
@@ -28,15 +28,16 @@ const ANONYMOUS_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "appli
 const ANONYMOUS_MAX_UPLOADS = 20; // per IP per window
 
 /**
- * Team folders that belong to an access area: a team member needs that area to upload there.
+ * Team folders that belong to an access area: a team member needs one of `levels` there to upload.
  * The upload only stores a file; the record it is attached to is checked again by its own action
  * (e.g. /api/deliverables checks the project). The other folders are open to the whole team.
+ * Deliverables are gallery work: Galleries OWN (their own galleries) or MANAGE, not the read-only VIEW.
  */
-const FOLDER_ACCESS: Record<string, { area: AccessArea; level: AccessLevel }> = {
-  deliverables: { area: "galleries", level: "OWN" },
-  frames: { area: "catalog", level: "MANAGE" },
-  showcase: { area: "catalog", level: "MANAGE" },
-  signatures: { area: "production", level: "VIEW" },
+const FOLDER_ACCESS: Record<string, { area: AccessArea; levels: AccessLevel[] }> = {
+  deliverables: { area: "galleries", levels: ["OWN", "MANAGE"] },
+  frames: { area: "catalog", levels: ["MANAGE"] },
+  showcase: { area: "catalog", levels: ["MANAGE"] },
+  signatures: { area: "production", levels: ["VIEW", "MANAGE"] },
 };
 
 
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     const need = FOLDER_ACCESS[folder];
     if (isStaff && need) {
       const access = await loadAccess({ id: session.id, role: session.role, tenantId: session.tenantId });
-      if (!levelAtLeast(access.areas[need.area], need.level)) {
+      if (!need.levels.includes(access.areas[need.area])) {
         return NextResponse.json({ error: "Not permitted to upload here" }, { status: 403 });
       }
     }

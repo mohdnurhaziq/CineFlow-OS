@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { AssignableMember } from "@/lib/team/members";
 import type { BookingDetails } from "@/lib/bookings/details";
+import type { BookingActionPowers } from "@/lib/auth/page-powers";
 import { BookingDetailsBody } from "@/components/admin/bookings/booking-details-dialog";
 import { BookingActions } from "@/components/admin/bookings/booking-actions";
 
@@ -14,6 +15,7 @@ export function BookingDetailView({
   currency,
   canManage,
   canRecordPayments,
+  actionPowers,
   assignable,
 }: {
   booking: BookingDetails;
@@ -22,6 +24,8 @@ export function BookingDetailView({
   currency: string;
   canManage: boolean;
   canRecordPayments: boolean;
+  /** Mark done / no-show and create the gallery. */
+  actionPowers: BookingActionPowers;
   /** Who can be added in the Team section (empty below Bookings MANAGE). */
   assignable: AssignableMember[];
 }) {
@@ -40,6 +44,7 @@ export function BookingDetailView({
         tenantSlug={tenantSlug}
         canManage={canManage}
         canRecordPayments={canRecordPayments}
+        actionPowers={actionPowers}
         onChanged={() => router.refresh()}
       />
     </div>

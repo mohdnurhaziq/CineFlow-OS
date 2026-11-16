@@ -9,6 +9,7 @@ import { NoAccess } from "@/components/admin/no-access";
 import { BookingsConsole, type FilterId } from "@/components/admin/bookings/bookings-console";
 import { loadBookableSlots } from "@/lib/bookings/bookable-slots";
 import { loadAssignableFor } from "@/lib/team/members";
+import { bookingActionPowers } from "@/lib/auth/page-powers";
 import { studioNow } from "@/lib/slot-time";
 
 interface BookingsPageProps {
@@ -72,6 +73,7 @@ export default async function AdminBookingsPage({ params, searchParams }: Bookin
         tenantId={tenant.id}
         canManage={canManage}
         canRecordPayments={viewer.access.ticks.recordPayments}
+        actionPowers={bookingActionPowers(viewer.access)}
         currency={tenant.currency}
         bookings={bookings}
         today={studioNow().dateKey}

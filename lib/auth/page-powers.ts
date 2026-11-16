@@ -8,6 +8,25 @@ import { levelAtLeast, type AccessMap } from "@/lib/auth/access";
  * Not a "use server" module.
  */
 
+/** What a booking's Actions offer besides the Bookings MANAGE ones (move, cancel, resend). */
+export interface BookingActionPowers {
+  /** Mark the session done or a no-show: Bookings MANAGE, or OWN (their own booking), not VIEW. */
+  canRecordOutcome: boolean;
+  /** Create a booking's missing gallery: Galleries MANAGE. */
+  canCreateGallery: boolean;
+}
+
+/**
+ * A booking's actions. The page or pop-up has already checked Bookings access to the booking (at
+ * OWN, only one they are assigned to), so OWN closes out its own booking like MANAGE.
+ */
+export function bookingActionPowers(access: AccessMap): BookingActionPowers {
+  return {
+    canRecordOutcome: access.areas.bookings === "OWN" || access.areas.bookings === "MANAGE",
+    canCreateGallery: levelAtLeast(access.areas.galleries, "MANAGE"),
+  };
+}
+
 /**
  * A project's page. The page has already checked Galleries access to this project (at OWN, only
  * a project they lead or are assigned to), so OWN works on its own project like MANAGE.

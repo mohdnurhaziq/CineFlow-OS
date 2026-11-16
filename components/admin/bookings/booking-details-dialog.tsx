@@ -22,6 +22,7 @@ import { BookingActions } from "@/components/admin/bookings/booking-actions";
 import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
 import { BookingTeamSection, type BookingTeamControls } from "@/components/admin/bookings/booking-team-section";
 import type { AssignableMember } from "@/lib/team/members";
+import type { BookingActionPowers } from "@/lib/auth/page-powers";
 
 // ---------------------------------------------------------------------------
 // Shared presentation helpers (also used by the Bookings list)
@@ -142,6 +143,8 @@ function formatDateTime(iso: string): string {
 // Dialog
 // ---------------------------------------------------------------------------
 
+const NO_ACTION_POWERS: BookingActionPowers = { canRecordOutcome: false, canCreateGallery: false };
+
 interface BookingDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -156,6 +159,8 @@ interface BookingDetailsDialogProps {
   canManage?: boolean;
   /** The recordPayments permission: cancel a paid booking. */
   canRecordPayments?: boolean;
+  /** Mark done / no-show and create the gallery. Without it, neither is offered. */
+  actionPowers?: BookingActionPowers;
   onChanged?: () => void;
   /** Who can be added in the Team section (the owner and active team members). Without it the section is read-only. */
   assignable?: AssignableMember[];
@@ -172,6 +177,7 @@ export function BookingDetailsDialog({
   tenantId,
   canManage = false,
   canRecordPayments = false,
+  actionPowers = NO_ACTION_POWERS,
   onChanged,
   assignable,
 }: BookingDetailsDialogProps) {
@@ -264,6 +270,7 @@ export function BookingDetailsDialog({
                 tenantSlug={tenantSlug}
                 canManage={canManage}
                 canRecordPayments={canRecordPayments}
+                actionPowers={actionPowers}
                 onChanged={onChanged}
               />
             )}

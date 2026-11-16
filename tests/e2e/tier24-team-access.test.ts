@@ -42,7 +42,9 @@ import { getNotificationHistory } from "@/lib/notifications";
 import { getCurrentUser, loginWithCredentials } from "@/lib/auth/session";
 import { createSessionToken } from "@/lib/auth/token";
 import { requestPasswordReset, resetPassword } from "@/lib/actions/password-reset";
-import { rescheduleBooking } from "@/lib/actions/admin-booking-lifecycle";
+import { recordSessionOutcome, rescheduleBooking } from "@/lib/actions/admin-booking-lifecycle";
+import { deleteDeliverableItem, notifyClientPhotosReady, updateProjectStatus } from "@/lib/actions/admin-projects";
+import { submitRetouchNote, toggleClientFavorite } from "@/lib/actions/vault";
 import { studioNow } from "@/lib/slot-time";
 import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { recordInvoicePayment, sendInvoiceReminder } from "@/lib/actions/admin-invoices";
@@ -57,6 +59,9 @@ import { loadAdminProjects } from "@/lib/projects/list";
 import { visibleNavItems, type AdminNavEntry } from "@/components/admin/admin-nav-items";
 import { NoAccess } from "@/components/admin/no-access";
 import { POST as uploadDeliverables } from "@/app/api/deliverables/route";
+import { POST as uploadFile } from "@/app/api/upload/route";
+import AdminProjectsPage from "@/app/[tenantSlug]/admin/projects/page";
+import ProjectVaultPage from "@/app/[tenantSlug]/vault/[projectId]/page";
 import AdminBookingPage from "@/app/[tenantSlug]/admin/bookings/[bookingId]/page";
 import AdminProjectPage from "@/app/[tenantSlug]/admin/projects/[projectId]/page";
 import AdminClientPage from "@/app/[tenantSlug]/admin/clients/[clientId]/page";
@@ -300,7 +305,7 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       await db.user.update({ where: { id: member.id }, data: { deactivatedAt: new Date() } });
       const gone = await refusal(() => withSession(s, () => requireAccess(f.lumina.id, "bookings", "VIEW")));
       // A removed account's session ends outright, so the refusal is "sign in" rather than "forbidden".
-      harness.assert(!!gone && /^(UNAUTHENTICATED|FORBIDDEN):/.test(gone), `deactivated member refused: ${gone}`);
+      harness.assert(!!gone && gone.startsWith("UNAUTHENTICATED:"), `deactivated member refused as signed out: ${gone}`);
       await db.user.update({ where: { id: member.id }, data: { deactivatedAt: null } });
 
       const crossMember = await refusal(() => withSession(s, () => requireAccess(f.apex.id, "bookings", "VIEW")));
@@ -412,12 +417,12 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         total += 1;
         const key = `${file}#${node.name.text}`;
         const body = node.body.getText(sf);
-        const ok = OTHER_GUARD[key] ? OTHER_GUARD[key].test(body) : /\b(requireAccess|requireTick|requireOwner)\(/.test(body);
+        const ok = OTHER_GUARD[key] ? OTHER_GUARD[key].test(body) : /\b(requireAccess|requireOwnOrManage|requireTick|requireOwner)\(/.test(body);
         if (!ok) unchecked.push(key);
       }
     }
     harness.assert(total > 60, `Scanned ${total} actions`);
-    harness.assert(unchecked.length === 0, "every action calls requireAccess, requireTick or requireOwner", `Unchecked: ${unchecked.join(", ")}`);
+    harness.assert(unchecked.length === 0, "every action calls requireAccess, requireOwnOrManage, requireTick or requireOwner", `Unchecked: ${unchecked.join(", ")}`);
 
     const ownerRoleUsers: string[] = [];
     for (const file of await fs.readdir(dir)) {
@@ -641,14 +646,14 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       const bookings = await loadAdminBookings(f.lumina.id, viewer);
       harness.assertEqual(JSON.stringify(bookings.map((b) => b.id)), JSON.stringify([o.mine.id]), "bookings: exactly the assigned one");
 
-      const projects = (await loadAdminProjects(f.lumina.id, viewer)).map((p) => p.id).sort();
+      const projects = (await loadAdminProjects(f.lumina.id, viewer, { money: false })).map((p) => p.id).sort();
       harness.assertEqual(JSON.stringify(projects), JSON.stringify([o.viaBooking.id, o.led.id].sort()), "projects: the assigned booking's and the led one");
 
       // VIEW and the owner see the whole studio.
       const ownerView = { id: f.luminaOwner.id, access: FULL_ACCESS };
       const allBookings = (await loadAdminBookings(f.lumina.id, ownerView)).map((b) => b.id);
       harness.assert(allBookings.includes(o.mine.id) && allBookings.includes(o.other.id), "owner sees every booking");
-      const allProjects = (await loadAdminProjects(f.lumina.id, ownerView)).map((p) => p.id);
+      const allProjects = (await loadAdminProjects(f.lumina.id, ownerView, { money: false })).map((p) => p.id);
       harness.assert([o.viaBooking.id, o.led.id, o.unrelated.id].every((id) => allProjects.includes(id)), "owner sees every project");
       const viewAccess = parseAccess(accessJson({ bookings: "VIEW", galleries: "VIEW" }));
       const viewBookings = (await loadAdminBookings(f.lumina.id, { id: o.member.id, access: viewAccess })).map((b) => b.id);
@@ -692,6 +697,197 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         AdminProjectPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: o.led.id }) })
       );
       harness.assert((ownPage as { type?: unknown }).type !== NoAccess, "their own project's page opens");
+    });
+  });
+
+  // ---- Changing work: View is read-only, Only-their-own changes only theirs, Manage changes any ----
+  /** A member at each level of Bookings and Galleries; a booking and gallery of the OWN member's, and someone else's. */
+  const workSetup = async (f: Fixture) => {
+    const view = await f.mkMember("work-view", await f.mkRole("Work view", accessJson({ bookings: "VIEW", galleries: "VIEW" })));
+    const own = await f.mkMember("work-own", await f.mkRole("Work own", accessJson({ bookings: "OWN", galleries: "OWN" })));
+    const manage = await f.mkMember("work-manage", await f.mkRole("Work manage", accessJson({ bookings: "MANAGE", galleries: "MANAGE" })));
+    const mine = await f.mkBooking(f.lumina.id, "work-mine");
+    const other = await f.mkBooking(f.lumina.id, "work-other");
+    await db.bookingAssignment.create({ data: { tenantId: f.lumina.id, bookingId: mine.id, userId: own.id } });
+    const ownProject = await f.mkProject(f.lumina.id, "work-own", f.luminaOwner.id, mine.id);
+    const otherProject = await f.mkProject(f.lumina.id, "work-other", f.luminaOwner.id, other.id);
+    return { view, own, manage, mine, other, ownProject, otherProject };
+  };
+  const addPhoto = async (projectId: string, title: string) => {
+    const album = await db.clientDeliverable.create({
+      data: {
+        projectId, title: "T24 work", discipline: "PHOTOGRAPHY",
+        items: { create: { title, itemType: "PHOTO", previewUrl: "https://example.test/p.jpg", downloadUrl: "https://example.test/m.jpg" } },
+      },
+      include: { items: true },
+    });
+    return album.items[0]!;
+  };
+  /** Allowed: returned success (anything else is reported). */
+  const allowedResult = async (fn: () => Promise<unknown>): Promise<string | null> => {
+    try {
+      const res = (await fn()) as { success?: boolean } | null;
+      return res?.success === true ? null : `not allowed: ${JSON.stringify(res)}`;
+    } catch (e) {
+      return `threw ${String(e)}`;
+    }
+  };
+
+  await harness.test("T24-WORK-01: gallery work needs Only-their-own on their own gallery, or Manage; View is refused", async () => {
+    await withFixture(async (f) => {
+      const w = await workSetup(f);
+      const t = f.lumina.id;
+      const as = (u: Row, fn: () => Promise<unknown>) => () => withSession(sess(u, "lumina-cine"), fn);
+      const project = (id: string) => db.project.findUniqueOrThrow({ where: { id } });
+
+      // Change the stage.
+      const stage = (u: Row, projectId: string) => as(u, () => updateProjectStatus({ tenantId: t, projectId, status: "POST_PRODUCTION" }));
+      for (const [label, call] of [["View", stage(w.view, w.otherProject.id)], ["Own, someone else's", stage(w.own, w.otherProject.id)]] as const) {
+        const why = await refusedResult(call);
+        harness.assert(why === null, `updateProjectStatus refused: ${label}`, why ?? "");
+      }
+      harness.assertEqual((await project(w.otherProject.id)).status, "PRE_PRODUCTION", "the stage is unchanged after the refusals");
+      harness.assertEqual(await allowedResult(stage(w.own, w.ownProject.id)), null, "updateProjectStatus: Own, their own");
+      harness.assertEqual((await project(w.ownProject.id)).status, "POST_PRODUCTION", "their own gallery moved on");
+      harness.assertEqual(await allowedResult(stage(w.manage, w.otherProject.id)), null, "updateProjectStatus: Manage, any");
+
+      // Remove a photo.
+      const otherPhoto = await addPhoto(w.otherProject.id, "other");
+      const ownPhoto = await addPhoto(w.ownProject.id, "own");
+      const remove = (u: Row, itemId: string) => as(u, () => deleteDeliverableItem({ tenantId: t, itemId }));
+      for (const [label, call] of [["View", remove(w.view, otherPhoto.id)], ["Own, someone else's", remove(w.own, otherPhoto.id)]] as const) {
+        const why = await refusedResult(call);
+        harness.assert(why === null, `deleteDeliverableItem refused: ${label}`, why ?? "");
+      }
+      harness.assert(!!(await db.deliverableItem.findUnique({ where: { id: otherPhoto.id } })), "the photo is still there after the refusals");
+      harness.assertEqual(await allowedResult(remove(w.own, ownPhoto.id)), null, "deleteDeliverableItem: Own, their own");
+      harness.assertEqual(await allowedResult(remove(w.manage, otherPhoto.id)), null, "deleteDeliverableItem: Manage, any");
+      harness.assertEqual(await db.deliverableItem.count({ where: { id: { in: [ownPhoto.id, otherPhoto.id] } } }), 0, "both removed by those allowed");
+
+      // Tell the client the photos are ready.
+      await addPhoto(w.otherProject.id, "other again");
+      await addPhoto(w.ownProject.id, "own again");
+      await db.project.updateMany({ where: { id: { in: [w.ownProject.id, w.otherProject.id] } }, data: { status: "PRE_PRODUCTION" } });
+      const notify = (u: Row, projectId: string) => as(u, () => notifyClientPhotosReady({ tenantId: t, projectId }));
+      for (const [label, call] of [["View", notify(w.view, w.otherProject.id)], ["Own, someone else's", notify(w.own, w.otherProject.id)]] as const) {
+        const why = await refusedResult(call);
+        harness.assert(why === null, `notifyClientPhotosReady refused: ${label}`, why ?? "");
+      }
+      harness.assertEqual((await project(w.otherProject.id)).status, "PRE_PRODUCTION", "no message sent, the stage is unchanged");
+      harness.assertEqual(await allowedResult(notify(w.own, w.ownProject.id)), null, "notifyClientPhotosReady: Own, their own");
+      harness.assertEqual(await allowedResult(notify(w.manage, w.otherProject.id)), null, "notifyClientPhotosReady: Manage, any");
+
+      // Upload photos (/api/deliverables) and the file upload's deliverables folder (/api/upload).
+      const upload = (u: Row, projectId: string) => {
+        const form = new FormData();
+        form.append("projectId", projectId);
+        form.append("files", new File(["x"], "a.png", { type: "image/png" }));
+        return withSession(sess(u, "lumina-cine"), () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
+      };
+      harness.assertEqual((await upload(w.view, w.otherProject.id)).status, 403, "/api/deliverables: View refused");
+      harness.assertEqual((await upload(w.own, w.otherProject.id)).status, 403, "/api/deliverables: Own, someone else's refused");
+      harness.assertEqual((await upload(w.own, w.ownProject.id)).status, 200, "/api/deliverables: Own, their own");
+      harness.assertEqual((await upload(w.manage, w.otherProject.id)).status, 200, "/api/deliverables: Manage, any");
+
+      const fileUpload = async (u: Row) => {
+        const form = new FormData();
+        form.append("folder", "deliverables");
+        form.append("file", new File(["x"], "a.png", { type: "image/png" }));
+        const res = await withSession(sess(u, "lumina-cine"), () => uploadFile(new NextRequest("http://localhost:3000/api/upload", { method: "POST", body: form })));
+        const body = (await res.json().catch(() => ({}))) as { url?: string };
+        if (body.url) await fs.rm(path.join(process.cwd(), "public", body.url), { force: true });
+        return res.status;
+      };
+      harness.assertEqual(await fileUpload(w.view), 403, "/api/upload deliverables folder: View refused");
+      harness.assertEqual(await fileUpload(w.own), 201, "/api/upload deliverables folder: Own");
+      harness.assertEqual(await fileUpload(w.manage), 201, "/api/upload deliverables folder: Manage");
+    });
+  });
+
+  await harness.test("T24-WORK-02: marking a session done or no-show needs their own booking at Only-their-own, or Manage", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const w = await workSetup(f);
+      const yesterday = new Date(Date.parse(`${studioNow().dateKey}T00:00:00Z`) - 86_400_000);
+      const slotIds: string[] = [];
+      try {
+        // Both bookings confirmed, with a session that has already started.
+        for (const b of [w.mine, w.other]) {
+          const slot = await db.bookingSlot.create({
+            data: { tenantId: f.lumina.id, date: yesterday, startTime: "10:00 AM", endTime: "11:00 AM", status: "BOOKED" },
+          });
+          slotIds.push(slot.id);
+          await db.clientBooking.update({ where: { id: b.id }, data: { slotId: slot.id, status: "CONFIRMED" } });
+        }
+        const outcome = (u: Row, bookingId: string, o: "COMPLETED" | "NO_SHOW") => () =>
+          withSession(sess(u, "lumina-cine"), () => recordSessionOutcome({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", bookingId, outcome: o }));
+        const status = async (id: string) => (await db.clientBooking.findUniqueOrThrow({ where: { id } })).status;
+
+        for (const [label, call] of [
+          ["View, done", outcome(w.view, w.other.id, "COMPLETED")],
+          ["View, no-show", outcome(w.view, w.other.id, "NO_SHOW")],
+          ["Own, someone else's", outcome(w.own, w.other.id, "COMPLETED")],
+        ] as const) {
+          const why = await refusedResult(call);
+          harness.assert(why === null, `recordSessionOutcome refused: ${label}`, why ?? "");
+        }
+        harness.assertEqual(await status(w.other.id), "CONFIRMED", "the booking is unchanged after the refusals");
+        harness.assertEqual(await allowedResult(outcome(w.own, w.mine.id, "COMPLETED")), null, "recordSessionOutcome: Own, their own");
+        harness.assertEqual(await status(w.mine.id), "COMPLETED", "their own session is done");
+        harness.assertEqual(await allowedResult(outcome(w.manage, w.other.id, "NO_SHOW")), null, "recordSessionOutcome: Manage, any");
+        harness.assertEqual(await status(w.other.id), "NO_SHOW", "Manage recorded the no-show");
+
+        // The booking page offers the buttons only to those allowed, and "Create gallery" only at Galleries Manage.
+        await db.clientBooking.updateMany({ where: { id: { in: [w.mine.id, w.other.id] } }, data: { status: "CONFIRMED" } });
+        type Powers = { canRecordOutcome: boolean; canCreateGallery: boolean };
+        const powers = async (u: Row, bookingId: string) =>
+          findProp<Powers>(
+            await withSession(sess(u, "lumina-cine"), () => AdminBookingPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", bookingId }) })),
+            "actionPowers"
+          );
+        const viewPowers = await powers(w.view, w.other.id);
+        harness.assert(!!viewPowers && !viewPowers.canRecordOutcome && !viewPowers.canCreateGallery, "View: no done / no-show, no Create gallery", JSON.stringify(viewPowers));
+        const ownPowers = await powers(w.own, w.mine.id);
+        harness.assert(!!ownPowers && ownPowers.canRecordOutcome && !ownPowers.canCreateGallery, "Own: done / no-show on their booking", JSON.stringify(ownPowers));
+        const managePowers = await powers(w.manage, w.other.id);
+        harness.assert(!!managePowers && managePowers.canRecordOutcome && managePowers.canCreateGallery, "Manage: both", JSON.stringify(managePowers));
+      } finally {
+        await db.clientBooking.updateMany({ where: { slotId: { in: slotIds } }, data: { slotId: null } });
+        await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
+      }
+    });
+  });
+
+  await harness.test("T24-WORK-03: vault favourites and retouch notes: the client, or the team at Only-their-own (theirs) or Manage", async () => {
+    await withFixture(async (f) => {
+      const w = await workSetup(f);
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+      await db.project.updateMany({ where: { id: { in: [w.ownProject.id, w.otherProject.id] } }, data: { clientId: client.id } });
+      const otherPhoto = await addPhoto(w.otherProject.id, "vault other");
+      const ownPhoto = await addPhoto(w.ownProject.id, "vault own");
+      const fav = (u: Row, itemId: string) => () => withSession(sess(u, "lumina-cine"), () => toggleClientFavorite({ itemId, isFav: true }));
+      const note = (u: Row, itemId: string) => () => withSession(sess(u, "lumina-cine"), () => submitRetouchNote({ itemId, note: "T24 note" }));
+      const denied = async (fn: () => Promise<unknown>) => {
+        const res = (await fn()) as { success: boolean; error?: string };
+        return res.success === false && /FORBIDDEN/.test(res.error ?? "");
+      };
+
+      for (const [label, u, itemId] of [["View", w.view, otherPhoto.id], ["Own, someone else's", w.own, otherPhoto.id]] as const) {
+        harness.assert(await denied(fav(u, itemId)), `favourite refused: ${label}`);
+        harness.assert(await denied(note(u, itemId)), `retouch note refused: ${label}`);
+      }
+      const untouched = await db.deliverableItem.findUniqueOrThrow({ where: { id: otherPhoto.id } });
+      harness.assert(!untouched.isClientFav && untouched.clientNotes === null, "the photo is unchanged after the refusals");
+      // Reading the gallery stays open at View.
+      const viewSess = sess(w.view, "lumina-cine");
+      harness.assertEqual(await canAccessClientRecord(viewSess, f.lumina.id, client.id, { area: "galleries", projectId: w.otherProject.id }), true, "View still opens the gallery");
+
+      harness.assertEqual(await allowedResult(fav(w.own, ownPhoto.id)), null, "favourite: Own, their own");
+      harness.assertEqual(await allowedResult(note(w.manage, otherPhoto.id)), null, "retouch note: Manage, any");
+      harness.assertEqual(await allowedResult(fav(client as Row, otherPhoto.id)), null, "favourite: the project's client");
+      harness.assertEqual(await allowedResult(note(client as Row, otherPhoto.id)), null, "retouch note: the project's client");
+      const after = await db.deliverableItem.findUniqueOrThrow({ where: { id: otherPhoto.id } });
+      harness.assert(after.isClientFav && after.clientNotes === "T24 note", "the client's favourite and note are saved");
     });
   });
 
@@ -956,6 +1152,83 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       harness.assert(shownPassed.every((r) => typeof r.paid === "number"), "page passes totals with Invoices VIEW");
     });
   });
+  /** Every string and number in an element tree's children, joined: the text the page writes itself. */
+  const textOf = (node: unknown): string => {
+    if (typeof node === "string" || typeof node === "number") return String(node);
+    if (!node || typeof node !== "object") return "";
+    if (Array.isArray(node)) return node.map(textOf).join(" ");
+    const props = (node as { props?: Record<string, unknown> }).props;
+    return props ? textOf(props.children) : "";
+  };
+
+  await harness.test("T24-REDACT-06: the Galleries list shows budgets and paid status only with Invoices access", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const project = await db.project.findFirstOrThrow({ where: { tenantId: f.lumina.id, budget: { gt: 0 } } });
+      const everyone = { id: f.luminaOwner.id, access: FULL_ACCESS };
+      const hiddenRow = (await loadAdminProjects(f.lumina.id, everyone, { tab: "all", money: false })).find((p) => p.id === project.id);
+      harness.assert(!!hiddenRow, "loader: the project is listed");
+      harness.assert(!!hiddenRow && !("budget" in hiddenRow) && !("isFinalBalancePaid" in hiddenRow), "loader: no budget or paid status");
+      harness.assertEqual(hiddenRow?.money, null, "loader: no money without Invoices access");
+      const shownRow = (await loadAdminProjects(f.lumina.id, everyone, { tab: "all", money: true })).find((p) => p.id === project.id);
+      harness.assertEqual(shownRow?.money?.budget, project.budget, "loader: the budget with Invoices access");
+      harness.assertEqual(shownRow?.money?.isFinalBalancePaid, project.isFinalBalancePaid, "loader: the paid status with Invoices access");
+
+      const noMoney = await f.mkMember("glist-no", await f.mkRole("Glist no", accessJson({ galleries: "VIEW" })));
+      const withMoney = await f.mkMember("glist-yes", await f.mkRole("Glist yes", accessJson({ galleries: "VIEW", invoices: "VIEW" })));
+      const render = async (u: Row) =>
+        textOf(
+          await withSession(sess(u, "lumina-cine"), () =>
+            AdminProjectsPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }), searchParams: Promise.resolve({ tab: "all" }) })
+          )
+        );
+      const hidden = await render(noMoney);
+      harness.assert(hidden.includes(project.title), "page: the list renders");
+      harness.assert(!/Budget|Fully paid|Balance open/.test(hidden), "page: no Budget column or paid line without Invoices access");
+      const shown = await render(withMoney);
+      harness.assert(/Budget/.test(shown) && /Fully paid|Balance open/.test(shown), "page: Budget column and paid line with Invoices access");
+    });
+  });
+
+  await harness.test("T24-REDACT-07: the client's gallery shows the balance to the team only with Invoices access", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+      const { id: projectId } = await f.mkProject(f.lumina.id, "vault-money", f.luminaOwner.id);
+      await db.project.update({ where: { id: projectId }, data: { clientId: client.id, budget: 4000, isFinalBalancePaid: false } });
+      const invoice = await db.milestoneInvoice.create({
+        data: {
+          tenantId: f.lumina.id, clientId: client.id, projectId, invoiceNumber: `T24-VLT-${Date.now().toString(36)}`,
+          milestoneType: "FINAL_BALANCE_50", description: "T24 balance", amount: 2000, status: "PENDING", dueDate: new Date(Date.now() + 7 * 86400000),
+        },
+      });
+      try {
+        const noMoney = await f.mkMember("vault-no", await f.mkRole("Vault no", accessJson({ galleries: "VIEW" })));
+        const withMoney = await f.mkMember("vault-yes", await f.mkRole("Vault yes", accessJson({ galleries: "VIEW", invoices: "VIEW" })));
+        const render = (u: Row) =>
+          withSession(sess(u, "lumina-cine"), () => ProjectVaultPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId }) }));
+        type Shown = { budget: number; isFinalBalancePaid: boolean };
+
+        const hidden = await render(noMoney);
+        harness.assertEqual(findProp(hidden, "finalInvoice"), null, "team without Invoices access: no balance invoice");
+        harness.assertEqual(findProp<Shown>(hidden, "project")?.budget, 0, "team without Invoices access: no budget");
+        harness.assertEqual(findProp(hidden, "money"), false, "team without Invoices access: the balance isn't shown");
+        harness.assert(!JSON.stringify(hidden).includes(invoice.invoiceNumber), "the invoice number is absent");
+
+        const shown = await render(withMoney);
+        harness.assertEqual(findProp<{ amount: number }>(shown, "finalInvoice")?.amount, 2000, "team with Invoices access: the balance");
+        harness.assertEqual(findProp(shown, "money"), true, "team with Invoices access: the balance is shown");
+
+        const own = await render(client as Row);
+        harness.assertEqual(findProp<{ amount: number }>(own, "finalInvoice")?.amount, 2000, "the client sees their own balance");
+        harness.assertEqual(findProp<Shown>(own, "project")?.budget, 4000, "the client gets their own budget");
+        harness.assertEqual(findProp(own, "money"), true, "the client's balance is shown");
+      } finally {
+        await db.milestoneInvoice.deleteMany({ where: { id: invoice.id } });
+      }
+    });
+  });
+
   await harness.test("T24-ROLE-01: the owner manages roles", async () => {
     await withFixture(async (f) => {
       const owner = sess(f.luminaOwner, "lumina-cine");
@@ -1235,7 +1508,10 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         const future = await f.mkBooking(f.lumina.id, `${tag}-future`);
         await db.clientBooking.update({ where: { id: future.id }, data: { targetDate: dayKey(3), status: "CONFIRMED" } });
         const todays = await f.mkBooking(f.lumina.id, `${tag}-today`);
-        await db.clientBooking.update({ where: { id: todays.id }, data: { targetDate: today } });
+        await db.clientBooking.update({ where: { id: todays.id }, data: { targetDate: today, status: "CONFIRMED" } });
+        // Shot already today: finished work keeps its name, whatever the date.
+        const doneToday = await f.mkBooking(f.lumina.id, `${tag}-done-today`);
+        await db.clientBooking.update({ where: { id: doneToday.id }, data: { targetDate: today, status: "COMPLETED" } });
         const past = await f.mkBooking(f.lumina.id, `${tag}-past`);
         await db.clientBooking.update({ where: { id: past.id }, data: { targetDate: dayKey(-3), status: "COMPLETED" } });
         const cancelled = await f.mkBooking(f.lumina.id, `${tag}-cancelled`);
@@ -1247,7 +1523,7 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         slotIds.push(slot.id);
         const slotted = await f.mkBooking(f.lumina.id, `${tag}-slotted`);
         await db.clientBooking.update({ where: { id: slotted.id }, data: { slotId: slot.id, targetDate: dayKey(9), status: "COMPLETED" } });
-        for (const b of [future, todays, past, cancelled, slotted]) {
+        for (const b of [future, todays, doneToday, past, cancelled, slotted]) {
           await db.bookingAssignment.create({ data: { tenantId: f.lumina.id, bookingId: b.id, userId: inv.userId } });
         }
 
@@ -1256,12 +1532,12 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
 
         const removed = await withSession(owner, () => removeTeamMember({ ...ids, userId: inv.userId }));
         harness.assert(removed.success, "the owner removes them", JSON.stringify(removed));
-        if (removed.success) harness.assertEqual(removed.unassigned, 2, "today's and the future booking lose the assignment");
+        if (removed.success) harness.assertEqual(removed.unassigned, 2, "today's confirmed and the future booking lose the assignment");
         const left = await db.bookingAssignment.findMany({ where: { userId: inv.userId }, select: { bookingId: true } });
         harness.assertEqual(
           left.map((a) => a.bookingId).sort().join(","),
-          [past.id, cancelled.id, slotted.id].sort().join(","),
-          "past and cancelled assignments are kept"
+          [doneToday.id, past.id, cancelled.id, slotted.id].sort().join(","),
+          "past, finished (even today) and cancelled assignments are kept"
         );
 
         harness.assertEqual(await cookieUser(oldCookie), null, "their existing session ends at once");
@@ -1286,7 +1562,7 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         harness.assertEqual(await cookieUser(oldCookie), null, "the old session stays ended");
         const back = await loginWithCredentials(email, PASSWORD, "lumina-cine");
         harness.assert(back.success, "they can sign in again", JSON.stringify(back));
-        harness.assertEqual(await db.bookingAssignment.count({ where: { userId: inv.userId } }), 3, "assignments are not restored");
+        harness.assertEqual(await db.bookingAssignment.count({ where: { userId: inv.userId } }), 4, "assignments are not restored");
       } finally {
         await dropInvited(tag);
         await db.clientBooking.updateMany({ where: { slotId: { in: slotIds } }, data: { slotId: null } });

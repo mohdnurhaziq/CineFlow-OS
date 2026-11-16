@@ -5,8 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { advanceProjectStage } from "@/lib/projects/stage";
 import { env } from "@/lib/env";
-import { AuthorizationError } from "@/lib/auth/guard";
-import { canAccessBooking, requireAccess } from "@/lib/auth/access-guard";
+import { assertCanWorkOn, requireAccess, requireOwnOrManage } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
@@ -234,16 +233,17 @@ export async function rescheduleBooking(input: z.input<typeof RescheduleSchema>)
 
 const OutcomeSchema = Base.extend({ outcome: z.enum(["COMPLETED", "NO_SHOW"]) });
 
-/** Marks a confirmed session as done, or the client as a no-show. Only once it has started. */
+/**
+ * Marks a confirmed session as done, or the client as a no-show. Only once it has started.
+ * Bookings MANAGE, or OWN on a booking they are assigned to; Bookings VIEW is read-only.
+ */
 export async function recordSessionOutcome(input: z.input<typeof OutcomeSchema>): Promise<Result> {
   try {
     const data = OutcomeSchema.parse(input);
-    const user = await requireAccess(data.tenantId, "bookings", "OWN");
+    const user = await requireOwnOrManage(data.tenantId, "bookings");
     const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId }, include: { slot: true } });
     if (!booking) return fail("NOT_FOUND", "Booking not found.");
-    if (!(await canAccessBooking(user, user.access, data.tenantId, booking.id))) {
-      throw new AuthorizationError("FORBIDDEN: This booking isn't assigned to you.");
-    }
+    await assertCanWorkOn(user, data.tenantId, "bookings", booking.id);
     if (booking.status !== "CONFIRMED") return fail("NOT_CONFIRMED", "Only confirmed bookings can be marked as done or no-show.");
     if (booking.slot && !isSlotInPast(booking.slot)) return fail("NOT_STARTED", "The session hasn't started yet.");
 

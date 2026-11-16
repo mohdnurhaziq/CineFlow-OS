@@ -41,9 +41,11 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
   await catchUpShotStages(tenant.id);
 
   const listViewer = { id: viewer.user.id, access: viewer.access };
+  // Budgets and paid status only with Invoices access; without it they aren't loaded.
+  const money = levelAtLeast(viewer.access.areas.invoices, "VIEW");
   const [counts, projects] = await Promise.all([
     countAdminProjects(tenant.id, listViewer),
-    loadAdminProjects(tenant.id, listViewer, tab),
+    loadAdminProjects(tenant.id, listViewer, { tab, money }),
   ]);
 
   return (
@@ -90,7 +92,7 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
                 <th scope="col" className="text-left px-4 py-3">Stage</th>
                 <th scope="col" className="text-left px-4 py-3">Next shoot day</th>
                 <th scope="col" className="text-left px-4 py-3">Files</th>
-                <th scope="col" className="text-right px-4 py-3">Budget</th>
+                {money && <th scope="col" className="text-right px-4 py-3">Budget</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
@@ -128,10 +130,12 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
                           : "Not scheduled"}
                     </td>
                     <td className="px-4 py-3 text-zinc-400 text-xs">{files === 0 ? "None yet" : `${files} delivered`}</td>
-                    <td className="px-4 py-3 text-right font-mono text-zinc-200">
-                      {formatMoney(tenant.currency, p.budget)}
-                      <div className="text-[10px] text-zinc-500">{p.isFinalBalancePaid ? "Fully paid" : "Balance open"}</div>
-                    </td>
+                    {p.money && (
+                      <td className="px-4 py-3 text-right font-mono text-zinc-200">
+                        {formatMoney(tenant.currency, p.money.budget)}
+                        <div className="text-[10px] text-zinc-500">{p.money.isFinalBalancePaid ? "Fully paid" : "Balance open"}</div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

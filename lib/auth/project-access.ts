@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { AuthorizationError, STAFF_ROLES } from "@/lib/auth/guard";
 import { levelAtLeast, loadAccess, type AccessArea, type AccessLevel } from "@/lib/auth/access";
-import { canAccessProject } from "@/lib/auth/access-guard";
+import { canAccessProject, canWorkOn } from "@/lib/auth/access-guard";
 
 /**
  * Access to a client's own records: projects (vault, call sheets, releases), proposals and invoices.
@@ -11,6 +11,7 @@ import { canAccessProject } from "@/lib/auth/access-guard";
  * super-admin) with access to the record's area: Galleries for a project's vault (with OWN, only the
  * projects they lead or are assigned to), Production for call sheets and releases, Proposals for
  * proposals, Invoices for invoices, each at VIEW or more (or the `level` a write path asks for).
+ * A gallery write path asks for MANAGE: Galleries MANAGE, or OWN on their own project; VIEW only reads.
  * Everyone must be signed in, so every view and change has a name on it.
  *
  * Not a "use server" module.
@@ -18,7 +19,12 @@ import { canAccessProject } from "@/lib/auth/access-guard";
 
 /** Which area a record belongs to, for the team's access check. */
 export type RecordArea =
-  | { area: "galleries"; projectId: string }
+  | {
+      area: "galleries";
+      projectId: string;
+      /** Default VIEW (open it). MANAGE for team write paths: Galleries MANAGE, or OWN on their own project. */
+      level?: "VIEW" | "MANAGE";
+    }
   | { area: Exclude<AccessArea, "galleries" | "bookings">; /** Default VIEW; MANAGE for team write paths. */ level?: AccessLevel };
 
 /** True when `session` is the client this record belongs to, in its studio. No access settings involved. */
@@ -36,7 +42,11 @@ export async function canAccessClientRecord(
   if (!STAFF_ROLES.has(session.role)) return isRecordClient(session, tenantId, clientId);
   if (session.role !== "SUPER_ADMIN" && session.tenantId !== tenantId) return false;
   const access = await loadAccess({ id: session.id, role: session.role, tenantId });
-  if (record.area === "galleries") return canAccessProject(session, access, tenantId, record.projectId);
+  if (record.area === "galleries") {
+    return record.level === "MANAGE"
+      ? canWorkOn({ id: session.id, access }, tenantId, "galleries", record.projectId)
+      : canAccessProject(session, access, tenantId, record.projectId);
+  }
   return levelAtLeast(access.areas[record.area], record.level ?? "VIEW");
 }
 

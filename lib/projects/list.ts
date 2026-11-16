@@ -42,12 +42,21 @@ function visibleProjectsWhere(viewer: ProjectListViewer): Prisma.ProjectWhereInp
   return { OR: [{ studioLeadId: viewer.id }, { booking: { assignments: { some: { userId: viewer.id } } } }] };
 }
 
-/** The admin Projects (Galleries) page list for one tab, newest first, filtered to the viewer's access. */
-export async function loadAdminProjects(tenantId: string, viewer: ProjectListViewer, tab: ProjectListTab = "all") {
+/**
+ * The admin Projects (Galleries) page list for one tab, newest first, filtered to the viewer's access.
+ * `money` (Invoices VIEW) decides whether each row carries its budget and paid status: without it
+ * they are not even read, and `money` on each row is null.
+ */
+export async function loadAdminProjects(
+  tenantId: string,
+  viewer: ProjectListViewer,
+  opts: { tab?: ProjectListTab; money: boolean }
+) {
   const visible = visibleProjectsWhere(viewer);
   if (!visible) return [];
-  return db.project.findMany({
-    where: { AND: [projectListWhere(tenantId, tab), visible] },
+  const rows = await db.project.findMany({
+    where: { AND: [projectListWhere(tenantId, opts.tab ?? "all"), visible] },
+    omit: { budget: !opts.money, isFinalBalancePaid: !opts.money },
     include: {
       client: { select: { name: true } },
       callSheets: { select: { shootDate: true }, orderBy: { shootDate: "asc" } },
@@ -57,6 +66,10 @@ export async function loadAdminProjects(tenantId: string, viewer: ProjectListVie
     },
     orderBy: { createdAt: "desc" },
   });
+  return rows.map(({ budget, isFinalBalancePaid, ...project }) => ({
+    ...project,
+    money: opts.money ? { budget, isFinalBalancePaid } : null,
+  }));
 }
 
 /** How many projects each tab holds for this viewer. */

@@ -11,6 +11,7 @@ import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { IncludedPrintsCard } from "@/components/admin/bookings/included-prints-card";
 import { remainingForLines } from "@/lib/prints/entitlements";
 import { loadAssignableFor } from "@/lib/team/members";
+import { bookingActionPowers } from "@/lib/auth/page-powers";
 import { BookingDetailView } from "@/components/admin/bookings/booking-detail-view";
 
 interface BookingPageProps {
@@ -72,6 +73,7 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
         canManage={canManage}
         assignable={assignable}
         canRecordPayments={viewer.access.ticks.recordPayments}
+        actionPowers={bookingActionPowers(viewer.access)}
       />
       <IncludedPrintsCard
         tenantId={tenant.id}

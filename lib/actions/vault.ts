@@ -14,7 +14,10 @@ function safeRevalidate(path: string) {
   }
 }
 
-/** Only the project's client or the team with access to its gallery may mark up its deliverables. */
+/**
+ * Only the project's client, or the team who may work on its gallery (Galleries MANAGE, or OWN on
+ * their own project), may mark up its deliverables. Galleries VIEW only reads.
+ */
 async function requireItemAccess(itemId: string) {
   const item = await db.deliverableItem.findUnique({
     where: { id: itemId },
@@ -22,7 +25,7 @@ async function requireItemAccess(itemId: string) {
   });
   if (!item) throw new Error("Deliverable item not found");
   const { id, tenantId, clientId } = item.deliverable.project;
-  await requireRecordAccess(tenantId, clientId, { area: "galleries", projectId: id });
+  await requireRecordAccess(tenantId, clientId, { area: "galleries", projectId: id, level: "MANAGE" });
 }
 
 const ToggleFavoriteSchema = z.object({

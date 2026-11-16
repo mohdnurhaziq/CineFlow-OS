@@ -3,13 +3,14 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AuthorizationError, STAFF_ROLES } from "@/lib/auth/guard";
-import { canAccessProject, requireAccess } from "@/lib/auth/access-guard";
+import { assertCanWorkOn, requireOwnOrManage } from "@/lib/auth/access-guard";
 import { storeDeliverablePhoto, storeDeliverableVideoMaster, storeVideoReviewCopy } from "@/lib/deliverables/storage";
 import { errorMessageOf } from "@/lib/action-error";
 import { advanceProjectStage } from "@/lib/projects/stage";
 
 /**
- * Uploads a project's deliverables (the team with Galleries access to that project only).
+ * Uploads a project's deliverables: the team with Galleries MANAGE, or OWN on a project they lead or
+ * are assigned to. Galleries VIEW is read-only.
  *
  * multipart/form-data:
  *   projectId   the project
@@ -64,12 +65,9 @@ export async function POST(request: NextRequest) {
     if (!project || (session.role !== "SUPER_ADMIN" && session.tenantId !== project.tenantId)) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-    // Galleries access; with OWN, only a project they lead or are assigned to.
     try {
-      const user = await requireAccess(project.tenantId, "galleries", "OWN");
-      if (!(await canAccessProject(user, user.access, project.tenantId, project.id))) {
-        throw new AuthorizationError("FORBIDDEN: This project isn't assigned to you.");
-      }
+      const user = await requireOwnOrManage(project.tenantId, "galleries");
+      await assertCanWorkOn(user, project.tenantId, "galleries", project.id);
     } catch (e) {
       if (e instanceof AuthorizationError) return NextResponse.json({ error: "Not permitted" }, { status: 403 });
       throw e;

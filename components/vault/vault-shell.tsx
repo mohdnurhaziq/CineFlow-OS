@@ -53,6 +53,13 @@ interface VaultShellProps {
   } | null;
   photoItems: PhotoItem[];
   videoItems: VideoItem[];
+  /**
+   * Show the balance and paid status: the client, or the team with Invoices VIEW. Without it the
+   * page gets no budget or balance invoice and shows only whether the files are released.
+   */
+  money: boolean;
+  /** May favourite photos and leave retouch notes: the client, or the team who may work on this gallery. */
+  canMarkUp: boolean;
   /** Extra gallery sections (framed prints), shown after the download bar. */
   children?: React.ReactNode;
 }
@@ -64,6 +71,8 @@ export function VaultShell({
   finalInvoice,
   photoItems,
   videoItems,
+  money,
+  canMarkUp,
   children,
 }: VaultShellProps) {
   const balanceAmount = finalInvoice?.amount ?? project.budget * 0.5;
@@ -124,9 +133,21 @@ export function VaultShell({
             </div>
           </div>
 
-          {/* Dual-Tier Payment Status Badge */}
+          {/* Dual-Tier Payment Status Badge (without money: only whether the files are released) */}
           <div className="shrink-0">
-            {isPaid ? (
+            {!money ? (
+              <div className="p-3.5 rounded-xl bg-zinc-800/60 border border-zinc-700 flex items-center gap-2.5">
+                {released ? <CheckCircle2 className="size-5 text-emerald-400" /> : <Lock className="size-5 text-zinc-400" />}
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
+                    {released ? "FILES RELEASED" : "PREVIEWS ONLY"}
+                  </span>
+                  <span className="text-xs font-semibold text-white">
+                    {released ? "Full-resolution files unlocked" : "Watermarked until released"}
+                  </span>
+                </div>
+              </div>
+            ) : isPaid ? (
               <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5">
                 <CheckCircle2 className="size-5 text-emerald-400" />
                 <div>
@@ -168,7 +189,7 @@ export function VaultShell({
       </div>
 
       {/* 2. Paywall Banner (Rendered when isFinalBalancePaid is false) */}
-      {!isPaid && (
+      {money && !isPaid && (
         <PaywallBanner
           tenantSlug={tenant.slug}
           projectId={project.id}
@@ -248,6 +269,7 @@ export function VaultShell({
           items={videoItems}
           projectId={project.id}
           filesReleased={released}
+          canMarkUp={canMarkUp}
         />
       )}
 
@@ -257,6 +279,7 @@ export function VaultShell({
           items={photoItems}
           projectId={project.id}
           filesReleased={released}
+          canMarkUp={canMarkUp}
         />
       )}
     </div>

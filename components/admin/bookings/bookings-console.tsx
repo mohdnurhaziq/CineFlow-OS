@@ -15,6 +15,7 @@ import { emailNote } from "./assign-email-note";
 import { NewBookingDialog } from "./new-booking-dialog";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
+import type { BookingActionPowers } from "@/lib/auth/page-powers";
 import {
   BookingDetailsDialog,
   BookingStageBadge,
@@ -38,6 +39,8 @@ interface BookingsConsoleProps {
   canManage: boolean;
   /** The recordPayments permission: may record a booking as paid and cancel paid bookings. */
   canRecordPayments: boolean;
+  /** Mark done / no-show and create the gallery, in a booking's details. */
+  actionPowers: BookingActionPowers;
   /** The owner and active team members, for the Assign picker. */
   assignable: AssignableMember[];
   /** Data for "New booking" (book a customer into an open session). */
@@ -70,6 +73,7 @@ export function BookingsConsole({
   tenantId,
   canManage,
   canRecordPayments,
+  actionPowers,
   assignable,
   newBooking,
 }: BookingsConsoleProps) {
@@ -349,6 +353,7 @@ export function BookingsConsole({
         tenantId={tenantId}
         canManage={canManage}
         canRecordPayments={canRecordPayments}
+        actionPowers={actionPowers}
         assignable={assignable}
         onChanged={() => router.refresh()}
       />
