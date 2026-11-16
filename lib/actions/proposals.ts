@@ -282,7 +282,8 @@ export async function toggleProposalAddOn(input: ToggleAddOnInput) {
       select: { tenantId: true, clientId: true, status: true },
     });
     if (!proposal) return { success: false, error: "Proposal not found." };
-    await requireRecordAccess(proposal.tenantId, proposal.clientId, { area: "proposals" });
+    // The proposal's client, or the team with Proposals MANAGE (VIEW is read-only).
+    await requireRecordAccess(proposal.tenantId, proposal.clientId, { area: "proposals", level: "MANAGE" });
     if (proposal.status === "ACCEPTED") {
       return { success: false, error: "This proposal is already signed; its add-ons can no longer change." };
     }

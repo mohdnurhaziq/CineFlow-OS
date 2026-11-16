@@ -30,6 +30,8 @@ import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { recordInvoicePayment, sendInvoiceReminder } from "@/lib/actions/admin-invoices";
 import { createServicePackage } from "@/lib/actions/admin-services";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
+import { processInvoicePayment } from "@/lib/actions/checkout";
+import { getProposalBySlugAndId, toggleProposalAddOn } from "@/lib/actions/proposals";
 
 export async function runTier24TeamAccessTests(harness: TestHarness) {
   harness.setSuite("Tier 24", "Team Access");
@@ -465,6 +467,118 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         harness.assertEqual(ownerRecord.success === false ? ownerRecord.error : "ok", "NOT_FOUND", "owner gets past the check");
       } finally {
         await db.servicePackage.deleteMany({ where: { tenantId: f.lumina.id, name } });
+      }
+    });
+  });
+
+  // ---- Money and write paths reached through other actions ---------------------------------
+  /** A CUSTOM invoice for a seeded lumina client, removed by the caller. */
+  const mkInvoice = async (tenantId: string, clientId: string, tag: string, status: string) =>
+    db.milestoneInvoice.create({
+      data: {
+        tenantId, invoiceNumber: `T24-${tag}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, clientId,
+        milestoneType: "CUSTOM", description: "T24", amount: 50, status, dueDate: new Date(Date.now() + 7 * 86400000),
+        ...(status === "PENDING_VERIFICATION" ? { paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t24.jpg" } : {}),
+      },
+    });
+
+  await harness.test("T24-ACCESS-13: recording a payment over a slip under review also needs approvePayments", async () => {
+    await withFixture(async (f) => {
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+      const recorder = await f.mkMember("recorder", await f.mkRole("Recorder", accessJson(LEGACY_TEAM_ACCESS.areas, { recordPayments: true })));
+      const both = await f.mkMember("both", await f.mkRole("Both", accessJson(LEGACY_TEAM_ACCESS.areas, { recordPayments: true, approvePayments: true })));
+      const t = { tenantId: f.lumina.id, tenantSlug: "lumina-cine" };
+      const ids: string[] = [];
+      try {
+        const slip = await mkInvoice(f.lumina.id, client.id, "SLIP", "PENDING_VERIFICATION");
+        ids.push(slip.id);
+        const refused = await withSession(sess(recorder, "lumina-cine"), () => recordInvoicePayment({ ...t, invoiceId: slip.id, method: "CASH" }));
+        harness.assertEqual(refused.success === false ? refused.error : "ok", "SLIP_PENDING", "recordPayments alone can't record over a slip");
+        harness.assertEqual(
+          refused.success === false ? refused.message : "",
+          "A payment slip is waiting for review. Approve or reject it in Verification.",
+          "message"
+        );
+        const after = await db.milestoneInvoice.findUniqueOrThrow({ where: { id: slip.id } });
+        harness.assertEqual(after.status, "PENDING_VERIFICATION", "slip still under review");
+        harness.assertEqual(after.paymentMethod, "QR_CODE", "payment method unchanged");
+
+        const pending = await mkInvoice(f.lumina.id, client.id, "PEND", "PENDING");
+        ids.push(pending.id);
+        const recorded = await withSession(sess(recorder, "lumina-cine"), () => recordInvoicePayment({ ...t, invoiceId: pending.id, method: "CASH" }));
+        harness.assertEqual(recorded.success, true, "recordPayments records a payment on an unpaid invoice", JSON.stringify(recorded));
+        harness.assertEqual((await db.milestoneInvoice.findUniqueOrThrow({ where: { id: pending.id } })).status, "PAID", "recorded invoice is paid");
+
+        const ok = await withSession(sess(both, "lumina-cine"), () => recordInvoicePayment({ ...t, invoiceId: slip.id, method: "CASH" }));
+        harness.assertEqual(ok.success, true, "with approvePayments too, the slip can be recorded", JSON.stringify(ok));
+        harness.assertEqual((await db.milestoneInvoice.findUniqueOrThrow({ where: { id: slip.id } })).status, "PAID", "slip invoice now paid");
+      } finally {
+        await db.milestoneInvoice.deleteMany({ where: { id: { in: ids } } });
+      }
+    });
+  });
+
+  await harness.test("T24-ACCESS-14: paying an invoice for a client needs recordPayments; the client still pays their own", async () => {
+    await withFixture(async (f) => {
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+      const noTick = await f.mkMember("payer-no", await f.mkRole("Payer no", FULL_NO_TICKS));
+      const withTick = await f.mkMember("payer-yes", await f.mkRole("Payer yes", accessJson(LEGACY_TEAM_ACCESS.areas, { recordPayments: true })));
+      const ids: string[] = [];
+      try {
+        const inv = await mkInvoice(f.lumina.id, client.id, "PAY", "PENDING");
+        ids.push(inv.id);
+        const pay = { tenantId: f.lumina.id, tenantSlug: "lumina-cine", invoiceId: inv.id, paymentMethod: "QR_CODE" as const, paymentProofUrl: "/uploads/receipts/t24-team.jpg" };
+        const refused = await withSession(sess(noTick, "lumina-cine"), () => processInvoicePayment(pay));
+        harness.assert(refused.success === false && /FORBIDDEN/.test(String(refused.message)), "team without recordPayments refused", JSON.stringify(refused));
+        const after = await db.milestoneInvoice.findUniqueOrThrow({ where: { id: inv.id } });
+        harness.assertEqual(after.status, "PENDING", "invoice status unchanged");
+        harness.assertEqual(after.paymentProofUrl, null, "no slip attached");
+
+        const ok = await withSession(sess(withTick, "lumina-cine"), () => processInvoicePayment(pay));
+        harness.assertEqual(ok.success, true, "team with recordPayments sends the slip", JSON.stringify(ok));
+        harness.assertEqual((await db.milestoneInvoice.findUniqueOrThrow({ where: { id: inv.id } })).status, "PENDING_VERIFICATION", "slip under review");
+
+        const own = await mkInvoice(f.lumina.id, client.id, "OWN", "PENDING");
+        ids.push(own.id);
+        const mine = await withSession(sess(client, "lumina-cine"), () => processInvoicePayment({ ...pay, invoiceId: own.id }));
+        harness.assertEqual(mine.success, true, "the client pays their own invoice", JSON.stringify(mine));
+      } finally {
+        await db.milestoneInvoice.deleteMany({ where: { id: { in: ids } } });
+      }
+    });
+  });
+
+  await harness.test("T24-ACCESS-15: Proposals VIEW reads a proposal but only MANAGE (or its client) changes add-ons", async () => {
+    await withFixture(async (f) => {
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+      const viewer = await f.mkMember("prop-view", await f.mkRole("Prop view", accessJson({ proposals: "VIEW" })));
+      const manager = await f.mkMember("prop-manage", await f.mkRole("Prop manage", accessJson({ proposals: "MANAGE" })));
+      const proposal = await db.proposal.create({
+        data: {
+          tenantId: f.lumina.id, clientId: client.id, studioId: f.luminaOwner.id, proposalNumber: `T24-${Date.now().toString(36)}-P`,
+          title: "T24 proposal", discipline: "PHOTOGRAPHY", basePrice: 1000, totalPrice: 1000, depositAmount: 500,
+          finalBalanceAmount: 500, contractTerms: "Standard terms for the T24 test proposal.", status: "SENT",
+        },
+      });
+      try {
+        const addOn = await db.proposalAddOn.create({ data: { proposalId: proposal.id, name: "Extra", description: "Extra hour", price: 50, unit: "fixed", isSelected: false } });
+        const input = { proposalId: proposal.id, addOnId: addOn.id, isSelected: true };
+
+        const read = await withSession(sess(viewer, "lumina-cine"), () => getProposalBySlugAndId("lumina-cine", proposal.id));
+        harness.assertEqual(read?.id, proposal.id, "Proposals VIEW can read it");
+        const refused = await withSession(sess(viewer, "lumina-cine"), () => toggleProposalAddOn(input));
+        harness.assert(refused.success === false && /FORBIDDEN/.test(String(refused.error)), "Proposals VIEW can't change add-ons", JSON.stringify(refused));
+        harness.assertEqual((await db.proposalAddOn.findUniqueOrThrow({ where: { id: addOn.id } })).isSelected, false, "add-on unchanged");
+
+        const ok = await withSession(sess(manager, "lumina-cine"), () => toggleProposalAddOn(input));
+        harness.assertEqual(ok.success, true, "Proposals MANAGE changes add-ons", JSON.stringify(ok));
+        harness.assertEqual((await db.proposalAddOn.findUniqueOrThrow({ where: { id: addOn.id } })).isSelected, true, "add-on selected");
+
+        const mine = await withSession(sess(client, "lumina-cine"), () => toggleProposalAddOn({ ...input, isSelected: false }));
+        harness.assertEqual(mine.success, true, "the proposal's client changes their add-ons", JSON.stringify(mine));
+      } finally {
+        await db.proposalAddOn.deleteMany({ where: { proposalId: proposal.id } });
+        await db.proposal.deleteMany({ where: { id: proposal.id } });
       }
     });
   });

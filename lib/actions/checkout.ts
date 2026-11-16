@@ -2,6 +2,8 @@
 
 import { db } from "@/lib/db";
 import { requireRecordAccess } from "@/lib/auth/project-access";
+import { STAFF_ROLES } from "@/lib/auth/guard";
+import { requireTick } from "@/lib/auth/access-guard";
 import { revalidatePath } from "next/cache";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { findOrCreateGuestClient, getSessionClient } from "@/lib/clients";
@@ -290,8 +292,10 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
     if (!invoice) {
       return { success: false, error: "INVOICE_NOT_FOUND", message: "Invoice not found or does not belong to studio." };
     }
-    // Paying, or sending a slip, is for the invoice's client (or studio staff), signed in.
-    await requireRecordAccess(invoice.tenantId, invoice.clientId, { area: "invoices" });
+    // Paying, or sending a slip, is for the invoice's client, signed in, or the team recording a
+    // payment on the client's behalf (needs the "record payments" permission).
+    const payer = await requireRecordAccess(invoice.tenantId, invoice.clientId, { area: "invoices" });
+    if (STAFF_ROLES.has(payer.role)) await requireTick(invoice.tenantId, "recordPayments");
 
     if (invoice.status === "PAID") {
       return { success: false, error: "ALREADY_PAID", message: "Invoice is already paid." };

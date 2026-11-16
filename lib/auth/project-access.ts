@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { AuthorizationError, STAFF_ROLES } from "@/lib/auth/guard";
-import { levelAtLeast, loadAccess, type AccessArea } from "@/lib/auth/access";
+import { levelAtLeast, loadAccess, type AccessArea, type AccessLevel } from "@/lib/auth/access";
 import { canAccessProject } from "@/lib/auth/access-guard";
 
 /**
@@ -10,8 +10,8 @@ import { canAccessProject } from "@/lib/auth/access-guard";
  * Allowed: the client the record belongs to, or a team member of the record's studio (or a platform
  * super-admin) with access to the record's area: Galleries for a project's vault (with OWN, only the
  * projects they lead or are assigned to), Production for call sheets and releases, Proposals for
- * proposals, Invoices for invoices, each at VIEW or more. Everyone must be signed in, so every view
- * and change has a name on it.
+ * proposals, Invoices for invoices, each at VIEW or more (or the `level` a write path asks for).
+ * Everyone must be signed in, so every view and change has a name on it.
  *
  * Not a "use server" module.
  */
@@ -19,7 +19,7 @@ import { canAccessProject } from "@/lib/auth/access-guard";
 /** Which area a record belongs to, for the team's access check. */
 export type RecordArea =
   | { area: "galleries"; projectId: string }
-  | { area: Exclude<AccessArea, "galleries" | "bookings"> };
+  | { area: Exclude<AccessArea, "galleries" | "bookings">; /** Default VIEW; MANAGE for team write paths. */ level?: AccessLevel };
 
 /** True when `session` is the client this record belongs to, in its studio. No access settings involved. */
 export function isRecordClient(session: SessionUser | null, tenantId: string, clientId: string | null | undefined): boolean {
@@ -37,7 +37,7 @@ export async function canAccessClientRecord(
   if (session.role !== "SUPER_ADMIN" && session.tenantId !== tenantId) return false;
   const access = await loadAccess({ id: session.id, role: session.role, tenantId });
   if (record.area === "galleries") return canAccessProject(session, access, tenantId, record.projectId);
-  return levelAtLeast(access.areas[record.area], "VIEW");
+  return levelAtLeast(access.areas[record.area], record.level ?? "VIEW");
 }
 
 /**

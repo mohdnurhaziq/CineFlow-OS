@@ -53,6 +53,10 @@ export async function recordInvoicePayment(input: z.input<typeof RecordSchema>):
     const invoice = await db.milestoneInvoice.findFirst({ where: { id: data.invoiceId, tenantId: data.tenantId } });
     if (!invoice) return fail("NOT_FOUND", "Invoice not found.");
     if (!UNPAID.includes(invoice.status)) return fail("NOT_UNPAID", "This invoice is already paid or cancelled.");
+    // A slip the client sent is reviewed in Verification: recording over it would approve it.
+    if (invoice.status === "PENDING_VERIFICATION" && !session.access.ticks.approvePayments) {
+      return fail("SLIP_PENDING", "A payment slip is waiting for review. Approve or reject it in Verification.");
+    }
 
     await db.milestoneInvoice.update({
       where: { id: invoice.id },
