@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { settleToyyibpayBill } from "@/lib/payments/settle";
 import { getCurrentUser } from "@/lib/auth/session";
+import { StudioPageHeader } from "@/components/layout/studio-page-header";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Payment status", robots: { index: false, follow: false } };
@@ -50,7 +51,9 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
         : "We have not received confirmation of your payment yet. If you completed it, this can take a minute.";
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center px-4 selection:bg-amber-500/20 selection:text-amber-400">
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-amber-500/20 selection:text-amber-400">
+      <StudioPageHeader tenantSlug={tenantSlug} staffView="website" />
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
       <div role="status" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#121215] p-8 text-center space-y-4 shadow-2xl">
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Payment</span>
         <h1 className="text-2xl font-bold tracking-tight text-white">Payment status</h1>
@@ -72,6 +75,7 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
           </Link>
         </div>
       </div>
+      </main>
     </div>
   );
 }

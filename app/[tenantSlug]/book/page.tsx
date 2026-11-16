@@ -2,9 +2,8 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { CinemaBookingShell } from "@/components/booking/cinema-booking-shell";
+import { StudioPageHeader } from "@/components/layout/studio-page-header";
 import { getSessionClient } from "@/lib/clients";
-import { getCurrentUser } from "@/lib/auth/session";
-import { STAFF_ROLES } from "@/lib/auth/guard";
 import { isSlotInPast, studioNow } from "@/lib/slot-time";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 
@@ -100,23 +99,16 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
     })
   ).filter((slot) => !isSlotInPast(slot, now));
 
-  // 5. Signed-in client or staff for this studio (if any)
-  const [client, session] = await Promise.all([
-    getSessionClient(tenant.id),
-    getCurrentUser(),
-  ]);
-  const isStaff =
-    !!session &&
-    STAFF_ROLES.has(session.role) &&
-    (session.role === "SUPER_ADMIN" || session.tenantId === tenant.id);
-  const staff = isStaff && session ? { name: session.name, email: session.email, role: session.role } : null;
+  // 5. The signed-in client of this studio, if any: they book as themselves.
+  const client = await getSessionClient(tenant.id);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      {/* A client keeps their account's bar while booking; visitors and the team see the website's. */}
+      <StudioPageHeader tenantSlug={tenant.slug} staffView="website" />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <CinemaBookingShell
           clientAccount={client ? { name: client.name, email: client.email, phone: client.phone ?? "" } : null}
-          staffAccount={staff}
           tenant={tenant}
           categories={categories}
           initialSlots={slots}

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import Link from "next/link";
 import { MyBookingLookup } from "@/components/booking/my-booking-lookup";
 import { getSessionClient } from "@/lib/clients";
+import { StudioPageHeader } from "@/components/layout/studio-page-header";
 
 interface MyBookingPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -39,7 +40,9 @@ export default async function MyBookingPage({ params, searchParams }: MyBookingP
   const client = await getSessionClient(tenant.id);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col items-center px-4 py-12 gap-6 selection:bg-amber-500/20 selection:text-amber-400">
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      <StudioPageHeader tenantSlug={tenant.slug} staffView="website" />
+      <main className="flex flex-col items-center px-4 py-12 gap-6">
       {client && (
         <div className="w-full max-w-2xl p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="text-sm">
@@ -59,6 +62,7 @@ export default async function MyBookingPage({ params, searchParams }: MyBookingP
         tenantName={tenant.name}
         initialCode={typeof code === "string" ? code.slice(0, 40) : ""}
       />
+      </main>
     </div>
   );
 }

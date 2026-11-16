@@ -40,6 +40,7 @@ import { runTier19PasswordResetTests } from "./tier19-password-reset.test";
 import { runTier20PrintOrderTests } from "./tier20-print-orders.test";
 import { runTier21AdminManualTests } from "./tier21-admin-manual.test";
 import { runTier22PopupTests } from "./tier22-popups.test";
+import { runTier23PageHeaderTests } from "./tier23-page-headers.test";
 
 // The suite creates and mutates lots of records; refuse to run against anything but the
 // throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
@@ -190,6 +191,11 @@ async function runMasterTestSuite() {
     // Tier 22: Pop-up messages (top centre, below sticky headers, never over controls)
     // --------------------------------------------------------------------------
     await runTier22PopupTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 23: Page headers (every page carries its area's top bar)
+    // --------------------------------------------------------------------------
+    await runTier23PageHeaderTests(harness);
   } catch (err) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {

@@ -495,3 +495,13 @@ Commit `4d5c669`.
 - Several admin form labels aren't linked to their inputs (`htmlFor`/`id`), so screen readers don't announce them.
 - The client vault (`/<studio>/vault/<project>`) and `/api/download` don't check who is signed in: anyone with the project link can see the watermarked previews and, once the balance is paid, download the masters.
 - Demo data: seeded receipt and portfolio images are 1×1 placeholders, and `lumina_showcase_02.jpg` is missing.
+
+### To do: gaps found while writing the admin manual (2026-11-16)
+
+The manual describes the app as it is today; each item below is written there as a limitation. Update the manual page named in brackets when one is fixed.
+
+- [ ] **No screen to add or remove team members.** Team accounts can only be created by the platform administrator. Add a Team section to Settings for the owner. (Settings and your team)
+- [ ] **Proposals have no draft or decline.** A proposal is sent the moment it is created; the "Draft" and "Declined" labels exist in the proposals list but nothing ever sets them. Either add Save as draft and a client Decline button, or remove the labels. (Clients and proposals)
+- [ ] **A package can't be hidden.** It can only be deleted or moved to a switched-off category. Add an Active switch to packages, as categories, sizes and frames already have. (Services and your website)
+- [ ] **A page-load error in the browser console.** React error #418 (server and browser rendered different text) appears on the client account, checkout and call sheet pages in the Docker build. Nothing visible breaks; likely a date or time formatted in a different time zone on the server and in the browser.
+- [ ] **A held slot can still be edited or deleted in the Calendar.** `updateBookingSlot` / `deleteBookingSlot` don't refuse a slot that is Held in Checkout, which stops the client at the last step. Refuse it, as Block already does. (Slot holds, Bookings)

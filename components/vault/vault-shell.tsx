@@ -17,6 +17,8 @@ import { VideoPlayerCard, type VideoItem } from "./video-player-card";
 import { disciplineLabel } from "@/lib/labels";
 
 interface VaultShellProps {
+  /** Where "back" goes: the client's galleries, or the project page for the studio's team. */
+  back: { href: string; label: string };
   tenant: {
     id: string;
     name: string;
@@ -56,6 +58,7 @@ interface VaultShellProps {
 }
 
 export function VaultShell({
+  back,
   tenant,
   project,
   finalInvoice,
@@ -77,11 +80,11 @@ export function VaultShell({
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
-            href={`/${tenant.slug}`}
+            href={back.href}
             className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="size-3.5" />
-            <span>Back to studio website</span>
+            <span>{back.label}</span>
           </Link>
 
           <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">

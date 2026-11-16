@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { requirePageAccess } from "@/lib/auth/project-access";
 import { ProposalViewer } from "@/components/proposals/proposal-viewer";
-import { PortalTopBar } from "@/components/portal/portal-top-bar";
+import { StudioPageHeader } from "@/components/layout/studio-page-header";
 
 interface ProposalPageProps {
   params: Promise<{
@@ -97,12 +97,7 @@ export default async function ProposalPage({ params }: ProposalPageProps) {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
-      <PortalTopBar
-        tenant={tenant}
-        width="5xl"
-        back={{ href: `/${tenant.slug}/account?tab=proposals`, label: "My proposals" }}
-        staffBack={{ href: `/${tenant.slug}/admin/proposals`, label: "All proposals" }}
-      />
+      <StudioPageHeader tenantSlug={tenant.slug} />
       <ProposalViewer tenant={tenant} proposal={proposal} />
     </div>
   );

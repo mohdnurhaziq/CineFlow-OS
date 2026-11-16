@@ -2,8 +2,7 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect, useMemo, useTransition } from "react";
-import Link from "next/link";
-import { ArrowLeft, Calendar, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { CinemaStageIndicator } from "./cinema-stage-indicator";
 import { StatusLegendBar } from "./status-legend-bar";
@@ -13,8 +12,6 @@ import { BookingIntakeModal } from "./booking-intake-modal";
 import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
 import { formatMoney, packagesFor, type BookingPackageOption } from "./package-picker";
-import { ClientAccountMenu } from "@/components/account/client-account-menu";
-import { disciplineLabel } from "@/lib/labels";
 
 interface TenantData {
   id: string;
@@ -40,7 +37,6 @@ interface CinemaBookingShellProps {
   initialCategory?: string;
   initialPackageId?: string;
   clientAccount?: { name: string; email: string; phone: string } | null;
-  staffAccount?: { name: string; email?: string; role?: string } | null;
   packages?: BookingPackageOption[];
 }
 
@@ -51,7 +47,6 @@ export function CinemaBookingShell({
   initialCategory = "all",
   initialPackageId,
   clientAccount = null,
-  staffAccount = null,
   packages = [],
 }: CinemaBookingShellProps) {
   const [, startTransition] = useTransition();
@@ -233,15 +228,9 @@ export function CinemaBookingShell({
   return (
     <div className={`space-y-10 ${heldSlot ? "pb-64 sm:pb-40" : "pb-16"}`}>
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
+      {/* The page's top bar (client portal or studio website) carries the studio name and the account menu. */}
+      <div className="border-b border-zinc-800 pb-6">
         <div className="space-y-1 min-w-0">
-          <Link
-            href={`/${tenant.slug}`}
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="size-3.5" />
-            Back to studio website
-          </Link>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Cinema-Style Soundstage Calendar
           </h1>
@@ -250,29 +239,6 @@ export function CinemaBookingShell({
           </p>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-        <ClientAccountMenu
-          tenantSlug={tenant.slug}
-          client={clientAccount ? { name: clientAccount.name, email: clientAccount.email } : null}
-          staff={staffAccount}
-          returnTo={`/${tenant.slug}/book`}
-        />
-        {/* Studio Branding Pill */}
-        <div className="flex items-center gap-2.5">
-          <div
-            className="size-8 rounded-lg flex items-center justify-center font-bold text-black text-sm"
-            style={{ backgroundColor: tenant.brandColor || "#f59e0b" }}
-          >
-            {tenant.name.slice(0, 1)}
-          </div>
-          <div>
-            <div className="text-sm font-bold text-white">{tenant.name}</div>
-            <div className="text-[10px] font-mono text-zinc-400">
-              {disciplineLabel(tenant.discipline)} · {tenant.currency}
-            </div>
-          </div>
-        </div>
-        </div>
       </div>
 
       {/* Category Filter Pills */}

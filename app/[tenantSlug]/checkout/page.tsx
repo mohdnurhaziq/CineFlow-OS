@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageAccess } from "@/lib/auth/project-access";
 import { CheckoutShell } from "@/components/checkout/checkout-shell";
-import { PortalTopBar } from "@/components/portal/portal-top-bar";
+import { StudioPageHeader } from "@/components/layout/studio-page-header";
 import { Metadata } from "next";
 import { getSessionClient } from "@/lib/clients";
 import { getCheckoutGateway } from "@/lib/payments/settle";
@@ -143,6 +143,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   if (slot && !client) {
     return (
       <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+        <StudioPageHeader tenantSlug={tenant.slug} staffView="website" />
         <CheckoutAuthGate tenantSlug={tenant.slug} tenantName={tenant.name} />
       </div>
     );
@@ -150,16 +151,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
-      <PortalTopBar
-        tenant={tenant}
-        width="7xl"
-        back={
-          invoice
-            ? { href: `/${tenant.slug}/account?tab=invoices`, label: "My invoices" }
-            : { href: `/${tenant.slug}/book`, label: "Back to booking" }
-        }
-        staffBack={invoice ? { href: `/${tenant.slug}/admin/invoices/${invoice.id}`, label: "Back to invoice" } : undefined}
-      />
+      <StudioPageHeader tenantSlug={tenant.slug} staffView="website" />
       <CheckoutShell
         tenant={tenant}
         slot={slot}

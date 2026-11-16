@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { filesReleased } from "@/lib/deliverables/access";
 import { requirePageAccess } from "@/lib/auth/project-access";
 import { VaultShell } from "@/components/vault/vault-shell";
+import { StudioPageHeader } from "@/components/layout/studio-page-header";
 import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
 import { loadFramedPrints } from "@/lib/prints/gallery";
 import { currencySymbol } from "@/lib/money";
@@ -143,7 +144,13 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
+      <StudioPageHeader tenantSlug={tenant.slug} />
       <VaultShell
+        back={
+          STAFF_ROLES.has(viewer.role)
+            ? { href: `/${tenant.slug}/admin/projects/${project.id}`, label: "Back to project" }
+            : { href: `/${tenant.slug}/account?tab=projects`, label: "My galleries" }
+        }
         tenant={tenant}
         project={{
           id: project.id,

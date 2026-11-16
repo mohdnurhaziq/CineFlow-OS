@@ -5,7 +5,7 @@ import { requirePageAccess } from "@/lib/auth/project-access";
 import { calculateGoldenHour, extractCoordinates } from "@/lib/solar";
 import { generateWhatsAppCallSheetUrl } from "@/lib/whatsapp";
 import { CallSheetShell, type CallSheetDetails } from "@/components/logistics/call-sheet-shell";
-import { PortalTopBar } from "@/components/portal/portal-top-bar";
+import { StudioPageHeader } from "@/components/layout/studio-page-header";
 
 interface SetHudPageProps {
   params: Promise<{
@@ -87,11 +87,7 @@ export default async function SetHudPage({ params }: SetHudPageProps) {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
-      <PortalTopBar
-        tenant={tenant}
-        back={{ href: `/${tenant.slug}/account?tab=projects`, label: "My projects" }}
-        staffBack={{ href: `/${tenant.slug}/admin/projects/${callSheet.projectId}`, label: "Back to project" }}
-      />
+      <StudioPageHeader tenantSlug={tenant.slug} />
       <main className="py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
       <CallSheetShell
         callSheet={callSheet as unknown as CallSheetDetails}

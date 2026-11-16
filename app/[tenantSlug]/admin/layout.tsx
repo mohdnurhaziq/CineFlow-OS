@@ -1,13 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import { db } from "@/lib/db";
-import { Film, Globe } from "lucide-react";
-import { AdminNavBar } from "@/components/admin/admin-nav-bar";
-import { AdminUserNav } from "@/components/admin/admin-user-nav";
+import { AdminHeader } from "@/components/admin/admin-header";
 import { getCurrentUser } from "@/lib/auth/session";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
-import { disciplineLabel } from "@/lib/labels";
-import { ToastAnchor } from "@/components/ui/toast-anchor";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -42,77 +37,12 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
     redirect(`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(`/${tenantSlug}/admin`)}`);
   }
 
-  // Release slots whose QR/cash deposit went unpaid for 24 hours, before counting.
+  // Release slots whose QR/cash deposit went unpaid for 24 hours, before the menu counts them.
   await expireUnpaidDeposits(tenant.id);
-
-  // Live counts for the nav badges: payments to verify, print orders to start.
-  const [pendingCount, newPrintOrderCount] = await Promise.all([
-    db.milestoneInvoice.count({
-      where: {
-        tenantId: tenant.id,
-        status: "PENDING_VERIFICATION",
-      },
-    }),
-    db.printOrder.count({ where: { tenantId: tenant.id, status: "NEW" } }),
-  ]);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-amber-500/20 selection:text-amber-400 print:bg-white print:min-h-0">
-      {/* Studio Admin Top Navigation Bar */}
-      <header className="border-b border-zinc-800 bg-[#121215]/95 backdrop-blur-md sticky top-0 z-40 print:hidden">
-        <ToastAnchor />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Top Brand Bar */}
-          <div className="h-16 flex items-center justify-between border-b border-zinc-800/60">
-            {/* Brand & Studio Scope */}
-            <div className="flex items-center gap-4">
-              <Link
-                href={`/${tenant.slug}/admin`}
-                title="Admin dashboard"
-                className="flex items-center gap-2 group text-zinc-400 hover:text-white transition-colors"
-              >
-                <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
-                  <Film className="size-4" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-sm tracking-tight text-white group-hover:text-amber-400 transition-colors">
-                    {tenant.name}
-                  </span>
-                  <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
-                    Studio admin
-                  </span>
-                </div>
-              </Link>
-
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {disciplineLabel(tenant.discipline)}
-              </span>
-            </div>
-
-            {/* Right Header Actions: User Profile & Studio Website */}
-            <div className="flex items-center gap-3">
-              <Link
-                href={`/${tenant.slug}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-colors"
-              >
-                <Globe className="size-3.5 text-amber-400" />
-                <span className="hidden sm:inline">View studio website</span>
-              </Link>
-              <div className="h-4 w-px bg-zinc-800" />
-              <AdminUserNav tenantSlug={tenant.slug} user={currentUser} />
-            </div>
-          </div>
-
-          {/* Administrative Domain Navigation Tabs */}
-          <div className="py-1">
-            <AdminNavBar
-              tenantSlug={tenant.slug}
-              pendingVerificationCount={pendingCount}
-              newPrintOrderCount={newPrintOrderCount}
-            />
-          </div>
-        </div>
-      </header>
+      <AdminHeader tenant={tenant} user={currentUser} />
 
       {/* Main Content Area */}
       <main className="flex-1">{children}</main>
