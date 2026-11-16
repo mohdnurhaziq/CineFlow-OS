@@ -29,11 +29,13 @@ export default async function AdminClientsPage({ params }: ClientsPageProps) {
   });
   if (!tenant) notFound();
 
-  const clients = await loadClientDirectory(tenant.id);
+  // Paid and balance due are money: Invoices VIEW.
+  const showMoney = levelAtLeast(viewer.access.areas.invoices, "VIEW");
+  const clients = await loadClientDirectory(tenant.id, { money: showMoney });
 
   return (
     <PageShell>
-      <ClientsDirectory tenantSlug={tenant.slug} currency={tenant.currency} clients={clients} />
+      <ClientsDirectory tenantSlug={tenant.slug} currency={tenant.currency} clients={clients} showMoney={showMoney} />
     </PageShell>
   );
 }

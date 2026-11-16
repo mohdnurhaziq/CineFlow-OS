@@ -80,11 +80,11 @@ export async function loadBookingDetails(
   opts: {
     bookingId?: string;
     bookingIds?: string[];
-    /** Include prices, amounts and invoices: only for viewers with Invoices VIEW. Default true. */
-    money?: boolean;
-  } = {}
+    /** Include prices, amounts and invoices: only for viewers with Invoices VIEW. Required, so no caller leaks by default. */
+    money: boolean;
+  }
 ): Promise<BookingDetails[]> {
-  const money = opts.money ?? true;
+  const money = opts.money;
   const bookings = await db.clientBooking.findMany({
     where: {
       tenantId,

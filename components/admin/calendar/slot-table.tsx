@@ -287,7 +287,10 @@ export function SlotTable({
 
                     {/* Pricing */}
                     <td className="px-4 py-3">
-                      {slot.booking && (slot.booking.packageName || slot.booking.sessionPrice != null) ? (
+                      {slot.booking?.moneyHidden ? (
+                        // No Invoices access: what was booked, without what the client pays.
+                        <div className="text-zinc-300 text-xs">{slot.booking.packageName ?? "Booked"}</div>
+                      ) : slot.booking && (slot.booking.packageName || slot.booking.sessionPrice != null) ? (
                         // Booked: show what the client is actually paying, not the slot's default rate.
                         <>
                           <div className="text-white font-medium">

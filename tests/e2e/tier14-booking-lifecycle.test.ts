@@ -294,10 +294,10 @@ export async function runTier14BookingLifecycleTests(harness: TestHarness) {
     const lumina = await db.tenant.findUnique({ where: { slug: "lumina-cine" } });
     const apexBooking = apex ? await db.clientBooking.findFirst({ where: { tenantId: apex.id } }) : null;
     if (!apex || !lumina || !apexBooking) throw new Error("Seed apex-media booking and lumina-cine are required");
-    const own = await loadBookingDetails(apex.id, { bookingId: apexBooking.id });
+    const own = await loadBookingDetails(apex.id, { bookingId: apexBooking.id, money: true });
     harness.assertEqual(own.length, 1, "The studio's own booking loads");
     harness.assertEqual(own[0]?.id, apexBooking.id, "It is the requested booking");
-    const foreign = await loadBookingDetails(lumina.id, { bookingId: apexBooking.id });
+    const foreign = await loadBookingDetails(lumina.id, { bookingId: apexBooking.id, money: true });
     harness.assertEqual(foreign.length, 0, "Another studio's booking id loads nothing (page shows 404)");
   });
 }

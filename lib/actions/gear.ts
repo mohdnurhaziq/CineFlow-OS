@@ -231,7 +231,9 @@ export async function quarantineGearItem(input: {
   reason?: string;
 }) {
   try {
-    await requireAccess(input.tenantId, "production", "MANAGE");
+    // Flagging an item for service or damage is an on-set action: Production VIEW. Clearing it
+    // (releaseGearFromMaintenance) stays Production MANAGE.
+    await requireAccess(input.tenantId, "production", "VIEW");
     const existing = await db.inventoryItem.findFirst({
       where: { id: input.itemId, tenantId: input.tenantId },
     });

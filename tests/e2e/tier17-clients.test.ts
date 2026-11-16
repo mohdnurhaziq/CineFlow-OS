@@ -130,7 +130,7 @@ export async function runTier17ClientsTests(harness: TestHarness) {
   });
 
   await harness.test("T17-03: directory row has both bookings (guest matched by email) and correct totals", async () => {
-    const rows = await loadClientDirectory(lumina.id);
+    const rows = await loadClientDirectory(lumina.id, { money: true });
     const row = rows.find((r) => r.id === client.id);
     harness.assert(!!row, "Client is listed");
     harness.assertEqual(row!.bookingCount, 2, "Linked booking plus the mixed-case guest booking");
@@ -143,7 +143,7 @@ export async function runTier17ClientsTests(harness: TestHarness) {
   });
 
   await harness.test("T17-04: profile gathers the client's bookings and invoices", async () => {
-    const p = await loadClientProfile(lumina.id, client.id);
+    const p = await loadClientProfile(lumina.id, client.id, { money: true, proposals: true });
     harness.assert(!!p, "Profile loads");
     harness.assertDeepEqual(
       p!.bookings.map((b) => b.id).sort(),
@@ -155,7 +155,7 @@ export async function runTier17ClientsTests(harness: TestHarness) {
   });
 
   await harness.test("T17-05: a client cannot be loaded through another studio", async () => {
-    harness.assertEqual(await loadClientProfile(apex.id, client.id), null, "Lumina client via Apex is null");
+    harness.assertEqual(await loadClientProfile(apex.id, client.id, { money: true, proposals: true }), null, "Lumina client via Apex is null");
     harness.assert(
       await isNotFound(() =>
         AdminClientPage({ params: Promise.resolve({ tenantSlug: "apex-media", clientId: client.id }) })
@@ -219,7 +219,7 @@ export async function runTier17ClientsTests(harness: TestHarness) {
     harness.assert(bookings.every((b) => b.clientName === "Tess Renamed" && b.clientEmail === newEmail), "Both bookings carry the new name and email");
     harness.assert(bookings.every((b) => b.userId === client.id), "The guest booking is now linked to the account");
     harness.assert(bookings.every((b) => b.clientPhone === "+60 19-999 0000"), "Bookings carry the new phone");
-    const p = await loadClientProfile(lumina.id, client.id);
+    const p = await loadClientProfile(lumina.id, client.id, { money: true, proposals: true });
     harness.assertEqual(p!.bookings.length, 2, "Both bookings still on the profile after the email change");
   });
 
@@ -248,7 +248,7 @@ export async function runTier17ClientsTests(harness: TestHarness) {
 
     const ok = await withSession(as(owner, "lumina-cine"), () => updateClientNotes(notesInput));
     harness.assertEqual(ok.success, true, "Owner saves notes", JSON.stringify(ok));
-    const p = await loadClientProfile(lumina.id, client.id);
+    const p = await loadClientProfile(lumina.id, client.id, { money: true, proposals: true });
     harness.assertEqual(p!.client.staffNotes, "Prefers morning shoots.", "Notes saved trimmed");
 
     const fresh = await db.user.findUniqueOrThrow({ where: { id: client.id } });
@@ -269,7 +269,7 @@ export async function runTier17ClientsTests(harness: TestHarness) {
     const lateUtc = new Date("2026-11-13T20:00:00Z");
     harness.assertEqual(studioIsoDate(lateUtc), "2026-11-14", "ISO date uses the studio zone");
     harness.assertEqual(formatStudioDate(lateUtc), "14 Nov 2026", "Label uses the studio zone");
-    const rows = await loadClientDirectory(lumina.id);
+    const rows = await loadClientDirectory(lumina.id, { money: true });
     const row = rows.find((r) => r.id === client.id)!;
     harness.assert(/^\d{4}-\d{2}-\d{2}$/.test(row.lastActivityDate), "Row carries a YYYY-MM-DD date", row.lastActivityDate);
   });

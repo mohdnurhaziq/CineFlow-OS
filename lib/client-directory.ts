@@ -44,8 +44,9 @@ export interface ClientDirectoryRow {
   accountStatus: ClientAccountStatus;
   bookingCount: number;
   projectCount: number;
-  paid: number;
-  outstanding: number;
+  /** Money: null without Invoices access (left out on the server). */
+  paid: number | null;
+  outstanding: number | null;
   /** ISO timestamp of the latest booking, project or invoice, or when the account was made. */
   lastActivityAt: string;
   /** lastActivityAt as a studio-local date ("13 Nov 2026"), formatted here so server and browser agree. */
@@ -69,7 +70,8 @@ function latest(...dates: (Date | null | undefined)[]): Date {
   return best;
 }
 
-export async function loadClientDirectory(tenantId: string): Promise<ClientDirectoryRow[]> {
+/** The Clients list. Paid and outstanding totals only with `show.money` (Invoices VIEW); otherwise null. */
+export async function loadClientDirectory(tenantId: string, show: { money: boolean }): Promise<ClientDirectoryRow[]> {
   const [clients, bookings] = await Promise.all([
     db.user.findMany({
       where: { tenantId, role: "CLIENT" },
@@ -81,7 +83,8 @@ export async function loadClientDirectory(tenantId: string): Promise<ClientDirec
         passwordHash: true,
         inviteToken: true,
         createdAt: true,
-        invoices: { where: { tenantId }, select: { amount: true, status: true, createdAt: true } },
+        // Without Invoices access only the dates are read (for "last active"), never the amounts.
+        invoices: { where: { tenantId }, select: { amount: show.money, status: show.money, createdAt: true } },
         clientProjects: { where: { tenantId }, select: { updatedAt: true } },
       },
     }),
@@ -104,7 +107,9 @@ export async function loadClientDirectory(tenantId: string): Promise<ClientDirec
   return clients
     .map((c) => {
       const bookingDates = bookingsByClient.get(c.id) ?? [];
-      const money = summarizeInvoices(c.invoices);
+      const money = show.money
+        ? summarizeInvoices(c.invoices as { amount: number; status: string }[])
+        : { paid: null, outstanding: null };
       const lastActivity = latest(
         c.createdAt,
         ...bookingDates,
@@ -136,11 +141,7 @@ export async function loadClientDirectory(tenantId: string): Promise<ClientDirec
  * Money (invoices, totals, prices and budgets) only with `money` (Invoices VIEW); proposals only with
  * `proposals` (Proposals VIEW). What's left out is never loaded: empty lists and nulls.
  */
-export async function loadClientProfile(
-  tenantId: string,
-  clientId: string,
-  show: { money: boolean; proposals: boolean } = { money: true, proposals: true }
-) {
+export async function loadClientProfile(tenantId: string, clientId: string, show: { money: boolean; proposals: boolean }) {
   const client = await db.user.findFirst({
     where: { id: clientId, tenantId, role: "CLIENT" },
     select: {

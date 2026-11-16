@@ -20,9 +20,14 @@ interface ClientsDirectoryProps {
   tenantSlug: string;
   currency: string;
   clients: ClientDirectoryRow[];
+  /** Invoices VIEW: the Paid and Balance due columns and filter (the server leaves the figures out otherwise). */
+  showMoney: boolean;
 }
 
-export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirectoryProps) {
+const GRID_WITH_MONEY = "md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_5rem_5rem_minmax(0,1fr)_minmax(0,1fr)_7rem_1rem]";
+const GRID_NO_MONEY = "md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_5rem_5rem_7rem_1rem]";
+
+export function ClientsDirectory({ tenantSlug, currency, clients, showMoney }: ClientsDirectoryProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("ALL");
 
@@ -32,7 +37,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
       REGISTERED: clients.filter((c) => c.accountStatus === "REGISTERED").length,
       INVITED: clients.filter((c) => c.accountStatus === "INVITED").length,
       GUEST: clients.filter((c) => c.accountStatus === "GUEST").length,
-      OWING: clients.filter((c) => c.outstanding > 0).length,
+      OWING: clients.filter((c) => (c.outstanding ?? 0) > 0).length,
     }),
     [clients]
   );
@@ -41,7 +46,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
     const q = query.trim().toLowerCase();
     const digits = q.replace(/[^0-9]/g, "");
     return clients.filter((c) => {
-      if (filter === "OWING" ? c.outstanding <= 0 : filter !== "ALL" && c.accountStatus !== filter) return false;
+      if (filter === "OWING" ? (c.outstanding ?? 0) <= 0 : filter !== "ALL" && c.accountStatus !== filter) return false;
       if (!q) return true;
       return (
         c.name.toLowerCase().includes(q) ||
@@ -54,7 +59,17 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
   /** Downloads the clients currently shown (search and filter applied) as a CSV file. */
   function exportCsv() {
     const csv = toCsv(
-      ["Name", "Email", "Phone", "Account", "Bookings", "Projects", `Paid (${currency})`, `Balance due (${currency})`, "Last active", "Client since"],
+      [
+        "Name",
+        "Email",
+        "Phone",
+        "Account",
+        "Bookings",
+        "Projects",
+        ...(showMoney ? [`Paid (${currency})`, `Balance due (${currency})`] : []),
+        "Last active",
+        "Client since",
+      ],
       visible.map((c) => [
         c.name,
         c.email,
@@ -62,8 +77,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
         CLIENT_ACCOUNT_STATUS_LABELS[c.accountStatus],
         c.bookingCount,
         c.projectCount,
-        c.paid.toFixed(2),
-        c.outstanding.toFixed(2),
+        ...(showMoney ? [(c.paid ?? 0).toFixed(2), (c.outstanding ?? 0).toFixed(2)] : []),
         c.lastActivityDate,
         c.clientSinceDate,
       ])
@@ -84,7 +98,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
     { id: "REGISTERED", label: "Registered" },
     { id: "INVITED", label: "Invited" },
     { id: "GUEST", label: "Guest" },
-    { id: "OWING", label: "Balance due" },
+    ...(showMoney ? [{ id: "OWING" as const, label: "Balance due" }] : []),
   ];
 
   return (
@@ -92,7 +106,11 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
       <PageHeader
         icon={Users}
         title="Clients"
-        description="Everyone with an account at your studio, with their bookings, galleries and balance."
+        description={
+          showMoney
+            ? "Everyone with an account at your studio, with their bookings, galleries and balance."
+            : "Everyone with an account at your studio, with their bookings and galleries."
+        }
         actions={
           <>
         <label className="relative w-full sm:w-80">
@@ -149,13 +167,18 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
         </div>
       ) : (
         <div className="rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden">
-          <div className="hidden md:grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_5rem_5rem_minmax(0,1fr)_minmax(0,1fr)_7rem_1rem] gap-4 px-4 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+          <div
+            className={cn(
+              "hidden md:grid gap-4 px-4 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-wider text-zinc-500",
+              showMoney ? GRID_WITH_MONEY : GRID_NO_MONEY
+            )}
+          >
             <span>Client</span>
             <span>Phone</span>
             <span className="text-right">Bookings</span>
             <span className="text-right">Galleries</span>
-            <span className="text-right">Paid</span>
-            <span className="text-right">Balance due</span>
+            {showMoney && <span className="text-right">Paid</span>}
+            {showMoney && <span className="text-right">Balance due</span>}
             <span className="text-right">Last active</span>
             <span />
           </div>
@@ -164,7 +187,10 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
               <li key={c.id}>
                 <Link
                   href={`/${tenantSlug}/admin/clients/${c.id}`}
-                  className="group grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_5rem_5rem_minmax(0,1fr)_minmax(0,1fr)_7rem_1rem] gap-x-4 gap-y-1 items-center px-4 py-3 hover:bg-zinc-800/40 focus-visible:bg-zinc-800/40 outline-none transition-colors"
+                  className={cn(
+                    "group grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 items-center px-4 py-3 hover:bg-zinc-800/40 focus-visible:bg-zinc-800/40 outline-none transition-colors",
+                    showMoney ? GRID_WITH_MONEY : GRID_NO_MONEY
+                  )}
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
@@ -178,17 +204,21 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
                   <span className="hidden md:block text-xs font-mono text-zinc-300 truncate">{c.phone || "—"}</span>
                   <span className="hidden md:block text-xs font-mono text-zinc-300 text-right tabular-nums">{c.bookingCount}</span>
                   <span className="hidden md:block text-xs font-mono text-zinc-300 text-right tabular-nums">{c.projectCount}</span>
-                  <span className="hidden md:block text-xs font-mono text-zinc-300 text-right tabular-nums">
-                    {formatMoney(currency, c.paid)}
-                  </span>
-                  <span
-                    className={cn(
-                      "hidden md:block text-xs font-mono text-right tabular-nums",
-                      c.outstanding > 0 ? "text-amber-400 font-semibold" : "text-zinc-500"
-                    )}
-                  >
-                    {c.outstanding > 0 ? formatMoney(currency, c.outstanding) : "—"}
-                  </span>
+                  {showMoney && (
+                    <span className="hidden md:block text-xs font-mono text-zinc-300 text-right tabular-nums">
+                      {formatMoney(currency, c.paid ?? 0)}
+                    </span>
+                  )}
+                  {showMoney && (
+                    <span
+                      className={cn(
+                        "hidden md:block text-xs font-mono text-right tabular-nums",
+                        (c.outstanding ?? 0) > 0 ? "text-amber-400 font-semibold" : "text-zinc-500"
+                      )}
+                    >
+                      {(c.outstanding ?? 0) > 0 ? formatMoney(currency, c.outstanding ?? 0) : "—"}
+                    </span>
+                  )}
                   <span className="hidden md:block text-xs font-mono text-zinc-400 text-right">{c.lastActivityLabel}</span>
                   <ChevronRight className="size-4 text-zinc-600 group-hover:text-amber-400 transition-colors justify-self-end" aria-hidden="true" />
 
@@ -196,8 +226,8 @@ export function ClientsDirectory({ tenantSlug, currency, clients }: ClientsDirec
                   <div className="md:hidden col-span-2 flex items-center gap-3 text-[11px] font-mono text-zinc-400">
                     <span>{c.bookingCount} {c.bookingCount === 1 ? "booking" : "bookings"}</span>
                     <span>{c.projectCount} {c.projectCount === 1 ? "project" : "projects"}</span>
-                    {c.outstanding > 0 && (
-                      <span className="text-amber-400 font-semibold">{formatMoney(currency, c.outstanding)} due</span>
+                    {showMoney && (c.outstanding ?? 0) > 0 && (
+                      <span className="text-amber-400 font-semibold">{formatMoney(currency, c.outstanding ?? 0)} due</span>
                     )}
                   </div>
                 </Link>

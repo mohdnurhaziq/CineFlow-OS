@@ -747,7 +747,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     );
     harness.assert(first.success === true && second.success === true, "Both bookings created");
 
-    const all = await loadBookingDetails(lumina.id);
+    const all = await loadBookingDetails(lumina.id, { money: true });
     const a = all.find((b) => b.id === first.bookingId);
     const b = all.find((x) => x.id === second.bookingId);
     harness.assertEqual(a?.invoice?.status, "PENDING_VERIFICATION", "Unpaid booking shows its pending invoice");

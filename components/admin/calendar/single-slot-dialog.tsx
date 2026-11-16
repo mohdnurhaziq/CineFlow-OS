@@ -35,6 +35,8 @@ export interface BookingSlotRow {
     packageName?: string | null;
     sessionPrice?: number | null;
     depositAmount?: number | null;
+    /** True when the viewer has no Invoices access: the booked price and deposit are left out on the server. */
+    moneyHidden?: boolean;
   } | null;
 }
 

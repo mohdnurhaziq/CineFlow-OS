@@ -33,6 +33,8 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
   const viewer = await adminPageAccess(tenantSlug);
   if (!viewer || !levelAtLeast(viewer.access.areas.bookings, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const canManage = levelAtLeast(viewer.access.areas.bookings, "MANAGE");
+  // A booked session's price and deposit are money: Invoices VIEW. The slot's own published fee stays.
+  const money = levelAtLeast(viewer.access.areas.invoices, "VIEW");
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({
@@ -63,7 +65,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
   });
 
   // 3. Fetch scoped slots with linked client bookings
-  const slots = await db.bookingSlot.findMany({
+  const rows = await db.bookingSlot.findMany({
     where: { tenantId: tenant.id },
     include: {
       booking: {
@@ -82,6 +84,12 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
     },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
+  const slots = money
+    ? rows
+    : rows.map((s) => ({
+        ...s,
+        booking: s.booking ? { ...s.booking, sessionPrice: null, depositAmount: null, moneyHidden: true } : null,
+      }));
 
   // 4. Fetch categories for assignment dropdowns
   const categories = await db.campaignCategory.findMany({

@@ -43,7 +43,10 @@ import AdminBookingPage from "@/app/[tenantSlug]/admin/bookings/[bookingId]/page
 import AdminProjectPage from "@/app/[tenantSlug]/admin/projects/[projectId]/page";
 import AdminClientPage from "@/app/[tenantSlug]/admin/clients/[clientId]/page";
 import InventoryPage from "@/app/[tenantSlug]/admin/inventory/page";
-import { loadClientProfile } from "@/lib/client-directory";
+import { loadClientDirectory, loadClientProfile } from "@/lib/client-directory";
+import AdminCalendarPage from "@/app/[tenantSlug]/admin/calendar/page";
+import AdminClientsPage from "@/app/[tenantSlug]/admin/clients/page";
+import { quarantineGearItem, releaseGearFromMaintenance } from "@/lib/actions/gear";
 import { projectPagePowers } from "@/lib/auth/page-powers";
 import { findProp, provideReactGlobal } from "./react-tree";
 
@@ -846,6 +849,92 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       harness.assertEqual(own.canManageProduction, false, "and shoot days need Production MANAGE");
       const owner = projectPagePowers(FULL_ACCESS);
       harness.assert(Object.values(owner).every(Boolean), "the owner has every power");
+    });
+  });
+
+  await harness.test("T24-GEAR-01: Production VIEW flags gear for service; clearing it needs MANAGE", async () => {
+    await withFixture(async (f) => {
+      const crew = await f.mkMember("flag-view", await f.mkRole("Flag view", accessJson({ production: "VIEW" })));
+      const lead = await f.mkMember("flag-manage", await f.mkRole("Flag manage", accessJson({ production: "MANAGE" })));
+      const item = await db.inventoryItem.create({
+        data: { tenantId: f.lumina.id, name: "T24 lens", sku: `T24-FLAG-${Date.now().toString(36)}`, category: "Lenses", discipline: "UNIVERSAL", condition: "EXCELLENT", status: "AVAILABLE" },
+      });
+      try {
+        const t = { itemId: item.id, tenantId: f.lumina.id, tenantSlug: "lumina-cine" };
+        const flagged = await withSession(sess(crew, "lumina-cine"), () => quarantineGearItem({ ...t, condition: "MAINTENANCE_NEEDED" }));
+        harness.assertEqual(flagged.success, true, "Production VIEW flags the item", JSON.stringify(flagged));
+        harness.assertEqual((await db.inventoryItem.findUniqueOrThrow({ where: { id: item.id } })).status, "MAINTENANCE", "item is in maintenance");
+
+        const refused = await withSession(sess(crew, "lumina-cine"), () => releaseGearFromMaintenance({ ...t, condition: "EXCELLENT" }));
+        harness.assert(refused.success === false && /FORBIDDEN|don't have/i.test(String(refused.message)), "Production VIEW can't clear it", JSON.stringify(refused));
+        harness.assertEqual((await db.inventoryItem.findUniqueOrThrow({ where: { id: item.id } })).status, "MAINTENANCE", "still in maintenance");
+
+        const cleared = await withSession(sess(lead, "lumina-cine"), () => releaseGearFromMaintenance({ ...t, condition: "EXCELLENT" }));
+        harness.assertEqual(cleared.success, true, "Production MANAGE clears it", JSON.stringify(cleared));
+        harness.assertEqual((await db.inventoryItem.findUniqueOrThrow({ where: { id: item.id } })).status, "AVAILABLE", "back in the fleet");
+
+        const none = await f.mkMember("flag-none", await f.mkRole("Flag none", accessJson({ bookings: "MANAGE" })));
+        const noFlag = await withSession(sess(none, "lumina-cine"), () => quarantineGearItem({ ...t, condition: "DAMAGED" }));
+        harness.assertEqual(noFlag.success, false, "without Production access nobody flags");
+      } finally {
+        await db.inventoryItem.deleteMany({ where: { id: item.id } });
+      }
+    });
+  });
+
+  await harness.test("T24-REDACT-04: calendar rows show a booked session's price and deposit only with Invoices access", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const priced = await db.clientBooking.findFirstOrThrow({
+        where: { tenantId: f.lumina.id, slotId: { not: null }, sessionPrice: { not: null } },
+      });
+      const noMoney = await f.mkMember("cal-no", await f.mkRole("Cal no", accessJson({ bookings: "VIEW" })));
+      const withMoney = await f.mkMember("cal-yes", await f.mkRole("Cal yes", accessJson({ bookings: "VIEW", invoices: "VIEW" })));
+      type SlotRow = { id: string; price: number; booking?: { id: string; sessionPrice?: number | null; depositAmount?: number | null; moneyHidden?: boolean } | null };
+      const slotsFor = async (u: Row) =>
+        findProp<SlotRow[]>(
+          await withSession(sess(u, "lumina-cine"), () => AdminCalendarPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }) })),
+          "initialSlots"
+        ) ?? [];
+
+      const hidden = await slotsFor(noMoney);
+      const booked = hidden.filter((s) => s.booking);
+      harness.assert(booked.length > 0, "there are booked slots");
+      harness.assert(
+        booked.every((s) => s.booking!.sessionPrice == null && s.booking!.depositAmount == null && s.booking!.moneyHidden === true),
+        "no booked price or deposit without Invoices access"
+      );
+      harness.assert(hidden.some((s) => typeof s.price === "number"), "the slot's own published fee stays");
+
+      const shown = await slotsFor(withMoney);
+      const row = shown.find((s) => s.booking?.id === priced.id);
+      harness.assertEqual(row?.booking?.sessionPrice, priced.sessionPrice, "Invoices VIEW sees the booked price");
+      harness.assertEqual(row?.booking?.moneyHidden, undefined, "and nothing is marked hidden");
+    });
+  });
+
+  await harness.test("T24-REDACT-05: the Clients list shows Paid and Balance due only with Invoices access", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const hiddenRows = await loadClientDirectory(f.lumina.id, { money: false });
+      harness.assert(hiddenRows.length > 0, "the studio has clients");
+      harness.assert(hiddenRows.every((r) => r.paid === null && r.outstanding === null), "loader: no totals without money");
+      const shownRows = await loadClientDirectory(f.lumina.id, { money: true });
+      harness.assert(shownRows.every((r) => typeof r.paid === "number" && typeof r.outstanding === "number"), "loader: totals with money");
+      harness.assert(shownRows.some((r) => (r.paid ?? 0) > 0 || (r.outstanding ?? 0) > 0), "some client has money on record");
+
+      const noMoney = await f.mkMember("dir-no", await f.mkRole("Dir no", accessJson({ clients: "VIEW" })));
+      const withMoney = await f.mkMember("dir-yes", await f.mkRole("Dir yes", accessJson({ clients: "VIEW", invoices: "VIEW" })));
+      const render = (u: Row) =>
+        withSession(sess(u, "lumina-cine"), () => AdminClientsPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }) }));
+      const hidden = await render(noMoney);
+      harness.assertEqual(findProp(hidden, "showMoney"), false, "page: no money columns or Balance due filter");
+      const passed = findProp<{ paid: number | null; outstanding: number | null }[]>(hidden, "clients") ?? [];
+      harness.assert(passed.length > 0 && passed.every((r) => r.paid === null && r.outstanding === null), "page passes no totals");
+      const shown = await render(withMoney);
+      harness.assertEqual(findProp(shown, "showMoney"), true, "page: money columns with Invoices VIEW");
+      const shownPassed = findProp<{ paid: number | null }[]>(shown, "clients") ?? [];
+      harness.assert(shownPassed.every((r) => typeof r.paid === "number"), "page passes totals with Invoices VIEW");
     });
   });
 }

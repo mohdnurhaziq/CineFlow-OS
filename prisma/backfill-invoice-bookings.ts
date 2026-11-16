@@ -18,7 +18,7 @@ async function main() {
   let linked = 0;
 
   for (const tenant of tenants) {
-    const details = await loadBookingDetails(tenant.id);
+    const details = await loadBookingDetails(tenant.id, { money: true });
     for (const booking of details) {
       if (!booking.invoice) continue;
       const invoice = await db.milestoneInvoice.findUnique({
