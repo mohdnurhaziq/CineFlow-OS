@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { getCurrentUser } from "@/lib/auth/session";
+import { STAFF_ROLES } from "@/lib/auth/guard";
 import { isRateLimited } from "@/lib/rate-limit";
 
 const ALLOWED_FOLDERS = new Set([
@@ -25,7 +26,6 @@ const ANONYMOUS_FOLDERS = new Set(["logos", "receipts"]);
 const ANONYMOUS_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const ANONYMOUS_MAX_UPLOADS = 20; // per IP per window
 
-const STAFF_ROLES = new Set(["SUPER_ADMIN", "STUDIO_OWNER", "PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"]);
 
 /** Extension is derived from the validated MIME type, never from the client-supplied filename. */
 const EXTENSION_BY_TYPE: Record<string, string> = {
