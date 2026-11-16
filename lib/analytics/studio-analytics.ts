@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { formatSlotDate } from "@/lib/slot-time";
 import { liveProjectWhere } from "@/lib/projects/list";
+import { levelAtLeast, type AccessMap } from "@/lib/auth/access";
 
 /**
  * The Overview's figures. Each section is loaded only when the viewer's access covers it
@@ -26,14 +27,18 @@ export interface DashboardSections {
   calendar: boolean;
 }
 
-export const ALL_DASHBOARD_SECTIONS: DashboardSections = {
-  money: true,
-  work: true,
-  gear: true,
-  proposals: true,
-  shoots: true,
-  calendar: true,
-};
+/** The parts of the Overview this access covers. */
+export function dashboardSectionsFor(access: AccessMap): DashboardSections {
+  const has = levelAtLeast;
+  return {
+    money: has(access.areas.invoices, "VIEW"),
+    work: has(access.areas.galleries, "VIEW") || has(access.areas.bookings, "VIEW"),
+    gear: has(access.areas.production, "VIEW"),
+    proposals: has(access.areas.proposals, "VIEW"),
+    shoots: has(access.areas.production, "VIEW"),
+    calendar: has(access.areas.bookings, "VIEW"),
+  };
+}
 
 export interface StudioAnalyticsData {
   /** What the viewer may see; the rest is empty or zero. */
@@ -101,10 +106,8 @@ export interface StudioAnalyticsData {
   }>;
 }
 
-export async function loadStudioAnalytics(
-  tenantSlug: string,
-  sections: DashboardSections = ALL_DASHBOARD_SECTIONS
-): Promise<StudioAnalyticsData | null> {
+/** `sections` is required: the caller says what the viewer may see (dashboardSectionsFor). */
+export async function loadStudioAnalytics(tenantSlug: string, sections: DashboardSections): Promise<StudioAnalyticsData | null> {
   try {
     const tenant = await db.tenant.findUnique({
       where: { slug: tenantSlug },
@@ -138,7 +141,7 @@ export async function loadStudioAnalytics(
       sections.work
         ? db.project.findMany({
             where: { tenantId, ...liveProjectWhere },
-            select: { id: true, status: true, budget: true },
+            select: { id: true, status: true },
           })
         : [],
       sections.work

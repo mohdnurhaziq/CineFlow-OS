@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { loadStudioAnalytics, type DashboardSections } from "@/lib/analytics/studio-analytics";
+import { dashboardSectionsFor, loadStudioAnalytics } from "@/lib/analytics/studio-analytics";
 import { getCurrentUser } from "@/lib/auth/session";
-import { levelAtLeast, type AccessMap } from "@/lib/auth/access";
+import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { getSetupChecklist, type SetupChecklist as SetupChecklistData } from "@/lib/onboarding/checklist";
@@ -50,25 +50,12 @@ async function onboardingFor(
   return { checklist, autoStartTour: !row.onboardingTourSeenAt };
 }
 
-/** The parts of the Overview this person's access covers. */
-function sectionsFor(access: AccessMap): DashboardSections {
-  const has = levelAtLeast;
-  return {
-    money: has(access.areas.invoices, "VIEW"),
-    work: has(access.areas.galleries, "VIEW") || has(access.areas.bookings, "VIEW"),
-    gear: has(access.areas.production, "VIEW"),
-    proposals: has(access.areas.proposals, "VIEW"),
-    shoots: has(access.areas.production, "VIEW"),
-    calendar: has(access.areas.bookings, "VIEW"),
-  };
-}
-
 // Any team member; each tile shows only when their access covers it.
 export default async function AdminDashboardPage({ params }: AdminPageProps) {
   const { tenantSlug } = await params;
   const viewer = await adminPageAccess(tenantSlug);
   if (!viewer) return <NoAccess tenantSlug={tenantSlug} />;
-  const sections = sectionsFor(viewer.access);
+  const sections = dashboardSectionsFor(viewer.access);
   // Only the sections they may see are loaded, so nothing else reaches the browser.
   const [analytics, onboarding] = await Promise.all([loadStudioAnalytics(tenantSlug, sections), onboardingFor(tenantSlug)]);
 
