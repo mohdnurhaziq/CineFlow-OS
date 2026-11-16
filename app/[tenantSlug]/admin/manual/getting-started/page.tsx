@@ -92,7 +92,8 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
         />
         <ManualP>
           Team members and clients sign in on the same page. The system sends each person to the right place: your team to the
-          admin console, clients to their account.
+          admin console, clients to their account. The owner invites team members from Settings → Team; see{" "}
+          <ManualLink href={`${manual}/team`}>Team, roles and assigning shoots</ManualLink>.
         </ManualP>
       </ManualSection>
 
@@ -145,6 +146,7 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
               "",
               "See money received and waiting, upcoming shoot days, open proposals and gear at a glance.",
             ],
+            [<Ui key="ms">My schedule</Ui>, "", "Your own upcoming sessions, with the client's contact details and brief. Everyone on the team sees it, and team members land here after signing in."],
             [<Ui key="c">Clients</Ui>, "", "Look up a client, their bookings, galleries and balance, and keep private notes."],
             [
               <Ui key="p">Production</Ui>,
@@ -238,6 +240,13 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
               "Know today's and tomorrow's sessions, and read each client's brief.",
             ],
             [
+              "Every morning",
+              <>
+                <ManualLink href={`${admin}/bookings`}>Bookings</ManualLink> → Unassigned
+              </>,
+              "Assign who shoots each booking. The Overview also tells you how many upcoming bookings have nobody assigned.",
+            ],
+            [
               "After each session",
               "The booking",
               "Mark the session done, or record a no-show.",
@@ -287,8 +296,8 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
               step in.
             </>,
             <>
-              <B>Money decisions belong to the owner.</B> Approving payments, prices, cancelling paid bookings and settings are
-              limited to the studio owner on purpose.
+              <B>Money decisions are given on purpose.</B> Approving payments, setting prices and cancelling paid bookings need a tick the owner gives
+              each person. Settings and the team itself stay with the owner.
             </>,
           ]}
         />

@@ -67,13 +67,13 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
             </>,
             <>
               Online payments confirm themselves. Bank transfers and cash wait in{" "}
-              <ManualLink href={`${admin}/verification`}>Finance → Verification</ManualLink> until the studio owner approves them.
+              <ManualLink href={`${admin}/verification`}>Finance → Verification</ManualLink> until the owner, or a team member given <Ui>Approve or reject payments</Ui>, approves them.
             </>,
             <>
               <B>Approving a payment is what moves things forward:</B> a deposit confirms the booking, a final balance unlocks the
               client&apos;s full-resolution photos, a print order goes into production.
             </>,
-            <>Only the studio owner can approve, reject, record or cancel payments. Any team member can send a reminder.</>,
+            <>Only the owner, and team members given the matching access, can approve, reject, record or cancel payments. Anyone who can open Invoices as Manage can send a reminder.</>,
           ]}
         />
       </ManualSection>
@@ -112,7 +112,7 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
             [
               <Ui key="c">Invoice</Ui>,
               <>
-                The owner presses <Ui>New invoice</Ui> for anything else, for example an extra hour of coverage.
+                The owner, or someone given <Ui>Set prices</Ui>, presses <Ui>New invoice</Ui> for anything else, for example an extra hour of coverage.
               </>,
               "Marks it paid. Nothing else changes.",
             ],
@@ -217,7 +217,7 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
               rejection.
             </>,
             <>The lower part of the page keeps a record of every payment already settled: who verified it and when.</>,
-            <>Team members who are not the owner can see the queue but can&apos;t approve or reject.</>,
+            <>Team members without <Ui>Approve or reject payments</Ui> can&apos;t approve or reject.</>,
           ]}
         />
         <ManualCallout tone="warning" title="An approval can't be undone here">
@@ -237,7 +237,7 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
           rows={[
             [
               <Ui key="r">Record payment</Ui>,
-              "Owner",
+              <>The owner, and anyone given <Ui>Record or cancel payments</Ui></>,
               <>
                 For money you received outside the app. You choose how it was paid (cash, bank transfer, QR / DuitNow or the
                 studio&apos;s card terminal) and may add a reference. It has the same effect as approving a slip.
@@ -245,17 +245,17 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
             ],
             [
               <Ui key="s">Send reminder</Ui>,
-              "Any team member",
+              <>The owner, and anyone with <Ui>Invoices</Ui>: Manage</>,
               "Emails the client the invoice number, the amount and the due date. It works only while something is still owed and the client has an email address.",
             ],
             [
               <Ui key="c">Cancel invoice</Ui>,
-              "Owner",
+              <>The owner, and anyone given <Ui>Record or cancel payments</Ui></>,
               "Cancels an unpaid invoice. You give a reason. A paid invoice can't be cancelled.",
             ],
             [
               <Ui key="n">New invoice</Ui>,
-              "Owner",
+              <>The owner, and anyone given <Ui>Set prices</Ui></>,
               <>
                 On the Invoices page. Choose the client, say what it is for, enter the amount and the due date, and tick{" "}
                 <Ui>Email the invoice to the client</Ui> if you want it sent.
@@ -289,7 +289,7 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
               <Ui key="5">Overdue</Ui>,
               "An online payment for a booking was started and never finished, and the booking has been released.",
             ],
-            [<Ui key="6">Cancelled</Ui>, "Cancelled by the owner, or by the system when its booking was cancelled. Nothing is owed."],
+            [<Ui key="6">Cancelled</Ui>, "Cancelled by your team, or by the system when its booking was cancelled. Nothing is owed."],
           ]}
         />
       </ManualSection>
@@ -371,7 +371,7 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
             <>Don&apos;t approve a payment to be helpful and collect later. Approval confirms the booking and may unlock the photos.</>,
             <>Don&apos;t record a payment twice: either approve the slip in Verification or use Record payment, never both.</>,
             <>Don&apos;t cancel an invoice to give a discount. Cancel it and issue a new invoice for the agreed amount.</>,
-            <>Don&apos;t share the owner&apos;s sign-in so others can approve payments. Each approval is recorded under a name.</>,
+            <>Don&apos;t share the owner&apos;s sign-in so others can approve payments. Give them their own account with the access they need. Each approval is recorded under a name.</>,
           ]}
         />
       </ManualSection>
@@ -380,7 +380,7 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
         <div className="space-y-5">
           <ManualQa question="A client paid, but the booking still says pending. Why?">
             <p>
-              For a bank transfer or cash, the payment is waiting for the owner in Verification. For an online payment, the client
+              For a bank transfer or cash, the payment is waiting to be approved in Verification. For an online payment, the client
               may not have finished on the bank&apos;s page. The system checks with the payment provider itself; you never need to
               mark an online payment by hand.
             </p>
@@ -392,7 +392,7 @@ export default async function PaymentsManualPage({ params }: PaymentsManualPageP
             </p>
           </ManualQa>
           <ManualQa question="Why can't I approve payments?">
-            <p>Only the studio owner can approve, reject, record or cancel payments. Ask the owner to check the queue.</p>
+            <p>Approving and rejecting needs the <Ui>Approve or reject payments</Ui> tick, and recording or cancelling needs <Ui>Record or cancel payments</Ui>. The owner can give either to a team member in Settings → Team. A payment slip waiting on an invoice also needs Approve before you can record a payment on it.</p>
           </ManualQa>
           <ManualQa question="A client can't download their photos. What is missing?">
             <p>

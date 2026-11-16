@@ -316,7 +316,7 @@ export default async function GalleriesManualPage({ params }: GalleriesManualPag
           </ManualQa>
           <ManualQa question="The client paid the balance but still can't download.">
             <p>
-              Check the invoice. A bank transfer or cash payment unlocks the files only when the owner approves it in Verification.
+              Check the invoice. A bank transfer or cash payment unlocks the files only when the owner, or a team member who can approve payments, approves it in Verification.
               If the invoice shows Paid, ask the client to reload the gallery.
             </p>
           </ManualQa>

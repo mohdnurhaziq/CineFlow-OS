@@ -62,7 +62,7 @@ export default async function ClientsManualPage({ params }: ClientsManualPagePro
               A <B>proposal</B> is a quote for a larger job. The client reviews it, chooses extras and signs it online.
             </>,
             <>Signing a proposal starts a production and issues its first invoice, with no booking slot involved.</>,
-            <>Only the studio owner can send a proposal.</>,
+            <>Only the owner, and team members given <Ui>Set prices</Ui>, can send a proposal.</>,
           ]}
         />
       </ManualSection>
@@ -280,7 +280,7 @@ export default async function ClientsManualPage({ params }: ClientsManualPagePro
             </p>
           </ManualQa>
           <ManualQa question="Can a team member send a proposal?">
-            <p>No. Sending a proposal sets a price, so it is limited to the studio owner. Any team member can manage the add-on catalogue.</p>
+            <p>Yes, if the owner has given them <Ui>Set prices</Ui> and <Ui>Proposals</Ui>: Manage. Sending a proposal sets a price, so it needs that tick. Proposals on a client&apos;s page show only to people with Proposals: View or more.</p>
           </ManualQa>
           <ManualQa question="Can I delete a client?">
             <p>

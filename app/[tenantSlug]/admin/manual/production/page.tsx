@@ -66,7 +66,7 @@ export default async function ProductionManualPage({ params }: ProductionManualP
               <ManualLink href={`${admin}/inventory`}>Production → Gear &amp; Fleet</ManualLink> is your equipment list. You reserve
               items for a production and log them out and back in.
             </>,
-            <>Any team member can use everything on this page.</>,
+            <>What a team member can change here depends on their access to <Ui>Shoot days &amp; gear</Ui>. With View they can still tick shots, check gear out and in, flag gear for service and collect release forms.</>,
           ]}
         />
       </ManualSection>

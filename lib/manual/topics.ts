@@ -88,6 +88,13 @@ export const MANUAL_TOPICS: ManualTopic[] = [
     area: "Studio setup",
   },
   {
+    slug: "team",
+    title: "Team, roles and assigning shoots",
+    summary:
+      "How to invite team members, give each role the access it needs, remove or bring back people, assign who shoots each booking, and what team members see in My schedule.",
+    area: "Studio setup",
+  },
+  {
     slug: "settings-and-team",
     title: "Settings and your team",
     summary:

@@ -500,7 +500,7 @@ Commit `4d5c669`.
 
 The manual describes the app as it is today; each item below is written there as a limitation. Update the manual page named in brackets when one is fixed.
 
-- [ ] **No screen to add or remove team members.** Team accounts can only be created by the platform administrator. Add a Team section to Settings for the owner. (Settings and your team)
+- [x] **No screen to add or remove team members.** Fixed 2026-11-17: Settings has a Team tab where the owner invites, edits and removes team members, defines roles with per-area access, and assigns people to bookings (with a My schedule page). Manual: Team, roles and assigning shoots.
 - [ ] **Proposals have no draft or decline.** A proposal is sent the moment it is created; the "Draft" and "Declined" labels exist in the proposals list but nothing ever sets them. Either add Save as draft and a client Decline button, or remove the labels. (Clients and proposals)
 - [ ] **A package can't be hidden.** It can only be deleted or moved to a switched-off category. Add an Active switch to packages, as categories, sizes and frames already have. (Services and your website)
 - [ ] **A page-load error in the browser console.** React error #418 (server and browser rendered different text) appears on the client account, checkout and call sheet pages in the Docker build. Nothing visible breaks; likely a date or time formatted in a different time zone on the server and in the browser.

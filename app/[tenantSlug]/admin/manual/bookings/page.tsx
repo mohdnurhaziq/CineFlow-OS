@@ -115,8 +115,8 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
               package sets the deposit and the session price. The Calendar shows <Ui>By package</Ui> for these slots.
             </>,
             <>
-              <B>A category without packages</B> uses the fee and deposit set on the slot itself. Only the studio owner can set
-              those. A team member who tries is asked to have the owner add a package for the category first.
+              <B>A category without packages</B> uses the fee and deposit set on the slot itself. Only the owner, or someone
+              given <Ui>Set prices</Ui>, can set those. Anyone else who tries is asked to have a package added for the category first.
             </>,
             <>
               Slots whose time has passed are hidden. Tick <Ui>Show past slots</Ui> to see them. A past slot nobody booked is marked{" "}
@@ -146,7 +146,7 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
             [
               <Ui key="e">Edit Slot</Ui>,
               "Changes the date, time, category or campaign title.",
-              "Not while a client is booked into the slot or booking it right now. To change a client's time, use Move to another slot on their booking. Only the owner can change a fee or deposit.",
+              "Not while a client is booked into the slot or booking it right now. To change a client's time, use Move to another slot on their booking. Changing a fee or deposit needs the Set prices tick.",
             ],
             [
               <Ui key="d">Delete Slot</Ui>,
@@ -203,7 +203,7 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
         <ManualList
           items={[
             <>
-              <B>Only the studio owner can record a deposit as paid.</B> Other team members book it as pending, and the payment is
+              <B>Only the owner, or someone given <Ui>Record or cancel payments</Ui>, can record a deposit as paid.</B> Everyone else books it as pending, and the payment is
               approved in <ManualLink href={`${admin}/verification`}>Finance → Verification</ManualLink>.
             </>,
             <>
@@ -327,10 +327,14 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
             <>
               <Ui>Open Project →</Ui> takes you to the booking&apos;s gallery and production page.
             </>,
+            <>
+              The <Ui>Team</Ui> section shows who is assigned to the booking. See{" "}
+              <ManualLink href={`${admin}/manual/team`}>Team, roles and assigning shoots</ManualLink>.
+            </>,
           ]}
         />
         <ManualCallout tone="warning" title="Cancelling a paid booking does not refund it">
-          Only the studio owner can cancel a booking whose deposit is paid. The deposit stays on record as paid, and the client is
+          Only the owner, or someone given Record or cancel payments, can cancel a booking whose deposit is paid. The deposit stays on record as paid, and the client is
           told the studio will contact them about it. Refund it or agree a new date with the client; a refund is made outside the
           system.
         </ManualCallout>
@@ -351,7 +355,7 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
               production.
             </>,
             <>
-              <B>Emails the client</B> when they book and when you move or cancel their booking.
+              <B>Emails the client</B> when they book and when you move or cancel their booking. It also emails the team members assigned to it when it is assigned, moved or cancelled.
             </>,
             <>
               <B>Cancels unpaid bookings.</B> A bank-transfer or cash booking with no payment slip and no approval after {deposit}{" "}
@@ -366,18 +370,27 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
       </ManualSection>
 
       <ManualSection id="roles" title="Who can do what">
+        <ManualP>
+          The owner can do everything below. A team member can do it when their role or extra access allows. See{" "}
+          <ManualLink href={`${admin}/manual/team`}>Team, roles and assigning shoots</ManualLink>.
+        </ManualP>
         <ManualTable
-          head={["Task", "Studio owner", "Other team members"]}
+          head={["Task", "Who can do it"]}
           rows={[
-            ["Open, edit, block and delete slots", "Yes", "Yes"],
-            ["Set a fee or deposit on a slot", "Yes", "No"],
-            ["Book a customer as pending", "Yes", "Yes"],
-            ["Book a customer as already paid", "Yes", "No"],
-            ["Move a booking, mark it done or no-show", "Yes", "Yes"],
-            ["Cancel an unpaid booking", "Yes", "Yes"],
-            ["Cancel a booking whose deposit is paid", "Yes", "No"],
+            ["Open, edit, block and delete slots", <>The owner, and anyone with <Ui key="a">Bookings &amp; Calendar</Ui>: Manage</>],
+            ["Set a fee or deposit on a slot", <>The owner, and anyone given <Ui key="b">Set prices</Ui></>],
+            ["Book a customer as pending", <>The owner, and anyone with <Ui key="c">Bookings &amp; Calendar</Ui>: Manage</>],
+            ["Book a customer as already paid", <>The owner, and anyone given <Ui key="d">Record or cancel payments</Ui></>],
+            ["Move a booking, mark it done or no-show", <>The owner, and anyone with <Ui key="e">Bookings &amp; Calendar</Ui>: Manage</>],
+            ["Assign team members to a booking", <>The owner, and anyone with <Ui key="f">Bookings &amp; Calendar</Ui>: Manage</>],
+            ["Cancel an unpaid booking", <>The owner, and anyone with <Ui key="g">Bookings &amp; Calendar</Ui>: Manage</>],
+            ["Cancel a booking whose deposit is paid", <>The owner, and anyone given <Ui key="h">Record or cancel payments</Ui></>],
           ]}
         />
+        <ManualP>
+          Someone with <Ui>Bookings &amp; Calendar</Ui>: <Ui>View</Ui> can look at bookings but not change them. Someone with{" "}
+          <Ui>Only their own</Ui> sees just the bookings they are assigned to.
+        </ManualP>
       </ManualSection>
 
       <ManualSection id="guidelines" title="Guidelines">

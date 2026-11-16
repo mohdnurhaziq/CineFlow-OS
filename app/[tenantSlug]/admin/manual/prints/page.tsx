@@ -171,7 +171,7 @@ export default async function PrintsManualPage({ params }: PrintsManualPageProps
         />
         <ManualP>
           <B>Ordering for a client.</B> For a client who asks you in person or by message, open their gallery and press{" "}
-          <Ui>Order framed prints for client</Ui>. You build the same cart on their behalf.
+          <Ui>Order framed prints for client</Ui>. You build the same cart on their behalf. This needs Print orders: Manage.
         </ManualP>
         <ManualP>
           The <Ui>Wall Art</Ui> page on your public site is a preview only. Visitors can try frames on a sample wall, but ordering
@@ -299,8 +299,8 @@ export default async function PrintsManualPage({ params }: PrintsManualPageProps
               is waiting for your review.
             </>,
             <>
-              <B>Your team</B> can cancel an order with <Ui>Cancel order</Ui> on its page. Only the studio owner can cancel an order
-              that has a payment.
+              <B>Your team</B> can cancel an order with <Ui>Cancel order</Ui> on its page. Cancelling an order that has a payment needs
+              the <Ui>Record or cancel payments</Ui> tick.
             </>,
             <>Included prints used by a cancelled order go back to the client, who can claim them again.</>,
           ]}

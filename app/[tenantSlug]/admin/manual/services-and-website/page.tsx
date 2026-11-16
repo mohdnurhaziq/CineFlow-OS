@@ -65,7 +65,7 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
             <>
               The work on it comes from <ManualLink href={`${admin}/cms`}>Catalog &amp; CMS → Showcase CMS</ManualLink>.
             </>,
-            <>Only the studio owner can change packages and prices.</>,
+            <>Only the owner, and team members given <Ui>Set prices</Ui>, can change packages and prices.</>,
           ]}
         />
       </ManualSection>
@@ -83,7 +83,7 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
         <ManualP>
           When a client selects a slot, they are offered the packages of <B>that slot&apos;s category</B>, and the package they pick
           sets the deposit they pay now and the balance they pay later. A category with slots but no packages falls back to the fee
-          and deposit on the slot itself, which only the owner can set.
+          and deposit on the slot itself, which needs the <Ui>Set prices</Ui> tick.
         </ManualP>
         <ManualCallout title="Set up in this order">
           Category first, then its packages, then its slots. A slot in a category with no packages and no slot price gives the
@@ -116,8 +116,8 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
           items={[
             <>Turn a category off to hide it from clients without losing it, for example a seasonal one such as Raya.</>,
             <>
-              A category that still has packages can&apos;t be deleted. Move or delete those packages first. Only the owner can
-              delete a category.
+              A category that still has packages can&apos;t be deleted. Move or delete those packages first. Deleting a
+              category needs the <Ui>Set prices</Ui> tick.
             </>,
           ]}
         />
@@ -125,7 +125,7 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
 
       <ManualSection id="packages" title="Packages and prices">
         <ManualP>
-          In Services, the owner presses <Ui>New Package</Ui>.
+          In Services, the owner, or someone given <Ui>Set prices</Ui>, presses <Ui>New Package</Ui>.
         </ManualP>
         <ManualTable
           head={["Field", "What it is for"]}
@@ -154,7 +154,7 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
             </>,
             <>The deposit can&apos;t be more than the total price.</>,
             <>Deleting a package stops clients booking it. Bookings already made with it are not changed.</>,
-            <>Any team member can turn the Featured mark on or off; only the owner can edit the rest.</>,
+            <>Anyone with <Ui>Services</Ui>: Manage can turn the Featured mark on or off; editing the rest needs <Ui>Set prices</Ui>.</>,
           ]}
         />
       </ManualSection>
@@ -229,16 +229,20 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
 
       <ManualSection id="roles" title="Who can change what">
         <ManualTable
-          head={["Task", "Studio owner", "Other team members"]}
+          head={["Task", "Who can do it"]}
           rows={[
-            ["Create, edit or delete a package", "Yes", "No"],
-            ["Mark a package as featured", "Yes", "Yes"],
-            ["Create or edit a category, turn it on or off", "Yes", "Yes"],
-            ["Delete a category", "Yes", "No"],
-            ["Add, edit or delete showcase items", "Yes", "Yes"],
-            ["Add, edit or delete print sizes and frames", "Yes", "Yes"],
+            ["Create, edit or delete a package", <>The owner, and anyone given <Ui key="a">Set prices</Ui></>],
+            ["Mark a package as featured", <>The owner, and anyone with <Ui key="b">Services</Ui>: Manage</>],
+            ["Create or edit a category, turn it on or off", <>The owner, and anyone with <Ui key="c">Services</Ui>: Manage</>],
+            ["Delete a category", <>The owner, and anyone given <Ui key="d">Set prices</Ui></>],
+            ["Add, edit or delete showcase items", <>The owner, and anyone with <Ui key="e">Catalog &amp; website</Ui>: Manage</>],
+            ["Add, edit or delete print sizes and frames", <>The owner, and anyone with <Ui key="f">Catalog &amp; website</Ui>: Manage</>],
           ]}
         />
+        <ManualP>
+          Someone with only <Ui>View</Ui> on an area sees its pages without edit buttons. The owner sets this per person in{" "}
+          <ManualLink href={`${admin}/manual/team`}>Team, roles and assigning shoots</ManualLink>.
+        </ManualP>
       </ManualSection>
 
       <ManualSection id="guidelines" title="Guidelines">
@@ -278,7 +282,7 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
             <p>No. Their booking keeps the price and deposit from the day they booked. The new price applies to new bookings.</p>
           </ManualQa>
           <ManualQa question="Why can't I edit a package?">
-            <p>Only the studio owner can change packages and prices. Other team members see them but can&apos;t save changes.</p>
+            <p>Only the owner, and team members given the <Ui>Set prices</Ui> tick, can change packages and prices. Others see them but can&apos;t save changes.</p>
           </ManualQa>
           <ManualQa question="How do I run a limited-time offer?">
             <p>

@@ -24,6 +24,7 @@ import ClientsManualPage from "@/app/[tenantSlug]/admin/manual/clients-and-propo
 import ProductionManualPage from "@/app/[tenantSlug]/admin/manual/production/page";
 import ServicesManualPage from "@/app/[tenantSlug]/admin/manual/services-and-website/page";
 import SettingsManualPage from "@/app/[tenantSlug]/admin/manual/settings-and-team/page";
+import TeamManualPage from "@/app/[tenantSlug]/admin/manual/team/page";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
 
 type ManualPageFn = (props: { params: Promise<{ tenantSlug: string }> }) => Promise<unknown>;
@@ -39,6 +40,7 @@ const TOPIC_PAGES: Record<string, ManualPageFn> = {
   "clients-and-proposals": ClientsManualPage,
   production: ProductionManualPage,
   "services-and-website": ServicesManualPage,
+  team: TeamManualPage,
   "settings-and-team": SettingsManualPage,
 };
 
@@ -54,6 +56,10 @@ const QUOTED_LABELS: [string, string, string][] = [
   ["bookings", "Mark session done", "components/admin/bookings/booking-actions.tsx"],
   ["bookings", "Cancel booking", "components/admin/bookings/booking-actions.tsx"],
   ["bookings", "Needs verification", "components/admin/bookings/bookings-console.tsx"],
+  ["team", "Invite team member", "components/admin/settings/team-tab.tsx"],
+  ["team", "New role", "components/admin/settings/team-tab.tsx"],
+  ["team", "Unassigned", "components/admin/bookings/bookings-console.tsx"],
+  ["team", "My schedule", "components/admin/admin-nav-items.ts"],
   ["payments", "Payments waiting for verification", "components/checkout/verification-queue.tsx"],
   ["payments", "Zoom receipt", "components/checkout/verification-queue.tsx"],
   ["payments", "Record payment", "components/admin/invoices/invoice-admin-actions.tsx"],

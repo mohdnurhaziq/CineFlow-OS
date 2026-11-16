@@ -53,17 +53,22 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
         <ManualList
           items={[
             <>
-              <ManualLink href={`${admin}/settings`}>Settings</ManualLink> has four tabs: <Ui>Studio</Ui>, <Ui>Getting paid</Ui>,{" "}
-              <Ui>Photo delivery</Ui> and <Ui>Plan</Ui>.
+              <ManualLink href={`${admin}/settings`}>Settings</ManualLink> has five tabs: <Ui>Studio</Ui>, <Ui>Getting paid</Ui>,{" "}
+              <Ui>Photo delivery</Ui>, <Ui>Team</Ui> and <Ui>Plan</Ui>.
             </>,
             <>
               Each tab has one <Ui>Save changes</Ui> button at the bottom. It tells you when you have unsaved changes, and{" "}
               <Ui>Discard</Ui> undoes them.
             </>,
             <>
-              There are two levels of access in the admin console: the <B>studio owner</B>, and <B>other team members</B>.
+              The <B>studio owner</B> can do everything. <B>Team members</B> get the access the owner gives their role, plus any
+              extras for them.
             </>,
-            <>Anything that moves money, sets a price or changes how the studio is set up is kept for the owner.</>,
+            <>Team and Studio settings are only ever for the owner. Everything else can be given to team members.</>,
+            <>
+              Inviting people, roles and who is assigned to shoots are explained in{" "}
+              <ManualLink href={`${admin}/manual/team`}>Team, roles and assigning shoots</ManualLink>.
+            </>,
           ]}
         />
       </ManualSection>
@@ -149,9 +154,9 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
           rows={[
             ["Studio owner", "The person who runs the studio.", "Everything in the admin console."],
             [
-              "Photographer, Videographer, Crew",
-              "Everyone else on the team.",
-              "The whole admin console, except the owner-only tasks below. The three titles describe the person's job; they have the same access.",
+              "Team member",
+              "Everyone the owner invites, each with a role the studio defines.",
+              "What the role allows, plus any extras for that person. Never Team or Studio settings.",
             ],
             ["Client", "Your customers.", "Their own account only. They can never open the admin console."],
           ]}
@@ -161,8 +166,8 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
             <>Your name and role are shown at the top right of the admin console.</>,
             <>Each team member has their own sign-in. Approvals, cancellations and collected releases are recorded under the name of the person who did them.</>,
             <>
-              <B>There is no screen for adding a team member yet.</B> Team accounts are created for your studio by the platform
-              administrator. Ask them to add or remove someone.
+              <B>The owner adds and removes team members</B> in <Ui>Team</Ui> on this page. See{" "}
+              <ManualLink href={`${admin}/manual/team`}>Team, roles and assigning shoots</ManualLink>.
             </>,
           ]}
         />
@@ -170,21 +175,24 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
 
       <ManualSection id="owner-only" title="What only the owner can do">
         <ManualTable
-          head={["Area", "Owner-only task"]}
+          head={["Task", "Who can do it"]}
           rows={[
-            ["Payments", "Approve or reject a payment in Verification."],
-            ["Invoices", "Record a payment, cancel an invoice, create a new invoice."],
-            ["Bookings", "Book a customer as already paid. Cancel a booking whose deposit is paid."],
-            ["Calendar", "Set a fee or deposit on a slot."],
-            ["Print orders", "Cancel an order that has a payment."],
-            ["Services", "Create, edit or delete a package. Delete a category."],
-            ["Proposals", "Send a proposal."],
-            ["Settings", "Change the studio, payment and photo delivery settings."],
+            ["Approve or reject a payment in Verification", <>The owner, and anyone given <Ui key="a">Approve or reject payments</Ui></>],
+            [
+              "Record a payment, cancel an invoice, book a customer as already paid, cancel a booking or order that has a payment",
+              <>The owner, and anyone given <Ui key="b">Record or cancel payments</Ui></>,
+            ],
+            [
+              "Set a package price or slot fee, delete a category, send a proposal, create an invoice",
+              <>The owner, and anyone given <Ui key="c">Set prices</Ui></>,
+            ],
+            ["Change the studio, payment and photo delivery settings", "The owner only"],
+            ["Invite, change or remove team members, and edit roles", "The owner only"],
           ]}
         />
         <ManualP>
-          Everything else is open to the whole team: the calendar, bookings, galleries and uploads, print order fulfilment, shoot
-          days, gear, clients, the showcase, frames and sizes, shipping zones, and sending payment reminders.
+          Everything else follows each person&apos;s access to an area. The details are on{" "}
+          <ManualLink href={`${admin}/manual/team`}>Team, roles and assigning shoots</ManualLink>.
         </ManualP>
       </ManualSection>
 
@@ -212,8 +220,8 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
           items={[
             <>Finish Settings before you share your booking link: logo, payment details and the delivery choice.</>,
             <>Test your payment details with a small booking of your own. A wrong account number costs real money.</>,
-            <>Give every team member their own account, and have a leaver&apos;s account removed the day they go.</>,
-            <>Keep the owner&apos;s sign-in to the owner. It is the only one that can move money.</>,
+            <>Give every team member their own account, and remove a leaver the day they go.</>,
+            <>Keep the owner&apos;s sign-in to the owner. It is the only one that can change settings and the team.</>,
           ]}
         />
         <ManualP>
@@ -233,12 +241,15 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
         <div className="space-y-5">
           <ManualQa question="How do I add a new photographer to the admin console?">
             <p>
-              Ask the platform administrator to create a team account for your studio. There is no screen for it in the admin
-              console yet.
+              Open <Ui>Team</Ui> in Settings and press <Ui>Invite team member</Ui>. The{" "}
+              <ManualLink href={`${admin}/manual/team`}>Team manual page</ManualLink> has the steps.
             </p>
           </ManualQa>
           <ManualQa question="Can I give a team member permission to approve payments?">
-            <p>No. Approving payments is tied to the owner role and can&apos;t be granted to others.</p>
+            <p>
+              Yes. Tick <Ui>Approve or reject payments</Ui> for that person, or in their role. Team and Studio settings can never
+              be given away.
+            </p>
           </ManualQa>
           <ManualQa question="I saved a custom domain but it doesn't open.">
             <p>
