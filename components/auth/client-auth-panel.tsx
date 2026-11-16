@@ -122,7 +122,9 @@ export function ClientAuthPanel({
                 ? "This account belongs to a different studio."
                 : res.error === "INVALID_CREDENTIALS"
                   ? "Invalid email or password."
-                  : "Sign-in is temporarily unavailable. Please retry."
+                  : res.error === "ACCOUNT_REMOVED"
+                    ? "This account was removed by the studio."
+                    : "Sign-in is temporarily unavailable. Please retry."
           );
           return;
         }

@@ -49,6 +49,8 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
           setError("Too many attempts. Please wait a few minutes and try again.");
         } else if (result.error === "TENANT_MISMATCH") {
           setError(`Account does not have access permissions for ${tenantName}.`);
+        } else if (result.error === "ACCOUNT_REMOVED") {
+          setError("This account was removed by the studio.");
         } else {
           setError("Authentication service temporarily unavailable. Please retry.");
         }

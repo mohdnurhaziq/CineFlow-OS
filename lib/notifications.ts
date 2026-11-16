@@ -15,7 +15,8 @@ export type NotificationEvent =
   | "VAULT_UNLOCKED"
   | "PHOTOS_READY"
   | "STUDIO_UPDATE"
-  | "PASSWORD_RESET";
+  | "PASSWORD_RESET"
+  | "TEAM_INVITE";
 
 export interface BookingConfirmedPayload {
   event: "BOOKING_CONFIRMED";
@@ -144,6 +145,21 @@ export interface PasswordResetPayload {
   expiresMinutes: number;
 }
 
+/** A studio added someone to its team: a set-password link (a credential: email only, never logged). */
+export interface TeamInvitePayload {
+  event: "TEAM_INVITE";
+  studioName: string;
+  studioSlug: string;
+  /** The person invited. */
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: undefined;
+  ownerName: string;
+  roleName: string;
+  inviteUrl: string;
+  expiresDays: number;
+}
+
 export type NotificationPayload =
   | BookingConfirmedPayload
   | PaymentApprovedPayload
@@ -152,7 +168,8 @@ export type NotificationPayload =
   | VaultUnlockedPayload
   | PhotosReadyPayload
   | StudioUpdatePayload
-  | PasswordResetPayload;
+  | PasswordResetPayload
+  | TeamInvitePayload;
 
 export interface NotificationResult {
   id: string;
@@ -531,6 +548,23 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
       whatsappText = "";
       break;
     }
+    case "TEAM_INVITE": {
+      emailSubject = `You're invited to join ${payload.studioName} on CineFlow`;
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>${esc(payload.ownerName)} added you to the <strong>${esc(payload.studioName)}</strong> team as <strong>${esc(payload.roleName)}</strong>. Set your password to sign in.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${esc(payload.inviteUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            Set my password
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #a1a1aa;">This link works for ${esc(payload.expiresDays)} days.</p>
+      `;
+      emailText = `${payload.ownerName} added you to the ${payload.studioName} team as ${payload.roleName}. Set your password to sign in: ${payload.inviteUrl} (This link works for ${payload.expiresDays} days.)`;
+      // No WhatsApp text: the studio copies the link from the Team screen if it wants to share it.
+      whatsappText = "";
+      break;
+    }
   }
 
   const emailHtml = wrapEmailTemplate(payload.studioName, emailSubject, bodyHtml);
@@ -563,10 +597,15 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     emailError: delivery.error,
   };
 
-  // The log keeps recent sends for auditing; a reset link is a credential, so never keep it.
+  // The log keeps recent sends for auditing; reset and invite links are credentials, so never keep them.
   notificationLog.push(
-    payload.event === "PASSWORD_RESET"
-      ? { ...result, emailHtml: "[redacted: password reset]", emailText: "[redacted: password reset]", whatsappMessage: undefined }
+    payload.event === "PASSWORD_RESET" || payload.event === "TEAM_INVITE"
+      ? {
+          ...result,
+          emailHtml: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : "password reset"}]`,
+          emailText: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : "password reset"}]`,
+          whatsappMessage: undefined,
+        }
       : result
   );
   if (notificationLog.length > NOTIFICATION_LOG_LIMIT) notificationLog.splice(0, notificationLog.length - NOTIFICATION_LOG_LIMIT);

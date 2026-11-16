@@ -9,16 +9,18 @@ import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 interface ResetPasswordPageProps {
   params: Promise<{ tenantSlug: string }>;
-  searchParams: Promise<{ token?: string; email?: string }>;
+  searchParams: Promise<{ token?: string; email?: string; welcome?: string }>;
 }
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: ResetPasswordPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: ResetPasswordPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
+  const welcome = (await searchParams).welcome === "1";
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
+  const label = welcome ? "Set your password" : "Reset password";
   return {
-    title: tenant ? `Reset password | ${tenant.name}` : "Reset password",
+    title: tenant ? `${label} | ${tenant.name}` : label,
     robots: { index: false, follow: false },
     // The URL carries a one-time token: never send it to other sites as a referrer.
     referrer: "no-referrer",
@@ -27,27 +29,31 @@ export async function generateMetadata({ params }: ResetPasswordPageProps): Prom
 
 export default async function ResetPasswordPage({ params, searchParams }: ResetPasswordPageProps) {
   const { tenantSlug } = await params;
-  const { token, email } = await searchParams;
+  const { token, email, welcome: welcomeParam } = await searchParams;
+  // A team invite: the same one-time link, worded as a welcome.
+  const welcome = welcomeParam === "1";
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, name: true, slug: true } });
   if (!tenant) notFound();
 
   // Checking the link here (without using it up) lets an expired link say so before the form.
   const account =
     typeof token === "string" && typeof email === "string" ? await findStudioAccount(tenant.id, email) : null;
-  const valid = !!account && resetTokenMatches(account, token);
+  const valid = !!account && !account.deactivatedAt && resetTokenMatches(account, token);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center p-4 selection:bg-amber-500/20 selection:text-amber-400">
       {valid && account ? (
-        <ResetPasswordForm tenantSlug={tenant.slug} tenantName={tenant.name} email={account.email} token={token as string} />
+        <ResetPasswordForm tenantSlug={tenant.slug} tenantName={tenant.name} email={account.email} token={token as string} welcome={welcome} />
       ) : (
         <div role="alert" className="w-full max-w-md p-8 rounded-2xl bg-[#121215] border border-zinc-800 shadow-2xl text-center space-y-4">
           <div className="size-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mx-auto">
             <LinkIcon className="size-6" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">This reset link has expired</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">{welcome ? "This invite link has expired" : "This reset link has expired"}</h1>
           <p className="text-sm text-zinc-400">
-            Reset links work once and expire after an hour. Request a new one and use the latest email.
+            {welcome
+              ? "Invite links work once and expire after 30 days. Ask the studio for a new one, or request a new link below."
+              : "Reset links work once and expire after an hour. Request a new one and use the latest email."}
           </p>
           <div className="flex flex-col gap-2 pt-2">
             <Link

@@ -72,6 +72,11 @@ export async function loginWithCredentials(
       return { success: false, error: "TENANT_MISMATCH" };
     }
 
+    // Removed by the studio. Said only after the password checks out, so it reveals nothing about which emails exist.
+    if (user.deactivatedAt) {
+      return { success: false, error: "ACCOUNT_REMOVED" };
+    }
+
     const sessionUser: SessionUser = {
       id: user.id,
       email: user.email,

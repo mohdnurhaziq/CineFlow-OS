@@ -60,7 +60,8 @@ export async function requestPasswordReset(
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, name: true, slug: true } });
   if (!tenant) return SENT;
   const account = await findStudioAccount(tenant.id, email);
-  if (!account) return SENT;
+  // A removed team member gets no link, and the same reply as an unknown email.
+  if (!account || account.deactivatedAt) return SENT;
 
   await afterResponse(async () => {
     try {
@@ -122,12 +123,12 @@ export async function resetPassword(
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } });
   if (!tenant) return INVALID_LINK;
   const account = await findStudioAccount(tenant.id, email);
-  if (!account || !resetTokenMatches(account, token)) return INVALID_LINK;
+  if (!account || account.deactivatedAt || !resetTokenMatches(account, token)) return INVALID_LINK;
 
   const passwordHash = await bcrypt.hash(password, 10);
   // Single use: only succeeds while the stored token is still the one that was checked.
   const { count } = await db.user.updateMany({
-    where: { id: account.id, passwordResetToken: account.passwordResetToken },
+    where: { id: account.id, passwordResetToken: account.passwordResetToken, deactivatedAt: null },
     data: {
       passwordHash,
       passwordResetToken: null,

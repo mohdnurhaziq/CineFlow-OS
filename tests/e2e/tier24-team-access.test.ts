@@ -8,7 +8,7 @@ import path from "node:path";
 import ts from "typescript";
 import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
-import { withSession } from "./mocks/session";
+import { COOKIE_NAME, withRequest, withSession } from "./mocks/session";
 import {
   FULL_ACCESS,
   LEGACY_TEAM_ACCESS,
@@ -26,7 +26,24 @@ import { canAccessBooking, canAccessProject, requireAccess, requireTick } from "
 import { canAccessClientRecord } from "@/lib/auth/project-access";
 import { updateClientNotes } from "@/lib/actions/admin-clients";
 import { createGearItem } from "@/lib/actions/gear";
-import { createTeamRole, deleteTeamRole, updateTeamRole } from "@/lib/actions/admin-team";
+import {
+  createTeamRole,
+  deleteTeamRole,
+  inviteTeamMember,
+  removeTeamMember,
+  resendTeamInvite,
+  restoreTeamMember,
+  updateTeamMember,
+  updateTeamRole,
+} from "@/lib/actions/admin-team";
+import { teamMemberStatus } from "@/lib/team/status";
+import { loadTeamMembers } from "@/lib/team/members";
+import { getNotificationHistory } from "@/lib/notifications";
+import { getCurrentUser, loginWithCredentials } from "@/lib/auth/session";
+import { createSessionToken } from "@/lib/auth/token";
+import { requestPasswordReset, resetPassword } from "@/lib/actions/password-reset";
+import { rescheduleBooking } from "@/lib/actions/admin-booking-lifecycle";
+import { studioNow } from "@/lib/slot-time";
 import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { recordInvoicePayment, sendInvoiceReminder } from "@/lib/actions/admin-invoices";
 import { createServicePackage } from "@/lib/actions/admin-services";
@@ -282,7 +299,8 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       await withSession(s, () => requireAccess(f.lumina.id, "bookings", "MANAGE"));
       await db.user.update({ where: { id: member.id }, data: { deactivatedAt: new Date() } });
       const gone = await refusal(() => withSession(s, () => requireAccess(f.lumina.id, "bookings", "VIEW")));
-      harness.assert(isForbidden(gone), `deactivated member refused: ${gone}`);
+      // A removed account's session ends outright, so the refusal is "sign in" rather than "forbidden".
+      harness.assert(!!gone && /^(UNAUTHENTICATED|FORBIDDEN):/.test(gone), `deactivated member refused: ${gone}`);
       await db.user.update({ where: { id: member.id }, data: { deactivatedAt: null } });
 
       const crossMember = await refusal(() => withSession(s, () => requireAccess(f.apex.id, "bookings", "VIEW")));
@@ -1023,6 +1041,281 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       } finally {
         await db.tenant.delete({ where: { id: temp.id } });
       }
+    });
+  });
+
+  // ---- Members: invite, edit, remove, bring back ------------------------------------------
+  const PHOTOGRAPHER_ACCESS = accessJson({ bookings: "OWN", galleries: "OWN", production: "VIEW" });
+  const PASSWORD = "Team-pass-123";
+  const tokenOf = (inviteUrl: string) => new URL(inviteUrl).searchParams.get("token") ?? "";
+  const cookieUser = async (cookie: string) =>
+    withRequest(async (jar) => {
+      jar.set(COOKIE_NAME, cookie);
+      return getCurrentUser();
+    });
+  /** Removes every account a members test created (matched by the run tag in the email). */
+  const dropInvited = (tag: string) => db.user.deleteMany({ where: { email: { contains: tag } } });
+
+  await harness.test("T24-TEAM-01: invite creates a member who sets a password from the link", async () => {
+    const now = new Date();
+    harness.assertEqual(teamMemberStatus({ deactivatedAt: now, passwordHash: "x", passwordResetExpires: null }, now), "REMOVED", "removed wins");
+    harness.assertEqual(teamMemberStatus({ deactivatedAt: null, passwordHash: "x", passwordResetExpires: null }, now), "ACTIVE", "password set: active");
+    harness.assertEqual(teamMemberStatus({ deactivatedAt: null, passwordHash: null, passwordResetExpires: new Date(now.getTime() + 1000) }, now), "INVITED", "unexpired link: invited");
+    harness.assertEqual(teamMemberStatus({ deactivatedAt: null, passwordHash: null, passwordResetExpires: new Date(now.getTime() - 1000) }, now), "LINK_EXPIRED", "expired link");
+    harness.assertEqual(teamMemberStatus({ deactivatedAt: null, passwordHash: null, passwordResetExpires: null }, now), "LINK_EXPIRED", "no link");
+
+    await withFixture(async (f) => {
+      const tag = `t24inv${Date.now().toString(36)}`;
+      const email = `${tag}@example.test`;
+      try {
+        const owner = sess(f.luminaOwner, "lumina-cine");
+        const roleId = await f.mkRole("Invitee", accessJson({ bookings: "VIEW", galleries: "OWN" }));
+        const inv = await withSession(owner, () =>
+          inviteTeamMember({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: "  Aina Rahman ", email: `  ${email.toUpperCase()} `, roleId })
+        );
+        harness.assert(inv.success, "the owner invites", JSON.stringify(inv));
+        if (!inv.success) return;
+        const url = new URL(inv.inviteUrl);
+        harness.assertEqual(url.searchParams.get("welcome"), "1", "the link opens in welcome mode");
+        harness.assertEqual(url.pathname, "/lumina-cine/reset-password", "the link opens the studio's reset page");
+        harness.assert(/^https?:\/\//.test(inv.inviteUrl), "the link is absolute");
+        harness.assertEqual(url.searchParams.get("email"), email, "the link names the lowercased email");
+        harness.assert(["SENT", "SKIPPED", "FAILED"].includes(inv.emailDelivery), "the email outcome is reported");
+        const mail = getNotificationHistory(5).filter((n) => n.event === "TEAM_INVITE").pop();
+        harness.assertEqual(mail?.recipientEmail, email, "an invite email was attempted");
+        harness.assertEqual(mail?.emailSubject, `You're invited to join ${(await db.tenant.findUniqueOrThrow({ where: { id: f.lumina.id } })).name} on CineFlow`, "subject");
+        harness.assert(!mail?.emailHtml.includes(tokenOf(inv.inviteUrl)), "the log never keeps the link");
+
+        const row = await db.user.findUniqueOrThrow({ where: { id: inv.userId } });
+        harness.assertEqual(row.email, email, "email is stored lowercase and trimmed");
+        harness.assertEqual(row.name, "Aina Rahman", "name is trimmed");
+        harness.assertEqual(row.role, "TEAM_MEMBER", "a team account");
+        harness.assertEqual(row.teamRoleId, roleId, "holds the role");
+        harness.assertEqual(row.passwordHash, null, "no password yet");
+        const days = ((row.passwordResetExpires?.getTime() ?? 0) - Date.now()) / 86_400_000;
+        harness.assert(days > 29.9 && days <= 30, "the link lasts 30 days", days.toFixed(2));
+        harness.assertEqual(teamMemberStatus(row, new Date()), "INVITED", "status is Invited");
+
+        const set = await resetPassword({ tenantSlug: "lumina-cine", email, token: tokenOf(inv.inviteUrl), password: PASSWORD });
+        harness.assert(set.success, "the link sets the password", JSON.stringify(set));
+        const after = await db.user.findUniqueOrThrow({ where: { id: inv.userId } });
+        harness.assertEqual(teamMemberStatus(after, new Date()), "ACTIVE", "status is Active");
+        harness.assertEqual(after.passwordResetToken, null, "the link works once");
+
+        const login = await loginWithCredentials(email, PASSWORD, "lumina-cine");
+        harness.assert(login.success && !!login.user, "they sign in", JSON.stringify(login));
+        if (login.user) {
+          const role = await db.teamRole.findUniqueOrThrow({ where: { id: roleId } });
+          harness.assertEqual(JSON.stringify(await loadAccess(login.user)), JSON.stringify(parseAccess(role.access)), "their access is the role's");
+        }
+
+        const members = await loadTeamMembers(f.lumina.id);
+        harness.assertEqual(members[0]?.isOwner, true, "the owner is listed first");
+        const listed = members.find((m) => m.id === inv.userId);
+        harness.assert(listed?.status === "ACTIVE" && listed.roleName.startsWith("Invitee"), "the member is listed with role and status");
+      } finally {
+        await dropInvited(tag);
+      }
+    });
+  });
+
+  await harness.test("T24-TEAM-02: invite refuses the wrong emails", async () => {
+    await withFixture(async (f) => {
+      const tag = `t24ref${Date.now().toString(36)}`;
+      const email = `${tag}@example.test`;
+      try {
+        const owner = sess(f.luminaOwner, "lumina-cine");
+        const roleId = await f.mkRole("Refuse", PHOTOGRAPHER_ACCESS);
+        const base = { tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: "Daniel Lee", roleId };
+        const invite = (e: string) => withSession(owner, () => inviteTeamMember({ ...base, email: e }));
+
+        const own = await invite(f.luminaOwner.email.toUpperCase());
+        harness.assert(!own.success && own.error === "EMAIL_IS_OWNER", "the owner's email is refused", JSON.stringify(own));
+        const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+        const asClient = await invite(client.email);
+        harness.assert(!asClient.success && asClient.error === "EMAIL_IS_CLIENT", "a client's email is refused");
+        if (!asClient.success) harness.assertEqual(asClient.message, `${client.email} is a client of this studio. A client can't also be on the team.`, "client message");
+
+        const first = await invite(email);
+        harness.assert(first.success, "a new email is invited", JSON.stringify(first));
+        const again = await invite(email);
+        harness.assert(!again.success && again.error === "ALREADY_ON_TEAM", "inviting them again is refused");
+        if (first.success) {
+          await db.user.update({ where: { id: first.userId }, data: { passwordResetExpires: new Date(Date.now() - 1000) } });
+          const expired = await invite(email);
+          harness.assert(!expired.success && expired.error === "ALREADY_ON_TEAM", "an expired invite is still on the team (resend instead)");
+          const removed = await withSession(owner, () => removeTeamMember({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", userId: first.userId }));
+          harness.assert(removed.success, "removed");
+          const back = await invite(email);
+          harness.assert(!back.success && back.error === "REMOVED_MEMBER", "a removed member's email is refused");
+          if (!back.success) harness.assertEqual(back.message, "Daniel Lee was removed. Bring them back from the list instead.", "removed message");
+        }
+
+        const member = await f.mkMember(`${tag}-m`, roleId);
+        const sneaky = await withSession(sess(member, "lumina-cine"), () => inviteTeamMember({ ...base, email: `${tag}-x@example.test` }));
+        harness.assert(!sneaky.success, "a team member can't invite");
+        harness.assertEqual(await db.user.count({ where: { email: `${tag}-x@example.test` } }), 0, "nothing was written");
+
+        await ensureStudioRoles(f.apex.id);
+        const apexRole = await db.teamRole.findFirstOrThrow({ where: { tenantId: f.apex.id } });
+        const apex = await withSession(sess(f.apexOwner, "apex-media"), () =>
+          inviteTeamMember({ tenantId: f.apex.id, tenantSlug: "apex-media", name: "Daniel Lee", email, roleId: apexRole.id })
+        );
+        harness.assert(apex.success, "the same email can join another studio", JSON.stringify(apex));
+        const foreignRole = await withSession(owner, () => inviteTeamMember({ ...base, email: `${tag}-y@example.test`, roleId: apexRole.id }));
+        harness.assert(!foreignRole.success, "another studio's role can't be given");
+      } finally {
+        await dropInvited(tag);
+      }
+    });
+  });
+
+  await harness.test("T24-TEAM-03: extras add to the role", async () => {
+    await withFixture(async (f) => {
+      const tag = `t24ext${Date.now().toString(36)}`;
+      try {
+        const owner = sess(f.luminaOwner, "lumina-cine");
+        const roleId = await f.mkRole("Photographer", PHOTOGRAPHER_ACCESS);
+        const extra = parseAccess(accessJson({ bookings: "MANAGE" }));
+        const inv = await withSession(owner, () =>
+          inviteTeamMember({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: "Aina", email: `${tag}@example.test`, roleId, extraAccess: extra })
+        );
+        harness.assert(inv.success, "invited with extras", JSON.stringify(inv));
+        if (!inv.success) return;
+        const member = await db.user.findUniqueOrThrow({ where: { id: inv.userId } });
+        const booking = await f.mkBooking(f.lumina.id, `${tag}`);
+        const move = () =>
+          withSession(sess(member, "lumina-cine"), () =>
+            rescheduleBooking({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", bookingId: booking.id, newSlotId: "no-such-slot" })
+          );
+        const allowed = await move();
+        harness.assert(!allowed.success && allowed.error === "SLOT_UNAVAILABLE", "with the extra, the move gets past the access check", JSON.stringify(allowed));
+
+        const edited = await withSession(owner, () =>
+          updateTeamMember({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", userId: member.id, name: "Aina R", roleId, extraAccess: null })
+        );
+        harness.assert(edited.success, "the owner edits the member", JSON.stringify(edited));
+        const refused = await move();
+        harness.assert(!refused.success && refused.message.startsWith("FORBIDDEN"), "without the extra it's refused", JSON.stringify(refused));
+        const row = await db.user.findUniqueOrThrow({ where: { id: member.id } });
+        harness.assertEqual(row.name, "Aina R", "the name changed");
+
+        const sneaky = await withSession(sess(member, "lumina-cine"), () =>
+          updateTeamMember({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", userId: member.id, name: "Aina", roleId, extraAccess: FULL_ACCESS })
+        );
+        harness.assert(!sneaky.success, "a member can't give themselves more access");
+        harness.assertEqual((await db.user.findUniqueOrThrow({ where: { id: member.id } })).extraAccess, null, "their extras are unchanged");
+      } finally {
+        await dropInvited(tag);
+      }
+    });
+  });
+
+  await harness.test("T24-TEAM-04: removing someone locks them out at once", async () => {
+    await withFixture(async (f) => {
+      const tag = `t24rm${Date.now().toString(36)}`;
+      const email = `${tag}@example.test`;
+      const slotIds: string[] = [];
+      try {
+        const owner = sess(f.luminaOwner, "lumina-cine");
+        const roleId = await f.mkRole("Remove", PHOTOGRAPHER_ACCESS);
+        const ids = { tenantId: f.lumina.id, tenantSlug: "lumina-cine" };
+        const inv = await withSession(owner, () => inviteTeamMember({ ...ids, name: "Sarah Tan", email, roleId }));
+        harness.assert(inv.success, "invited");
+        if (!inv.success) return;
+        await resetPassword({ tenantSlug: "lumina-cine", email, token: tokenOf(inv.inviteUrl), password: PASSWORD });
+        const login = await loginWithCredentials(email, PASSWORD, "lumina-cine");
+        harness.assert(login.success && !!login.user, "signed in before removal");
+        await new Promise((r) => setTimeout(r, 5));
+        const oldCookie = await createSessionToken(login.user!);
+        harness.assertEqual((await cookieUser(oldCookie))?.id, inv.userId, "the session works before removal");
+
+        const today = studioNow().dateKey;
+        const dayKey = (offset: number) => new Date(Date.parse(`${today}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
+        const future = await f.mkBooking(f.lumina.id, `${tag}-future`);
+        await db.clientBooking.update({ where: { id: future.id }, data: { targetDate: dayKey(3), status: "CONFIRMED" } });
+        const todays = await f.mkBooking(f.lumina.id, `${tag}-today`);
+        await db.clientBooking.update({ where: { id: todays.id }, data: { targetDate: today } });
+        const past = await f.mkBooking(f.lumina.id, `${tag}-past`);
+        await db.clientBooking.update({ where: { id: past.id }, data: { targetDate: dayKey(-3), status: "COMPLETED" } });
+        const cancelled = await f.mkBooking(f.lumina.id, `${tag}-cancelled`);
+        await db.clientBooking.update({ where: { id: cancelled.id }, data: { targetDate: dayKey(5), status: "CANCELLED" } });
+        // The slot's date wins over targetDate: this one happened yesterday.
+        const slot = await db.bookingSlot.create({
+          data: { tenantId: f.lumina.id, date: new Date(`${dayKey(-1)}T00:00:00.000Z`), startTime: "10:00 AM", endTime: "11:00 AM", status: "BOOKED" },
+        });
+        slotIds.push(slot.id);
+        const slotted = await f.mkBooking(f.lumina.id, `${tag}-slotted`);
+        await db.clientBooking.update({ where: { id: slotted.id }, data: { slotId: slot.id, targetDate: dayKey(9), status: "COMPLETED" } });
+        for (const b of [future, todays, past, cancelled, slotted]) {
+          await db.bookingAssignment.create({ data: { tenantId: f.lumina.id, bookingId: b.id, userId: inv.userId } });
+        }
+
+        const sneaky = await withSession(sess(login.user!, "lumina-cine"), () => removeTeamMember({ ...ids, userId: inv.userId }));
+        harness.assert(!sneaky.success, "a member can't remove anyone");
+
+        const removed = await withSession(owner, () => removeTeamMember({ ...ids, userId: inv.userId }));
+        harness.assert(removed.success, "the owner removes them", JSON.stringify(removed));
+        if (removed.success) harness.assertEqual(removed.unassigned, 2, "today's and the future booking lose the assignment");
+        const left = await db.bookingAssignment.findMany({ where: { userId: inv.userId }, select: { bookingId: true } });
+        harness.assertEqual(
+          left.map((a) => a.bookingId).sort().join(","),
+          [past.id, cancelled.id, slotted.id].sort().join(","),
+          "past and cancelled assignments are kept"
+        );
+
+        harness.assertEqual(await cookieUser(oldCookie), null, "their existing session ends at once");
+        const refused = await loginWithCredentials(email, PASSWORD, "lumina-cine");
+        harness.assertEqual(refused.error, "ACCOUNT_REMOVED", "sign-in is refused as removed");
+        const wrong = await loginWithCredentials(email, "Wrong-pass-999", "lumina-cine");
+        harness.assertEqual(wrong.error, "INVALID_CREDENTIALS", "a wrong password doesn't reveal the removal");
+
+        const unknown = await requestPasswordReset({ tenantSlug: "lumina-cine", email: `${tag}-nobody@example.test` });
+        const reset = await requestPasswordReset({ tenantSlug: "lumina-cine", email });
+        harness.assertEqual(JSON.stringify(reset), JSON.stringify(unknown), "the reset reply is the same as for an unknown email");
+        const row = await db.user.findUniqueOrThrow({ where: { id: inv.userId } });
+        harness.assertEqual(row.passwordResetToken, null, "no reset link is issued for a removed account");
+        harness.assertEqual(teamMemberStatus(row, new Date()), "REMOVED", "status is Removed");
+        harness.assert(!!row.deactivatedAt, "deactivatedAt is set");
+
+        const resend = await withSession(owner, () => resendTeamInvite({ ...ids, userId: inv.userId }));
+        harness.assert(!resend.success && resend.error === "REMOVED_MEMBER", "no new link for a removed member");
+
+        const restored = await withSession(owner, () => restoreTeamMember({ ...ids, userId: inv.userId }));
+        harness.assert(restored.success, "the owner brings them back", JSON.stringify(restored));
+        harness.assertEqual(await cookieUser(oldCookie), null, "the old session stays ended");
+        const back = await loginWithCredentials(email, PASSWORD, "lumina-cine");
+        harness.assert(back.success, "they can sign in again", JSON.stringify(back));
+        harness.assertEqual(await db.bookingAssignment.count({ where: { userId: inv.userId } }), 3, "assignments are not restored");
+      } finally {
+        await dropInvited(tag);
+        await db.clientBooking.updateMany({ where: { slotId: { in: slotIds } }, data: { slotId: null } });
+        await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
+      }
+    });
+  });
+
+  await harness.test("T24-TEAM-05: the owner's row can't be changed here", async () => {
+    await withFixture(async (f) => {
+      const owner = sess(f.luminaOwner, "lumina-cine");
+      const ids = { tenantId: f.lumina.id, tenantSlug: "lumina-cine" };
+      const roleId = await f.mkRole("Owner check", PHOTOGRAPHER_ACCESS);
+      const rm = await withSession(owner, () => removeTeamMember({ ...ids, userId: f.luminaOwner.id }));
+      harness.assert(!rm.success && rm.error === "CANNOT_CHANGE_OWNER", "the owner can't be removed", JSON.stringify(rm));
+      const up = await withSession(owner, () => updateTeamMember({ ...ids, userId: f.luminaOwner.id, name: "X", roleId, extraAccess: null }));
+      harness.assert(!up.success && up.error === "CANNOT_CHANGE_OWNER", "the owner can't be edited");
+      const rs = await withSession(owner, () => resendTeamInvite({ ...ids, userId: f.luminaOwner.id }));
+      harness.assert(!rs.success && rs.error === "CANNOT_CHANGE_OWNER", "no invite for the owner");
+      const row = await db.user.findUniqueOrThrow({ where: { id: f.luminaOwner.id } });
+      harness.assert(!row.deactivatedAt && row.name === f.luminaOwner.name && row.teamRoleId === null, "the owner is untouched");
+
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+      const onClient = await withSession(owner, () => removeTeamMember({ ...ids, userId: client.id }));
+      harness.assert(!onClient.success && onClient.error === "NOT_FOUND", "a client isn't a team member");
+      const apexMember = await db.user.findFirstOrThrow({ where: { tenantId: f.apex.id, role: { in: ["PHOTOGRAPHER", "CREW"] } } });
+      const foreign = await withSession(owner, () => removeTeamMember({ ...ids, userId: apexMember.id }));
+      harness.assert(!foreign.success && foreign.error === "NOT_FOUND", "another studio's member can't be touched");
+      harness.assertEqual((await db.user.findUniqueOrThrow({ where: { id: apexMember.id } })).deactivatedAt, null, "they stay active");
     });
   });
 }

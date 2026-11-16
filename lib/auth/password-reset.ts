@@ -7,19 +7,25 @@ import { db } from "@/lib/db";
  */
 
 export const PASSWORD_RESET_TTL_MINUTES = 60;
+/** A team invite is a reset link that lasts 30 days. */
+export const TEAM_INVITE_TTL_MINUTES = 30 * 24 * 60;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
 /** Issues a fresh reset token for `userId` (replacing any earlier one) and returns the raw token. */
-export async function issuePasswordReset(userId: string, now: Date = new Date()): Promise<string> {
+export async function issuePasswordReset(
+  userId: string,
+  now: Date = new Date(),
+  ttlMinutes: number = PASSWORD_RESET_TTL_MINUTES
+): Promise<string> {
   const token = randomBytes(32).toString("base64url");
   await db.user.update({
     where: { id: userId },
     data: {
       passwordResetToken: hashToken(token),
-      passwordResetExpires: new Date(now.getTime() + PASSWORD_RESET_TTL_MINUTES * 60_000),
+      passwordResetExpires: new Date(now.getTime() + ttlMinutes * 60_000),
     },
   });
   return token;
@@ -43,7 +49,7 @@ export async function findStudioAccount(tenantId: string, email: string) {
   const raw = email.trim();
   return db.user.findFirst({
     where: { tenantId, email: { in: Array.from(new Set([raw.toLowerCase(), raw])) } },
-    select: { id: true, name: true, email: true, role: true, passwordResetToken: true, passwordResetExpires: true },
+    select: { id: true, name: true, email: true, role: true, passwordResetToken: true, passwordResetExpires: true, deactivatedAt: true },
   });
 }
 

@@ -108,7 +108,7 @@ export function mergeAccess(a: AccessMap, b: AccessMap): AccessMap {
 }
 
 /** Account types that count as team. */
-const TEAM_ACCOUNT_ROLES = ["PHOTOGRAPHER", "VIDEOGRAPHER", "CREW", "TEAM_MEMBER"];
+export const TEAM_ACCOUNT_ROLES = ["PHOTOGRAPHER", "VIDEOGRAPHER", "CREW", "TEAM_MEMBER"];
 /** Pre-upgrade account types: only these are ever linked to a legacy role automatically. */
 const LEGACY_ACCOUNT_ROLES = ["PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"];
 

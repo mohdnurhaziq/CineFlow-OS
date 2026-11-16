@@ -13,12 +13,14 @@ interface ResetPasswordFormProps {
   tenantName: string;
   email: string;
   token: string;
+  /** A team invite: welcome wording instead of "reset". */
+  welcome?: boolean;
 }
 
 const inputClass =
   "w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors font-mono";
 
-export function ResetPasswordForm({ tenantSlug, tenantName, email, token }: ResetPasswordFormProps) {
+export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcome = false }: ResetPasswordFormProps) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
@@ -52,8 +54,17 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token }: Rese
         <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mx-auto mb-3">
           <KeyRound className="size-6" aria-hidden="true" />
         </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Choose a new password</span>
-        <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
+        {welcome ? (
+          <>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Welcome to {tenantName}</h1>
+            <p className="text-sm text-zinc-400">Set a password to start using your studio account.</p>
+          </>
+        ) : (
+          <>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Choose a new password</span>
+            <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
+          </>
+        )}
         <p className="text-xs text-zinc-400 break-all">for {email}</p>
       </div>
 
@@ -74,7 +85,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token }: Rese
         <div className="space-y-1.5">
           <label htmlFor="new-password" className="text-xs font-mono text-zinc-300 flex items-center gap-1.5">
             <Lock className="size-3.5 text-amber-400" aria-hidden="true" />
-            New password
+            {welcome ? "Password" : "New password"}
           </label>
           <div className="relative">
             <input
@@ -95,7 +106,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token }: Rese
         <div className="space-y-1.5">
           <label htmlFor="confirm-password" className="text-xs font-mono text-zinc-300 flex items-center gap-1.5">
             <Lock className="size-3.5 text-amber-400" aria-hidden="true" />
-            Confirm new password
+            {welcome ? "Confirm password" : "Confirm new password"}
           </label>
           <input
             id="confirm-password"
@@ -116,12 +127,12 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token }: Rese
             <span>Saving…</span>
           ) : (
             <>
-              <span>Save new password</span>
+              <span>{welcome ? "Set my password" : "Save new password"}</span>
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </>
           )}
         </button>
-        <p className="text-[11px] text-zinc-500 text-center">Saving signs you out on every other device.</p>
+        {!welcome && <p className="text-[11px] text-zinc-500 text-center">Saving signs you out on every other device.</p>}
       </form>
     </div>
   );

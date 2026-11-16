@@ -10,6 +10,7 @@ import type { StudioTenantData } from "@/components/admin/settings/settings-ui";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { ensureStudioRoles, parseAccess } from "@/lib/auth/access";
 import { NoAccess } from "@/components/admin/no-access";
+import { loadTeamMembers, type TeamMemberRow } from "@/lib/team/members";
 
 interface SettingsPageProps {
   params: Promise<{
@@ -60,6 +61,7 @@ export default async function AdminSettingsPage({ params, searchParams }: Settin
   const zones = zoneRows.map((z) => ({ name: z.name, fee: z.fee, states: parseZoneStates(z.statesJson) }));
 
   let roles: { id: string; name: string; access: ReturnType<typeof parseAccess>; members: number }[] = [];
+  let members: TeamMemberRow[] = [];
   if (tab === "team") {
     await ensureStudioRoles(tenant.id);
     const rows = await db.teamRole.findMany({
@@ -68,12 +70,13 @@ export default async function AdminSettingsPage({ params, searchParams }: Settin
       include: { _count: { select: { members: true } } },
     });
     roles = rows.map((r) => ({ id: r.id, name: r.name, access: parseAccess(r.access), members: r._count.members }));
+    members = await loadTeamMembers(tenant.id);
   }
 
   return (
     <PageShell>
       {/* key: a tab starts from the saved values each time it opens */}
-      <SettingsShell key={tab} tenant={data as unknown as StudioTenantData} tab={tab} host={host} zones={zones} roles={roles} />
+      <SettingsShell key={tab} tenant={data as unknown as StudioTenantData} tab={tab} host={host} zones={zones} roles={roles} members={members} />
     </PageShell>
   );
 }
