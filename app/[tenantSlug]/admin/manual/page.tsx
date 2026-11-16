@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { PageHeader, PageShell } from "@/components/ui/page";
-import { MANUAL_TOPICS, manualTopicHref } from "@/lib/manual/topics";
+import { MANUAL_AREAS, MANUAL_TOPICS, manualTopicHref } from "@/lib/manual/topics";
 
 interface ManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
  */
 export default async function ManualIndexPage({ params }: ManualPageProps) {
   const { tenantSlug } = await params;
-  const areas = [...new Set(MANUAL_TOPICS.map((t) => t.area))];
+  const areas = MANUAL_AREAS.filter((area) => MANUAL_TOPICS.some((t) => t.area === area));
 
   return (
     <PageShell width="detail">

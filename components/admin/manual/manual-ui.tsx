@@ -1,5 +1,7 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
-import { AlertTriangle, Lightbulb } from "lucide-react";
+import { AlertTriangle, Lightbulb, type LucideIcon } from "lucide-react";
+import { PageHeader, PageShell } from "@/components/ui/page";
 import { cn } from "@/lib/utils";
 
 /**
@@ -144,5 +146,47 @@ export function ManualContents({ items }: { items: { id: string; title: string }
         ))}
       </ol>
     </nav>
+  );
+}
+
+/** A link to another admin page or manual page, inside manual text. */
+export function ManualLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="text-amber-400 hover:underline whitespace-nowrap">
+      {children}
+    </Link>
+  );
+}
+
+/** A bold phrase inside manual text. */
+export function B({ children }: { children: ReactNode }) {
+  return <strong className="text-white">{children}</strong>;
+}
+
+interface ManualPageProps {
+  tenantSlug: string;
+  icon: LucideIcon;
+  /** The part of the admin console the page belongs to, e.g. "Payments". */
+  area: string;
+  title: string;
+  description: string;
+  sections: { id: string; title: string }[];
+  children: ReactNode;
+}
+
+/** The frame every manual topic page shares: header, way back to the manual, "On this page". */
+export function ManualPage({ tenantSlug, icon, area, title, description, sections, children }: ManualPageProps) {
+  return (
+    <PageShell width="document">
+      <PageHeader
+        icon={icon}
+        eyebrow={`Manual · ${area}`}
+        title={title}
+        description={description}
+        back={{ href: `/${tenantSlug}/admin/manual`, label: "Manual" }}
+      />
+      <ManualContents items={sections} />
+      {children}
+    </PageShell>
   );
 }
