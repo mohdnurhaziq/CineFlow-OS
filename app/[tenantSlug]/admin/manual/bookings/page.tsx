@@ -146,14 +146,18 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
             [
               <Ui key="e">Edit Slot</Ui>,
               "Changes the date, time, category or campaign title.",
-              "A slot a client has booked can't have its status changed. Only the owner can change a fee or deposit.",
+              "Not while a client is booked into the slot or booking it right now. To change a client's time, use Move to another slot on their booking. Only the owner can change a fee or deposit.",
             ],
             [
               <Ui key="d">Delete Slot</Ui>,
               "Removes the slot.",
-              "A slot with an active or pending booking can't be deleted. Cancel or move the booking first.",
+              "Not while a client is booked into it or booking it right now. Cancel or move the booking first.",
             ],
-            [<Ui key="ds">Delete Selected</Ui>, "Removes every slot you ticked.", "Booked slots among them are skipped."],
+            [
+              <Ui key="ds">Delete Selected</Ui>,
+              "Removes every slot you ticked.",
+              "Slots a client is booked into, or booking right now, are skipped.",
+            ],
             [
               <Ui key="f">Force Release Hold</Ui>,
               "Ends a client's reservation while they are still booking.",

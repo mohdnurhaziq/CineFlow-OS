@@ -21,6 +21,7 @@ import {
 import type { BookingSlotRow, CategoryOption } from "./single-slot-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatSlotDate, isSlotInPast } from "@/lib/slot-time";
+import { holdIsRunning } from "@/lib/bookings/hold";
 import { errorMessageOf } from "@/lib/action-error";
 
 interface SlotTableProps {
@@ -100,7 +101,7 @@ export function SlotTable({
 
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!(await confirm({ title: `Delete ${selectedIds.length} slot${selectedIds.length === 1 ? "" : "s"}?`, message: "Booked slots are skipped.", confirmLabel: "Delete" }))) return;
+    if (!(await confirm({ title: `Delete ${selectedIds.length} slot${selectedIds.length === 1 ? "" : "s"}?`, message: "Slots a client is booked into, or is booking right now, are skipped.", confirmLabel: "Delete" }))) return;
 
     setIsBatchDeleting(true);
     setErrorMessage(null);
@@ -232,6 +233,12 @@ export function SlotTable({
                 const isSelected = selectedIds.includes(slot.id);
                 // An open slot whose time has passed can't be booked any more.
                 const pastOpen = slot.status === "AVAILABLE" && isSlotInPast(slot);
+                // Why the slot can't be edited or deleted right now, if it can't.
+                const lockedReason = holdIsRunning(slot)
+                  ? "A client is booking this time right now"
+                  : slot.booking || slot.status === "BOOKED" || slot.status === "PENDING_VERIFICATION"
+                    ? "A client is booked into this slot: move the booking instead"
+                    : null;
 
                 return (
                   <tr
@@ -398,28 +405,26 @@ export function SlotTable({
                           </button>
                         )}
 
-                        {/* Edit Slot (disabled if booked) */}
+                        {/* Edit Slot (not while a client is booking or booked into it) */}
                         <button
                           type="button"
                           onClick={() => onEdit(slot)}
-                          disabled={slot.status === "BOOKED"}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-30"
-                          title="Edit Slot"
+                          disabled={!!lockedReason}
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={lockedReason ?? "Edit Slot"}
+                          aria-label={lockedReason ? `Edit Slot: ${lockedReason}` : "Edit Slot"}
                         >
                           <Edit2 className="size-3.5" />
                         </button>
 
-                        {/* Delete Slot (disabled if booked) */}
+                        {/* Delete Slot (not while a client is booking or booked into it) */}
                         <button
                           type="button"
                           onClick={() => handleDelete(slot)}
-                          disabled={
-                            deletingId === slot.id ||
-                            slot.status === "BOOKED" ||
-                            slot.status === "PENDING_VERIFICATION"
-                          }
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30"
-                          title="Delete Slot"
+                          disabled={deletingId === slot.id || !!lockedReason}
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={lockedReason ?? "Delete Slot"}
+                          aria-label={lockedReason ? `Delete Slot: ${lockedReason}` : "Delete Slot"}
                         >
                           {deletingId === slot.id ? (
                             <Loader2 className="size-3.5 animate-spin" />

@@ -36,8 +36,17 @@ function safeRevalidate(path: string) {
 
 import { parseTimeToMinutes, formatMinutesToTime } from "@/lib/utils/time";
 import { isSlotInPast, minutesOfDay, slotDateKey } from "@/lib/slot-time";
+import { holdIsRunning, SLOT_HELD_MESSAGE } from "@/lib/bookings/hold";
 
 type SlotCheck = { ok: true } | { ok: false; error: string; message: string };
+
+/**
+ * Database condition for "no client is booking this slot right now" (see holdIsRunning), so a
+ * write can refuse a slot a client selected after the action's own checks.
+ */
+function noRunningHold(now: Date = new Date()): Prisma.BookingSlotWhereInput {
+  return { OR: [{ status: { not: "HELD" } }, { heldUntil: { lte: now } }] };
+}
 
 /** Start and end must be readable times, and the session must end after it starts. */
 function checkSlotTimes(startTime: string, endTime: string): SlotCheck & { start?: number; end?: number } {
@@ -185,12 +194,17 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
       return { success: false, error: "SLOT_NOT_FOUND", message: "Slot not found or does not belong to studio." };
     }
 
-    // Prevent modifying status of booked slots to incompatible states
-    if (existing.booking && updateData.status && updateData.status !== "BOOKED") {
+    // A client is mid-booking: changing the slot now would stop them at the last step.
+    if (holdIsRunning(existing)) {
+      return { success: false, error: "SLOT_HELD", message: SLOT_HELD_MESSAGE };
+    }
+
+    // A client is booked into it: changing it here would move their session without telling them.
+    if (existing.booking) {
       return {
         success: false,
         error: "SLOT_HAS_BOOKING",
-        message: "Cannot change status of a slot that is already booked by a client.",
+        message: "A client is booked into this slot. To change their time, use Move to another slot on the booking.",
       };
     }
 
@@ -206,8 +220,14 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
     }
 
     const { date: newDateKey, ...slotFields } = updateData;
+    // A hold that has run out is let go while the slot is edited, so it doesn't stay "held".
+    const releaseExpiredHold =
+      existing.status === "HELD" && (!slotFields.status || slotFields.status === "HELD")
+        ? { status: "AVAILABLE", heldUntil: null, heldBySessionId: null }
+        : {};
     const payload: Prisma.BookingSlotUpdateInput & { date?: Date } = {
       ...slotFields,
+      ...releaseExpiredHold,
       ...(newDateKey ? { date: new Date(`${newDateKey}T00:00:00.000Z`) } : {}),
     };
 
@@ -227,10 +247,15 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
       if (clash) return { success: false, error: "SLOT_OVERLAP", message: overlapMessage(clash) };
     }
 
-    const updated = await db.bookingSlot.update({
-      where: { id },
-      data: payload,
+    // Write only if no client has taken the slot since the checks above.
+    const written = await db.bookingSlot.updateMany({
+      where: { id, tenantId, booking: null, ...noRunningHold() },
+      data: payload as Prisma.BookingSlotUpdateManyMutationInput,
     });
+    if (written.count === 0) {
+      return { success: false, error: "SLOT_HELD", message: SLOT_HELD_MESSAGE };
+    }
+    const updated = await db.bookingSlot.findUniqueOrThrow({ where: { id } });
 
     safeRevalidate(`/${tenantSlug}/admin/calendar`);
     safeRevalidate(`/${tenantSlug}/book`);
@@ -268,9 +293,17 @@ export async function deleteBookingSlot(input: DeleteBookingSlotInput) {
       };
     }
 
-    await db.bookingSlot.delete({
-      where: { id: slotId },
+    if (holdIsRunning(slot)) {
+      return { success: false, error: "SLOT_HELD", message: SLOT_HELD_MESSAGE };
+    }
+
+    // Delete only if no client has taken the slot since the checks above.
+    const deleted = await db.bookingSlot.deleteMany({
+      where: { id: slotId, tenantId, booking: null, status: { notIn: ["BOOKED", "PENDING_VERIFICATION"] }, ...noRunningHold() },
     });
+    if (deleted.count === 0) {
+      return { success: false, error: "SLOT_HELD", message: SLOT_HELD_MESSAGE };
+    }
 
     safeRevalidate(`/${tenantSlug}/admin/calendar`);
     safeRevalidate(`/${tenantSlug}/book`);
@@ -291,28 +324,28 @@ export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
     await requireStaff(validated.tenantId);
     const { tenantId, tenantSlug, slotIds } = validated;
 
-    // Filter out any slots that have client bookings or are BOOKED/PENDING_VERIFICATION
-    const eligibleSlots = await db.bookingSlot.findMany({
+    // Skip slots with a client on them: booked, awaiting verification, or being booked right now.
+    const candidates = await db.bookingSlot.findMany({
       where: {
         id: { in: slotIds },
         tenantId,
         status: { notIn: ["BOOKED", "PENDING_VERIFICATION"] },
         booking: null,
       },
-      select: { id: true },
+      select: { id: true, status: true, heldUntil: true },
     });
 
-    const eligibleIds = eligibleSlots.map((s) => s.id);
+    const eligibleIds = candidates.filter((s) => !holdIsRunning(s)).map((s) => s.id);
     if (eligibleIds.length === 0) {
       return {
         success: false,
         error: "NO_DELETABLE_SLOTS",
-        message: "None of the selected slots could be deleted (they may be booked or pending).",
+        message: "None of the selected slots could be deleted: they are booked, awaiting payment, or a client is booking them right now.",
       };
     }
 
     const deleteResult = await db.bookingSlot.deleteMany({
-      where: { id: { in: eligibleIds } },
+      where: { id: { in: eligibleIds }, booking: null, status: { notIn: ["BOOKED", "PENDING_VERIFICATION"] }, ...noRunningHold() },
     });
 
     safeRevalidate(`/${tenantSlug}/admin/calendar`);

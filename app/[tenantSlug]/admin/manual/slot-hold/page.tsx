@@ -324,13 +324,11 @@ export default async function SlotHoldManualPage({ params }: SlotHoldManualPageP
         <ManualList
           items={[
             <>
-              You <strong className="text-white">can&apos;t book a customer into it</strong> or <strong className="text-white">block it</strong>.
-              Wait for the hold to end, or release it first.
+              You <strong className="text-white">can&apos;t book a customer into it, block it, edit it or delete it</strong>. Changing
+              it would stop the client who is booking it at the last step. Its edit and delete buttons are greyed out, and{" "}
+              <Ui>Delete Selected</Ui> skips it.
             </>,
-            <>
-              You <strong className="text-white">can still edit or delete it</strong>, but don&apos;t. The client who is booking it
-              would be stopped at the last step.
-            </>,
+            <>Wait for the hold to end, or release it first. A hold that has already run out doesn&apos;t count: that slot can be changed.</>,
           ]}
         />
       </ManualSection>
@@ -369,9 +367,6 @@ export default async function SlotHoldManualPage({ params }: SlotHoldManualPageP
             <>
               Don&apos;t promise a client a slot that shows <Ui>Held in Checkout</Ui>. It may be confirmed for someone else within
               minutes.
-            </>,
-            <>
-              Don&apos;t edit, delete or re-time a held slot. Wait until it is <Ui>Available</Ui> again.
             </>,
             <>
               Don&apos;t mention the {hold} to clients as a deadline. It is not a rule they need to follow, and a client who runs out

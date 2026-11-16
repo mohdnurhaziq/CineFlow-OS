@@ -26,6 +26,7 @@ import {
   deleteBookingSlot,
   updateBookingSlot,
   batchGenerateBookingSlots,
+  batchDeleteBookingSlots,
 } from "@/lib/actions/admin-calendar";
 import {
   createFrameDesign,
@@ -1065,6 +1066,56 @@ export async function runTier2BoundaryTests(harness: TestHarness) {
       await db.bookingSlot.deleteMany({ where: { tenantId: luminaTenant!.id, date: new Date("2027-08-02T00:00:00.000Z") } });
     } finally {
       if (first.success && first.slot) await db.bookingSlot.delete({ where: { id: first.slot.id } }).catch(() => null);
+    }
+  });
+
+  await harness.test("T2-SLOT-02: a slot a client is booking, or is booked into, can't be edited or deleted", async () => {
+    const tenantId = luminaTenant!.id;
+    const tenantSlug = "lumina-cine";
+    const base = { tenantId, category: "commercial", price: 0, depositRequired: 0, date: new Date("2027-10-04T00:00:00.000Z") };
+    const make = (startTime: string, endTime: string, extra: Record<string, unknown> = {}) =>
+      db.bookingSlot.create({ data: { ...base, startTime, endTime, ...extra } });
+    const minutes = (n: number) => new Date(Date.now() + n * 60_000);
+
+    const held = await make("09:00 AM", "10:00 AM", { status: "HELD", heldUntil: minutes(5), heldBySessionId: "sess_t2_slot_02" });
+    const expired = await make("10:00 AM", "11:00 AM", { status: "HELD", heldUntil: minutes(-5), heldBySessionId: "sess_t2_slot_02_old" });
+    const pending = await make("11:00 AM", "12:00 PM", { status: "PENDING_VERIFICATION" });
+    const free = await make("01:00 PM", "02:00 PM");
+    const booking = await db.clientBooking.create({
+      data: {
+        tenantId, trackingCode: `T2SLOT02${Date.now().toString(36).toUpperCase()}`, clientName: "Slot Test", clientEmail: "slot02@example.com",
+        clientPhone: "0123456789", discipline: "PHOTOGRAPHY", serviceTier: "STANDARD", status: "PENDING", slotId: pending.id,
+      },
+    });
+    try {
+      // A hold that is still running belongs to the client who is booking.
+      const editHeld = await updateBookingSlot({ id: held.id, tenantId, tenantSlug, campaignTitle: "Renamed" });
+      harness.assertEqual(editHeld.error, "SLOT_HELD", "Editing a slot a client is booking right now is refused");
+      const delHeld = await deleteBookingSlot({ slotId: held.id, tenantId, tenantSlug });
+      harness.assertEqual(delHeld.error, "SLOT_HELD", "Deleting a slot a client is booking right now is refused");
+      const stillHeld = await db.bookingSlot.findUnique({ where: { id: held.id } });
+      harness.assert(stillHeld?.status === "HELD" && stillHeld.campaignTitle === null, "The held slot is untouched");
+
+      // A slot with a client booking on it is moved from the booking, never edited underneath it.
+      const editPending = await updateBookingSlot({ id: pending.id, tenantId, tenantSlug, startTime: "11:30 AM", endTime: "12:30 PM" });
+      harness.assertEqual(editPending.error, "SLOT_HAS_BOOKING", "Re-timing a slot whose booking awaits payment is refused");
+      harness.assertEqual((await db.bookingSlot.findUnique({ where: { id: pending.id } }))?.startTime, "11:00 AM", "The client's time is unchanged");
+
+      // Several at once: only the free one goes.
+      const batch = await batchDeleteBookingSlots({ tenantId, tenantSlug, slotIds: [held.id, pending.id, free.id] });
+      harness.assert(batch.success === true && batch.deletedCount === 1, "Batch delete removes only the free slot");
+      harness.assert(!!(await db.bookingSlot.findUnique({ where: { id: held.id } })), "Batch delete skips the held slot");
+
+      // A hold that has run out blocks nobody: it can be edited (and is opened up) or deleted.
+      const editExpired = await updateBookingSlot({ id: expired.id, tenantId, tenantSlug, campaignTitle: "After the hold" });
+      harness.assert(editExpired.success === true, "A slot whose hold has run out can be edited");
+      const opened = await db.bookingSlot.findUnique({ where: { id: expired.id } });
+      harness.assert(opened?.status === "AVAILABLE" && opened.heldUntil === null && opened.heldBySessionId === null, "Editing it opens the slot up again");
+      const delExpired = await deleteBookingSlot({ slotId: expired.id, tenantId, tenantSlug });
+      harness.assert(delExpired.success === true, "It can be deleted");
+    } finally {
+      await db.clientBooking.delete({ where: { id: booking.id } }).catch(() => null);
+      await db.bookingSlot.deleteMany({ where: { id: { in: [held.id, expired.id, pending.id, free.id] } } });
     }
   });
 
