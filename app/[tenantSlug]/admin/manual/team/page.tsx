@@ -88,15 +88,16 @@ export default async function TeamManualPage({ params }: TeamManualPageProps) {
             [
               <Ui key="o">{LEVEL_LABELS.OWN}</Ui>,
               <>
-                Only the bookings or galleries they are assigned to. This level exists for <Ui>{AREA_LABELS.bookings}</Ui> and{" "}
-                <Ui>{AREA_LABELS.galleries}</Ui> only.
+                Only the bookings or galleries they are assigned to, and the full work on those: for example marking their
+                session done or a no-show, or uploading and removing their photos. This level exists for{" "}
+                <Ui>{AREA_LABELS.bookings}</Ui> and <Ui>{AREA_LABELS.galleries}</Ui> only.
               </>,
             ],
             [
               <Ui key="v">{LEVEL_LABELS.VIEW}</Ui>,
               <>
-                Look, but not change. The exception is on-set tasks: ticking shots, checking gear out and in, flagging gear for
-                service and collecting release forms.
+                Look, but not change: for example they can&apos;t mark a session done or upload photos. The exception is on-set
+                tasks: ticking shots, checking gear out and in, flagging gear for service and collecting release forms.
               </>,
             ],
             [<Ui key="m">{LEVEL_LABELS.MANAGE}</Ui>, "Look and change everything in that area, apart from what needs a tick below."],

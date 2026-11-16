@@ -381,15 +381,24 @@ export default async function BookingsManualPage({ params }: BookingsManualPageP
             ["Set a fee or deposit on a slot", <>The owner, and anyone given <Ui key="b">Set prices</Ui></>],
             ["Book a customer as pending", <>The owner, and anyone with <Ui key="c">Bookings &amp; Calendar</Ui>: Manage</>],
             ["Book a customer as already paid", <>The owner, and anyone given <Ui key="d">Record or cancel payments</Ui></>],
-            ["Move a booking, mark it done or no-show", <>The owner, and anyone with <Ui key="e">Bookings &amp; Calendar</Ui>: Manage</>],
+            ["Move a booking to another slot", <>The owner, and anyone with <Ui key="e">Bookings &amp; Calendar</Ui>: Manage</>],
+            [
+              "Mark a session done, or the client as a no-show",
+              <>
+                The owner, anyone with <Ui key="e1">Bookings &amp; Calendar</Ui>: Manage, and anyone with <Ui key="e2">Only their own</Ui>{" "}
+                on the bookings they are assigned to
+              </>,
+            ],
+            ["Create the gallery for an older booking", <>The owner, and anyone with <Ui key="e3">Galleries &amp; photos</Ui>: Manage</>],
             ["Assign team members to a booking", <>The owner, and anyone with <Ui key="f">Bookings &amp; Calendar</Ui>: Manage</>],
             ["Cancel an unpaid booking", <>The owner, and anyone with <Ui key="g">Bookings &amp; Calendar</Ui>: Manage</>],
             ["Cancel a booking whose deposit is paid", <>The owner, and anyone given <Ui key="h">Record or cancel payments</Ui></>],
           ]}
         />
         <ManualP>
-          Someone with <Ui>Bookings &amp; Calendar</Ui>: <Ui>View</Ui> can look at bookings but not change them. Someone with{" "}
-          <Ui>Only their own</Ui> sees just the bookings they are assigned to.
+          Someone with <Ui>Bookings &amp; Calendar</Ui>: <Ui>View</Ui> can look at bookings but not change them, so they can&apos;t
+          mark a session done or a no-show. Someone with <Ui>Only their own</Ui> sees just the bookings they are assigned to, and
+          can mark those done or a no-show.
         </ManualP>
       </ManualSection>
 
