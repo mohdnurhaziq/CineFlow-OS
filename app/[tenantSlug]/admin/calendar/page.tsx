@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
+import { loadAssignableFor } from "@/lib/team/members";
 import { NoAccess } from "@/components/admin/no-access";
 import { CalendarAdminDashboard } from "@/components/admin/calendar/calendar-admin-dashboard";
 import type { BookingSlotRow, CategoryOption } from "@/components/admin/calendar/single-slot-dialog";
@@ -114,6 +115,8 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
     orderBy: { price: "asc" },
   });
 
+  const assignable = await loadAssignableFor(tenant.id, canManage);
+
   return (
     <PageShell>
       <CalendarAdminDashboard
@@ -125,6 +128,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         clients={clients}
         packages={packages}
         canManage={canManage}
+        assignable={assignable}
         canSetPrices={viewer.access.ticks.setPrices}
         canRecordPayments={viewer.access.ticks.recordPayments}
       />

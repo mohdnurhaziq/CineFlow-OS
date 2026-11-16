@@ -10,6 +10,7 @@ import { NoAccess } from "@/components/admin/no-access";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { IncludedPrintsCard } from "@/components/admin/bookings/included-prints-card";
 import { remainingForLines } from "@/lib/prints/entitlements";
+import { loadAssignableFor } from "@/lib/team/members";
 import { BookingDetailView } from "@/components/admin/bookings/booking-detail-view";
 
 interface BookingPageProps {
@@ -46,10 +47,11 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
   if (!booking) notFound();
   const canManage = levelAtLeast(viewer.access.areas.bookings, "MANAGE");
 
-  const [lines, sizes, frames] = await Promise.all([
+  const [lines, sizes, frames, assignable] = await Promise.all([
     db.bookingIncludedPrint.findMany({ where: { bookingId: booking.id, tenantId: tenant.id }, orderBy: { createdAt: "asc" } }),
     db.printSize.findMany({ where: { tenantId: tenant.id, isAvailable: true }, orderBy: { basePrice: "asc" } }),
     db.frameDesign.findMany({ where: { tenantId: tenant.id, isAvailable: true }, orderBy: { name: "asc" } }),
+    loadAssignableFor(tenant.id, canManage),
   ]);
   const remaining = await remainingForLines(db, lines.map((l) => l.id));
 
@@ -68,6 +70,7 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
         tenantSlug={tenant.slug}
         currency={tenant.currency}
         canManage={canManage}
+        assignable={assignable}
         canRecordPayments={viewer.access.ticks.recordPayments}
       />
       <IncludedPrintsCard

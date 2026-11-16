@@ -23,6 +23,7 @@ import { BatchGeneratorDialog } from "./batch-generator-dialog";
 import { ForceReleaseDialog } from "./force-release-dialog";
 import { SlotTable } from "./slot-table";
 import { BookForCustomerDialog, type ClientOption } from "./book-for-customer-dialog";
+import type { AssignableMember } from "@/lib/team/members";
 import { BookingDetailsDialog } from "@/components/admin/bookings/booking-details-dialog";
 import type { BookingPackageOption } from "@/components/booking/package-picker";
 import { getBookingDetails } from "@/lib/actions/admin-bookings";
@@ -43,6 +44,8 @@ interface CalendarAdminDashboardProps {
   canSetPrices: boolean;
   /** The recordPayments permission: may record a booking as paid. */
   canRecordPayments: boolean;
+  /** Who can be added to a booking in its details (empty below Bookings MANAGE). */
+  assignable: AssignableMember[];
 }
 
 export function CalendarAdminDashboard({
@@ -56,6 +59,7 @@ export function CalendarAdminDashboard({
   canManage,
   canSetPrices,
   canRecordPayments,
+  assignable,
 }: CalendarAdminDashboardProps) {
   const router = useRouter();
 
@@ -385,6 +389,7 @@ export function CalendarAdminDashboard({
         tenantId={tenantId}
         canManage={canManage}
         canRecordPayments={canRecordPayments}
+        assignable={assignable}
         onChanged={reloadViewedBooking}
       />
 

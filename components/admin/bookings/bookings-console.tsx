@@ -323,7 +323,7 @@ export function BookingsConsole({
 
                   <span className="min-w-0 col-span-2 md:col-span-1 text-[11px] text-zinc-400 truncate">
                     <span className="md:hidden text-zinc-500">Team: </span>
-                    {b.assignees.length > 0 ? b.assignees.map((a) => a.name.split(" ")[0]).join(", ") : "—"}
+                    {b.assignees.length > 0 ? b.assignees.map((a) => a.name.split(" ")[0]).join(", ") : "â€”"}
                   </span>
 
                   <span className="hidden md:block justify-self-end">

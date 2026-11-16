@@ -8,7 +8,7 @@ import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { BookingsConsole } from "@/components/admin/bookings/bookings-console";
 import { loadBookableSlots } from "@/lib/bookings/bookable-slots";
-import { loadAssignableMembers } from "@/lib/team/members";
+import { loadAssignableFor } from "@/lib/team/members";
 import { studioNow } from "@/lib/slot-time";
 
 interface BookingsPageProps {
@@ -60,7 +60,7 @@ export default async function AdminBookingsPage({ params }: BookingsPageProps) {
         })
       : [],
     // Who can be put on a booking: only needed to add people (Bookings MANAGE).
-    canManage ? loadAssignableMembers(tenant.id) : [],
+    loadAssignableFor(tenant.id, canManage),
   ]);
 
   return (

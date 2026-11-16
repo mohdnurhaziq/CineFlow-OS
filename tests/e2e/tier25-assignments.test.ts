@@ -8,7 +8,8 @@ import { withSession } from "./mocks/session";
 import { ensureStudioRoles, FULL_ACCESS } from "@/lib/auth/access";
 import { loadAdminBookings, isUnassigned } from "@/lib/bookings/admin-list";
 import { getBookingDetails } from "@/lib/actions/admin-bookings";
-import { loadAssignableMembers } from "@/lib/team/members";
+import { studioNow } from "@/lib/slot-time";
+import { loadAssignableFor, loadAssignableMembers } from "@/lib/team/members";
 import { assignTeamMember, unassignTeamMember } from "@/lib/actions/admin-assignments";
 import { cancelBooking, rescheduleBooking } from "@/lib/actions/admin-booking-lifecycle";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
@@ -296,7 +297,7 @@ export async function runTier25AssignmentTests(harness: TestHarness) {
 
       const rows = await loadAdminBookings(f.lumina.id, { id: f.owner.id, access: FULL_ACCESS });
       const byId = new Map(rows.map((r) => [r.id, r]));
-      const today = "2026-11-17";
+      const today = studioNow().dateKey;
       harness.assertEqual(byId.get(staffed.id)?.assignees.map((x) => x.id).join(), a.id, "the row lists its assignee");
       harness.assertEqual(byId.get(staffed.id)?.assignees[0]?.name, a.name, "with the name");
       harness.assertEqual(byId.get(upcoming.id)?.assignees.length, 0, "an unstaffed row has none");
@@ -313,6 +314,9 @@ export async function runTier25AssignmentTests(harness: TestHarness) {
       harness.assert(people.some((p) => p.id === f.owner.id && p.roleName === "Studio owner"), "the owner is assignable");
       harness.assert(people.some((p) => p.id === a.id), "an active member is assignable");
       harness.assert(!people.some((p) => p.id === invited.id), "an invited member is not");
+      // The calendar and full-page booking pages use this: the list only for Bookings MANAGE.
+      harness.assertEqual((await loadAssignableFor(f.lumina.id, true)).length, people.length, "MANAGE gets the picker list");
+      harness.assertEqual((await loadAssignableFor(f.lumina.id, false)).length, 0, "below MANAGE gets none");
     });
   });
 }

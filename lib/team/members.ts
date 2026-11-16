@@ -55,6 +55,11 @@ export async function loadTeamMembers(tenantId: string, now: Date = new Date()):
   return rows.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
+/** The picker's list, for a viewer: only people who can add or remove assignees (Bookings MANAGE) get it. */
+export async function loadAssignableFor(tenantId: string, canManage: boolean): Promise<AssignableMember[]> {
+  return canManage ? loadAssignableMembers(tenantId) : [];
+}
+
 export interface AssignableMember {
   id: string;
   name: string;
