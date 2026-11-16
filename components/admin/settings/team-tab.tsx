@@ -38,6 +38,9 @@ export function TeamTab({ tenant, roles }: { tenant: { id: string; slug: string 
     }
   }
 
+  const deleteBlock = (role: TeamRoleRow): string | undefined =>
+    role.members > 0 ? "Move its people to another role first." : roles.length <= 1 ? "A studio needs at least one role." : undefined;
+
   return (
     <div className="rounded-2xl border border-zinc-800 bg-[#0b0b0e] px-4 sm:px-6 pb-2">
       <SettingsSection title="Roles" description="A role is a set of access you give to people. Changes apply right away, with no need to sign out and in.">
@@ -57,7 +60,14 @@ export function TeamTab({ tenant, roles }: { tenant: { id: string; slug: string 
               <button type="button" onClick={() => setEditing(role)} aria-label={`Edit ${role.name}`} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <Pencil className="size-4" />
               </button>
-              <button type="button" onClick={() => void remove(role)} aria-label={`Delete ${role.name}`} className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-800">
+              <button
+                type="button"
+                onClick={() => void remove(role)}
+                disabled={!!deleteBlock(role)}
+                title={deleteBlock(role)}
+                aria-label={`Delete ${role.name}`}
+                className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-800 disabled:opacity-40 disabled:hover:text-zinc-400 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+              >
                 <Trash2 className="size-4" />
               </button>
             </li>

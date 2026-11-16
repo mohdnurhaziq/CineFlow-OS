@@ -1007,6 +1007,24 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       harness.assert(gone.success, "an unused role can be deleted");
     });
   });
+  await harness.test("T24-ROLE-03: a studio can't delete its last role", async () => {
+    await withFixture(async (f) => {
+      const tag = Date.now().toString(36);
+      const temp = await db.tenant.create({ data: { name: `T24 lone ${tag}`, slug: `t24-lone-${tag}` } });
+      try {
+        const only = await db.teamRole.create({ data: { tenantId: temp.id, name: "Only", access: "{}" } });
+        const owner = { ...sess(f.luminaOwner, temp.slug), tenantId: temp.id };
+        const res = await withSession(owner, () => deleteTeamRole({ tenantId: temp.id, tenantSlug: temp.slug, roleId: only.id }));
+        harness.assert(!res.success && res.error === "LAST_ROLE", "deleting the only role is refused with LAST_ROLE");
+        harness.assert(!!(await db.teamRole.findUnique({ where: { id: only.id } })), "the role still exists");
+        await db.teamRole.create({ data: { tenantId: temp.id, name: "Second", access: "{}" } });
+        const ok = await withSession(owner, () => deleteTeamRole({ tenantId: temp.id, tenantSlug: temp.slug, roleId: only.id }));
+        harness.assert(ok.success, "with another role present the delete works");
+      } finally {
+        await db.tenant.delete({ where: { id: temp.id } });
+      }
+    });
+  });
 }
 
 interface Fixture {

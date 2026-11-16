@@ -98,11 +98,18 @@ export async function deleteTeamRole(input: DeleteTeamRoleInput) {
   try {
     const v = DeleteTeamRoleSchema.parse(input);
     await requireOwner(v.tenantId);
-    const role = await db.teamRole.findFirst({ where: { id: v.roleId, tenantId: v.tenantId }, select: { id: true } });
-    if (!role) throw new RoleError("NOT_FOUND", "That role no longer exists.");
-    const n = await db.user.count({ where: { tenantId: v.tenantId, teamRoleId: v.roleId } });
-    if (n > 0) throw new RoleError("ROLE_IN_USE", `Move its ${n} ${n === 1 ? "person" : "people"} to another role first.`);
-    await db.teamRole.delete({ where: { id: v.roleId } });
+    // Checked and deleted in one transaction so two deletes can't race a studio down to zero roles
+    // (which would re-seed the starter roles on the next Team tab load).
+    await db.$transaction(async (tx) => {
+      const role = await tx.teamRole.findFirst({ where: { id: v.roleId, tenantId: v.tenantId }, select: { id: true } });
+      if (!role) throw new RoleError("NOT_FOUND", "That role no longer exists.");
+      const n = await tx.user.count({ where: { tenantId: v.tenantId, teamRoleId: v.roleId } });
+      if (n > 0) throw new RoleError("ROLE_IN_USE", `Move its ${n} ${n === 1 ? "person" : "people"} to another role first.`);
+      if ((await tx.teamRole.count({ where: { tenantId: v.tenantId } })) <= 1) {
+        throw new RoleError("LAST_ROLE", "A studio needs at least one role. Create another role before deleting this one.");
+      }
+      await tx.teamRole.delete({ where: { id: v.roleId } });
+    });
     safeRevalidate(`/${v.tenantSlug}/admin/settings`);
     return { success: true as const };
   } catch (error) {
