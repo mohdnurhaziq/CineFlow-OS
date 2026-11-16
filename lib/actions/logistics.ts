@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 import { requireRecordAccess } from "@/lib/auth/project-access";
 
 import { db } from "@/lib/db";
@@ -58,7 +58,7 @@ export async function toggleShotCompletion(input: ToggleShotCompletionInput) {
     }
 
     // Only crew/staff of the studio that owns this shot may change it.
-    await requireStaff(existingShot.project.tenantId);
+    await requireAccess(existingShot.project.tenantId, "production", "VIEW");
 
     // 2. Update status
     const updatedShot = await db.shotItem.update({
@@ -142,7 +142,7 @@ export async function createShotItem(input: CreateShotItemInput) {
       };
     }
 
-    await requireStaff(project.tenantId);
+    await requireAccess(project.tenantId, "production", "MANAGE");
 
     // 2. Determine sortOrder if not provided
     let sortOrder = validated.sortOrder;
@@ -224,7 +224,7 @@ export async function updateShotItem(input: UpdateShotItemInput) {
       };
     }
 
-    await requireStaff(existingShot.project.tenantId);
+    await requireAccess(existingShot.project.tenantId, "production", "MANAGE");
 
     // 2. Perform update
     const updatedShot = await db.shotItem.update({
@@ -295,7 +295,7 @@ export async function deleteShotItem(input: DeleteShotItemInput) {
       };
     }
 
-    await requireStaff(existingShot.project.tenantId);
+    await requireAccess(existingShot.project.tenantId, "production", "MANAGE");
 
     // 2. Delete shot
     await db.shotItem.delete({
@@ -361,9 +361,9 @@ export async function submitDigitalRelease(input: SubmitDigitalReleaseInput) {
       };
     }
 
-    // Releases are collected while signed in (studio staff or the project's client) so each one
-    // records who took it.
-    const collector = await requireRecordAccess(project.tenantId, project.clientId);
+    // Releases are collected while signed in (the team with Production access, or the project's
+    // client) so each one records who took it.
+    const collector = await requireRecordAccess(project.tenantId, project.clientId, { area: "production" });
 
     // 2. Insert digital release
     const release = await db.digitalRelease.create({

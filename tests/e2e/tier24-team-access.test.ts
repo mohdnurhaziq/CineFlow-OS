@@ -3,6 +3,9 @@
  * - Schema: team roles, per-person extras and booking assignments are stored
  */
 
+import fs from "node:fs/promises";
+import path from "node:path";
+import ts from "typescript";
 import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
@@ -20,6 +23,13 @@ import {
 } from "@/lib/auth/access";
 import { AuthorizationError } from "@/lib/auth/guard";
 import { canAccessBooking, canAccessProject, requireAccess, requireTick } from "@/lib/auth/access-guard";
+import { canAccessClientRecord } from "@/lib/auth/project-access";
+import { updateClientNotes } from "@/lib/actions/admin-clients";
+import { createGearItem } from "@/lib/actions/gear";
+import { saveShippingZones } from "@/lib/actions/admin-shipping";
+import { recordInvoicePayment, sendInvoiceReminder } from "@/lib/actions/admin-invoices";
+import { createServicePackage } from "@/lib/actions/admin-services";
+import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 
 export async function runTier24TeamAccessTests(harness: TestHarness) {
   harness.setSuite("Tier 24", "Team Access");
@@ -329,6 +339,133 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       harness.assertEqual(await canAccessProject(member, view, f.lumina.id, unrelated.id), true, "VIEW sees any project of the studio");
       harness.assertEqual(await canAccessProject(member, view, f.lumina.id, foreign.id), false, "VIEW: another studio project");
       harness.assertEqual(await canAccessProject(member, view, f.lumina.id, "does-not-exist"), false, "VIEW: nonexistent project");
+    });
+  });
+
+  // ---- Every admin action decides access through the access model ------------------------
+  await harness.test("T24-ACCESS-10: every admin action checks access", async () => {
+    const dir = path.join(process.cwd(), "lib", "actions");
+    const files = (await fs.readdir(dir)).filter(
+      (f) => /^admin-.*\.ts$/.test(f) || ["gear.ts", "logistics.ts", "print-orders.ts", "onboarding-guide.ts"].includes(f)
+    );
+    /** Exports that use another guard, and which one. */
+    const OTHER_GUARD: Record<string, RegExp> = {
+      // Any team member marks their own tour as seen.
+      "onboarding-guide.ts#markTourSeen": /requireStaffBySlug\(/,
+      // Also for the project's client (lib/auth/project-access checks the team's Production access).
+      "logistics.ts#submitDigitalRelease": /requireRecordAccess\(/,
+      // Owner-only through the file's assertOwner helper, which wraps requireOwner (checked below).
+      "admin-payments.ts#saveGatewayCredentials": /assertOwner\(/,
+      "admin-payments.ts#removeGatewayCredentials": /assertOwner\(/,
+    };
+    const payments = await fs.readFile(path.join(dir, "admin-payments.ts"), "utf8");
+    harness.assert(/async function assertOwner[\s\S]*?await requireOwner\(/.test(payments), "admin-payments assertOwner wraps requireOwner");
+    const unchecked: string[] = [];
+    let total = 0;
+    for (const file of files) {
+      const src = await fs.readFile(path.join(dir, file), "utf8");
+      const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
+      for (const node of sf.statements) {
+        if (!ts.isFunctionDeclaration(node) || !node.name || !node.body) continue;
+        const mods = ts.getModifiers(node) ?? [];
+        const exported = mods.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+        const isAsync = mods.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword);
+        if (!exported || !isAsync) continue;
+        total += 1;
+        const key = `${file}#${node.name.text}`;
+        const body = node.body.getText(sf);
+        const ok = OTHER_GUARD[key] ? OTHER_GUARD[key].test(body) : /\b(requireAccess|requireTick|requireOwner)\(/.test(body);
+        if (!ok) unchecked.push(key);
+      }
+    }
+    harness.assert(total > 60, `Scanned ${total} actions`);
+    harness.assert(unchecked.length === 0, "every action calls requireAccess, requireTick or requireOwner", `Unchecked: ${unchecked.join(", ")}`);
+
+    const ownerRoleUsers: string[] = [];
+    for (const file of await fs.readdir(dir)) {
+      if (!file.endsWith(".ts")) continue;
+      if ((await fs.readFile(path.join(dir, file), "utf8")).includes("OWNER_ROLES")) ownerRoleUsers.push(file);
+    }
+    harness.assert(ownerRoleUsers.length === 0, "no action references OWNER_ROLES", `Found in: ${ownerRoleUsers.join(", ")}`);
+  });
+
+  /** Refused: threw an AuthorizationError, or returned a failure that says so. */
+  const refusedResult = async (fn: () => Promise<unknown>): Promise<string | null> => {
+    try {
+      const res = (await fn()) as { success?: boolean; error?: unknown; message?: unknown } | null;
+      if (res && res.success === false && /FORBIDDEN|not allowed|don't have/i.test(`${String(res.error)} ${String(res.message)}`)) return null;
+      return `not refused: ${JSON.stringify(res)}`;
+    } catch (e) {
+      return e instanceof AuthorizationError ? null : `threw ${String(e)}`;
+    }
+  };
+
+  await harness.test("T24-ACCESS-11: a role without access is refused on the server", async () => {
+    await withFixture(async (f) => {
+      const none = accessJson({
+        bookings: "NONE", galleries: "NONE", production: "NONE", printOrders: "NONE", clients: "NONE",
+        proposals: "NONE", invoices: "NONE", services: "NONE", catalog: "NONE",
+      });
+      const member = await f.mkMember("none", await f.mkRole("Nothing", none));
+      const s = sess(member, "lumina-cine");
+      const t = { tenantId: f.lumina.id, tenantSlug: "lumina-cine" };
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT" } });
+      const invoice = await db.milestoneInvoice.findFirst({ where: { tenantId: f.lumina.id } });
+      const zonesBefore = await db.shippingZone.count({ where: { tenantId: f.lumina.id } });
+      const sku = `T24-NONE-${Date.now()}`;
+
+      const calls: Array<[string, () => Promise<unknown>]> = [
+        ["updateClientNotes", () => updateClientNotes({ ...t, clientId: client.id, notes: "T24 should not save" })],
+        ["createGearItem", () => createGearItem({ ...t, name: "T24 lens", sku, category: "LENS" })],
+        ["saveShippingZones", () => saveShippingZones({ ...t, zones: [] })],
+        ["sendInvoiceReminder", () => sendInvoiceReminder({ ...t, invoiceId: invoice?.id ?? "does-not-exist" })],
+      ];
+      for (const [name, call] of calls) {
+        const why = await refusedResult(() => withSession(s, call));
+        harness.assert(why === null, `${name} refused`, why ?? "");
+      }
+      // Client records (vault, proposals, releases) check the team's area too.
+      const project = await f.mkProject(f.lumina.id, "none", f.luminaOwner.id);
+      for (const record of [{ area: "galleries" as const, projectId: project.id }, { area: "proposals" as const }, { area: "production" as const }]) {
+        harness.assertEqual(await canAccessClientRecord(s, f.lumina.id, client.id, record), false, `no ${record.area} record access`);
+        harness.assertEqual(await canAccessClientRecord(sess(f.luminaOwner, "lumina-cine"), f.lumina.id, client.id, record), true, `owner opens ${record.area}`);
+      }
+
+      const clientAfter = await db.user.findUniqueOrThrow({ where: { id: client.id } });
+      harness.assertEqual(clientAfter.staffNotes, client.staffNotes, "client notes unchanged");
+      harness.assertEqual(await db.inventoryItem.count({ where: { sku } }), 0, "no gear item created");
+      harness.assertEqual(await db.shippingZone.count({ where: { tenantId: f.lumina.id } }), zonesBefore, "shipping zones unchanged");
+    });
+  });
+
+  await harness.test("T24-ACCESS-12: ticks grant exactly the money powers", async () => {
+    await withFixture(async (f) => {
+      const member = await f.mkMember("prices", await f.mkRole("Pricer", accessJson(LEGACY_TEAM_ACCESS.areas, { setPrices: true })));
+      const s = sess(member, "lumina-cine");
+      const t = { tenantId: f.lumina.id, tenantSlug: "lumina-cine" };
+      const name = `T24 package ${Date.now()}`;
+      try {
+        const pkg = await withSession(s, () =>
+          createServicePackage({
+            ...t, name, category: "commercial", discipline: "PHOTOGRAPHY", price: 100, depositPrice: 50,
+            turnaround: "1 week", description: "Made by a member with setPrices", deliverables: "Photos", isFeatured: false,
+          })
+        );
+        harness.assertEqual(pkg.success, true, "setPrices can create a package", JSON.stringify(pkg));
+
+        const missing = { ...t, invoiceId: "does-not-exist" };
+        const record = await withSession(s, () => recordInvoicePayment({ ...missing, method: "CASH" }));
+        harness.assert(record.success === false && /FORBIDDEN|don't have/.test(record.message), "recordInvoicePayment refused", JSON.stringify(record));
+        const approve = await withSession(s, () => approvePaymentVerification(missing));
+        harness.assert(approve.success === false && /FORBIDDEN|don't have/.test(String(approve.message)), "approvePaymentVerification refused", JSON.stringify(approve));
+
+        // The owner reaches the lookup with the same input, so the refusals above came from the access check.
+        const owner = sess(f.luminaOwner, "lumina-cine");
+        const ownerRecord = await withSession(owner, () => recordInvoicePayment({ ...missing, method: "CASH" }));
+        harness.assertEqual(ownerRecord.success === false ? ownerRecord.error : "ok", "NOT_FOUND", "owner gets past the check");
+      } finally {
+        await db.servicePackage.deleteMany({ where: { tenantId: f.lumina.id, name } });
+      }
     });
   });
 }

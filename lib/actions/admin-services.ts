@@ -3,7 +3,7 @@
 import { actionErrorMessage } from "@/lib/action-error";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
 // Prices, and removing what clients book, are the owner's call; staff keep the rest.
-import { requireOwner, requireStaff } from "@/lib/auth/guard";
+import { requireAccess, requireTick } from "@/lib/auth/access-guard";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -73,7 +73,7 @@ function safeRevalidate(path: string) {
 export async function createServicePackage(input: CreateServicePackageInput) {
   try {
     const validated = CreateServicePackageSchema.parse(input);
-    await requireOwner(validated.tenantId);
+    await requireTick(validated.tenantId, "setPrices");
     const {
       tenantId,
       tenantSlug,
@@ -135,7 +135,7 @@ export async function createServicePackage(input: CreateServicePackageInput) {
 export async function updateServicePackage(input: UpdateServicePackageInput) {
   try {
     const validated = UpdateServicePackageSchema.parse(input);
-    await requireOwner(validated.tenantId);
+    await requireTick(validated.tenantId, "setPrices");
     const {
       id,
       tenantId,
@@ -203,7 +203,7 @@ export async function updateServicePackage(input: UpdateServicePackageInput) {
 export async function deleteServicePackage(input: DeleteServicePackageInput) {
   try {
     const validated = DeleteServicePackageSchema.parse(input);
-    await requireOwner(validated.tenantId);
+    await requireTick(validated.tenantId, "setPrices");
     const { id, tenantId, tenantSlug } = validated;
 
     // Check ownership
@@ -243,7 +243,7 @@ export async function deleteServicePackage(input: DeleteServicePackageInput) {
 export async function togglePackageFeatured(input: TogglePackageFeaturedInput) {
   try {
     const validated = TogglePackageFeaturedSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "services", "MANAGE");
     const { id, tenantId, tenantSlug, isFeatured } = validated;
 
     const existing = await db.servicePackage.findFirst({
@@ -279,7 +279,7 @@ export async function togglePackageFeatured(input: TogglePackageFeaturedInput) {
 export async function createCampaignCategory(input: CreateCampaignCategoryInput) {
   try {
     const validated = CreateCampaignCategorySchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "services", "MANAGE");
     const { tenantId, tenantSlug, name, slug, badgeIcon, description, sortOrder, isActive, isProduction } = validated;
 
     // Check slug uniqueness within tenant
@@ -344,7 +344,7 @@ async function renameCategorySlug(tx: CategoryTx, tenantId: string, from: string
 export async function updateCampaignCategory(input: UpdateCampaignCategoryInput) {
   try {
     const validated = UpdateCampaignCategorySchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "services", "MANAGE");
     const { id, tenantId, tenantSlug, name, slug, badgeIcon, description, sortOrder, isActive, isProduction } = validated;
 
     // Check category ownership
@@ -401,7 +401,7 @@ export async function updateCampaignCategory(input: UpdateCampaignCategoryInput)
 export async function deleteCampaignCategory(input: DeleteCampaignCategoryInput) {
   try {
     const validated = DeleteCampaignCategorySchema.parse(input);
-    await requireOwner(validated.tenantId);
+    await requireTick(validated.tenantId, "setPrices");
     const { id, tenantId, tenantSlug } = validated;
 
     // Check category ownership
@@ -449,7 +449,7 @@ export async function deleteCampaignCategory(input: DeleteCampaignCategoryInput)
 export async function toggleCategoryActive(input: ToggleCategoryActiveInput) {
   try {
     const validated = ToggleCategoryActiveSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "services", "MANAGE");
     const { id, tenantId, tenantSlug, isActive } = validated;
 
     const existing = await db.campaignCategory.findFirst({

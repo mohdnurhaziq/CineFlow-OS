@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -38,7 +38,7 @@ function safeRevalidate(path: string) {
 export async function createGearItem(input: CreateGearItemInput) {
   try {
     const validated = CreateGearItemSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "production", "MANAGE");
     const { tenantId, tenantSlug, sku, ...data } = validated;
 
     // Check SKU uniqueness
@@ -80,7 +80,7 @@ export async function createGearItem(input: CreateGearItemInput) {
 export async function updateGearItem(input: UpdateGearItemInput) {
   try {
     const validated = UpdateGearItemSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "production", "MANAGE");
     const { id, tenantId, tenantSlug, sku, ...data } = validated;
 
     const existing = await db.inventoryItem.findFirst({
@@ -139,7 +139,7 @@ export async function deleteGearItem(input: {
 }) {
   try {
     const { id, tenantId, tenantSlug } = input;
-    await requireStaff(tenantId);
+    await requireAccess(tenantId, "production", "MANAGE");
 
     const existing = await db.inventoryItem.findFirst({
       where: { id, tenantId },
@@ -195,7 +195,7 @@ export async function updateGearConditionStatus(input: {
 }) {
   try {
     const { id, tenantId, tenantSlug, condition, status, location } = input;
-    await requireStaff(tenantId);
+    await requireAccess(tenantId, "production", "MANAGE");
 
     const existing = await db.inventoryItem.findFirst({
       where: { id, tenantId },
@@ -231,7 +231,7 @@ export async function quarantineGearItem(input: {
   reason?: string;
 }) {
   try {
-    await requireStaff(input.tenantId);
+    await requireAccess(input.tenantId, "production", "MANAGE");
     const existing = await db.inventoryItem.findFirst({
       where: { id: input.itemId, tenantId: input.tenantId },
     });
@@ -273,7 +273,7 @@ export async function releaseGearFromMaintenance(input: {
   condition?: "EXCELLENT" | "GOOD" | "FAIR";
 }) {
   try {
-    await requireStaff(input.tenantId);
+    await requireAccess(input.tenantId, "production", "MANAGE");
     const existing = await db.inventoryItem.findFirst({
       where: { id: input.itemId, tenantId: input.tenantId },
     });
@@ -312,7 +312,7 @@ export async function releaseGearFromMaintenance(input: {
 export async function createKitBundle(input: CreateKitBundleInput) {
   try {
     const validated = CreateKitBundleSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "production", "MANAGE");
     const { tenantId, tenantSlug, name, description, discipline, dailyRate, items } =
       validated;
 
@@ -377,7 +377,7 @@ export async function createKitBundle(input: CreateKitBundleInput) {
 export async function updateKitBundle(input: UpdateKitBundleInput) {
   try {
     const validated = UpdateKitBundleSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "production", "MANAGE");
     const { id, tenantId, tenantSlug, name, description, discipline, dailyRate, items } =
       validated;
 
@@ -461,7 +461,7 @@ export async function deleteKitBundle(input: {
 }) {
   try {
     const { id, tenantId, tenantSlug } = input;
-    await requireStaff(tenantId);
+    await requireAccess(tenantId, "production", "MANAGE");
     const existing = await db.kitBundle.findFirst({
       where: { id, tenantId },
     });
@@ -485,7 +485,7 @@ export async function deleteKitBundle(input: {
  */
 export async function checkBundleAvailability(bundleId: string, tenantId: string) {
   try {
-    await requireStaff(tenantId);
+    await requireAccess(tenantId, "production", "VIEW");
     const bundle = await db.kitBundle.findFirst({
       where: { id: bundleId, tenantId },
       include: {
@@ -572,7 +572,7 @@ export async function checkBundleAvailability(bundleId: string, tenantId: string
 export async function createEquipmentReservation(input: CreateReservationInput) {
   try {
     const validated = CreateReservationSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "production", "MANAGE");
     const { tenantId, tenantSlug, projectId, itemId, startDate, endDate } = validated;
 
     // Verify Project and Item belong to tenant
@@ -666,7 +666,7 @@ export async function logPreShootInspection(input: LogPreShootInspectionInput) {
   try {
     const validated = LogPreShootInspectionSchema.parse(input);
     // The inspection is logged under the signed-in staff member, never a name sent by the browser.
-    const inspectorName = (await requireStaff(validated.tenantId)).name;
+    const inspectorName = (await requireAccess(validated.tenantId, "production", "VIEW")).name;
     const {
       tenantId,
       tenantSlug,
@@ -767,7 +767,7 @@ export async function logPreShootInspection(input: LogPreShootInspectionInput) {
 export async function logPostShootInspection(input: LogPostShootInspectionInput) {
   try {
     const validated = LogPostShootInspectionSchema.parse(input);
-    const inspectorName = (await requireStaff(validated.tenantId)).name;
+    const inspectorName = (await requireAccess(validated.tenantId, "production", "VIEW")).name;
     const {
       tenantId,
       tenantSlug,

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -29,7 +29,7 @@ function safeRevalidate(path: string) {
 export async function createProposalAddOnTemplate(input: CreateProposalAddOnTemplateInput) {
   try {
     const validated = CreateProposalAddOnTemplateSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "proposals", "MANAGE");
     const { tenantId, tenantSlug, name, description, price, unit, isDefault, isActive } = validated;
 
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
@@ -64,7 +64,7 @@ export async function createProposalAddOnTemplate(input: CreateProposalAddOnTemp
 export async function updateProposalAddOnTemplate(input: UpdateProposalAddOnTemplateInput) {
   try {
     const validated = UpdateProposalAddOnTemplateSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "proposals", "MANAGE");
     const { id, tenantId, tenantSlug, name, description, price, unit, isDefault, isActive } = validated;
 
     const existing = await db.proposalAddOnTemplate.findFirst({
@@ -101,7 +101,7 @@ export async function updateProposalAddOnTemplate(input: UpdateProposalAddOnTemp
 export async function deleteProposalAddOnTemplate(input: DeleteProposalAddOnTemplateInput) {
   try {
     const validated = DeleteProposalAddOnTemplateSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "proposals", "MANAGE");
     const { id, tenantId, tenantSlug } = validated;
 
     const existing = await db.proposalAddOnTemplate.findFirst({
@@ -130,7 +130,7 @@ export async function deleteProposalAddOnTemplate(input: DeleteProposalAddOnTemp
 export async function toggleAddOnTemplateDefault(input: ToggleTemplateDefaultInput) {
   try {
     const validated = ToggleTemplateDefaultSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "proposals", "MANAGE");
     const { id, tenantId, tenantSlug, isDefault } = validated;
 
     const existing = await db.proposalAddOnTemplate.findFirst({
@@ -160,7 +160,7 @@ export async function toggleAddOnTemplateDefault(input: ToggleTemplateDefaultInp
 export async function toggleAddOnTemplateActive(input: ToggleTemplateActiveInput) {
   try {
     const validated = ToggleTemplateActiveSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "proposals", "MANAGE");
     const { id, tenantId, tenantSlug, isActive } = validated;
 
     const existing = await db.proposalAddOnTemplate.findFirst({

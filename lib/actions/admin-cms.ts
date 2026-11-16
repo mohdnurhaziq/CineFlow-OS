@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -27,7 +27,7 @@ function safeRevalidate(path: string) {
 export async function createShowcaseItem(input: CreateShowcaseItemInput) {
   try {
     const validated = CreateShowcaseItemSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const {
       tenantId,
       tenantSlug,
@@ -80,7 +80,7 @@ export async function createShowcaseItem(input: CreateShowcaseItemInput) {
 export async function updateShowcaseItem(input: UpdateShowcaseItemInput) {
   try {
     const validated = UpdateShowcaseItemSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const {
       id,
       tenantId,
@@ -136,7 +136,7 @@ export async function updateShowcaseItem(input: UpdateShowcaseItemInput) {
 export async function deleteShowcaseItem(input: DeleteShowcaseItemInput) {
   try {
     const validated = DeleteShowcaseItemSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug } = validated;
 
     const existing = await db.showcaseItem.findFirst({
@@ -166,7 +166,7 @@ export async function deleteShowcaseItem(input: DeleteShowcaseItemInput) {
 export async function toggleShowcaseFeatured(input: ToggleShowcaseFeaturedInput) {
   try {
     const validated = ToggleShowcaseFeaturedSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug, isFeatured } = validated;
 
     const existing = await db.showcaseItem.findFirst({

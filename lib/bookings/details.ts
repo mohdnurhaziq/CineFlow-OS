@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
  * Booking details for the studio admin (Bookings page and calendar drill-down).
  *
  * Not a "use server" module: callers must authorize first. Pages under /admin are
- * guarded by the admin layout; the server action wrapper calls requireStaff.
+ * guarded by the admin layout; the server action wrapper (getBookingDetails) checks Bookings access.
  */
 
 export interface BookingInvoiceSummary {

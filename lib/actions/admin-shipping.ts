@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { actionErrorMessage } from "@/lib/action-error";
@@ -18,7 +18,7 @@ function safeRevalidate(path: string) {
 export async function saveShippingZones(input: SaveShippingZonesInput) {
   try {
     const validated = SaveShippingZonesSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { tenantId, tenantSlug, zones } = validated;
 
     await db.$transaction([

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -67,7 +67,7 @@ async function frameInUse(id: string): Promise<boolean> {
 export async function createFrameDesign(input: CreateFrameDesignInput) {
   try {
     const validated = CreateFrameDesignSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { tenantId, tenantSlug, name, material, moldingWidth, frameColor, previewAsset, priceOffset, isAvailable } = validated;
 
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
@@ -104,7 +104,7 @@ export async function createFrameDesign(input: CreateFrameDesignInput) {
 export async function updateFrameDesign(input: UpdateFrameDesignInput) {
   try {
     const validated = UpdateFrameDesignSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug, name, material, moldingWidth, frameColor, previewAsset, priceOffset, isAvailable } = validated;
 
     const existing = await db.frameDesign.findFirst({
@@ -143,7 +143,7 @@ export async function updateFrameDesign(input: UpdateFrameDesignInput) {
 export async function deleteFrameDesign(input: DeleteFrameDesignInput) {
   try {
     const validated = DeleteFrameDesignSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug } = validated;
 
     const existing = await db.frameDesign.findFirst({
@@ -175,7 +175,7 @@ export async function deleteFrameDesign(input: DeleteFrameDesignInput) {
 export async function toggleFrameAvailability(input: ToggleFrameAvailabilityInput) {
   try {
     const validated = ToggleFrameAvailabilitySchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug, isAvailable } = validated;
 
     const existing = await db.frameDesign.findFirst({
@@ -210,7 +210,7 @@ export async function toggleFrameAvailability(input: ToggleFrameAvailabilityInpu
 export async function createPrintSize(input: CreatePrintSizeInput) {
   try {
     const validated = CreatePrintSizeSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { tenantId, tenantSlug, code, name, widthInches, heightInches, basePrice } = validated;
 
     const normalizedCode = code.toUpperCase().trim();
@@ -254,7 +254,7 @@ export async function createPrintSize(input: CreatePrintSizeInput) {
 export async function updatePrintSize(input: UpdatePrintSizeInput) {
   try {
     const validated = UpdatePrintSizeSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug, code, name, widthInches, heightInches, basePrice } = validated;
 
     const existing = await db.printSize.findFirst({
@@ -305,7 +305,7 @@ export async function updatePrintSize(input: UpdatePrintSizeInput) {
 export async function deletePrintSize(input: DeletePrintSizeInput) {
   try {
     const validated = DeletePrintSizeSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug } = validated;
 
     const existing = await db.printSize.findFirst({
@@ -337,7 +337,7 @@ export async function deletePrintSize(input: DeletePrintSizeInput) {
 export async function togglePrintSizeAvailability(input: TogglePrintSizeAvailabilityInput) {
   try {
     const validated = TogglePrintSizeAvailabilitySchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { id, tenantId, tenantSlug, isAvailable } = validated;
 
     const existing = await db.printSize.findFirst({ where: { id, tenantId } });
@@ -367,7 +367,7 @@ export async function togglePrintSizeAvailability(input: TogglePrintSizeAvailabi
 export async function updateMatBoardPrice(input: UpdateMatBoardPriceInput) {
   try {
     const validated = UpdateMatBoardPriceSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
     const { tenantId, tenantSlug, price } = validated;
 
     const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });

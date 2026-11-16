@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { getCurrentUser } from "@/lib/auth/session";
 import { STAFF_ROLES } from "@/lib/auth/guard";
+import { levelAtLeast, loadAccess, type AccessArea, type AccessLevel } from "@/lib/auth/access";
 import { isRateLimited } from "@/lib/rate-limit";
 
 const ALLOWED_FOLDERS = new Set([
@@ -25,6 +26,18 @@ const ALLOWED_FOLDERS = new Set([
 const ANONYMOUS_FOLDERS = new Set(["logos", "receipts"]);
 const ANONYMOUS_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const ANONYMOUS_MAX_UPLOADS = 20; // per IP per window
+
+/**
+ * Team folders that belong to an access area: a team member needs that area to upload there.
+ * The upload only stores a file; the record it is attached to is checked again by its own action
+ * (e.g. /api/deliverables checks the project). The other folders are open to the whole team.
+ */
+const FOLDER_ACCESS: Record<string, { area: AccessArea; level: AccessLevel }> = {
+  deliverables: { area: "galleries", level: "OWN" },
+  frames: { area: "catalog", level: "MANAGE" },
+  showcase: { area: "catalog", level: "MANAGE" },
+  signatures: { area: "production", level: "VIEW" },
+};
 
 
 /** Extension is derived from the validated MIME type, never from the client-supplied filename. */
@@ -65,9 +78,17 @@ export async function POST(request: NextRequest) {
 
     const folder = ALLOWED_FOLDERS.has(requestedFolder) ? requestedFolder : "general";
 
-    // Authorization: staff may write anywhere; visitors only to the narrow public folders.
+    // Authorization: the team may write to the folders their access covers; visitors only to the
+    // narrow public folders.
     const session = await getCurrentUser();
     const isStaff = !!session && STAFF_ROLES.has(session.role);
+    const need = FOLDER_ACCESS[folder];
+    if (isStaff && need) {
+      const access = await loadAccess({ id: session.id, role: session.role, tenantId: session.tenantId });
+      if (!levelAtLeast(access.areas[need.area], need.level)) {
+        return NextResponse.json({ error: "Not permitted to upload here" }, { status: 403 });
+      }
+    }
     if (!isStaff) {
       if (!ANONYMOUS_FOLDERS.has(folder)) {
         return NextResponse.json(

@@ -5,7 +5,9 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { requireOwner, requireStaff } from "@/lib/auth/guard";
+import { AuthorizationError } from "@/lib/auth/guard";
+import { canAccessProject, requireAccess, requireTick } from "@/lib/auth/access-guard";
+import type { AccessMap } from "@/lib/auth/access";
 import { actionErrorMessage } from "@/lib/action-error";
 import { deleteDeliverableFiles } from "@/lib/deliverables/storage";
 import { filesReleased } from "@/lib/deliverables/access";
@@ -16,7 +18,8 @@ import { PROJECT_STAGES } from "@/lib/projects/constants";
 /**
  * Studio-side management of proposals and the projects they turn into: create a proposal
  * for a client; then, once accepted, run the project (status, call sheets, deliverables,
- * gear). Creating a proposal sets prices, so it is owner-only; the rest is any staff.
+ * gear). Creating a proposal sets prices, so it needs the "set prices" permission; the rest
+ * needs Galleries or Production access.
  */
 
 type Result<T = object> = ({ success: true } & T) | { success: false; error: string; message: string };
@@ -29,6 +32,13 @@ function revalidate(paths: string[]) {
     } catch {
       // non-request context
     }
+  }
+}
+
+/** Refuses unless `user` may open this project (with OWN on Galleries: one they lead or are assigned to). */
+async function assertProjectAccess(user: { id: string; access: AccessMap }, tenantId: string, projectId: string) {
+  if (!(await canAccessProject(user, user.access, tenantId, projectId))) {
+    throw new AuthorizationError("FORBIDDEN: This project isn't assigned to you.");
   }
 }
 
@@ -79,7 +89,7 @@ export async function createProposal(
 ): Promise<Result<{ proposalId: string; proposalNumber: string; shareUrl: string }>> {
   try {
     const data = CreateProposalSchema.parse(input);
-    const session = await requireOwner(data.tenantId);
+    const session = await requireTick(data.tenantId, "setPrices");
     const tenant = await db.tenant.findUnique({ where: { id: data.tenantId }, select: { name: true, slug: true } });
     if (!tenant) return fail("TENANT_NOT_FOUND", "Studio not found.");
 
@@ -185,9 +195,10 @@ const StatusSchema = z.object({
 export async function updateProjectStatus(input: z.input<typeof StatusSchema>): Promise<Result> {
   try {
     const data = StatusSchema.parse(input);
-    await requireStaff(data.tenantId);
+    const user = await requireAccess(data.tenantId, "galleries", "OWN");
     const project = await projectOf(data.tenantId, data.projectId);
     if (!project) return fail("NOT_FOUND", "Project not found.");
+    await assertProjectAccess(user, data.tenantId, project.id);
     await db.project.update({ where: { id: project.id }, data: { status: data.status } });
     revalidate([`/${project.tenant.slug}/admin/projects`, `/${project.tenant.slug}/admin/projects/${project.id}`, `/${project.tenant.slug}/admin`]);
     return { success: true };
@@ -209,7 +220,7 @@ const KindSchema = z.object({
 export async function updateProjectKind(input: z.input<typeof KindSchema>): Promise<Result> {
   try {
     const data = KindSchema.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "galleries", "MANAGE");
     const project = await projectOf(data.tenantId, data.projectId);
     if (!project) return fail("NOT_FOUND", "Project not found.");
     await db.project.update({ where: { id: project.id }, data: { kind: data.kind } });
@@ -250,7 +261,7 @@ const CallSheetSchema = z.object({
 export async function createCallSheet(input: z.input<typeof CallSheetSchema>): Promise<Result<{ callSheetId: string }>> {
   try {
     const data = CallSheetSchema.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "production", "MANAGE");
     const project = await projectOf(data.tenantId, data.projectId);
     if (!project) return fail("NOT_FOUND", "Project not found.");
     const sheet = await db.callSheet.create({
@@ -281,7 +292,7 @@ const DeleteCallSheetSchema = z.object({ tenantId: z.string().min(1), callSheetI
 export async function deleteCallSheet(input: z.input<typeof DeleteCallSheetSchema>): Promise<Result> {
   try {
     const data = DeleteCallSheetSchema.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "production", "MANAGE");
     const sheet = await db.callSheet.findFirst({
       where: { id: data.callSheetId, project: { tenantId: data.tenantId } },
       include: { project: { include: { tenant: { select: { slug: true } } } } },
@@ -308,12 +319,13 @@ const DeleteItemSchema = z.object({ tenantId: z.string().min(1), itemId: z.strin
 export async function deleteDeliverableItem(input: z.input<typeof DeleteItemSchema>): Promise<Result> {
   try {
     const data = DeleteItemSchema.parse(input);
-    await requireStaff(data.tenantId);
+    const user = await requireAccess(data.tenantId, "galleries", "OWN");
     const item = await db.deliverableItem.findFirst({
       where: { id: data.itemId, deliverable: { project: { tenantId: data.tenantId } } },
       include: { deliverable: { include: { project: { include: { tenant: { select: { slug: true } } } } } } },
     });
     if (!item) return fail("NOT_FOUND", "File not found.");
+    await assertProjectAccess(user, data.tenantId, item.deliverable.projectId);
     // The studio prints from this photo's master until the order is done or cancelled.
     const inOpenOrder = await db.printOrderItem.count({
       where: { deliverableItemId: item.id, order: { status: { notIn: [...FINISHED_PRINT_ORDER_STATUSES] } } },
@@ -344,7 +356,7 @@ export async function notifyClientPhotosReady(
 ): Promise<Result<{ photoCount: number; videoCount: number; emailDelivery: string; whatsappUrl?: string }>> {
   try {
     const data = NotifyPhotosReadySchema.parse(input);
-    await requireStaff(data.tenantId);
+    const user = await requireAccess(data.tenantId, "galleries", "OWN");
     const project = await db.project.findFirst({
       where: { id: data.projectId, tenantId: data.tenantId },
       include: {
@@ -354,6 +366,7 @@ export async function notifyClientPhotosReady(
       },
     });
     if (!project) return fail("NOT_FOUND", "Project not found.");
+    await assertProjectAccess(user, data.tenantId, project.id);
 
     const items = project.deliverables.flatMap((d) => d.items);
     const photoCount = items.filter((i) => i.itemType === "PHOTO").length;
@@ -424,7 +437,7 @@ const CancelReservationSchema = z.object({ tenantId: z.string().min(1), reservat
 export async function cancelEquipmentReservation(input: z.input<typeof CancelReservationSchema>): Promise<Result> {
   try {
     const data = CancelReservationSchema.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "production", "MANAGE");
     const reservation = await db.equipmentReservation.findFirst({
       where: { id: data.reservationId, project: { tenantId: data.tenantId } },
       include: { project: { include: { tenant: { select: { slug: true } } } } },

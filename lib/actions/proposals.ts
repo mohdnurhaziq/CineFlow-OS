@@ -51,7 +51,7 @@ export async function getProposalBySlugAndId(tenantSlug: string, proposalIdOrNum
     if (!proposal) return null;
 
     // Only the proposal's client or the studio's staff, signed in.
-    await requireRecordAccess(tenant.id, proposal.clientId);
+    await requireRecordAccess(tenant.id, proposal.clientId, { area: "proposals" });
     return proposal;
   } catch (error) {
     console.error("Error fetching proposal:", error);
@@ -282,7 +282,7 @@ export async function toggleProposalAddOn(input: ToggleAddOnInput) {
       select: { tenantId: true, clientId: true, status: true },
     });
     if (!proposal) return { success: false, error: "Proposal not found." };
-    await requireRecordAccess(proposal.tenantId, proposal.clientId);
+    await requireRecordAccess(proposal.tenantId, proposal.clientId, { area: "proposals" });
     if (proposal.status === "ACCEPTED") {
       return { success: false, error: "This proposal is already signed; its add-ons can no longer change." };
     }

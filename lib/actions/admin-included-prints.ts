@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 
 function safeRevalidate(path: string) {
@@ -38,7 +38,7 @@ function fail(error: string, message: string) {
 export async function grantIncludedPrint(input: z.input<typeof GrantSchema>) {
   try {
     const v = GrantSchema.parse(input);
-    const staff = await requireStaff(v.tenantId);
+    const staff = await requireAccess(v.tenantId, "bookings", "MANAGE");
 
     const booking = await db.clientBooking.findFirst({ where: { id: v.bookingId, tenantId: v.tenantId }, select: { id: true } });
     if (!booking) return fail("BOOKING_NOT_FOUND", "Booking not found.");
@@ -77,7 +77,7 @@ export async function grantIncludedPrint(input: z.input<typeof GrantSchema>) {
 export async function removeIncludedPrint(input: z.input<typeof RemoveSchema>) {
   try {
     const v = RemoveSchema.parse(input);
-    await requireStaff(v.tenantId);
+    await requireAccess(v.tenantId, "bookings", "MANAGE");
 
     const line = await db.bookingIncludedPrint.findFirst({ where: { id: v.lineId, tenantId: v.tenantId } });
     if (!line) return fail("LINE_NOT_FOUND", "Included print not found.");

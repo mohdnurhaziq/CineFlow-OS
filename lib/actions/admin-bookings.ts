@@ -3,8 +3,8 @@
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { getCurrentUser } from "@/lib/auth/session";
-import { requireStaff, STAFF_ROLES, OWNER_ROLES } from "@/lib/auth/guard";
+import { AuthorizationError } from "@/lib/auth/guard";
+import { canAccessBooking, requireAccess } from "@/lib/auth/access-guard";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
@@ -49,18 +49,20 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
     }
     const data = parsed.data;
 
-    // Only studio staff of this studio (or the platform super-admin) may book on a customer's behalf.
-    const session = await getCurrentUser();
-    if (
-      !session ||
-      !STAFF_ROLES.has(session.role) ||
-      (session.role !== "SUPER_ADMIN" && session.tenantId !== data.tenantId)
-    ) {
-      return { success: false, error: "You are not allowed to create bookings for this studio" };
+    // Only this studio's team with Bookings access (or the platform super-admin) may book on a customer's behalf.
+    let session: Awaited<ReturnType<typeof requireAccess>>;
+    try {
+      session = await requireAccess(data.tenantId, "bookings", "MANAGE");
+    } catch (e) {
+      if (e instanceof AuthorizationError) return { success: false, error: "You are not allowed to create bookings for this studio" };
+      throw e;
     }
-    // Recording a deposit as received is the owner's call; staff book it as awaiting payment.
-    if (data.paymentStatus === "PAID" && !OWNER_ROLES.has(session.role)) {
-      return { success: false, error: "Only the studio owner can record a payment as received." };
+    // Recording a deposit as received needs the "record payments" permission; others book it as awaiting payment.
+    if (data.paymentStatus === "PAID" && !session.access.ticks.recordPayments) {
+      return {
+        success: false,
+        error: "Only the studio owner, or someone they've allowed to record or cancel payments, can record a payment as received.",
+      };
     }
 
     const result = await db.$transaction(async (tx) => {
@@ -206,10 +208,13 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
   }
 }
 
-/** Full details of one booking, for the calendar's booking drill-down. Staff of the studio only. */
+/** Full details of one booking, for the calendar's booking drill-down. Team with access to that booking only. */
 export async function getBookingDetails(input: { tenantId: string; bookingId: string }) {
   try {
-    await requireStaff(input.tenantId);
+    const user = await requireAccess(input.tenantId, "bookings", "OWN");
+    if (!(await canAccessBooking(user, user.access, input.tenantId, input.bookingId))) {
+      throw new AuthorizationError("FORBIDDEN: This booking isn't assigned to you.");
+    }
     const [booking] = await loadBookingDetails(input.tenantId, { bookingId: input.bookingId });
     if (!booking) return { success: false as const, error: "Booking not found" };
     return { success: true as const, booking };
@@ -228,8 +233,7 @@ export async function promoteBookingToProjectAction(input: {
   bookingId: string;
 }) {
   try {
-    await requireStaff(input.tenantId);
-    const session = await getCurrentUser();
+    const session = await requireAccess(input.tenantId, "galleries", "MANAGE");
 
     const booking = await db.clientBooking.findFirst({
       where: { id: input.bookingId, tenantId: input.tenantId },
@@ -241,7 +245,7 @@ export async function promoteBookingToProjectAction(input: {
     }
 
     const result = await db.$transaction(async (tx) => {
-      return provisionProjectForBooking(tx, booking.id, { studioLeadId: session?.id });
+      return provisionProjectForBooking(tx, booking.id, { studioLeadId: session.id });
     });
 
     if (!result) {

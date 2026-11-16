@@ -893,7 +893,11 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const a = await placeAwaiting();
     const unpaidRes = await withSession(photographerSession, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
     harness.assertEqual(errOf(unpaidRes), "OWNER_ONLY", "Photographer can't void the unpaid invoice");
-    harness.assertEqual(msgOf(unpaidRes), "Only the studio owner can cancel an order that has a payment.", "Message");
+    harness.assertEqual(
+      msgOf(unpaidRes),
+      "Only the studio owner, or someone they've allowed to record or cancel payments, can cancel an order that has a payment.",
+      "Message"
+    );
     harness.assertEqual(await orderStatus(a.orderId), "AWAITING_PAYMENT", "Order unchanged");
     harness.assertEqual(await invoiceStatus(a.invoice.id), a.invoice.status, "Invoice unchanged");
 

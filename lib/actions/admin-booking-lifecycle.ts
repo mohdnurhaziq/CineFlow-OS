@@ -5,7 +5,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { advanceProjectStage } from "@/lib/projects/stage";
 import { env } from "@/lib/env";
-import { OWNER_ROLES, requireStaff } from "@/lib/auth/guard";
+import { AuthorizationError } from "@/lib/auth/guard";
+import { canAccessBooking, requireAccess } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
@@ -21,7 +22,8 @@ import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
  *   CONFIRMED ----------after the session--> COMPLETED or NO_SHOW
  *   COMPLETED ---------------------------> DELIVERED (optional gallery link for the client)
  *
- * Cancelling a booking whose deposit was paid is owner-only: the deposit may need refunding.
+ * Cancelling a booking whose deposit was paid needs the "record or cancel payments" permission
+ * (the owner always has it): the deposit may need refunding.
  */
 
 const DAY_MS = 86_400_000;
@@ -82,14 +84,17 @@ const CancelSchema = Base.extend({ reason: z.string().trim().min(3, "Give a shor
 export async function cancelBooking(input: z.input<typeof CancelSchema>): Promise<Result> {
   try {
     const data = CancelSchema.parse(input);
-    const session = await requireStaff(data.tenantId);
+    const session = await requireAccess(data.tenantId, "bookings", "MANAGE");
     const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId }, include: { slot: true } });
     if (!booking) return fail("NOT_FOUND", "Booking not found.");
     if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
       return fail("NOT_CANCELLABLE", "Only upcoming bookings can be cancelled.");
     }
-    if (booking.depositPaid && !OWNER_ROLES.has(session.role)) {
-      return fail("OWNER_ONLY", "Only the studio owner can cancel a paid booking, as the deposit may need refunding.");
+    if (booking.depositPaid && !session.access.ticks.recordPayments) {
+      return fail(
+        "OWNER_ONLY",
+        "Only the studio owner, or someone they've allowed to record or cancel payments, can cancel a paid booking, as the deposit may need refunding."
+      );
     }
 
     await db.$transaction(async (tx) => {
@@ -145,7 +150,7 @@ export interface RescheduleOption {
 export async function listRescheduleOptions(input: z.input<typeof Base>): Promise<{ success: true; slots: RescheduleOption[] } | { success: false; error: string; message: string }> {
   try {
     const data = Base.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "bookings", "MANAGE");
     const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId } });
     if (!booking) return { success: false, error: "NOT_FOUND", message: "Booking not found." };
     const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
@@ -170,7 +175,7 @@ const RescheduleSchema = Base.extend({ newSlotId: z.string().min(1) });
 export async function rescheduleBooking(input: z.input<typeof RescheduleSchema>): Promise<Result> {
   try {
     const data = RescheduleSchema.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "bookings", "MANAGE");
     const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId }, include: { slot: true } });
     if (!booking) return fail("NOT_FOUND", "Booking not found.");
     if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
@@ -232,9 +237,12 @@ const OutcomeSchema = Base.extend({ outcome: z.enum(["COMPLETED", "NO_SHOW"]) })
 export async function recordSessionOutcome(input: z.input<typeof OutcomeSchema>): Promise<Result> {
   try {
     const data = OutcomeSchema.parse(input);
-    await requireStaff(data.tenantId);
+    const user = await requireAccess(data.tenantId, "bookings", "OWN");
     const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId }, include: { slot: true } });
     if (!booking) return fail("NOT_FOUND", "Booking not found.");
+    if (!(await canAccessBooking(user, user.access, data.tenantId, booking.id))) {
+      throw new AuthorizationError("FORBIDDEN: This booking isn't assigned to you.");
+    }
     if (booking.status !== "CONFIRMED") return fail("NOT_CONFIRMED", "Only confirmed bookings can be marked as done or no-show.");
     if (booking.slot && !isSlotInPast(booking.slot)) return fail("NOT_STARTED", "The session hasn't started yet.");
 
@@ -264,7 +272,7 @@ export async function resendBookingConfirmation(
 ): Promise<{ success: true; sentTo: string } | { success: false; error: string; message: string }> {
   try {
     const data = Base.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "bookings", "MANAGE");
     const booking = await db.clientBooking.findFirst({
       where: { id: data.bookingId, tenantId: data.tenantId },
       select: { id: true, status: true, clientEmail: true },

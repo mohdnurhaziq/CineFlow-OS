@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { formatSlotDate } from "@/lib/slot-time";
 import { liveProjectWhere } from "@/lib/projects/list";
-import { requireStaffBySlug } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 
 export interface StudioAnalyticsData {
   tenant: {
@@ -71,7 +71,9 @@ export interface StudioAnalyticsData {
 
 export async function getStudioAnalytics(tenantSlug: string): Promise<StudioAnalyticsData | null> {
   try {
-    await requireStaffBySlug(tenantSlug);
+    // Compares ids, so slug renames are safe. The figures are money: Invoices access.
+    const studio = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } });
+    await requireAccess(studio?.id ?? "", "invoices", "VIEW");
     const tenant = await db.tenant.findUnique({
       where: { slug: tenantSlug },
       select: {

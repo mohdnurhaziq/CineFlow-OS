@@ -4,17 +4,18 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { requireOwner, requireStaff } from "@/lib/auth/guard";
+import { requireAccess, requireTick } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { nextInvoiceNumber, UNPAID_INVOICE_STATUSES } from "@/lib/bookings/billing";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
-import { approvePaymentVerification } from "@/lib/actions/admin-verification";
+import { applyInvoicePayment } from "@/lib/bookings/payment-approval";
 import { sendNotification } from "@/lib/notifications";
 import { formatMoney } from "@/lib/money";
 
 /**
- * Invoice actions for the studio. Taking, cancelling or issuing money is the owner's call;
- * any staff member can send a payment reminder.
+ * Invoice actions for the studio. Recording or cancelling a payment needs the "record payments"
+ * permission and issuing an invoice "set prices" (the owner always has both); sending a payment
+ * reminder needs Invoices access.
  */
 
 type Result = { success: true; invoiceId?: string; invoiceNumber?: string } | { success: false; error: string; message: string };
@@ -48,7 +49,7 @@ const RecordSchema = Base.extend({
 export async function recordInvoicePayment(input: z.input<typeof RecordSchema>): Promise<Result> {
   try {
     const data = RecordSchema.parse(input);
-    await requireOwner(data.tenantId);
+    const session = await requireTick(data.tenantId, "recordPayments");
     const invoice = await db.milestoneInvoice.findFirst({ where: { id: data.invoiceId, tenantId: data.tenantId } });
     if (!invoice) return fail("NOT_FOUND", "Invoice not found.");
     if (!UNPAID.includes(invoice.status)) return fail("NOT_UNPAID", "This invoice is already paid or cancelled.");
@@ -58,7 +59,7 @@ export async function recordInvoicePayment(input: z.input<typeof RecordSchema>):
       data: { paymentMethod: data.method, ...(data.reference ? { paymentReference: data.reference } : {}) },
     });
     // Same effects as approving a slip: confirm the booking, issue the balance, unlock the vault.
-    const res = await approvePaymentVerification({ invoiceId: invoice.id, tenantId: data.tenantId, tenantSlug: data.tenantSlug });
+    const res = await applyInvoicePayment({ invoiceId: invoice.id, tenantId: data.tenantId, tenantSlug: data.tenantSlug }, session.name);
     if (!res.success) return fail(res.error ?? "RECORD_FAILED", res.message ?? "Could not record the payment.");
     revalidate(data.tenantSlug, invoice.id);
     return { success: true };
@@ -76,7 +77,7 @@ const VoidSchema = Base.extend({ reason: z.string().trim().min(3, "Give a short 
 export async function voidInvoice(input: z.input<typeof VoidSchema>): Promise<Result> {
   try {
     const data = VoidSchema.parse(input);
-    const session = await requireOwner(data.tenantId);
+    const session = await requireTick(data.tenantId, "recordPayments");
     const invoice = await db.milestoneInvoice.findFirst({ where: { id: data.invoiceId, tenantId: data.tenantId } });
     if (!invoice) return fail("NOT_FOUND", "Invoice not found.");
     if (!UNPAID.includes(invoice.status)) return fail("NOT_UNPAID", "Only unpaid invoices can be cancelled.");
@@ -117,33 +118,38 @@ export async function voidInvoice(input: z.input<typeof VoidSchema>): Promise<Re
 export async function sendInvoiceReminder(input: z.input<typeof Base>): Promise<Result> {
   try {
     const data = Base.parse(input);
-    await requireStaff(data.tenantId);
-    const invoice = await db.milestoneInvoice.findFirst({
-      where: { id: data.invoiceId, tenantId: data.tenantId },
-      include: { client: true, tenant: { select: { name: true, slug: true, currency: true } } },
-    });
-    if (!invoice) return fail("NOT_FOUND", "Invoice not found.");
-    if (!["PENDING", "OVERDUE", "REJECTED"].includes(invoice.status)) {
-      return fail("NOTHING_DUE", "There is nothing for the client to pay on this invoice right now.");
-    }
-    if (!invoice.client.email) return fail("NO_EMAIL", "This client has no email address.");
-    const due = invoice.dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    await sendNotification({
-      event: "STUDIO_UPDATE",
-      studioName: invoice.tenant.name,
-      studioSlug: invoice.tenant.slug,
-      clientName: invoice.client.name,
-      clientEmail: invoice.client.email,
-      clientPhone: invoice.client.phone || undefined,
-      headline: `Invoice ${invoice.invoiceNumber} is due`,
-      message: `A reminder that invoice ${invoice.invoiceNumber} for ${formatMoney(invoice.tenant.currency, invoice.amount)} is due on ${due}.`,
-      linkUrl: `${env.NEXT_PUBLIC_APP_URL}/${invoice.tenant.slug}/account/invoices/${invoice.id}`,
-      linkLabel: "View and pay",
-    });
-    return { success: true };
+    await requireAccess(data.tenantId, "invoices", "MANAGE");
+    return await remind(data);
   } catch (err) {
     return fail("REMIND_FAILED", actionErrorMessage(err, "Could not send the reminder."));
   }
+}
+
+/** Emails the client that the invoice is due. The caller checks access. */
+async function remind(data: z.output<typeof Base>): Promise<Result> {
+  const invoice = await db.milestoneInvoice.findFirst({
+    where: { id: data.invoiceId, tenantId: data.tenantId },
+    include: { client: true, tenant: { select: { name: true, slug: true, currency: true } } },
+  });
+  if (!invoice) return fail("NOT_FOUND", "Invoice not found.");
+  if (!["PENDING", "OVERDUE", "REJECTED"].includes(invoice.status)) {
+    return fail("NOTHING_DUE", "There is nothing for the client to pay on this invoice right now.");
+  }
+  if (!invoice.client.email) return fail("NO_EMAIL", "This client has no email address.");
+  const due = invoice.dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  await sendNotification({
+    event: "STUDIO_UPDATE",
+    studioName: invoice.tenant.name,
+    studioSlug: invoice.tenant.slug,
+    clientName: invoice.client.name,
+    clientEmail: invoice.client.email,
+    clientPhone: invoice.client.phone || undefined,
+    headline: `Invoice ${invoice.invoiceNumber} is due`,
+    message: `A reminder that invoice ${invoice.invoiceNumber} for ${formatMoney(invoice.tenant.currency, invoice.amount)} is due on ${due}.`,
+    linkUrl: `${env.NEXT_PUBLIC_APP_URL}/${invoice.tenant.slug}/account/invoices/${invoice.id}`,
+    linkLabel: "View and pay",
+  });
+  return { success: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +169,7 @@ const CreateSchema = z.object({
 export async function createInvoice(input: z.input<typeof CreateSchema>): Promise<Result> {
   try {
     const data = CreateSchema.parse(input);
-    await requireOwner(data.tenantId);
+    await requireTick(data.tenantId, "setPrices");
     const client = await db.user.findFirst({ where: { id: data.clientId, tenantId: data.tenantId, role: "CLIENT" } });
     if (!client) return fail("CLIENT_NOT_FOUND", "Client not found.");
     const due = new Date(`${data.dueDate}T00:00:00.000Z`);
@@ -187,7 +193,7 @@ export async function createInvoice(input: z.input<typeof CreateSchema>): Promis
     );
     revalidate(data.tenantSlug, invoice.id);
     if (data.notifyClient) {
-      await sendInvoiceReminder({ tenantId: data.tenantId, tenantSlug: data.tenantSlug, invoiceId: invoice.id }).catch(() => null);
+      await remind({ tenantId: data.tenantId, tenantSlug: data.tenantSlug, invoiceId: invoice.id }).catch(() => null);
     }
     return { success: true, invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber };
   } catch (err) {

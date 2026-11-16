@@ -56,6 +56,7 @@ export default async function ReleasesPage({ params }: ReleasesPageProps) {
     tenantSlug: tenant.slug,
     tenantId: tenant.id,
     clientId: project.clientId,
+    record: { area: "production" },
     returnTo: `/${tenant.slug}/releases/${project.id}`,
   });
 

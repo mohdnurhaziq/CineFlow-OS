@@ -92,6 +92,7 @@ export default async function ProposalPage({ params }: ProposalPageProps) {
     tenantSlug: tenant.slug,
     tenantId: tenant.id,
     clientId: proposal.client.id,
+    record: { area: "proposals" },
     returnTo: `/${tenant.slug}/proposals/${proposal.id}`,
   });
 

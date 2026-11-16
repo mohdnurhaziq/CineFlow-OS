@@ -3,12 +3,13 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireStaff, AuthorizationError } from "@/lib/auth/guard";
+import { AuthorizationError } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 
 /**
  * Studio-side edits to a client: contact details and the studio's private notes.
- * Any staff member of the studio may make them (they already create bookings for clients).
+ * The team needs Clients access to make them.
  */
 
 /** Refreshes cached pages; a no-op outside a Next request (scripts, tests). Never fails a save. */
@@ -42,7 +43,7 @@ const ClientDetailsSchema = z.object({
 export async function updateClientDetails(input: z.input<typeof ClientDetailsSchema>): Promise<ActionResult> {
   try {
     const data = ClientDetailsSchema.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "clients", "MANAGE");
 
     const client = await db.user.findFirst({
       where: { id: data.clientId, tenantId: data.tenantId, role: "CLIENT" },
@@ -112,7 +113,7 @@ const ClientNotesSchema = z.object({
 export async function updateClientNotes(input: z.input<typeof ClientNotesSchema>): Promise<ActionResult> {
   try {
     const data = ClientNotesSchema.parse(input);
-    await requireStaff(data.tenantId);
+    await requireAccess(data.tenantId, "clients", "MANAGE");
 
     const { count } = await db.user.updateMany({
       where: { id: data.clientId, tenantId: data.tenantId, role: "CLIENT" },

@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
-import { canAccessClientRecord } from "@/lib/auth/project-access";
-import { AuthorizationError, OWNER_ROLES, requireStaff, STAFF_ROLES } from "@/lib/auth/guard";
+import { isRecordClient } from "@/lib/auth/project-access";
+import { AuthorizationError, STAFF_ROLES } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 import { nextInvoiceNumber, nextPrintOrderNumber, UNPAID_INVOICE_STATUSES } from "@/lib/bookings/billing";
 import { remainingForLines } from "@/lib/prints/entitlements";
 import { orderTotals, priceCartLine, type PricedCartLine } from "@/lib/prints/pricing";
@@ -74,16 +75,17 @@ function appendNote(existing: string | null, note: string): string {
 type OrderProject = { id: string; clientId: string; bookingId: string | null };
 
 /**
- * The project, if the caller is its client or the studio's staff and its balance is paid.
- * Staff get no override on the unlock rule.
+ * The project, if the caller is its client or the studio's team and its balance is paid.
+ * `teamChecked`: the caller is on the team and already passed the Print orders check (made
+ * before any transaction, as it reads the database). The team gets no override on the unlock rule.
  */
-async function loadOrderProject(tx: Tx, session: SessionUser | null, v: PlaceOrderValues): Promise<OrderProject> {
+async function loadOrderProject(tx: Tx, session: SessionUser | null, v: PlaceOrderValues, teamChecked: boolean): Promise<OrderProject> {
   if (!session) refuse("UNAUTHENTICATED", "Please sign in to order prints.");
   const project = await tx.project.findFirst({
     where: { id: v.projectId, tenantId: v.tenantId },
     select: { id: true, clientId: true, bookingId: true, isFinalBalancePaid: true },
   });
-  if (!project || !canAccessClientRecord(session, v.tenantId, project.clientId)) {
+  if (!project || !(teamChecked || isRecordClient(session, v.tenantId, project.clientId))) {
     refuse("FORBIDDEN", "That project isn't available to this account.");
   }
   if (!project.isFinalBalancePaid) refuse("LOCKED", "Framed prints unlock when your balance is paid.");
@@ -222,7 +224,10 @@ export async function quotePrintOrder(
   try {
     const v = PlaceOrderSchema.parse(input);
     const session = await getCurrentUser();
-    const project = await loadOrderProject(db, session, v);
+    // The team orders for a client with Print orders access.
+    const isTeam = !!session && STAFF_ROLES.has(session.role);
+    if (isTeam) await requireAccess(v.tenantId, "printOrders", "MANAGE");
+    const project = await loadOrderProject(db, session, v, isTeam);
     const priced = await priceOrder(db, v, project);
     return {
       success: true,
@@ -245,13 +250,16 @@ export async function placePrintOrder(
   try {
     const v = PlaceOrderSchema.parse(input);
     const session = await getCurrentUser();
+    // The team orders for a client with Print orders access.
+    const isTeam = !!session && STAFF_ROLES.has(session.role);
+    if (isTeam) await requireAccess(v.tenantId, "printOrders", "MANAGE");
 
     const placed = await db.$transaction(async (tx) => {
       // Take SQLite's write lock before reading anything, so two orders for the last included
       // print run one after the other and the second sees the first one's claim.
       await tx.$executeRaw`UPDATE "Tenant" SET "id" = "id" WHERE "id" = ${v.tenantId}`;
 
-      const project = await loadOrderProject(tx, session, v);
+      const project = await loadOrderProject(tx, session, v, isTeam);
       const priced = await priceOrder(tx, v, project);
       const orderNumber = await nextPrintOrderNumber(tx, v.tenantId);
 
@@ -346,29 +354,34 @@ export async function placePrintOrder(
  * while it awaits payment (but not while a payment slip is being checked: the money may already be
  * with the studio); the studio's staff may cancel until the prints are shipped or collected.
  * An unpaid linked invoice is voided with it. A paid invoice stays paid (any refund is settled
- * outside the app) and the refund owed is noted on the order and the invoice. Money rule: only the
- * studio owner cancels an order that has an invoice; other staff can cancel free orders only.
+ * outside the app) and the refund owed is noted on the order and the invoice. The team needs Print
+ * orders access. Money rule: cancelling an order that has an invoice needs the "record or cancel
+ * payments" permission (the owner always has it); without it the team can cancel free orders only.
  */
 export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ success: true } | Fail> {
   try {
     const v = CancelOrderSchema.parse(input);
     const session = await getCurrentUser();
     if (!session) refuse("UNAUTHENTICATED", "Please sign in to cancel an order.");
+    const isStaff = STAFF_ROLES.has(session.role);
+    const team = isStaff ? await requireAccess(v.tenantId, "printOrders", "MANAGE") : null;
 
     const order = await db.printOrder.findFirst({ where: { id: v.orderId, tenantId: v.tenantId } });
     // Someone else's order is reported as missing, so its existence isn't revealed.
-    if (!order || !canAccessClientRecord(session, v.tenantId, order.clientId)) {
+    if (!order || !(team || isRecordClient(session, v.tenantId, order.clientId))) {
       refuse("NOT_FOUND", "Order not found.");
     }
     if (order.status === "CANCELLED") refuse("ALREADY_CANCELLED", "This order is already cancelled.");
-    const isStaff = STAFF_ROLES.has(session.role);
-    if (isStaff) {
+    if (team) {
       if (SENT_ORDER_STATUSES.includes(order.status)) {
         refuse("NOT_CANCELLABLE", "These prints have already gone out, so the order can't be cancelled.");
       }
-      // Voiding an invoice or owing a refund is the owner's call, as with voidInvoice.
-      if (order.invoiceId && !OWNER_ROLES.has(session.role)) {
-        refuse("OWNER_ONLY", "Only the studio owner can cancel an order that has a payment.");
+      // Voiding an invoice or owing a refund needs the payments permission, as with voidInvoice.
+      if (order.invoiceId && !team.access.ticks.recordPayments) {
+        refuse(
+          "OWNER_ONLY",
+          "Only the studio owner, or someone they've allowed to record or cancel payments, can cancel an order that has a payment."
+        );
       }
     } else if (order.status !== "AWAITING_PAYMENT") {
       refuse("NOT_CANCELLABLE", "This order is paid. Contact the studio to change it.");
@@ -422,13 +435,13 @@ export async function cancelPrintOrder(input: CancelOrderInput): Promise<{ succe
 /**
  * Moves a print order along: NEW -> IN_PRODUCTION -> READY_FOR_PICKUP -> COLLECTED for pickup,
  * NEW -> IN_PRODUCTION -> SHIPPED (with courier and tracking number) -> DELIVERED for delivery.
- * Studio staff only. The client is emailed when the prints are ready or have shipped, after the
+ * The team with Print orders access only. The client is emailed when the prints are ready or have shipped, after the
  * change is saved; a mail problem never undoes it.
  */
 export async function updatePrintOrderStatus(input: UpdateOrderStatusInput): Promise<{ success: true } | Fail> {
   try {
     const v = UpdateOrderStatusSchema.parse(input);
-    await requireStaff(v.tenantId);
+    await requireAccess(v.tenantId, "printOrders", "MANAGE");
 
     const order = await db.printOrder.findFirst({ where: { id: v.orderId, tenantId: v.tenantId } });
     if (!order) refuse("NOT_FOUND", "Order not found.");

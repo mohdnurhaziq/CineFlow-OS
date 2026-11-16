@@ -116,6 +116,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       tenantSlug: tenant.slug,
       tenantId: tenant.id,
       clientId: invoice.clientId,
+      record: { area: "invoices" },
       returnTo: `/${tenant.slug}/checkout?${query.toString()}`,
     });
     // After paying: the client sees their invoice (receipt + confirmation); staff paying on a

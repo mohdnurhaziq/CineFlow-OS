@@ -98,6 +98,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
     tenantSlug: tenant.slug,
     tenantId: tenant.id,
     clientId: project.client.id,
+    record: { area: "galleries", projectId: project.id },
     returnTo: `/${tenant.slug}/vault/${project.id}`,
   });
 

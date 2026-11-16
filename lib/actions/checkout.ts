@@ -291,7 +291,7 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
       return { success: false, error: "INVOICE_NOT_FOUND", message: "Invoice not found or does not belong to studio." };
     }
     // Paying, or sending a slip, is for the invoice's client (or studio staff), signed in.
-    await requireRecordAccess(invoice.tenantId, invoice.clientId);
+    await requireRecordAccess(invoice.tenantId, invoice.clientId, { area: "invoices" });
 
     if (invoice.status === "PAID") {
       return { success: false, error: "ALREADY_PAID", message: "Invoice is already paid." };

@@ -80,6 +80,7 @@ export default async function VisualizerPage({
       tenantSlug: tenant.slug,
       tenantId: tenant.id,
       clientId: project.clientId,
+      record: { area: "galleries", projectId: project.id },
       returnTo: `/${tenant.slug}/visualizer?projectId=${project.id}`,
     });
     viewerIsProjectClient = session.role === "CLIENT" && session.id === project.clientId;

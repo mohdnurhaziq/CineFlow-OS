@@ -64,6 +64,7 @@ export default async function SetHudPage({ params }: SetHudPageProps) {
     tenantSlug: tenant.slug,
     tenantId: tenant.id,
     clientId: callSheet.project.clientId,
+    record: { area: "production" },
     returnTo: `/${tenant.slug}/set-hud/${callSheet.id}`,
   });
 

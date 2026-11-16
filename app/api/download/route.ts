@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: "Please sign in to download files." }, { status: 401 });
     }
-    if (!canAccessClientRecord(session, project.tenantId, project.clientId)) {
+    if (!(await canAccessClientRecord(session, project.tenantId, project.clientId, { area: "galleries", projectId: project.id }))) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 

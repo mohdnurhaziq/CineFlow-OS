@@ -1,7 +1,7 @@
 "use server";
 
 import { actionErrorMessage, errorMessageOf } from "@/lib/action-error";
-import { OWNER_ROLES, requireStaff } from "@/lib/auth/guard";
+import { requireAccess } from "@/lib/auth/access-guard";
 import { packagesForCategory } from "@/lib/bookings/pricing";
 
 import type { Prisma } from "@prisma/client";
@@ -89,9 +89,9 @@ async function findOverlap(
 }
 
 /**
- * Setting prices is the owner's call. Slots a staff member opens are priced by the
- * category's packages (fee 0; the deposit is the package deposit the client picks), so a
- * category needs at least one package before staff can open slots in it.
+ * Setting prices needs the "set prices" permission (the owner always has it). Slots anyone else
+ * opens are priced by the category's packages (fee 0; the deposit is the package deposit the
+ * client picks), so a category needs at least one package before they can open slots in it.
  */
 async function staffSlotPricing(
   tenantId: string,
@@ -102,7 +102,7 @@ async function staffSlotPricing(
     return {
       ok: false,
       error: "OWNER_PRICING_REQUIRED",
-      message: "Only the studio owner can set slot prices. Ask them to add a package for this category in Services first.",
+      message: "Only the studio owner, or someone they've allowed to set prices, can set slot prices. Ask them to add a package for this category in Services first.",
     };
   }
   return { ok: true, price: 0, depositRequired: Math.min(...packages.map((p) => p.depositPrice)) };
@@ -118,10 +118,10 @@ const overlapMessage = (s: { startTime: string; endTime: string }) =>
 export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
   try {
     const validated = CreateSingleSlotSchema.parse(input);
-    const session = await requireStaff(validated.tenantId);
+    const session = await requireAccess(validated.tenantId, "bookings", "MANAGE");
     const { tenantId, tenantSlug, date, startTime, endTime, category, campaignTitle, status } = validated;
     let { price, depositRequired } = validated;
-    if (!OWNER_ROLES.has(session.role)) {
+    if (!session.access.ticks.setPrices) {
       if (status === "BLOCKED") {
         price = 0;
         depositRequired = 0;
@@ -182,7 +182,7 @@ export async function createSingleBookingSlot(input: CreateSingleSlotInput) {
 export async function updateBookingSlot(input: UpdateBookingSlotInput) {
   try {
     const validated = UpdateBookingSlotSchema.parse(input);
-    const session = await requireStaff(validated.tenantId);
+    const session = await requireAccess(validated.tenantId, "bookings", "MANAGE");
     const { id, tenantId, tenantSlug, ...updateData } = validated;
 
     const existing = await db.bookingSlot.findFirst({
@@ -211,8 +211,8 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
     const changesPrice =
       (updateData.price !== undefined && updateData.price !== existing.price) ||
       (updateData.depositRequired !== undefined && updateData.depositRequired !== existing.depositRequired);
-    if (changesPrice && !OWNER_ROLES.has(session.role)) {
-      return { success: false, error: "OWNER_ONLY", message: "Only the studio owner can change a slot's fee or deposit." };
+    if (changesPrice && !session.access.ticks.setPrices) {
+      return { success: false, error: "OWNER_ONLY", message: "Only the studio owner, or someone they've allowed to set prices, can change a slot's fee or deposit." };
     }
 
     if (!slotDepositWithinFee(updateData.price ?? existing.price, updateData.depositRequired ?? existing.depositRequired)) {
@@ -273,7 +273,7 @@ export async function updateBookingSlot(input: UpdateBookingSlotInput) {
 export async function deleteBookingSlot(input: DeleteBookingSlotInput) {
   try {
     const validated = DeleteBookingSlotSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "bookings", "MANAGE");
     const { slotId, tenantId, tenantSlug } = validated;
 
     const slot = await db.bookingSlot.findFirst({
@@ -321,7 +321,7 @@ export async function deleteBookingSlot(input: DeleteBookingSlotInput) {
 export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
   try {
     const validated = BatchDeleteSlotsSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "bookings", "MANAGE");
     const { tenantId, tenantSlug, slotIds } = validated;
 
     // Skip slots with a client on them: booked, awaiting verification, or being booked right now.
@@ -368,7 +368,7 @@ export async function batchDeleteBookingSlots(input: BatchDeleteSlotsInput) {
 export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) {
   try {
     const validated = BatchGenerateSlotsSchema.parse(input);
-    const session = await requireStaff(validated.tenantId);
+    const session = await requireAccess(validated.tenantId, "bookings", "MANAGE");
     const {
       tenantId,
       tenantSlug,
@@ -383,7 +383,7 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
       campaignTitle,
     } = validated;
     let { price, depositRequired } = validated;
-    if (!OWNER_ROLES.has(session.role)) {
+    if (!session.access.ticks.setPrices) {
       const pricing = await staffSlotPricing(tenantId, category);
       if (!pricing.ok) return { success: false, error: pricing.error, message: pricing.message };
       ({ price, depositRequired } = pricing);
@@ -526,7 +526,7 @@ export async function batchGenerateBookingSlots(input: BatchGenerateSlotsInput) 
 export async function forceReleaseHeldSlot(input: ForceReleaseSlotInput) {
   try {
     const validated = ForceReleaseSlotSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "bookings", "MANAGE");
     const { slotId, tenantId, tenantSlug } = validated;
 
     // Atomic conditional update: only updates if slot is actually HELD
@@ -567,7 +567,7 @@ export async function forceReleaseHeldSlot(input: ForceReleaseSlotInput) {
 export async function toggleBlockBookingSlot(input: ToggleBlockSlotInput) {
   try {
     const validated = ToggleBlockSlotSchema.parse(input);
-    await requireStaff(validated.tenantId);
+    await requireAccess(validated.tenantId, "bookings", "MANAGE");
     const { slotId, tenantId, tenantSlug } = validated;
 
     const slot = await db.bookingSlot.findFirst({
@@ -608,7 +608,7 @@ export async function toggleBlockBookingSlot(input: ToggleBlockSlotInput) {
 
 export async function cleanupExpiredHolds(tenantId: string, tenantSlug: string) {
   try {
-    await requireStaff(tenantId);
+    await requireAccess(tenantId, "bookings", "MANAGE");
     const now = new Date();
     const result = await db.bookingSlot.updateMany({
       where: {

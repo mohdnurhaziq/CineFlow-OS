@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { STAFF_ROLES } from "@/lib/auth/guard";
+import { AuthorizationError, STAFF_ROLES } from "@/lib/auth/guard";
+import { canAccessProject, requireAccess } from "@/lib/auth/access-guard";
 import { storeDeliverablePhoto, storeDeliverableVideoMaster, storeVideoReviewCopy } from "@/lib/deliverables/storage";
 import { errorMessageOf } from "@/lib/action-error";
 import { advanceProjectStage } from "@/lib/projects/stage";
 
 /**
- * Uploads a project's deliverables (studio staff only).
+ * Uploads a project's deliverables (the team with Galleries access to that project only).
  *
  * multipart/form-data:
  *   projectId   the project
@@ -62,6 +63,16 @@ export async function POST(request: NextRequest) {
     const project = await db.project.findUnique({ where: { id: projectId }, include: { tenant: { select: { id: true, name: true, slug: true } } } });
     if (!project || (session.role !== "SUPER_ADMIN" && session.tenantId !== project.tenantId)) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    // Galleries access; with OWN, only a project they lead or are assigned to.
+    try {
+      const user = await requireAccess(project.tenantId, "galleries", "OWN");
+      if (!(await canAccessProject(user, user.access, project.tenantId, project.id))) {
+        throw new AuthorizationError("FORBIDDEN: This project isn't assigned to you.");
+      }
+    } catch (e) {
+      if (e instanceof AuthorizationError) return NextResponse.json({ error: "Not permitted" }, { status: 403 });
+      throw e;
     }
 
     const galleryName = String(form.get("gallery") ?? "").trim().slice(0, 80) || "Final selects";
