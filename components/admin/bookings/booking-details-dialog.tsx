@@ -20,6 +20,8 @@ import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
 import { BookingActions } from "@/components/admin/bookings/booking-actions";
 import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { BookingTeamSection, type BookingTeamControls } from "@/components/admin/bookings/booking-team-section";
+import type { AssignableMember } from "@/lib/team/members";
 
 // ---------------------------------------------------------------------------
 // Shared presentation helpers (also used by the Bookings list)
@@ -155,6 +157,8 @@ interface BookingDetailsDialogProps {
   /** The recordPayments permission: cancel a paid booking. */
   canRecordPayments?: boolean;
   onChanged?: () => void;
+  /** Who can be added in the Team section (the owner and active team members). Without it the section is read-only. */
+  assignable?: AssignableMember[];
 }
 
 export function BookingDetailsDialog({
@@ -169,6 +173,7 @@ export function BookingDetailsDialog({
   canManage = false,
   canRecordPayments = false,
   onChanged,
+  assignable,
 }: BookingDetailsDialogProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
@@ -180,7 +185,8 @@ export function BookingDetailsDialog({
     if (!isOpen) return;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseRef.current();
+      // A dialog opened from this one (the picker, a confirmation) takes Escape first.
+      if (e.key === "Escape" && document.querySelectorAll('[role="dialog"]').length <= 1) onCloseRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -241,7 +247,16 @@ export function BookingDetailsDialog({
           </div>
         ) : (
           <>
-            <BookingDetailsBody booking={booking} tenantSlug={tenantSlug} currency={currency} />
+            <BookingDetailsBody
+              booking={booking}
+              tenantSlug={tenantSlug}
+              currency={currency}
+              team={
+                tenantId && onChanged && assignable
+                  ? { tenantId, tenantSlug, canManage, people: assignable, onChanged }
+                  : undefined
+              }
+            />
             {tenantId && onChanged && (
               <BookingActions
                 booking={booking}
@@ -284,10 +299,13 @@ export function BookingDetailsBody({
   booking,
   tenantSlug,
   currency,
+  team,
 }: {
   booking: BookingDetails;
   tenantSlug: string;
   currency: string;
+  /** Add and remove in the Team section; without it the section only lists who is on the booking. */
+  team?: BookingTeamControls;
 }) {
   const inv = booking.invoice;
   const stage = bookingStage(booking);
@@ -342,6 +360,8 @@ export function BookingDetailsBody({
           <span className="font-semibold text-blue-300 whitespace-nowrap">Verify payment →</span>
         </Link>
       )}
+
+      <BookingTeamSection booking={booking} controls={team} />
 
       <Section title="Client" icon={Mail}>
         <Row label="Email">

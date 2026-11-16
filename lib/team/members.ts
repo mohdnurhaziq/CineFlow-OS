@@ -54,3 +54,15 @@ export async function loadTeamMembers(tenantId: string, now: Date = new Date()):
   const rank = (r: TeamMemberRow) => (r.isOwner ? 0 : r.status === "REMOVED" ? 2 : 1);
   return rows.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
+
+export interface AssignableMember {
+  id: string;
+  name: string;
+  roleName: string;
+}
+
+/** Who can be put on a booking: the studio owner and active team members (not invited or removed people). */
+export async function loadAssignableMembers(tenantId: string, now: Date = new Date()): Promise<AssignableMember[]> {
+  const rows = await loadTeamMembers(tenantId, now);
+  return rows.filter((r) => r.status === "ACTIVE").map((r) => ({ id: r.id, name: r.name, roleName: r.roleName }));
+}

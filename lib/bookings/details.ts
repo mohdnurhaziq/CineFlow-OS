@@ -18,6 +18,13 @@ export interface BookingInvoiceSummary {
   paidAt: string | null;
 }
 
+export interface BookingAssignee {
+  id: string;
+  name: string;
+  /** "Studio owner", the team role's name, or "No role". */
+  roleName: string;
+}
+
 export interface BookingDetails {
   /**
    * False when the viewer has no Invoices access: the session price, deposit amount, payment
@@ -64,6 +71,8 @@ export interface BookingDetails {
   deliveredAt: string | null;
   /** Link to the client's gallery or files, once delivered. */
   deliveryUrl: string | null;
+  /** Team members on this booking (oldest assignment first), with their role for the Team section. */
+  assignees: BookingAssignee[];
   /** Linked production project, if provisioned. */
   project?: {
     id: string;
@@ -94,6 +103,10 @@ export async function loadBookingDetails(
     include: {
       slot: true,
       project: { select: { id: true, projectNumber: true, status: true } },
+      assignments: {
+        orderBy: { createdAt: "asc" },
+        select: { user: { select: { id: true, name: true, role: true, teamRole: { select: { name: true } } } } },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -204,6 +217,11 @@ export async function loadBookingDetails(
       completedAt: b.completedAt ? b.completedAt.toISOString() : null,
       deliveredAt: b.deliveredAt ? b.deliveredAt.toISOString() : null,
       deliveryUrl: b.deliveryUrl,
+      assignees: b.assignments.map((a) => ({
+        id: a.user.id,
+        name: a.user.name,
+        roleName: a.user.role === "STUDIO_OWNER" ? "Studio owner" : (a.user.teamRole?.name ?? "No role"),
+      })),
       project: b.project ?? null,
     };
   });

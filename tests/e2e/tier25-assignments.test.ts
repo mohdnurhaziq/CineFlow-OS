@@ -5,7 +5,10 @@
 import { db } from "@/lib/db";
 import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
-import { ensureStudioRoles } from "@/lib/auth/access";
+import { ensureStudioRoles, FULL_ACCESS } from "@/lib/auth/access";
+import { loadAdminBookings, isUnassigned } from "@/lib/bookings/admin-list";
+import { getBookingDetails } from "@/lib/actions/admin-bookings";
+import { loadAssignableMembers } from "@/lib/team/members";
 import { assignTeamMember, unassignTeamMember } from "@/lib/actions/admin-assignments";
 import { cancelBooking, rescheduleBooking } from "@/lib/actions/admin-booking-lifecycle";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
@@ -274,6 +277,42 @@ export async function runTier25AssignmentTests(harness: TestHarness) {
       harness.assert(count >= 1, "the unpaid booking lapsed", String(count));
       const lapse = await waitFor(a.email, /^Shoot cancelled: Mira Client$/, 2);
       harness.assertEqual(lapse.length, 2, "an auto-cancelled booking tells its assignee");
+    });
+  });
+
+  await harness.test("T25-UI-01: the bookings list and details carry assignees", async () => {
+    await withFixture(async (f) => {
+      const owner = sess(f.owner, "lumina-cine");
+      const a = await f.mkMember("ua");
+      const invited = await f.mkMember("uinv", { active: false });
+      const upcoming = await f.mkBooking("up", { slotId: (await f.mkSlot("booked", 14, "09:00 AM")).id });
+      const staffed = await f.mkBooking("staffed", { slotId: (await f.mkSlot("booked", 15, "09:00 AM")).id });
+      const pending = await f.mkBooking("pend", { slotId: (await f.mkSlot("booked", 16, "09:00 AM")).id, status: "PENDING" });
+      const cancelled = await f.mkBooking("cx", { slotId: (await f.mkSlot("booked", 17, "09:00 AM")).id, status: "CANCELLED" });
+      const past = await f.mkBooking("past");
+      await db.clientBooking.update({ where: { id: past.id }, data: { targetDate: "2020-01-01" } });
+      const base = { tenantId: f.lumina.id, tenantSlug: "lumina-cine" };
+      await withSession(owner, () => assignTeamMember({ ...base, bookingIds: [staffed.id], userId: a.id }));
+
+      const rows = await loadAdminBookings(f.lumina.id, { id: f.owner.id, access: FULL_ACCESS });
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const today = "2026-11-17";
+      harness.assertEqual(byId.get(staffed.id)?.assignees.map((x) => x.id).join(), a.id, "the row lists its assignee");
+      harness.assertEqual(byId.get(staffed.id)?.assignees[0]?.name, a.name, "with the name");
+      harness.assertEqual(byId.get(upcoming.id)?.assignees.length, 0, "an unstaffed row has none");
+      harness.assert(isUnassigned(byId.get(upcoming.id)!, today), "upcoming and unstaffed is Unassigned");
+      harness.assert(isUnassigned(byId.get(pending.id)!, today), "pending counts too");
+      harness.assert(!isUnassigned(byId.get(staffed.id)!, today), "staffed is not");
+      harness.assert(!isUnassigned(byId.get(cancelled.id)!, today), "cancelled is not");
+      harness.assert(!isUnassigned(byId.get(past.id)!, today), "past is not");
+
+      const detail = await withSession(owner, () => getBookingDetails({ tenantId: f.lumina.id, bookingId: staffed.id }));
+      harness.assert(detail.success && detail.booking.assignees.length === 1 && detail.booking.assignees[0]?.id === a.id, "details carry assignees", JSON.stringify(detail));
+
+      const people = await loadAssignableMembers(f.lumina.id);
+      harness.assert(people.some((p) => p.id === f.owner.id && p.roleName === "Studio owner"), "the owner is assignable");
+      harness.assert(people.some((p) => p.id === a.id), "an active member is assignable");
+      harness.assert(!people.some((p) => p.id === invited.id), "an invited member is not");
     });
   });
 }

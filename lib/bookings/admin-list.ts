@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { levelAtLeast, type AccessMap } from "@/lib/auth/access";
 import { loadBookingDetails, type BookingDetails } from "@/lib/bookings/details";
 
+export { isUnassigned } from "@/lib/bookings/unassigned";
+
 /** Who is looking at a list: their id (for "Only their own") and their access. */
 export interface ListViewer {
   id: string;
