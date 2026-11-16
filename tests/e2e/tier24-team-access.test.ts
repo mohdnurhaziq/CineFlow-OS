@@ -26,6 +26,7 @@ import { canAccessBooking, canAccessProject, requireAccess, requireTick } from "
 import { canAccessClientRecord } from "@/lib/auth/project-access";
 import { updateClientNotes } from "@/lib/actions/admin-clients";
 import { createGearItem } from "@/lib/actions/gear";
+import { createTeamRole, deleteTeamRole, updateTeamRole } from "@/lib/actions/admin-team";
 import { saveShippingZones } from "@/lib/actions/admin-shipping";
 import { recordInvoicePayment, sendInvoiceReminder } from "@/lib/actions/admin-invoices";
 import { createServicePackage } from "@/lib/actions/admin-services";
@@ -935,6 +936,75 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
       harness.assertEqual(findProp(shown, "showMoney"), true, "page: money columns with Invoices VIEW");
       const shownPassed = findProp<{ paid: number | null }[]>(shown, "clients") ?? [];
       harness.assert(shownPassed.every((r) => typeof r.paid === "number"), "page passes totals with Invoices VIEW");
+    });
+  });
+  await harness.test("T24-ROLE-01: the owner manages roles", async () => {
+    await withFixture(async (f) => {
+      const owner = sess(f.luminaOwner, "lumina-cine");
+      const name = `Editor ${Date.now()}`;
+      const access = parseAccess(accessJson({ galleries: "MANAGE" }));
+      const created = await withSession(owner, () => createTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: `  ${name}  `, access }));
+      harness.assert(created.success, "the owner creates a role");
+      if (!created.success) return;
+      try {
+        const stored = await db.teamRole.findUniqueOrThrow({ where: { id: created.roleId } });
+        harness.assertEqual(stored.name, name, "the name is trimmed");
+        harness.assertEqual(parseAccess(stored.access).areas.galleries, "MANAGE", "access is stored");
+
+        const a = await f.mkMember("role-a", created.roleId);
+        await f.mkMember("role-b", created.roleId);
+        harness.assertEqual((await loadAccess(a)).areas.galleries, "MANAGE", "the member has the role's access");
+
+        const updated = await withSession(owner, () =>
+          updateTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", roleId: created.roleId, name, access: parseAccess(accessJson({ galleries: "VIEW" })) })
+        );
+        harness.assert(updated.success, "the owner updates the role");
+        if (updated.success) harness.assertEqual(updated.affected, 2, "affected equals the linked members");
+        harness.assertEqual((await loadAccess(a)).areas.galleries, "VIEW", "the member's next check reflects the change");
+      } finally {
+        await db.user.updateMany({ where: { teamRoleId: created.roleId }, data: { teamRoleId: null } });
+        await db.teamRole.deleteMany({ where: { id: created.roleId } });
+      }
+    });
+  });
+
+  await harness.test("T24-ROLE-02: roles can't clash or vanish from under people", async () => {
+    await withFixture(async (f) => {
+      const owner = sess(f.luminaOwner, "lumina-cine");
+      const base = `Clash ${Date.now()}`;
+      const roleId = await f.mkRole(base, accessJson({ bookings: "VIEW" }));
+      const stored = await db.teamRole.findUniqueOrThrow({ where: { id: roleId } });
+      const dup = await withSession(owner, () => createTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: stored.name.toUpperCase(), access: NO_ACCESS }));
+      harness.assert(!dup.success && dup.error === "NAME_TAKEN", "a name that differs only by case is taken");
+
+      const other = await withSession(owner, () => createTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: `Other ${base}`, access: NO_ACCESS }));
+      harness.assert(other.success, "another name is fine");
+      if (other.success) {
+        const rename = await withSession(owner, () =>
+          updateTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", roleId: other.roleId, name: stored.name.toLowerCase(), access: NO_ACCESS })
+        );
+        harness.assert(!rename.success && rename.error === "NAME_TAKEN", "renaming onto an existing name is refused");
+        await db.teamRole.deleteMany({ where: { id: other.roleId } });
+      }
+
+      const empty = await withSession(owner, () => createTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: "   ", access: NO_ACCESS }));
+      harness.assert(!empty.success, "a blank name is refused");
+
+      const member = await f.mkMember("role-held", roleId);
+      const del = await withSession(owner, () => deleteTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", roleId }));
+      harness.assert(!del.success && del.error === "ROLE_IN_USE", "a role with people can't be deleted");
+      if (!del.success) harness.assert(del.message.includes("1 person"), "the message counts the people");
+      harness.assert(!!(await db.teamRole.findUnique({ where: { id: roleId } })), "the role is still there");
+
+      const asMember = await withSession(sess(member, "lumina-cine"), () =>
+        createTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", name: `Sneaky ${base}`, access: FULL_ACCESS })
+      );
+      harness.assert(!asMember.success, "a team member can't create roles");
+      harness.assertEqual(await db.teamRole.count({ where: { name: `Sneaky ${base}` } }), 0, "nothing was written");
+
+      await db.user.update({ where: { id: member.id }, data: { teamRoleId: null } });
+      const gone = await withSession(owner, () => deleteTeamRole({ tenantId: f.lumina.id, tenantSlug: "lumina-cine", roleId }));
+      harness.assert(gone.success, "an unused role can be deleted");
     });
   });
 }

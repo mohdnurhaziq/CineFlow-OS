@@ -11,6 +11,8 @@ import { DirtyContext, type StudioTenantData } from "./settings-ui";
 import { StudioTab } from "./studio-tab";
 import { PaymentsTab } from "./payments-tab";
 import { DeliveryTab, type ShippingZoneRow } from "./delivery-tab";
+import { TeamTab } from "./team-tab";
+import type { TeamRoleRow } from "./team-role-dialog";
 import { PlanTab } from "./plan-tab";
 import { SETTINGS_TABS, type SettingsTabId } from "./tabs";
 
@@ -18,7 +20,7 @@ import { SETTINGS_TABS, type SettingsTabId } from "./tabs";
 /**
  * Settings, one area per tab. Each tab has its own Save; switching away from unsaved edits asks first.
  */
-export function SettingsShell({ tenant, tab, host, zones }: { tenant: StudioTenantData; tab: SettingsTabId; host: string; zones: ShippingZoneRow[] }) {
+export function SettingsShell({ tenant, tab, host, zones, roles }: { tenant: StudioTenantData; tab: SettingsTabId; host: string; zones: ShippingZoneRow[]; roles: TeamRoleRow[] }) {
   const router = useRouter();
   const { confirm, confirmDialog } = useConfirm();
   const dirtyForms = useRef(new Set<string>());
@@ -80,6 +82,7 @@ export function SettingsShell({ tenant, tab, host, zones }: { tenant: StudioTena
         {tab === "studio" && <StudioTab tenant={tenant} host={host} />}
         {tab === "payments" && <PaymentsTab tenant={tenant} />}
         {tab === "delivery" && <DeliveryTab tenant={tenant} zones={zones} />}
+        {tab === "team" && <TeamTab tenant={{ id: tenant.id, slug: tenant.slug }} roles={roles} />}
         {tab === "plan" && <PlanTab tenant={tenant} />}
         </div>
       </div>
