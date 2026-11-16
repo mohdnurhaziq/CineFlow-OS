@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { STAFF_ROLES } from "@/lib/auth/roles";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 
 /**
@@ -12,7 +13,7 @@ import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
  * Not a "use server" module.
  */
 
-export const STAFF_ROLES = new Set(["SUPER_ADMIN", "STUDIO_OWNER", "PHOTOGRAPHER", "VIDEOGRAPHER", "CREW", "TEAM_MEMBER"]);
+export { STAFF_ROLES };
 export const OWNER_ROLES = new Set(["SUPER_ADMIN", "STUDIO_OWNER"]);
 
 export class AuthorizationError extends Error {

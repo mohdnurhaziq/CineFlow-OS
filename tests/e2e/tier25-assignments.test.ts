@@ -15,6 +15,7 @@ import { cancelBooking, rescheduleBooking } from "@/lib/actions/admin-booking-li
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { removeTeamMember } from "@/lib/actions/admin-team";
 import { getNotificationHistory } from "@/lib/notifications";
+import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loadSchedule, countUnassignedUpcoming } from "@/lib/bookings/schedule";
 
 type Row = { id: string; email: string; name: string; role: string; tenantId: string | null };
@@ -388,5 +389,25 @@ export async function runTier25AssignmentTests(harness: TestHarness) {
       harness.assertEqual(await countUnassignedUpcoming(f.lumina.id, today), after - 1, "assigning one lowers the count");
       harness.assertEqual(await countUnassignedUpcoming(f.apex.id, today), await countUnassignedUpcoming(f.apex.id, today), "scoped by studio");
     });
+  });
+
+  await harness.test("T25-SIGNIN-01: where each account lands after signing in", async () => {
+    const slug = "lumina-cine";
+    const go = (role: string, callbackUrl?: string | null) => signInTarget({ role, tenantSlug: slug, callbackUrl });
+    for (const role of ["TEAM_MEMBER", "PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"]) {
+      harness.assertEqual(go(role), "/lumina-cine/admin/schedule", role + " lands on My schedule");
+    }
+    harness.assertEqual(go("STUDIO_OWNER"), "/lumina-cine/admin", "the owner lands on the Overview");
+    harness.assertEqual(go("SUPER_ADMIN"), "/lumina-cine/admin", "so does the super-admin");
+    harness.assertEqual(go("CLIENT"), "/lumina-cine/account", "a client lands on their account");
+    harness.assertEqual(go("CLIENT", "/lumina-cine/admin/bookings"), "/lumina-cine/account", "a client is never sent into admin");
+    harness.assertEqual(go("CLIENT", "/lumina-cine/book?x=1"), "/lumina-cine/book?x=1", "a client's safe callback wins");
+    harness.assertEqual(go("TEAM_MEMBER", "/lumina-cine/admin/bookings"), "/lumina-cine/admin/bookings", "staff's safe callback wins");
+    harness.assertEqual(go("TEAM_MEMBER", "/lumina-cine"), "/lumina-cine/admin/schedule", "the studio root is not a callback");
+    harness.assertEqual(go("STUDIO_OWNER", "/lumina-cine/"), "/lumina-cine/admin", "nor with a trailing slash");
+    for (const bad of ["//evil.com", "https://evil.com", "/apex-media/admin", "/lumina-cinex/admin", "javascript:alert(1)"]) {
+      harness.assertEqual(go("TEAM_MEMBER", bad), "/lumina-cine/admin/schedule", "ignores " + bad);
+      harness.assertEqual(go("CLIENT", bad), "/lumina-cine/account", "client ignores " + bad);
+    }
   });
 }

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Film, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, Sparkles } from "lucide-react";
+import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 
@@ -58,22 +59,7 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
         return;
       }
 
-      const isClient = result.user?.role === "CLIENT";
-      // Team accounts (not the owner) start on their own schedule.
-      const isTeam = !isClient && result.user?.role !== "STUDIO_OWNER" && result.user?.role !== "SUPER_ADMIN";
-      const callbackPath = (callbackUrl?.split("?")[0] ?? "").replace(/\/+$/, "").toLowerCase();
-      const tenantRoot = `/${tenantSlug}`.toLowerCase();
-      const isShowcaseRoot =
-        !callbackUrl || callbackPath === tenantRoot || callbackPath === "";
-      const target = isClient
-        ? callbackUrl && !callbackUrl.includes("/admin") && !isShowcaseRoot
-          ? callbackUrl
-          : `/${tenantSlug}/account`
-        : callbackUrl && !isShowcaseRoot
-        ? callbackUrl
-        : isTeam
-        ? `/${tenantSlug}/admin/schedule`
-        : `/${tenantSlug}/admin`;
+      const target = signInTarget({ role: result.user?.role, tenantSlug, callbackUrl });
       window.location.href = target;
     } catch {
       setError("An unexpected network error occurred.");

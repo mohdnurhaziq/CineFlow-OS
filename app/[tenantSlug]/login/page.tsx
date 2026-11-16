@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { STAFF_ROLES } from "@/lib/auth/guard";
+import { signInTarget } from "@/lib/auth/sign-in-target";
 import { getSessionClient } from "@/lib/clients";
 import { StudioLoginForm } from "@/components/auth/studio-login-form";
 import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
@@ -41,21 +42,7 @@ export default async function StudioLoginPage({ params, searchParams }: LoginPag
   const isClient = session?.role === "CLIENT" && !!(await getSessionClient(tenant.id));
   const isStaff =
     !!session && STAFF_ROLES.has(session.role) && (session.role === "SUPER_ADMIN" || session.tenantId === tenant.id);
-  const safeCallback =
-    typeof callbackUrl === "string" && callbackUrl.startsWith(`/${tenant.slug}`) && !callbackUrl.startsWith("//")
-      ? callbackUrl
-      : null;
-  const callbackPath = (safeCallback?.split("?")[0] ?? "").replace(/\/+$/, "").toLowerCase();
-  const tenantRoot = `/${tenant.slug}`.toLowerCase();
-  const isShowcaseRoot =
-    !safeCallback || callbackPath === tenantRoot || callbackPath === "";
-  const target = isClient
-    ? safeCallback && !safeCallback.includes("/admin") && !isShowcaseRoot
-      ? safeCallback
-      : `/${tenant.slug}/account`
-    : safeCallback && !isShowcaseRoot
-    ? safeCallback
-    : `/${tenant.slug}/admin`;
+  const target = signInTarget({ role: session?.role, tenantSlug: tenant.slug, callbackUrl: callbackUrl ?? null });
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center p-4 selection:bg-amber-500/20 selection:text-amber-400">
