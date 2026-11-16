@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { notifyAssignees } from "@/lib/bookings/assignment-emails";
+import { slotDateKey } from "@/lib/slot-time";
 
 /**
  * Releases slots held by unpaid deposits.
@@ -35,7 +37,7 @@ export async function expireUnpaidDeposits(tenantId: string, now: Date = new Dat
         none: { milestoneType: "BOOKING_DEPOSIT", OR: [{ status: "PAID" }, { paymentProofUrl: { not: null } }] },
       },
     },
-    select: { id: true, slotId: true },
+    select: { id: true, slotId: true, targetDate: true, slot: { select: { date: true } } },
   });
 
   // Slips the studio rejected that the client hasn't replaced in time.
@@ -46,18 +48,20 @@ export async function expireUnpaidDeposits(tenantId: string, now: Date = new Dat
       depositPaid: false,
       invoices: { some: { milestoneType: "BOOKING_DEPOSIT", status: "REJECTED", rejectedAt: { lt: cutoff } } },
     },
-    select: { id: true, slotId: true },
+    select: { id: true, slotId: true, targetDate: true, slot: { select: { date: true } } },
   });
   const seen = new Set(stale.map((b) => b.id));
   for (const b of rejected) if (!seen.has(b.id)) stale.push(b);
 
   let cancelled = 0;
+  const cancelledIds: string[] = [];
   for (const booking of stale) {
     await db.$transaction(async (tx) => {
       // Re-check inside the transaction so a payment approved meanwhile wins.
       const claimed = await tx.clientBooking.updateMany({
         where: { id: booking.id, status: "PENDING", depositPaid: false },
-        data: { status: "CANCELLED", slotId: null },
+        // Keep the session date on record once the slot is let go (the team is told which shoot it was).
+        data: { status: "CANCELLED", slotId: null, targetDate: booking.slot ? slotDateKey(booking.slot.date) : booking.targetDate },
       });
       if (claimed.count !== 1) return;
 
@@ -76,7 +80,10 @@ export async function expireUnpaidDeposits(tenantId: string, now: Date = new Dat
         });
       }
       cancelled += 1;
+      cancelledIds.push(booking.id);
     });
   }
+  // Team members on a booking that lapsed hear about it; never blocks or fails.
+  for (const id of cancelledIds) void notifyAssignees(id, { kind: "CANCELLED" });
   return cancelled;
 }

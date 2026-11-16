@@ -16,7 +16,9 @@ export type NotificationEvent =
   | "PHOTOS_READY"
   | "STUDIO_UPDATE"
   | "PASSWORD_RESET"
-  | "TEAM_INVITE";
+  | "TEAM_INVITE"
+  | "SHOOT_ASSIGNED"
+  | "SHOOT_CHANGED";
 
 export interface BookingConfirmedPayload {
   event: "BOOKING_CONFIRMED";
@@ -160,6 +162,40 @@ export interface TeamInvitePayload {
   expiresDays: number;
 }
 
+/** A team member was put on a shoot. clientName/clientEmail are the team member (the recipient). */
+export interface ShootAssignedPayload {
+  event: "SHOOT_ASSIGNED";
+  studioName: string;
+  studioSlug: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: undefined;
+  assignerName: string;
+  /** The studio's client whose session it is. */
+  shootClientName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  packageName?: string;
+  brief?: string;
+  scheduleUrl: string;
+}
+
+/** A shoot the recipient is on moved, was cancelled, or they were taken off it. */
+export interface ShootChangedPayload {
+  event: "SHOOT_CHANGED";
+  studioName: string;
+  studioSlug: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: undefined;
+  kind: "MOVED" | "CANCELLED" | "UNASSIGNED";
+  shootClientName: string;
+  /** The plain sentence with the details. */
+  message: string;
+  scheduleUrl: string;
+}
+
 export type NotificationPayload =
   | BookingConfirmedPayload
   | PaymentApprovedPayload
@@ -169,7 +205,9 @@ export type NotificationPayload =
   | PhotosReadyPayload
   | StudioUpdatePayload
   | PasswordResetPayload
-  | TeamInvitePayload;
+  | TeamInvitePayload
+  | ShootAssignedPayload
+  | ShootChangedPayload;
 
 export interface NotificationResult {
   id: string;
@@ -562,6 +600,44 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
       `;
       emailText = `${payload.ownerName} added you to the ${payload.studioName} team as ${payload.roleName}. Set your password to sign in: ${payload.inviteUrl} (This link works for ${payload.expiresDays} days.)`;
       // No WhatsApp text: the studio copies the link from the Team screen if it wants to share it.
+      whatsappText = "";
+      break;
+    }
+    case "SHOOT_ASSIGNED": {
+      emailSubject = `New shoot: ${payload.date} at ${payload.startTime}`;
+      const intro = `${payload.assignerName} assigned you to ${payload.shootClientName}'s session on ${payload.date}, ${payload.startTime}–${payload.endTime}.`;
+      const extra = [payload.packageName ? `Package: ${payload.packageName}` : "", payload.brief ? `Brief: ${payload.brief}` : ""].filter(Boolean);
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>${esc(intro)}</p>
+        ${extra.map((line) => `<p>${esc(line)}</p>`).join("")}
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${esc(payload.scheduleUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            Open my schedule
+          </a>
+        </div>
+      `;
+      emailText = [intro, ...extra, `Open my schedule: ${payload.scheduleUrl}`].join("\n");
+      whatsappText = "";
+      break;
+    }
+    case "SHOOT_CHANGED": {
+      emailSubject =
+        payload.kind === "MOVED"
+          ? `Shoot moved: ${payload.shootClientName}`
+          : payload.kind === "CANCELLED"
+            ? `Shoot cancelled: ${payload.shootClientName}`
+            : `Removed from a shoot: ${payload.shootClientName}`;
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>${esc(payload.message)}</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${esc(payload.scheduleUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            Open my schedule
+          </a>
+        </div>
+      `;
+      emailText = `${payload.message} Open my schedule: ${payload.scheduleUrl}`;
       whatsappText = "";
       break;
     }

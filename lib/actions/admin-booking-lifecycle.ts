@@ -10,9 +10,10 @@ import { canAccessBooking, requireAccess } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
-import { isSlotInPast, minutesOfDay, slotDateKey, formatSlotDate } from "@/lib/slot-time";
+import { isSlotInPast, minutesOfDay, slotDateKey } from "@/lib/slot-time";
 import { sendNotification } from "@/lib/notifications";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
+import { notifyAssignees, sessionText } from "@/lib/bookings/assignment-emails";
 
 /**
  * What a studio does with a booking after it is made:
@@ -49,9 +50,6 @@ function revalidate(tenantSlug: string) {
     }
   }
 }
-
-const sessionText = (slot: { date: Date; startTime: string; endTime: string } | null) =>
-  slot ? `${formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}, ${slot.startTime} – ${slot.endTime}` : "your session";
 
 async function notifyClient(
   tenantId: string,
@@ -129,6 +127,8 @@ export async function cancelBooking(input: z.input<typeof CancelSchema>): Promis
         booking.depositPaid ? " The studio will contact you about your deposit." : ""
       }`,
     });
+    // The team members on the shoot hear about it too; this never blocks or fails the cancel.
+    void notifyAssignees(booking.id, { kind: "CANCELLED" });
     return { success: true };
   } catch (err) {
     return fail("CANCEL_FAILED", actionErrorMessage(err, "Could not cancel the booking."));
@@ -221,6 +221,7 @@ export async function rescheduleBooking(input: z.input<typeof RescheduleSchema>)
       headline: "Your booking was moved",
       message: `Your session has moved from ${sessionText(booking.slot)} to ${sessionText(target)}.`,
     });
+    void notifyAssignees(booking.id, { kind: "MOVED", previous: sessionText(booking.slot) });
     return { success: true };
   } catch (err) {
     return fail("RESCHEDULE_FAILED", actionErrorMessage(err, "Could not move the booking."));
