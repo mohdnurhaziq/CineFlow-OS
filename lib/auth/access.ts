@@ -107,7 +107,10 @@ export function mergeAccess(a: AccessMap, b: AccessMap): AccessMap {
   );
 }
 
+/** Account types that count as team. */
 const TEAM_ACCOUNT_ROLES = ["PHOTOGRAPHER", "VIDEOGRAPHER", "CREW", "TEAM_MEMBER"];
+/** Pre-upgrade account types: only these are ever linked to a legacy role automatically. */
+const LEGACY_ACCOUNT_ROLES = ["PHOTOGRAPHER", "VIDEOGRAPHER", "CREW"];
 
 function legacyTitle(role: string): string {
   switch (role) {
@@ -115,10 +118,8 @@ function legacyTitle(role: string): string {
       return "Photographer";
     case "VIDEOGRAPHER":
       return "Videographer";
-    case "CREW":
-      return "Crew";
     default:
-      return "Team";
+      return "Crew";
   }
 }
 
@@ -127,13 +128,15 @@ function isUniqueViolation(e: unknown): boolean {
 }
 
 /**
- * Makes sure a studio has team roles. A studio with no roles gets one per existing title
- * (legacy access, so nothing changes for the team) or, with no team, the starter roles.
- * Team members without a role are linked to the role named after their title. Idempotent.
+ * Makes sure a studio has team roles. A studio with no roles gets one per existing legacy title
+ * (legacy access, so nothing changes for the team that existed before) or, with none, the starter roles.
+ * Only the pre-upgrade account types (photographer, videographer, crew) without a role are linked to
+ * the role named after their title; a TEAM_MEMBER without a role is never linked and has no access.
+ * Idempotent.
  */
 export async function ensureStudioRoles(tenantId: string): Promise<void> {
   const members = await db.user.findMany({
-    where: { tenantId, role: { in: TEAM_ACCOUNT_ROLES } },
+    where: { tenantId, role: { in: LEGACY_ACCOUNT_ROLES } },
     select: { id: true, role: true, teamRoleId: true },
   });
 

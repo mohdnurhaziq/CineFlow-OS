@@ -31,28 +31,50 @@ export async function requireTick(tenantId: string, tick: AccessTick): Promise<W
   return user;
 }
 
-/** VIEW or more sees every booking; OWN sees only the ones they are assigned to. */
-export async function canAccessBooking(user: { id: string }, access: AccessMap, bookingId: string): Promise<boolean> {
+/**
+ * Whether `user` may open booking `bookingId` of studio `tenantId`. False unless the booking exists in that
+ * studio. Then VIEW or more sees every booking; OWN only the ones they are assigned to.
+ */
+export async function canAccessBooking(
+  user: { id: string },
+  access: AccessMap,
+  tenantId: string,
+  bookingId: string
+): Promise<boolean> {
   const level = access.areas.bookings;
+  if (level === "NONE") return false;
+  const booking = await db.clientBooking.findFirst({ where: { id: bookingId, tenantId }, select: { id: true } });
+  if (!booking) return false;
   if (levelAtLeast(level, "VIEW")) return true;
-  if (level !== "OWN") return false;
-  return !!(await db.bookingAssignment.findUnique({
-    where: { bookingId_userId: { bookingId, userId: user.id } },
-    select: { id: true },
-  }));
+  return isAssigned(user.id, bookingId);
 }
 
-/** VIEW or more sees every gallery; OWN sees the ones they lead or are assigned to the booking of. */
-export async function canAccessProject(user: { id: string }, access: AccessMap, projectId: string): Promise<boolean> {
+/**
+ * Whether `user` may open project `projectId` of studio `tenantId`. False unless the project exists in that
+ * studio. Then VIEW or more on galleries sees every project; OWN the ones they lead or are assigned to the
+ * booking of.
+ */
+export async function canAccessProject(
+  user: { id: string },
+  access: AccessMap,
+  tenantId: string,
+  projectId: string
+): Promise<boolean> {
   const level = access.areas.galleries;
-  if (levelAtLeast(level, "VIEW")) return true;
-  if (level !== "OWN") return false;
-  const project = await db.project.findUnique({ where: { id: projectId }, select: { studioLeadId: true, bookingId: true } });
+  if (level === "NONE") return false;
+  const project = await db.project.findFirst({
+    where: { id: projectId, tenantId },
+    select: { studioLeadId: true, bookingId: true },
+  });
   if (!project) return false;
+  if (levelAtLeast(level, "VIEW")) return true;
   if (project.studioLeadId === user.id) return true;
-  if (!project.bookingId) return false;
+  return project.bookingId ? isAssigned(user.id, project.bookingId) : false;
+}
+
+async function isAssigned(userId: string, bookingId: string): Promise<boolean> {
   return !!(await db.bookingAssignment.findUnique({
-    where: { bookingId_userId: { bookingId: project.bookingId, userId: user.id } },
+    where: { bookingId_userId: { bookingId, userId } },
     select: { id: true },
   }));
 }
