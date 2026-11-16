@@ -35,6 +35,7 @@ model Tenant {
   updatedAt          DateTime            @updatedAt
 
   users                  User[]
+  teamRoles              TeamRole[]
   proposals              Proposal[]
   proposalAddOnTemplates ProposalAddOnTemplate[]
   invoices               MilestoneInvoice[]
@@ -178,10 +179,17 @@ model User {
   // and when this user finishes or skips the dashboard tour. Null = not yet.
   onboardingChecklistDismissedAt DateTime?
   onboardingTourSeenAt           DateTime?
+  // Team: the role this person holds, their own extra access on top of it (JSON), and when
+  // the studio deactivated them (null = active). Deactivated people keep their past work.
+  teamRoleId         String?
+  extraAccess        String?
+  deactivatedAt      DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
   tenant             Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teamRole           TeamRole?           @relation(fields: [teamRoleId], references: [id], onDelete: SetNull)
+  assignments        BookingAssignment[]
   clientBookings     ClientBooking[]
   clientProposals    Proposal[]          @relation("ClientProposals")
   studioProposals    Proposal[]          @relation("StudioProposals")
@@ -565,11 +573,47 @@ model ClientBooking {
   invoices       MilestoneInvoice[]
   project        Project?
   includedPrints BookingIncludedPrint[]
+  assignments    BookingAssignment[]
 
   @@index([tenantId])
   @@index([userId])
   @@index([slotId])
   @@index([tenantId, status])
+}
+
+// A named set of access a studio gives to team members (e.g. "Photographer", "Front desk").
+// access is JSON: { areas: { <area>: NONE|OWN|VIEW|MANAGE }, ticks: { <tick>: boolean } }.
+model TeamRole {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  access    String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members   User[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// A team member put on a booking (shoot). Gone when the booking is deleted.
+model BookingAssignment {
+  id           String        @id @default(cuid())
+  tenantId     String
+  bookingId    String
+  userId       String
+  assignedById String?
+  createdAt    DateTime      @default(now())
+
+  booking      ClientBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, userId])
+  @@index([userId])
+  @@index([tenantId])
 }
 
 model ServicePackage {
