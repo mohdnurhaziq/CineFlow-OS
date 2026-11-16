@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { ClientContactCard } from "@/components/admin/clients/client-contact-card";
 import { ClientNotesCard } from "@/components/admin/clients/client-notes-card";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface ClientPageProps {
   params: Promise<{ tenantSlug: string; clientId: string }>;
@@ -112,10 +115,11 @@ function Row({ href, title, meta, right }: { href?: string; title: React.ReactNo
   );
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only). The client is looked
-// up within this studio, so another studio's client id gives a 404.
+// Clients VIEW. The client is looked up within this studio, so another studio's client id gives a 404.
 export default async function AdminClientPage({ params }: ClientPageProps) {
   const { tenantSlug, clientId } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.clients, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
     select: { id: true, slug: true, currency: true },

@@ -32,6 +32,16 @@ import { createServicePackage } from "@/lib/actions/admin-services";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { processInvoicePayment } from "@/lib/actions/checkout";
 import { getProposalBySlugAndId, toggleProposalAddOn } from "@/lib/actions/proposals";
+import { NextRequest } from "next/server";
+import { getBookingDetails } from "@/lib/actions/admin-bookings";
+import { loadAdminBookings } from "@/lib/bookings/admin-list";
+import { loadAdminProjects } from "@/lib/projects/list";
+import { visibleNavItems, type AdminNavEntry } from "@/components/admin/admin-nav-items";
+import { NoAccess } from "@/components/admin/no-access";
+import { POST as uploadDeliverables } from "@/app/api/deliverables/route";
+import AdminBookingPage from "@/app/[tenantSlug]/admin/bookings/[bookingId]/page";
+import AdminProjectPage from "@/app/[tenantSlug]/admin/projects/[projectId]/page";
+import { provideReactGlobal } from "./react-tree";
 
 export async function runTier24TeamAccessTests(harness: TestHarness) {
   harness.setSuite("Tier 24", "Team Access");
@@ -581,6 +591,132 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         await db.proposal.deleteMany({ where: { id: proposal.id } });
       }
     });
+  });
+
+  // ---- Pages, menu and "Only their own" lists ----------------------------------------------
+  /** A member with bookings OWN and galleries OWN, assigned to one booking, plus work that isn't theirs. */
+  const ownSetup = async (f: Fixture) => {
+    const member = await f.mkMember("own", await f.mkRole("Own lists", accessJson({ bookings: "OWN", galleries: "OWN" })));
+    const mine = await f.mkBooking(f.lumina.id, "own-mine");
+    const other = await f.mkBooking(f.lumina.id, "own-other");
+    await db.bookingAssignment.create({ data: { tenantId: f.lumina.id, bookingId: mine.id, userId: member.id } });
+    const viaBooking = await f.mkProject(f.lumina.id, "own-via", f.luminaOwner.id, mine.id);
+    const led = await f.mkProject(f.lumina.id, "own-led", member.id);
+    const unrelated = await f.mkProject(f.lumina.id, "own-unrelated", f.luminaOwner.id, other.id);
+    const access = await loadAccess(member);
+    return { member, mine, other, viaBooking, led, unrelated, access };
+  };
+
+  await harness.test("T24-OWN-01: an Only-their-own member's lists hold only their work", async () => {
+    await withFixture(async (f) => {
+      const o = await ownSetup(f);
+      const viewer = { id: o.member.id, access: o.access };
+
+      const bookings = await loadAdminBookings(f.lumina.id, viewer);
+      harness.assertEqual(JSON.stringify(bookings.map((b) => b.id)), JSON.stringify([o.mine.id]), "bookings: exactly the assigned one");
+
+      const projects = (await loadAdminProjects(f.lumina.id, viewer)).map((p) => p.id).sort();
+      harness.assertEqual(JSON.stringify(projects), JSON.stringify([o.viaBooking.id, o.led.id].sort()), "projects: the assigned booking's and the led one");
+
+      // VIEW and the owner see the whole studio.
+      const ownerView = { id: f.luminaOwner.id, access: FULL_ACCESS };
+      const allBookings = (await loadAdminBookings(f.lumina.id, ownerView)).map((b) => b.id);
+      harness.assert(allBookings.includes(o.mine.id) && allBookings.includes(o.other.id), "owner sees every booking");
+      const allProjects = (await loadAdminProjects(f.lumina.id, ownerView)).map((p) => p.id);
+      harness.assert([o.viaBooking.id, o.led.id, o.unrelated.id].every((id) => allProjects.includes(id)), "owner sees every project");
+      const viewAccess = parseAccess(accessJson({ bookings: "VIEW", galleries: "VIEW" }));
+      const viewBookings = (await loadAdminBookings(f.lumina.id, { id: o.member.id, access: viewAccess })).map((b) => b.id);
+      harness.assert(viewBookings.includes(o.other.id), "bookings VIEW sees unassigned bookings");
+      const none = await loadAdminBookings(f.lumina.id, { id: o.member.id, access: NO_ACCESS });
+      harness.assertEqual(none.length, 0, "no bookings access: empty list");
+    });
+  });
+
+  await harness.test("T24-OWN-02: they can't reach anyone else's work", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const o = await ownSetup(f);
+      const s = sess(o.member, "lumina-cine");
+
+      const theirs = await withSession(s, () => getBookingDetails({ tenantId: f.lumina.id, bookingId: o.mine.id }));
+      harness.assertEqual(theirs.success, true, "their booking's details open", JSON.stringify(theirs));
+      const others = await withSession(s, () => getBookingDetails({ tenantId: f.lumina.id, bookingId: o.other.id }));
+      harness.assertEqual(others.success, false, "an unassigned booking's details are refused");
+
+      harness.assertEqual(await canAccessProject(o.member, o.access, f.lumina.id, o.unrelated.id), false, "another gallery is closed");
+
+      const upload = (projectId: string) => {
+        const form = new FormData();
+        form.append("projectId", projectId);
+        form.append("files", new File(["x"], "a.png", { type: "image/png" }));
+        return withSession(s, () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
+      };
+      harness.assertEqual((await upload(o.unrelated.id)).status, 403, "uploading to another project is refused");
+
+      // The pages answer the same way.
+      const bookingPage = await withSession(s, () =>
+        AdminBookingPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", bookingId: o.other.id }) })
+      );
+      harness.assertEqual((bookingPage as { type?: unknown }).type, NoAccess, "unassigned booking page shows No access");
+      const projectPage = await withSession(s, () =>
+        AdminProjectPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: o.unrelated.id }) })
+      );
+      harness.assertEqual((projectPage as { type?: unknown }).type, NoAccess, "another project's page shows No access");
+      const ownPage = await withSession(s, () =>
+        AdminProjectPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: o.led.id }) })
+      );
+      harness.assert((ownPage as { type?: unknown }).type !== NoAccess, "their own project's page opens");
+    });
+  });
+
+  /** Every href in the menu: top-level links and the items of each group. */
+  const menuHrefs = (entries: AdminNavEntry[]) =>
+    entries.flatMap((e) => (e.kind === "group" ? e.items.map((i) => i.href) : [e.href]));
+
+  await harness.test("T24-MENU-01: the menu hides what they can't open", async () => {
+    const crew = STARTER_ROLES.find((r) => r.name === "Crew")!.access;
+    const crewMenu = visibleNavItems("lumina-cine", crew, false);
+    const hrefs = menuHrefs(crewMenu);
+    for (const hidden of ["invoices", "verification", "clients", "services", "settings", "calendar", "projects", "proposals"]) {
+      harness.assert(!hrefs.includes(`/lumina-cine/admin/${hidden}`), `Crew menu has no ${hidden}`);
+    }
+    for (const shown of ["bookings", "inventory", "manual"]) {
+      harness.assert(hrefs.includes(`/lumina-cine/admin/${shown}`), `Crew menu has ${shown}`);
+    }
+    harness.assert(hrefs.includes("/lumina-cine/admin"), "Crew menu has Overview");
+    harness.assert(!crewMenu.some((e) => e.kind === "group" && e.id === "finance"), "the Finance group disappears when it's empty");
+    harness.assert(!crewMenu.some((e) => e.kind === "group" && e.items.length === 0), "no empty groups");
+
+    const ownerHrefs = menuHrefs(visibleNavItems("lumina-cine", FULL_ACCESS, true));
+    for (const page of ["invoices", "verification", "clients", "services", "settings", "calendar", "projects", "frames", "cms", "print-orders"]) {
+      harness.assert(ownerHrefs.includes(`/lumina-cine/admin/${page}`), `owner menu has ${page}`);
+    }
+    // Verification also opens with only the approvePayments tick.
+    const approver = parseAccess(accessJson({}, { approvePayments: true }));
+    const approverHrefs = menuHrefs(visibleNavItems("lumina-cine", approver, false));
+    harness.assert(approverHrefs.includes("/lumina-cine/admin/verification"), "approvePayments shows Verification");
+    harness.assert(!approverHrefs.includes("/lumina-cine/admin/invoices"), "but not Invoices");
+    // Settings stays owner-only, even with every area.
+    harness.assert(!menuHrefs(visibleNavItems("lumina-cine", FULL_ACCESS, false)).includes("/lumina-cine/admin/settings"), "Settings is owner-only");
+  });
+
+  await harness.test("T24-MENU-02: pages and components decide with the access model, not the owner role", async () => {
+    const found: string[] = [];
+    const walk = async (dir: string): Promise<void> => {
+      for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) await walk(full);
+        else if (/\.tsx?$/.test(entry.name)) {
+          const src = await fs.readFile(full, "utf8");
+          if (/\bOWNER_ROLES\b|\bcurrentUserIsOwner\b|@\/lib\/auth\/owner\b/.test(src)) found.push(path.relative(process.cwd(), full));
+        }
+      }
+    };
+    await walk(path.join(process.cwd(), "app"));
+    await walk(path.join(process.cwd(), "components"));
+    harness.assert(found.length === 0, "no page or component uses OWNER_ROLES or currentUserIsOwner", `Found in: ${found.join(", ")}`);
+    const ownerHelper = await fs.stat(path.join(process.cwd(), "lib", "auth", "owner.ts")).then(() => true, () => false);
+    harness.assert(!ownerHelper, "lib/auth/owner.ts is removed");
   });
 }
 

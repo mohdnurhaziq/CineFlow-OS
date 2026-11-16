@@ -2,7 +2,9 @@ import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 import { NewProposalButton } from "@/components/admin/proposals/new-proposal-dialog";
 import { ProposalAdminDashboard } from "@/components/admin/proposals/proposal-admin-dashboard";
 import type { ProposalAddOnTemplateRow } from "@/components/admin/proposals/addon-template-dialog";
@@ -27,8 +29,11 @@ export async function generateMetadata({
   };
 }
 
+// Proposals VIEW.
 export default async function AdminProposalsPage({ params }: ProposalsPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.proposals, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({
@@ -68,9 +73,9 @@ export default async function AdminProposalsPage({ params }: ProposalsPageProps)
     orderBy: { createdAt: "desc" },
   });
 
-  // Creating a proposal sets prices: owner only.
-  const isOwner = await currentUserIsOwner();
-  const [clients, categories] = isOwner
+  // Creating a proposal sets prices: the setPrices permission.
+  const canSetPrices = viewer.access.ticks.setPrices;
+  const [clients, categories] = canSetPrices
     ? await Promise.all([
         db.user.findMany({ where: { tenantId: tenant.id, role: "CLIENT" }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" }, take: 1000 }),
         db.campaignCategory.findMany({ where: { tenantId: tenant.id, isActive: true }, select: { slug: true, name: true }, orderBy: { sortOrder: "asc" } }),
@@ -81,7 +86,7 @@ export default async function AdminProposalsPage({ params }: ProposalsPageProps)
     <PageShell>
       <ProposalAdminDashboard
         newProposal={
-          isOwner ? (
+          canSetPrices ? (
             <NewProposalButton
               tenantId={tenant.id}
               tenantSlug={tenant.slug}

@@ -9,9 +9,11 @@ import { signedOutHref } from "@/lib/auth/signed-out";
 interface AdminUserNavProps {
   tenantSlug: string;
   user: SessionUser | null;
+  /** Shown under the name: "Studio owner", the team member's role, or the account type. */
+  roleLabel?: string;
 }
 
-export function AdminUserNav({ tenantSlug, user }: AdminUserNavProps) {
+export function AdminUserNav({ tenantSlug, user, roleLabel }: AdminUserNavProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -49,7 +51,7 @@ export function AdminUserNav({ tenantSlug, user }: AdminUserNavProps) {
         </div>
         <div className="hidden md:flex flex-col text-left">
           <span className="text-xs font-medium text-white line-clamp-1">{user.name}</span>
-          <span className="text-[9px] font-mono text-zinc-400 uppercase">{user.role.replace(/_/g, " ")}</span>
+          <span className="text-[9px] font-mono text-zinc-400 uppercase">{roleLabel ?? user.role.replace(/_/g, " ")}</span>
         </div>
       </div>
 

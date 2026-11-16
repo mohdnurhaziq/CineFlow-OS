@@ -8,6 +8,9 @@ import { GearDashboard } from "@/components/gear/gear-dashboard";
 import type { InventoryItemRow } from "@/components/gear/gear-item-dialog";
 import type { KitBundleRow } from "@/components/gear/kit-bundle-dialog";
 import type { ReservationWithDetails } from "@/components/gear/inspection-dialog";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface InventoryPageProps {
   params: Promise<{
@@ -28,8 +31,11 @@ export async function generateMetadata({
   };
 }
 
+// Production VIEW.
 export default async function InventoryPage({ params }: InventoryPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.production, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({

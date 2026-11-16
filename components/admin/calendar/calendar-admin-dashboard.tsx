@@ -37,8 +37,12 @@ interface CalendarAdminDashboardProps {
   categories: CategoryOption[];
   clients: ClientOption[];
   packages?: BookingPackageOption[];
-  /** Studio owner: may set prices and record payments. */
-  isOwner?: boolean;
+  /** Bookings MANAGE: may open, change and book slots. Without it the calendar is read-only. */
+  canManage: boolean;
+  /** The setPrices permission: may set slot fees. */
+  canSetPrices: boolean;
+  /** The recordPayments permission: may record a booking as paid. */
+  canRecordPayments: boolean;
 }
 
 export function CalendarAdminDashboard({
@@ -49,7 +53,9 @@ export function CalendarAdminDashboard({
   categories,
   clients,
   packages = [],
-  isOwner = true,
+  canManage,
+  canSetPrices,
+  canRecordPayments,
 }: CalendarAdminDashboardProps) {
   const router = useRouter();
 
@@ -168,6 +174,7 @@ export function CalendarAdminDashboard({
           </>
         }
         actions={
+          canManage && (
           <>
           <button
             type="button"
@@ -201,6 +208,7 @@ export function CalendarAdminDashboard({
             <span>New Slot</span>
           </button>
           </>
+          )
         }
       />
 
@@ -349,6 +357,7 @@ export function CalendarAdminDashboard({
         tenantSlug={tenantSlug}
         currency={currency}
         categories={categories}
+        canManage={canManage}
         onEdit={(slot) => {
           setSlotToEdit(slot);
           setIsSingleDialogOpen(true);
@@ -374,12 +383,13 @@ export function CalendarAdminDashboard({
         loading={viewBooking.loading}
         error={viewBooking.error}
         tenantId={tenantId}
-        isOwner={isOwner}
+        canManage={canManage}
+        canRecordPayments={canRecordPayments}
         onChanged={reloadViewedBooking}
       />
 
       <BookForCustomerDialog
-        isOwner={isOwner}
+        canRecordPayments={canRecordPayments}
         isOpen={isBookDialogOpen}
         onClose={() => setIsBookDialogOpen(false)}
         tenantId={tenantId}
@@ -393,7 +403,7 @@ export function CalendarAdminDashboard({
 
       {/* Dialog Modals */}
       <SingleSlotDialog
-        isOwner={isOwner}
+        canSetPrices={canSetPrices}
         isOpen={isSingleDialogOpen}
         onClose={() => setIsSingleDialogOpen(false)}
         tenantId={tenantId}
@@ -406,7 +416,7 @@ export function CalendarAdminDashboard({
       />
 
       <BatchGeneratorDialog
-        isOwner={isOwner}
+        canSetPrices={canSetPrices}
         isOpen={isBatchDialogOpen}
         onClose={() => setIsBatchDialogOpen(false)}
         tenantId={tenantId}

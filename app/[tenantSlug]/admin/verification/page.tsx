@@ -4,8 +4,9 @@ import { db } from "@/lib/db";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { AdminVerificationConsole } from "@/components/checkout/admin-verification-console";
 import { Metadata } from "next";
-import { getCurrentUser } from "@/lib/auth/session";
-import { OWNER_ROLES } from "@/lib/auth/guard";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 import { loadPrintOrderPreviews } from "@/lib/prints/order-preview";
 
 interface VerificationPageProps {
@@ -27,8 +28,13 @@ export async function generateMetadata({ params }: VerificationPageProps): Promi
   };
 }
 
+// The approvePayments permission, or Invoices VIEW to see the queue without deciding.
 export default async function AdminVerificationPage({ params }: VerificationPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !(viewer.access.ticks.approvePayments || levelAtLeast(viewer.access.areas.invoices, "VIEW"))) {
+    return <NoAccess tenantSlug={tenantSlug} />;
+  }
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({
@@ -98,15 +104,14 @@ export default async function AdminVerificationPage({ params }: VerificationPage
     take: 20,
   });
 
-  const user = await getCurrentUser();
   const categories = await db.campaignCategory.findMany({ where: { tenantId: tenant.id }, select: { slug: true, name: true } });
 
   return (
     <PageShell>
     <AdminVerificationConsole
       tenant={tenant}
-      verifierName={user?.name ?? "Studio staff"}
-      isOwner={!!user && OWNER_ROLES.has(user.role)}
+      verifierName={viewer.user.name ?? "Studio staff"}
+      canApprovePayments={viewer.access.ticks.approvePayments}
       categoryNames={Object.fromEntries(categories.map((c) => [c.slug, c.name]))}
       pendingInvoices={enrichedPending}
       historyInvoices={historyInvoices}

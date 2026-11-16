@@ -19,7 +19,8 @@ interface VerificationQueueProps {
   /** ISO currency code, for the print order preview. */
   currency: string;
   currencySymbol: string;
-  isOwner: boolean;
+  /** The approvePayments permission: shows Approve and Reject. */
+  canApprovePayments: boolean;
   isPending: boolean;
   categoryName: (slug: string) => string;
   onApprove: (item: PendingItem) => void;
@@ -77,7 +78,7 @@ export function VerificationQueue({
   tenantSlug,
   currency,
   currencySymbol,
-  isOwner,
+  canApprovePayments,
   isPending,
   categoryName,
   onApprove,
@@ -309,9 +310,9 @@ export function VerificationQueue({
                 {money(currencySymbol, selected.amount)}
               </div>
             </div>
-            {!isOwner ? (
+            {!canApprovePayments ? (
               <p className="text-[11px] text-zinc-500 sm:max-w-[14rem] sm:text-right">
-                Only the studio owner can approve or reject payments.
+                Approving or rejecting a payment needs the approve-payments permission.
               </p>
             ) : (
               <div className="flex items-center gap-2">

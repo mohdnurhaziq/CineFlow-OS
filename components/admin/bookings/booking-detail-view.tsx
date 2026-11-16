@@ -11,13 +11,15 @@ export function BookingDetailView({
   tenantId,
   tenantSlug,
   currency,
-  isOwner,
+  canManage,
+  canRecordPayments,
 }: {
   booking: BookingDetails;
   tenantId: string;
   tenantSlug: string;
   currency: string;
-  isOwner: boolean;
+  canManage: boolean;
+  canRecordPayments: boolean;
 }) {
   const router = useRouter();
   return (
@@ -27,7 +29,8 @@ export function BookingDetailView({
         booking={booking}
         tenantId={tenantId}
         tenantSlug={tenantSlug}
-        isOwner={isOwner}
+        canManage={canManage}
+        canRecordPayments={canRecordPayments}
         onChanged={() => router.refresh()}
       />
     </div>

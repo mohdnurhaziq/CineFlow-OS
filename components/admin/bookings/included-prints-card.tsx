@@ -37,6 +37,7 @@ export function IncludedPrintsCard({
   lines,
   sizes,
   frames,
+  canManage,
 }: {
   tenantId: string;
   tenantSlug: string;
@@ -44,6 +45,8 @@ export function IncludedPrintsCard({
   lines: IncludedPrintRow[];
   sizes: Option[];
   frames: Option[];
+  /** Bookings MANAGE: may grant or remove prints. Without it the list is read-only. */
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [size, setSize] = useState(sizes[0]?.id ?? "");
@@ -101,7 +104,7 @@ export function IncludedPrintsCard({
               <span className="text-xs text-zinc-300 tabular-nums">
                 {l.claimed} used, {Math.max(0, l.quantity - l.claimed)} left
               </span>
-              {l.source === "MANUAL" && l.claimed === 0 && (
+              {canManage && l.source === "MANUAL" && l.claimed === 0 && (
                 <button
                   type="button"
                   disabled={pending}
@@ -117,6 +120,7 @@ export function IncludedPrintsCard({
         </ul>
       )}
 
+      {canManage && (
       <div className="space-y-2 border-t border-zinc-800 pt-4">
         <div className="text-xs font-medium text-zinc-300">Grant included print</div>
         <div className="flex flex-wrap items-end gap-2">
@@ -153,6 +157,7 @@ export function IncludedPrintsCard({
         </div>
         {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
       </div>
+      )}
     </section>
   );
 }

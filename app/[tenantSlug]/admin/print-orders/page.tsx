@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { loadItemPreviews } from "@/lib/prints/gallery";
 import { PageShell } from "@/components/ui/page";
 import { PrintOrdersConsole, type PrintOrderRow } from "@/components/admin/print-orders/print-orders-console";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface PrintOrdersPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -15,9 +18,11 @@ export async function generateMetadata({ params }: PrintOrdersPageProps): Promis
   return { title: tenant ? `Print orders | ${tenant.name} Studio Admin` : "Print orders" };
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Print orders VIEW.
 export default async function AdminPrintOrdersPage({ params }: PrintOrdersPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.printOrders, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
   if (!tenant) notFound();
 

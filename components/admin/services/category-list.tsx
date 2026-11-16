@@ -13,8 +13,10 @@ interface CategoryListProps {
   tenantSlug: string;
   onEdit: (category: CategoryRow) => void;
   onSuccess: () => void;
-  /** Deleting a category is owner-only. */
-  canDelete?: boolean;
+  /** The setPrices permission: deleting a category. */
+  canDelete: boolean;
+  /** Services MANAGE: editing a category or switching it on and off. */
+  canEdit: boolean;
 }
 
 export function CategoryList({
@@ -23,7 +25,8 @@ export function CategoryList({
   tenantSlug,
   onEdit,
   onSuccess,
-  canDelete = true,
+  canDelete,
+  canEdit,
 }: CategoryListProps) {
   const { confirm, confirmDialog } = useConfirm();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -125,6 +128,7 @@ export function CategoryList({
                   <td className="px-4 py-3 text-center">
                     <button
                       type="button"
+                      disabled={!canEdit}
                       onClick={() => handleToggleActive(cat)}
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono transition-colors"
                     >
@@ -141,6 +145,7 @@ export function CategoryList({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {canEdit && (
                       <button
                         type="button"
                         onClick={() => onEdit(cat)}
@@ -149,6 +154,7 @@ export function CategoryList({
                       >
                         <Edit2 className="size-3.5" />
                       </button>
+                      )}
                       {canDelete && (
                       <button
                         type="button"

@@ -4,6 +4,9 @@ import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { CmsManager } from "@/components/admin/cms/cms-manager";
 import type { ShowcaseItemRow, CategoryOption, PackageOption } from "@/components/admin/cms/showcase-item-dialog";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface CmsPageProps {
   params: Promise<{
@@ -24,8 +27,11 @@ export async function generateMetadata({
   };
 }
 
+// Catalog VIEW.
 export default async function AdminCmsPage({ params }: CmsPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.catalog, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({

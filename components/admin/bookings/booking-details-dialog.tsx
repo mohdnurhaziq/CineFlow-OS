@@ -150,7 +150,10 @@ interface BookingDetailsDialogProps {
   error?: string | null;
   /** With these, the dialog offers move / cancel / done / deliver actions. */
   tenantId?: string;
-  isOwner?: boolean;
+  /** Bookings MANAGE: move, cancel, resend. */
+  canManage?: boolean;
+  /** The recordPayments permission: cancel a paid booking. */
+  canRecordPayments?: boolean;
   onChanged?: () => void;
 }
 
@@ -163,7 +166,8 @@ export function BookingDetailsDialog({
   loading = false,
   error = null,
   tenantId,
-  isOwner = false,
+  canManage = false,
+  canRecordPayments = false,
   onChanged,
 }: BookingDetailsDialogProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -239,7 +243,14 @@ export function BookingDetailsDialog({
           <>
             <BookingDetailsBody booking={booking} tenantSlug={tenantSlug} currency={currency} />
             {tenantId && onChanged && (
-              <BookingActions booking={booking} tenantId={tenantId} tenantSlug={tenantSlug} isOwner={isOwner} onChanged={onChanged} />
+              <BookingActions
+                booking={booking}
+                tenantId={tenantId}
+                tenantSlug={tenantSlug}
+                canManage={canManage}
+                canRecordPayments={canRecordPayments}
+                onChanged={onChanged}
+              />
             )}
           </>
         )}

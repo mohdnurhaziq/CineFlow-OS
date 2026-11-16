@@ -54,8 +54,8 @@ interface SingleSlotDialogProps {
   categories: CategoryOption[];
   slotToEdit?: BookingSlotRow | null;
   onSuccess?: () => void;
-  /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
-  isOwner?: boolean;
+  /** The setPrices permission: may set the slot fee. Without it the fee is left as it is. */
+  canSetPrices: boolean;
   /** Service packages; a category that has some is priced by them, so no slot fee is asked for. */
   packages?: { category: string; price: number; depositPrice: number }[];
 }
@@ -63,7 +63,7 @@ interface SingleSlotDialogProps {
 export function SingleSlotDialog({
   isOpen,
   onClose,
-  isOwner = true,
+  canSetPrices,
   tenantId,
   tenantSlug,
   currency,
@@ -278,7 +278,7 @@ export function SingleSlotDialog({
 
           {packageRange ? (
             <PackagePricingNote range={packageRange} currency={currency} />
-          ) : isOwner ? (
+          ) : canSetPrices ? (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-mono text-zinc-400 block mb-1">

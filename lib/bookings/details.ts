@@ -68,10 +68,14 @@ const SAME_TRANSACTION_MS = 5 * 60 * 1000;
 
 export async function loadBookingDetails(
   tenantId: string,
-  opts: { bookingId?: string } = {}
+  opts: { bookingId?: string; bookingIds?: string[] } = {}
 ): Promise<BookingDetails[]> {
   const bookings = await db.clientBooking.findMany({
-    where: { tenantId, ...(opts.bookingId ? { id: opts.bookingId } : {}) },
+    where: {
+      tenantId,
+      ...(opts.bookingId ? { id: opts.bookingId } : {}),
+      ...(opts.bookingIds ? { id: { in: opts.bookingIds } } : {}),
+    },
     include: {
       slot: true,
       project: { select: { id: true, projectNumber: true, status: true } },

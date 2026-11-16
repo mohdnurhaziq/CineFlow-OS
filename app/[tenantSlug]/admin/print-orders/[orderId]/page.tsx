@@ -13,7 +13,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { CopyButton } from "@/components/admin/print-orders/copy-button";
 import { PrintOrderActions } from "@/components/admin/print-orders/print-order-actions";
 import { PrintFitNote } from "@/components/admin/print-orders/print-fit";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface PrintOrderPageProps {
   params: Promise<{ tenantSlug: string; orderId: string }>;
@@ -32,9 +34,11 @@ const INVOICE_STATE: Record<string, string> = { PAID: "paid", VOID: "cancelled",
 
 const card = "rounded-2xl border border-zinc-800 bg-[#0d0d10] p-5 space-y-3";
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Print orders VIEW; moving or cancelling the order needs MANAGE.
 export default async function AdminPrintOrderPage({ params }: PrintOrderPageProps) {
   const { tenantSlug, orderId } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.printOrders, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
   if (!tenant) notFound();
 
@@ -49,7 +53,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
   });
   if (!order) notFound();
 
-  const [photoById, isOwner] = await Promise.all([loadItemPhotos(order.items.map((i) => i.deliverableItemId)), currentUserIsOwner()]);
+  const photoById = await loadItemPhotos(order.items.map((i) => i.deliverableItemId));
   const money = (n: number) => formatCurrency(n, tenant.currency);
   const ship = order.fulfilment === "SHIP";
   const address = orderAddressLines(order);
@@ -160,16 +164,19 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
         </section>
 
         <div className="space-y-6">
-          <PrintOrderActions
-            tenantId={tenant.id}
-            tenantSlug={tenant.slug}
-            orderId={order.id}
-            status={order.status}
-            fulfilment={order.fulfilment}
-            paid={order.invoice?.status === "PAID"}
-            hasInvoice={!!order.invoice}
-            isOwner={isOwner}
-          />
+          {/* Moving or cancelling an order is Print orders MANAGE. */}
+          {levelAtLeast(viewer.access.areas.printOrders, "MANAGE") && (
+            <PrintOrderActions
+              tenantId={tenant.id}
+              tenantSlug={tenant.slug}
+              orderId={order.id}
+              status={order.status}
+              fulfilment={order.fulfilment}
+              paid={order.invoice?.status === "PAID"}
+              hasInvoice={!!order.invoice}
+              canRecordPayments={viewer.access.ticks.recordPayments}
+            />
+          )}
 
           <section className={card} aria-label="Fulfilment">
             <h2 className="text-sm font-semibold text-white flex items-center gap-2">

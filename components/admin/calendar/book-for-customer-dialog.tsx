@@ -27,8 +27,8 @@ interface BookForCustomerDialogProps {
   packages?: BookingPackageOption[];
   currency?: string;
   onSuccess: () => void;
-  /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
-  isOwner?: boolean;
+  /** The recordPayments permission: may record the booking as paid. */
+  canRecordPayments: boolean;
   /** Shows a Back button (used when this form is step 2 of "New booking" on the Bookings page). */
   onBack?: () => void;
 }
@@ -40,7 +40,7 @@ const labelClass = "text-xs font-mono text-zinc-400 block mb-1";
 export function BookForCustomerDialog({
   isOpen,
   onClose,
-  isOwner = true,
+  canRecordPayments,
   tenantId,
   tenantSlug,
   slot,
@@ -347,8 +347,8 @@ export function BookForCustomerDialog({
                 className={inputClass}
               >
                 <option value="PENDING">Pending (needs verification)</option>
-                {/* Recording money as received is the owner's call. */}
-                {isOwner && <option value="PAID">Paid (confirm booking)</option>}
+                {/* Recording money as received needs the recordPayments permission. */}
+                {canRecordPayments && <option value="PAID">Paid (confirm booking)</option>}
               </select>
             </div>
             <div>

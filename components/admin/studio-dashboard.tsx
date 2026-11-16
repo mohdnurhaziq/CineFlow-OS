@@ -19,7 +19,7 @@ import {
   ChevronRight,
   LayoutDashboard,
 } from "lucide-react";
-import type { StudioAnalyticsData } from "@/lib/actions/admin-analytics";
+import type { StudioAnalyticsData } from "@/lib/analytics/studio-analytics";
 import { conditionLabel, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { formatCurrency as formatMoneyAmount } from "@/lib/utils";
 
@@ -30,7 +30,8 @@ interface StudioDashboardProps {
 }
 
 export function StudioDashboard({ data, guide }: StudioDashboardProps) {
-  const { tenant, kpis, proposalsSummary, recentInvoices, upcomingCallSheets, gearAlerts } = data;
+  const { sections, tenant, kpis, proposalsSummary, recentInvoices, upcomingCallSheets, gearAlerts } = data;
+  const nothingToShow = !sections.money && !sections.work && !sections.gear && !sections.proposals && !sections.shoots;
   const currency = tenant.currency || "USD";
 
   // Same two-decimal money format as Invoices, Clients and Galleries.
@@ -83,7 +84,7 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
         description="Money in and waiting, gear on hand, upcoming shoots and open proposals at a glance."
         actions={
           <>
-          {kpis.pendingVerificationCount > 0 && (
+          {sections.money && kpis.pendingVerificationCount > 0 && (
             <Link
               href={`/${tenant.slug}/admin/verification`}
               className={buttonVariants()}
@@ -92,29 +93,39 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
               <span>Verify {kpis.pendingVerificationCount} {kpis.pendingVerificationCount === 1 ? "Payment" : "Payments"}</span>
             </Link>
           )}
-          <Link
-            href={`/${tenant.slug}/admin/calendar`}
-            className={buttonVariants({ variant: "secondary" })}
-          >
-            <Calendar className="size-3.5 text-amber-400" />
-            <span>Open Calendar</span>
-          </Link>
-          <Link
-            href={`/${tenant.slug}/admin/inventory`}
-            className={buttonVariants({ variant: "secondary" })}
-          >
-            <Layers className="size-3.5 text-amber-400" />
-            <span>Gear</span>
-          </Link>
+          {sections.calendar && (
+            <Link
+              href={`/${tenant.slug}/admin/calendar`}
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              <Calendar className="size-3.5 text-amber-400" />
+              <span>Open Calendar</span>
+            </Link>
+          )}
+          {sections.gear && (
+            <Link
+              href={`/${tenant.slug}/admin/inventory`}
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              <Layers className="size-3.5 text-amber-400" />
+              <span>Gear</span>
+            </Link>
+          )}
           </>
         }
       />
 
       {guide}
 
+      {nothingToShow && (
+        <p className="text-sm text-zinc-400">Use the menu above for the parts of the studio you work on.</p>
+      )}
+
       {/* KPI Cards Grid */}
+      {(sections.money || sections.work || sections.gear) && (
       <div data-tour="kpis" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Collected Revenue */}
+        {sections.money && (
         <Link
           href={`/${tenant.slug}/admin/invoices`}
           className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-emerald-500/40 transition-all shadow-sm block"
@@ -140,8 +151,10 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
             </div>
           </div>
         </Link>
+        )}
 
         {/* Metric 2: Pending Invoices / Verification */}
+        {sections.money && (
         <Link
           href={`/${tenant.slug}/admin/verification`}
           className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-amber-500/40 transition-all shadow-sm block"
@@ -164,8 +177,10 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
             </div>
           </div>
         </Link>
+        )}
 
         {/* Metric 3: Active Productions & Shoots */}
+        {sections.work && (
         <div className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-blue-500/40 transition-all shadow-sm">
           <Link href={`/${tenant.slug}/admin/projects`} className="block">
             <div className="flex items-center justify-between text-zinc-400">
@@ -195,8 +210,10 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
             </Link>
           </div>
         </div>
+        )}
 
         {/* Metric 4: Fleet Readiness & Quarantine */}
+        {sections.gear && (
         <Link
           href={`/${tenant.slug}/admin/inventory`}
           className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-purple-500/40 transition-all shadow-sm block"
@@ -224,11 +241,15 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
             </div>
           </div>
         </Link>
+        )}
       </div>
+      )}
 
       {/* Middle Section: Financial Pipeline & Upcoming Shoots Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {(sections.money || sections.proposals || sections.gear) && (
+      <div className={sections.money ? "grid grid-cols-1 lg:grid-cols-3 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
         {/* Left 2 Cols: Recent Cash Flow Invoices & Milestone Status */}
+        {sections.money && (
         <div className="lg:col-span-2 rounded-xl bg-[#121215] border border-zinc-800 overflow-hidden shadow-sm">
           <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -326,10 +347,12 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
             </table>
           </div>
         </div>
+        )}
 
-        {/* Right Col: Proposal Funnel & Fleet Watch */}
-        <div className="space-y-6">
+        {/* Right Col: Proposal Funnel & Fleet Watch (side by side when there are no invoices to show) */}
+        <div className={sections.money ? "space-y-6" : "contents"}>
           {/* Proposal Pipeline Card */}
+          {sections.proposals && (
           <div className="p-5 rounded-xl bg-[#121215] border border-zinc-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -389,8 +412,10 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
               </Link>
             </div>
           </div>
+          )}
 
           {/* Gear Fleet Maintenance Alerts */}
+          {sections.gear && (
           <div className="p-5 rounded-xl bg-[#121215] border border-zinc-800 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -442,10 +467,13 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
+      )}
 
       {/* Bottom Section: Upcoming Shoots & Direct Production Call Sheets */}
+      {sections.shoots && (
       <div className="rounded-xl bg-[#121215] border border-zinc-800 p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
           <div className="flex items-center gap-2">
@@ -529,6 +557,7 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

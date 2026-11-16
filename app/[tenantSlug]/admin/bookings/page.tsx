@@ -2,8 +2,10 @@ import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { loadBookingDetails } from "@/lib/bookings/details";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { loadAdminBookings } from "@/lib/bookings/admin-list";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 import { BookingsConsole } from "@/components/admin/bookings/bookings-console";
 import { loadBookableSlots } from "@/lib/bookings/bookable-slots";
 
@@ -24,9 +26,13 @@ function todayIso(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Bookings access; at "Only their own", the list holds only the bookings they are assigned to.
 export default async function AdminBookingsPage({ params }: BookingsPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.bookings, "OWN")) return <NoAccess tenantSlug={tenantSlug} />;
+  // "New booking" is for Bookings MANAGE: only they get the open slots and the client list.
+  const canManage = levelAtLeast(viewer.access.areas.bookings, "MANAGE");
 
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
@@ -35,25 +41,29 @@ export default async function AdminBookingsPage({ params }: BookingsPageProps) {
   if (!tenant) notFound();
 
   const [bookings, slots, categories, clients, packages] = await Promise.all([
-    loadBookingDetails(tenant.id),
+    loadAdminBookings(tenant.id, { id: viewer.user.id, access: viewer.access }),
     // "New booking": open sessions, plus what the customer form needs (as on the Calendar page).
-    loadBookableSlots(tenant.id),
+    canManage ? loadBookableSlots(tenant.id) : [],
     db.campaignCategory.findMany({
       where: { tenantId: tenant.id },
       select: { id: true, name: true, slug: true, badgeIcon: true },
       orderBy: { sortOrder: "asc" },
     }),
-    db.user.findMany({
-      where: { tenantId: tenant.id, role: "CLIENT" },
-      select: { id: true, name: true, email: true, phone: true },
-      orderBy: { name: "asc" },
-      take: 1000,
-    }),
-    db.servicePackage.findMany({
-      where: { tenantId: tenant.id },
-      select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true, discipline: true },
-      orderBy: { price: "asc" },
-    }),
+    canManage
+      ? db.user.findMany({
+          where: { tenantId: tenant.id, role: "CLIENT" },
+          select: { id: true, name: true, email: true, phone: true },
+          orderBy: { name: "asc" },
+          take: 1000,
+        })
+      : [],
+    canManage
+      ? db.servicePackage.findMany({
+          where: { tenantId: tenant.id },
+          select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true, discipline: true },
+          orderBy: { price: "asc" },
+        })
+      : [],
   ]);
 
   return (
@@ -61,7 +71,8 @@ export default async function AdminBookingsPage({ params }: BookingsPageProps) {
       <BookingsConsole
         tenantSlug={tenant.slug}
         tenantId={tenant.id}
-        isOwner={await currentUserIsOwner()}
+        canManage={canManage}
+        canRecordPayments={viewer.access.ticks.recordPayments}
         currency={tenant.currency}
         bookings={bookings}
         today={todayIso()}

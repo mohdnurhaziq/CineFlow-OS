@@ -22,8 +22,8 @@ interface BatchGeneratorDialogProps {
   currency: string;
   categories: CategoryOption[];
   onSuccess?: () => void;
-  /** Studio owner: may set prices and record payments. Staff see those fields read-only. */
-  isOwner?: boolean;
+  /** The setPrices permission: may set the session fee. Without it the fee is left as it is. */
+  canSetPrices: boolean;
   /** Service packages; a category that has some is priced by them, so no slot fee is asked for. */
   packages?: { category: string; price: number; depositPrice: number }[];
 }
@@ -41,7 +41,7 @@ const DAYS = [
 export function BatchGeneratorDialog({
   isOpen,
   onClose,
-  isOwner = true,
+  canSetPrices,
   tenantId,
   tenantSlug,
   currency,
@@ -394,7 +394,7 @@ export function BatchGeneratorDialog({
           {/* Pricing */}
           {packageRange ? (
             <PackagePricingNote range={packageRange} currency={currency} />
-          ) : isOwner ? (
+          ) : canSetPrices ? (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-mono text-zinc-400 block mb-1">

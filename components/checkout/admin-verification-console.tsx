@@ -32,8 +32,8 @@ import type { PrintOrderPreview } from "@/lib/prints/order-preview";
 export interface AdminVerificationConsoleProps {
   /** The signed-in staff member; the server records approvals and rejections under this name. */
   verifierName: string;
-  /** Approving and rejecting payments is owner-only; staff can review the queue. */
-  isOwner?: boolean;
+  /** The approvePayments permission: may approve or reject. Without it the queue is read-only. */
+  canApprovePayments: boolean;
   /** Category slug -> display name, so bookings show "Studio Portraits", not "studio-portrait". */
   categoryNames?: Record<string, string>;
   tenant: {
@@ -97,7 +97,7 @@ export interface AdminVerificationConsoleProps {
 export function AdminVerificationConsole({
   tenant,
   verifierName,
-  isOwner = true,
+  canApprovePayments,
   categoryNames = {},
   pendingInvoices: initialPending,
   historyInvoices: initialHistory,
@@ -354,7 +354,7 @@ export function AdminVerificationConsole({
             tenantSlug={tenant.slug}
             currency={tenant.currency}
             currencySymbol={currencySymbol}
-            isOwner={isOwner}
+            canApprovePayments={canApprovePayments}
             isPending={isPending}
             categoryName={categoryName}
             onApprove={(item) => handleApprove(item.id, item.invoiceNumber)}

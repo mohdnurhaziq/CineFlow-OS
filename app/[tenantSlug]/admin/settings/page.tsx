@@ -7,6 +7,8 @@ import { parseZoneStates } from "@/lib/prints/zones";
 import { SettingsShell } from "@/components/admin/settings/settings-shell";
 import { SETTINGS_TABS, type SettingsTabId } from "@/components/admin/settings/tabs";
 import type { StudioTenantData } from "@/components/admin/settings/settings-ui";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface SettingsPageProps {
   params: Promise<{
@@ -28,8 +30,11 @@ export async function generateMetadata({
   };
 }
 
+// The studio owner only: never grantable to the team.
 export default async function AdminSettingsPage({ params, searchParams }: SettingsPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer?.isOwner) return <NoAccess tenantSlug={tenantSlug} />;
   const { tab: tabParam } = await searchParams;
   const tab: SettingsTabId = SETTINGS_TABS.some((t) => t.id === tabParam) ? (tabParam as SettingsTabId) : "studio";
   // Shown before the studio address field, e.g. "localhost:3000/".

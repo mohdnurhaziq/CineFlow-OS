@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { loadBookingDetails } from "@/lib/bookings/details";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { canAccessBooking } from "@/lib/auth/access-guard";
+import { NoAccess } from "@/components/admin/no-access";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { IncludedPrintsCard } from "@/components/admin/bookings/included-prints-card";
 import { remainingForLines } from "@/lib/prints/entitlements";
@@ -24,7 +27,7 @@ export async function generateMetadata({ params }: BookingPageProps): Promise<Me
   };
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only). The booking is
+// Bookings access; at "Only their own", only a booking they are assigned to. The booking is
 // looked up within this studio, so another studio's booking id gives a 404.
 export default async function AdminBookingPage({ params }: BookingPageProps) {
   const { tenantSlug, bookingId } = await params;
@@ -33,9 +36,14 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
     select: { id: true, slug: true, currency: true },
   });
   if (!tenant) notFound();
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.bookings, "OWN")) return <NoAccess tenantSlug={tenantSlug} />;
+  if (!(await db.clientBooking.findFirst({ where: { id: bookingId, tenantId: tenant.id }, select: { id: true } }))) notFound();
+  if (!(await canAccessBooking(viewer.user, viewer.access, tenant.id, bookingId))) return <NoAccess tenantSlug={tenantSlug} />;
 
   const [booking] = await loadBookingDetails(tenant.id, { bookingId });
   if (!booking) notFound();
+  const canManage = levelAtLeast(viewer.access.areas.bookings, "MANAGE");
 
   const [lines, sizes, frames] = await Promise.all([
     db.bookingIncludedPrint.findMany({ where: { bookingId: booking.id, tenantId: tenant.id }, orderBy: { createdAt: "asc" } }),
@@ -58,7 +66,8 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         currency={tenant.currency}
-        isOwner={await currentUserIsOwner()}
+        canManage={canManage}
+        canRecordPayments={viewer.access.ticks.recordPayments}
       />
       <IncludedPrintsCard
         tenantId={tenant.id}
@@ -76,6 +85,7 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
         }))}
         sizes={sizes.map((s) => ({ id: s.id, label: `${s.name} (${s.widthInches}x${s.heightInches} in)` }))}
         frames={frames.map((f) => ({ id: f.id, label: f.name }))}
+        canManage={canManage}
       />
     </PageShell>
   );

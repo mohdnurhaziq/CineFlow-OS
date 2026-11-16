@@ -5,6 +5,9 @@ import { currencySymbol } from "@/lib/money";
 import { PageShell } from "@/components/ui/page";
 import { VisualizerShell } from "@/components/visualizer/visualizer-shell";
 import type { PrintSizeOption, FrameDesignOption, PhotoOption } from "@/components/visualizer/configurator-panel";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface AdminVisualizerPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -17,11 +20,13 @@ export async function generateMetadata({ params }: AdminVisualizerPageProps): Pr
 }
 
 /**
- * Wall Art inside the admin console, as a preview (no ordering): the admin layout supplies the
- * staff guard and the admin top bar.
+ * Wall Art inside the admin console, as a preview (no ordering), for Catalog VIEW. The admin layout
+ * supplies the admin top bar.
  */
 export default async function AdminVisualizerPage({ params }: AdminVisualizerPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.catalog, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant) notFound();
 

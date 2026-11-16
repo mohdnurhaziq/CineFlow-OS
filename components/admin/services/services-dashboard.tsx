@@ -35,8 +35,10 @@ interface ServicesDashboardProps {
   initialCategories: CategoryRow[];
   printSizes?: PrintOption[];
   frames?: FrameOption[];
-  /** Studio owner: may create, edit and delete packages (prices) and delete categories. */
-  isOwner?: boolean;
+  /** The setPrices permission: may create, edit and delete packages (prices) and delete categories. */
+  canSetPrices: boolean;
+  /** Services MANAGE: may feature packages and add, edit or switch off categories. */
+  canManage: boolean;
 }
 
 export function ServicesDashboard({
@@ -47,7 +49,8 @@ export function ServicesDashboard({
   initialCategories,
   printSizes = [],
   frames = [],
-  isOwner = true,
+  canSetPrices,
+  canManage,
 }: ServicesDashboardProps) {
   const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
@@ -135,11 +138,11 @@ export function ServicesDashboard({
         description="Your packages and prices, and the categories clients book under."
         actions={
           <>
-          {!isOwner && activeTab === "packages" && (
-            <span className="text-[11px] text-zinc-500">Only the studio owner can change packages and prices.</span>
+          {!canSetPrices && activeTab === "packages" && (
+            <span className="text-[11px] text-zinc-500">Changing packages and prices needs the set-prices permission.</span>
           )}
           {activeTab === "packages" ? (
-            isOwner && (
+            canSetPrices && (
             <button
               type="button"
               onClick={() => {
@@ -153,6 +156,7 @@ export function ServicesDashboard({
             </button>
             )
           ) : (
+            canManage && (
             <button
               type="button"
               onClick={() => {
@@ -164,6 +168,7 @@ export function ServicesDashboard({
               <Plus className="size-4" />
               <span>New Category</span>
             </button>
+            )
           )}
           </>
         }
@@ -328,6 +333,7 @@ export function ServicesDashboard({
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
+                            disabled={!canManage}
                             onClick={() => handleToggleFeatured(pkg)}
                             title={pkg.isFeatured ? "Remove from featured" : "Mark as featured"}
                             className={`p-1.5 rounded-lg transition-colors ${
@@ -338,7 +344,7 @@ export function ServicesDashboard({
                           >
                             <Star className={`size-3.5 ${pkg.isFeatured ? "fill-amber-400" : ""}`} />
                           </button>
-                          {isOwner && (
+                          {canSetPrices && (
                           <>
                           <button
                             type="button"
@@ -421,7 +427,8 @@ export function ServicesDashboard({
       {/* Tab 2: Campaign Categories View */}
       {activeTab === "categories" && (
         <CategoryList
-          canDelete={isOwner}
+          canDelete={canSetPrices}
+          canEdit={canManage}
           categories={initialCategories}
           tenantId={tenantId}
           tenantSlug={tenantSlug}

@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { loadClientDirectory } from "@/lib/client-directory";
 import { ClientsDirectory } from "@/components/admin/clients/clients-directory";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface ClientsPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -15,9 +18,11 @@ export async function generateMetadata({ params }: ClientsPageProps): Promise<Me
   return { title: tenant ? `Clients | ${tenant.name} Studio Admin` : "Clients" };
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Clients VIEW.
 export default async function AdminClientsPage({ params }: ClientsPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.clients, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
     select: { id: true, slug: true, currency: true },

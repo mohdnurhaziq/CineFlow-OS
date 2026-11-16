@@ -26,10 +26,15 @@ interface BookingsConsoleProps {
   /** Today's date (YYYY-MM-DD), computed on the server so the first render matches. */
   today: string;
   tenantId: string;
-  /** Studio owner: may cancel paid bookings. */
-  isOwner: boolean;
+  /** Bookings MANAGE: new bookings, moving and cancelling. */
+  canManage: boolean;
+  /** The recordPayments permission: may record a booking as paid and cancel paid bookings. */
+  canRecordPayments: boolean;
   /** Data for "New booking" (book a customer into an open session). */
-  newBooking: Omit<ComponentProps<typeof NewBookingDialog>, "isOpen" | "onClose" | "onBooked" | "tenantId" | "tenantSlug" | "currency" | "isOwner">;
+  newBooking: Omit<
+    ComponentProps<typeof NewBookingDialog>,
+    "isOpen" | "onClose" | "onBooked" | "tenantId" | "tenantSlug" | "currency" | "canRecordPayments"
+  >;
 }
 
 /** "09:00 AM" -> minutes since midnight, for ordering sessions within a day. */
@@ -46,7 +51,16 @@ function sessionKey(b: BookingDetails): string {
   return `${b.sessionDate ?? "0000-00-00"} ${String(minutesOf(b.slot?.startTime)).padStart(4, "0")}`;
 }
 
-export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantId, isOwner, newBooking }: BookingsConsoleProps) {
+export function BookingsConsole({
+  tenantSlug,
+  currency,
+  bookings,
+  today,
+  tenantId,
+  canManage,
+  canRecordPayments,
+  newBooking,
+}: BookingsConsoleProps) {
   const [newBookingOpen, setNewBookingOpen] = useState(false);
   // Open on whatever needs the owner's attention first.
   const [filter, setFilter] = useState<FilterId>(() =>
@@ -104,14 +118,16 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
         description="Every client booking with contact details, brief and deposit status. Select a booking to see everything."
         actions={
           <>
-        <button
-          type="button"
-          onClick={() => setNewBookingOpen(true)}
-          className={cn(buttonVariants(), "shrink-0")}
-        >
-          <Plus className="size-3.5" aria-hidden="true" />
-          New booking
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setNewBookingOpen(true)}
+            className={cn(buttonVariants(), "shrink-0")}
+          >
+            <Plus className="size-3.5" aria-hidden="true" />
+            New booking
+          </button>
+        )}
         <label className="relative block w-full sm:w-72">
           <span className="sr-only">Search bookings</span>
           <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -134,7 +150,7 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
         tenantId={tenantId}
         tenantSlug={tenantSlug}
         currency={currency}
-        isOwner={isOwner}
+        canRecordPayments={canRecordPayments}
         {...newBooking}
       />
 
@@ -230,7 +246,8 @@ export function BookingsConsole({ tenantSlug, currency, bookings, today, tenantI
         currency={currency}
         booking={selected}
         tenantId={tenantId}
-        isOwner={isOwner}
+        canManage={canManage}
+        canRecordPayments={canRecordPayments}
         onChanged={() => router.refresh()}
       />
     </div>

@@ -8,7 +8,9 @@ import { loadInvoiceDocument } from "@/lib/invoices/document";
 import { InvoiceDocumentView } from "@/components/invoices/invoice-document";
 import { PrintButton } from "@/components/invoices/print-button";
 import { InvoiceAdminActions } from "@/components/admin/invoices/invoice-admin-actions";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 
 interface AdminInvoicePageProps {
@@ -21,9 +23,11 @@ export async function generateMetadata({ params }: AdminInvoicePageProps): Promi
   return { title: tenant ? `Invoice | ${tenant.name} Studio Admin` : "Invoice" };
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Invoices VIEW. Recording or cancelling a payment needs recordPayments; a reminder Invoices MANAGE.
 export default async function AdminInvoicePage({ params }: AdminInvoicePageProps) {
   const { tenantSlug, invoiceId } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.invoices, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true } });
   if (!tenant) notFound();
 
@@ -38,7 +42,8 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
         invoiceId={doc.id}
         status={doc.status}
         milestoneType={doc.milestoneType}
-        isOwner={await currentUserIsOwner()}
+        canRecordPayments={viewer.access.ticks.recordPayments}
+        canManage={levelAtLeast(viewer.access.areas.invoices, "MANAGE")}
       />
       <InvoiceDocumentView
         doc={doc}

@@ -20,8 +20,8 @@ interface PrintOrderActionsProps {
   paid: boolean;
   /** The order has an invoice (an order of only free included prints has none). */
   hasInvoice: boolean;
-  /** The viewer is the studio owner: only the owner cancels an order that has an invoice (money rule). */
-  isOwner: boolean;
+  /** The recordPayments permission: needed to cancel an order that has an invoice (money rule). */
+  canRecordPayments: boolean;
 }
 
 const MOVE_LABELS: Record<string, string> = {
@@ -36,7 +36,7 @@ const field =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 
 /** Move the order along, add courier and tracking when it ships, or cancel it (confirmed in place). */
-export function PrintOrderActions({ tenantId, tenantSlug, orderId, status, fulfilment, paid, hasInvoice, isOwner }: PrintOrderActionsProps) {
+export function PrintOrderActions({ tenantId, tenantSlug, orderId, status, fulfilment, paid, hasInvoice, canRecordPayments }: PrintOrderActionsProps) {
   const router = useRouter();
   const [courier, setCourier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -108,11 +108,11 @@ export function PrintOrderActions({ tenantId, tenantSlug, orderId, status, fulfi
         )
       )}
 
-      {cancellable && hasInvoice && !isOwner && (
-        <p className="pt-4 border-t border-zinc-800 text-xs text-zinc-400">Only the studio owner can cancel an order that has a payment.</p>
+      {cancellable && hasInvoice && !canRecordPayments && (
+        <p className="pt-4 border-t border-zinc-800 text-xs text-zinc-400">Cancelling an order that has a payment needs the record-payments permission.</p>
       )}
 
-      {cancellable && (!hasInvoice || isOwner) && (
+      {cancellable && (!hasInvoice || canRecordPayments) && (
         <div className="pt-4 border-t border-zinc-800 space-y-3">
           {paid && (
             <p className="text-xs text-amber-300/90">

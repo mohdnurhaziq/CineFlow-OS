@@ -7,6 +7,10 @@ import { catchUpShotStages } from "@/lib/projects/stage";
 import { formatMoney } from "@/lib/money";
 import type { JobBooking, JobPayment } from "@/components/admin/projects/job-header";
 import { ProjectWorkspace } from "@/components/admin/projects/project-workspace";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { canAccessProject } from "@/lib/auth/access-guard";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface ProjectPageProps {
   params: Promise<{ tenantSlug: string; projectId: string }>;
@@ -21,11 +25,15 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
   return { title: project ? `${project.title} | ${project.tenant.name} Studio Admin` : "Project" };
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Galleries access; at "Only their own", only a project they lead or are assigned to.
 export default async function AdminProjectPage({ params }: ProjectPageProps) {
   const { tenantSlug, projectId } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true, releaseFilesBeforePayment: true } });
   if (!tenant) notFound();
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.galleries, "OWN")) return <NoAccess tenantSlug={tenantSlug} />;
+  if (!(await db.project.findFirst({ where: { id: projectId, tenantId: tenant.id }, select: { id: true } }))) notFound();
+  if (!(await canAccessProject(viewer.user, viewer.access, tenant.id, projectId))) return <NoAccess tenantSlug={tenantSlug} />;
 
   // A session whose time has passed counts as shot.
   await catchUpShotStages(tenant.id);

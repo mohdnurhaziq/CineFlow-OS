@@ -18,7 +18,8 @@ interface NewBookingDialogProps {
   tenantId: string;
   tenantSlug: string;
   currency: string;
-  isOwner: boolean;
+  /** The recordPayments permission: may record the booking as paid. */
+  canRecordPayments: boolean;
   /** Open, upcoming slots (see loadBookableSlots), soonest first. */
   slots: BookingSlotRow[];
   categories: CategoryOption[];
@@ -37,7 +38,7 @@ export function NewBookingDialog({
   tenantId,
   tenantSlug,
   currency,
-  isOwner,
+  canRecordPayments,
   slots,
   categories,
   clients,
@@ -98,7 +99,7 @@ export function NewBookingDialog({
         clients={clients}
         packages={packages}
         currency={currency}
-        isOwner={isOwner}
+        canRecordPayments={canRecordPayments}
         onSuccess={onBooked}
       />
     );

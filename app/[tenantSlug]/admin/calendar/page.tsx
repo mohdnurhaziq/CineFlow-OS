@@ -2,7 +2,9 @@ import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 import { CalendarAdminDashboard } from "@/components/admin/calendar/calendar-admin-dashboard";
 import type { BookingSlotRow, CategoryOption } from "@/components/admin/calendar/single-slot-dialog";
 
@@ -25,8 +27,12 @@ export async function generateMetadata({
   };
 }
 
+// Bookings VIEW sees the calendar; changing it needs Bookings MANAGE.
 export default async function AdminCalendarPage({ params }: CalendarPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.bookings, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
+  const canManage = levelAtLeast(viewer.access.areas.bookings, "MANAGE");
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({
@@ -83,13 +89,15 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
     orderBy: { sortOrder: "asc" },
   });
 
-  // 5. Customer accounts the admin can book on behalf of
-  const clients = await db.user.findMany({
-    where: { tenantId: tenant.id, role: "CLIENT" },
-    select: { id: true, name: true, email: true, phone: true },
-    orderBy: { name: "asc" },
-    take: 1000,
-  });
+  // 5. Customer accounts the admin can book on behalf of (only for those who may book)
+  const clients = canManage
+    ? await db.user.findMany({
+        where: { tenantId: tenant.id, role: "CLIENT" },
+        select: { id: true, name: true, email: true, phone: true },
+        orderBy: { name: "asc" },
+        take: 1000,
+      })
+    : [];
 
   // 6. Service packages (set a booking's price and deposit)
   const packages = await db.servicePackage.findMany({
@@ -108,7 +116,9 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         categories={categories as unknown as CategoryOption[]}
         clients={clients}
         packages={packages}
-        isOwner={await currentUserIsOwner()}
+        canManage={canManage}
+        canSetPrices={viewer.access.ticks.setPrices}
+        canRecordPayments={viewer.access.ticks.recordPayments}
       />
     </PageShell>
   );

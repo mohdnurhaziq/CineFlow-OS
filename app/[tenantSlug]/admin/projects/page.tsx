@@ -8,8 +8,11 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
 import { formatSlotDate } from "@/lib/slot-time";
-import { PROJECT_LIST_TABS, projectListWhere, type ProjectListTab } from "@/lib/projects/list";
+import { PROJECT_LIST_TABS, countAdminProjects, loadAdminProjects, type ProjectListTab } from "@/lib/projects/list";
 import { catchUpShotStages } from "@/lib/projects/stage";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface ProjectsPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -24,32 +27,24 @@ export async function generateMetadata({ params }: ProjectsPageProps): Promise<M
   return { title: tenant ? `Galleries | ${tenant.name} Studio Admin` : "Galleries" };
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Galleries access; at "Only their own", the list holds only the projects they lead or are assigned to.
 export default async function AdminProjectsPage({ params, searchParams }: ProjectsPageProps) {
   const { tenantSlug } = await params;
   const { tab: tabParam } = await searchParams;
   const tab: ProjectListTab = PROJECT_LIST_TABS.includes(tabParam as ProjectListTab) ? (tabParam as ProjectListTab) : "productions";
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.galleries, "OWN")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
   if (!tenant) notFound();
 
   // A session whose time has passed counts as shot.
   await catchUpShotStages(tenant.id);
 
-  const counts = Object.fromEntries(
-    await Promise.all(PROJECT_LIST_TABS.map(async (t) => [t, await db.project.count({ where: projectListWhere(tenant.id, t) })] as const))
-  ) as Record<ProjectListTab, number>;
-
-  const projects = await db.project.findMany({
-    where: projectListWhere(tenant.id, tab),
-    include: {
-      client: { select: { name: true } },
-      callSheets: { select: { shootDate: true }, orderBy: { shootDate: "asc" } },
-      deliverables: { select: { _count: { select: { items: true } } } },
-      booking: { select: { id: true, trackingCode: true, category: true, serviceTier: true } },
-      proposal: { select: { id: true, proposalNumber: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const listViewer = { id: viewer.user.id, access: viewer.access };
+  const [counts, projects] = await Promise.all([
+    countAdminProjects(tenant.id, listViewer),
+    loadAdminProjects(tenant.id, listViewer, tab),
+  ]);
 
   return (
     <PageShell>

@@ -2,7 +2,9 @@ import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/lib/db";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 import { ServicesDashboard } from "@/components/admin/services/services-dashboard";
 import type { PackageRow } from "@/components/admin/services/package-dialog";
 import type { CategoryRow } from "@/components/admin/services/category-dialog";
@@ -26,8 +28,11 @@ export async function generateMetadata({
   };
 }
 
+// Services VIEW. Packages and their prices need setPrices; categories Services MANAGE.
 export default async function AdminServicesPage({ params }: ServicesPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.services, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({
@@ -85,7 +90,8 @@ export default async function AdminServicesPage({ params }: ServicesPageProps) {
         initialCategories={categories as unknown as CategoryRow[]}
         printSizes={printSizes}
         frames={frames}
-        isOwner={await currentUserIsOwner()}
+        canSetPrices={viewer.access.ticks.setPrices}
+        canManage={levelAtLeast(viewer.access.areas.services, "MANAGE")}
       />
     </PageShell>
   );

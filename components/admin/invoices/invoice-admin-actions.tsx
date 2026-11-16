@@ -12,8 +12,10 @@ interface InvoiceAdminActionsProps {
   invoiceId: string;
   status: string;
   milestoneType: string;
-  /** Recording or cancelling money is owner-only; staff can send reminders. */
-  isOwner: boolean;
+  /** The recordPayments permission: may record a payment or cancel the invoice. */
+  canRecordPayments: boolean;
+  /** Invoices MANAGE: may send the client a reminder. */
+  canManage: boolean;
 }
 
 type Mode = null | "pay" | "void";
@@ -24,7 +26,15 @@ const field =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 
 /** Record a payment, cancel the invoice, or remind the client. Shown above the invoice in the admin. */
-export function InvoiceAdminActions({ tenantId, tenantSlug, invoiceId, status, milestoneType, isOwner }: InvoiceAdminActionsProps) {
+export function InvoiceAdminActions({
+  tenantId,
+  tenantSlug,
+  invoiceId,
+  status,
+  milestoneType,
+  canRecordPayments,
+  canManage,
+}: InvoiceAdminActionsProps) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(null);
   const [method, setMethod] = useState<"CASH" | "BANK_TRANSFER" | "QR_CODE" | "CARD">("CASH");
@@ -35,7 +45,7 @@ export function InvoiceAdminActions({ tenantId, tenantSlug, invoiceId, status, m
 
   const unpaid = ["PENDING", "OVERDUE", "PENDING_VERIFICATION", "REJECTED"].includes(status);
   const remindable = ["PENDING", "OVERDUE", "REJECTED"].includes(status);
-  if (!unpaid) return null;
+  if (!unpaid || (!canRecordPayments && !canManage)) return null;
 
   const ids = { tenantId, tenantSlug, invoiceId };
   const run = (fn: () => Promise<{ success: boolean; message?: string }>, done: string) =>
@@ -55,12 +65,12 @@ export function InvoiceAdminActions({ tenantId, tenantSlug, invoiceId, status, m
     <div className="w-full rounded-xl border border-zinc-800 bg-[#0d0d10] p-4 space-y-3 print:hidden">
       {mode === null && (
         <div className="flex flex-wrap items-center gap-2">
-          {isOwner && (
+          {canRecordPayments && (
             <button type="button" className={`${btn} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`} onClick={() => setMode("pay")}>
               <Banknote className="size-3.5" /> Record payment
             </button>
           )}
-          {remindable && (
+          {remindable && canManage && (
             <button
               type="button"
               className={quiet}
@@ -70,12 +80,14 @@ export function InvoiceAdminActions({ tenantId, tenantSlug, invoiceId, status, m
               <Bell className="size-3.5" /> Send reminder
             </button>
           )}
-          {isOwner && milestoneType !== "BOOKING_DEPOSIT" && (
+          {canRecordPayments && milestoneType !== "BOOKING_DEPOSIT" && (
             <button type="button" className={`${btn} border-red-500/40 text-red-300 hover:bg-red-500/10`} onClick={() => setMode("void")}>
               <Ban className="size-3.5" /> Cancel invoice
             </button>
           )}
-          {!isOwner && <span className="text-[11px] text-zinc-500">Only the studio owner can record or cancel payments.</span>}
+          {!canRecordPayments && (
+            <span className="text-[11px] text-zinc-500">Recording or cancelling a payment needs the record-payments permission.</span>
+          )}
         </div>
       )}
 

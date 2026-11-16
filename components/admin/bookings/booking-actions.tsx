@@ -22,8 +22,10 @@ interface BookingActionsProps {
   booking: BookingDetails;
   tenantId: string;
   tenantSlug: string;
-  /** Studio owner: may cancel a booking whose deposit was paid. */
-  isOwner: boolean;
+  /** Bookings MANAGE: may move, cancel and resend the confirmation. */
+  canManage: boolean;
+  /** The recordPayments permission: may cancel a booking whose deposit was paid. */
+  canRecordPayments: boolean;
   /** Called after a change so the caller can reload the booking and list. */
   onChanged: () => void;
 }
@@ -35,7 +37,7 @@ const input =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 
 /** What the studio can do with a booking from here: move, cancel, close out, and upload the photos. */
-export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChanged }: BookingActionsProps) {
+export function BookingActions({ booking, tenantId, tenantSlug, canManage, canRecordPayments, onChanged }: BookingActionsProps) {
   const [mode, setMode] = useState<Mode>(null);
   const [reason, setReason] = useState("");
   const [options, setOptions] = useState<RescheduleOption[] | null>(null);
@@ -47,7 +49,7 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
   const upcoming = booking.status === "PENDING" || booking.status === "CONFIRMED";
   const started =
     !!booking.sessionDate && !!booking.slot && isSlotInPast({ date: booking.sessionDate, startTime: booking.slot.startTime });
-  const canCancel = upcoming && (!booking.depositPaid || isOwner);
+  const canCancel = upcoming && canManage && (!booking.depositPaid || canRecordPayments);
 
   const run = (fn: () => Promise<{ success: boolean; message?: string }>, done: string) =>
     start(async () => {
@@ -90,12 +92,12 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
 
       {mode === null && (
         <div className="flex flex-wrap gap-2">
-          {upcoming && (
+          {upcoming && canManage && (
             <button type="button" className={quiet} onClick={openReschedule}>
               <CalendarClock className="size-3.5" /> Move to another slot
             </button>
           )}
-          {upcoming && (
+          {upcoming && canManage && (
             <button type="button" className={quiet} disabled={pending} onClick={resendConfirmation}>
               {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Mail className="size-3.5" />} Resend confirmation email
             </button>
@@ -142,12 +144,13 @@ export function BookingActions({ booking, tenantId, tenantSlug, isOwner, onChang
             )
           )}
           {upcoming &&
+            canManage &&
             (canCancel ? (
               <button type="button" className={buttonVariants({ variant: "danger" })} onClick={() => setMode("cancel")}>
                 <XCircle className="size-3.5" /> Cancel booking
               </button>
             ) : (
-              <p className="text-[11px] text-zinc-500 self-center">Only the studio owner can cancel a paid booking.</p>
+              <p className="text-[11px] text-zinc-500 self-center">Cancelling a paid booking needs the record-payments permission.</p>
             ))}
         </div>
       )}

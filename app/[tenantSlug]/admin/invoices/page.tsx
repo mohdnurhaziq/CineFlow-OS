@@ -5,7 +5,9 @@ import { db } from "@/lib/db";
 import { milestoneInstallmentLabel } from "@/lib/labels";
 import { InvoicesConsole, type InvoiceRow } from "@/components/admin/invoices/invoices-console";
 import { NewInvoiceButton } from "@/components/admin/invoices/new-invoice-dialog";
-import { currentUserIsOwner } from "@/lib/auth/owner";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface InvoicesPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -17,9 +19,11 @@ export async function generateMetadata({ params }: InvoicesPageProps): Promise<M
   return { title: tenant ? `Invoices | ${tenant.name} Studio Admin` : "Invoices" };
 }
 
-// Access is enforced by the admin layout (studio staff or super-admin only).
+// Invoices VIEW. A new invoice sets a price: the setPrices permission.
 export default async function AdminInvoicesPage({ params }: InvoicesPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.invoices, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
     select: { id: true, slug: true, currency: true },
@@ -36,8 +40,8 @@ export default async function AdminInvoicesPage({ params }: InvoicesPageProps) {
     orderBy: { createdAt: "desc" },
   });
 
-  const isOwner = await currentUserIsOwner();
-  const clients = isOwner
+  const canSetPrices = viewer.access.ticks.setPrices;
+  const clients = canSetPrices
     ? await db.user.findMany({
         where: { tenantId: tenant.id, role: "CLIENT" },
         select: { id: true, name: true, email: true },
@@ -76,7 +80,7 @@ export default async function AdminInvoicesPage({ params }: InvoicesPageProps) {
         currency={tenant.currency}
         invoices={rows}
         actions={
-          isOwner ? (
+          canSetPrices ? (
             <NewInvoiceButton tenantId={tenant.id} tenantSlug={tenant.slug} currency={tenant.currency} clients={clients} />
           ) : null
         }

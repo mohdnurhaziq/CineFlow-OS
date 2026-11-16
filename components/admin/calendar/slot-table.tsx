@@ -30,6 +30,8 @@ interface SlotTableProps {
   tenantSlug: string;
   currency: string;
   categories: CategoryOption[];
+  /** Bookings MANAGE: may select, change, block, release and book slots. Without it the table is read-only. */
+  canManage: boolean;
   onEdit: (slot: BookingSlotRow) => void;
   onForceRelease: (slot: BookingSlotRow) => void;
   onBookForCustomer: (slot: BookingSlotRow) => void;
@@ -44,6 +46,7 @@ export function SlotTable({
   tenantSlug,
   currency,
   categories,
+  canManage,
   onEdit,
   onForceRelease,
   onBookForCustomer,
@@ -174,7 +177,7 @@ export function SlotTable({
       )}
 
       {/* Batch Actions Bar */}
-      {selectedIds.length > 0 && (
+      {canManage && selectedIds.length > 0 && (
         <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between animate-in fade-in-0">
           <span className="text-xs font-mono text-amber-300">
             {selectedIds.length} slot(s) selected
@@ -211,12 +214,14 @@ export function SlotTable({
             <thead className="text-[11px] font-mono uppercase bg-zinc-900/60 text-zinc-400 border-b border-zinc-800">
               <tr>
                 <th scope="col" className="px-4 py-3 w-8">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length === slots.length && slots.length > 0}
-                    onChange={toggleSelectAll}
-                    className="rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-0"
-                  />
+                  {canManage && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === slots.length && slots.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-0"
+                    />
+                  )}
                 </th>
                 <th scope="col" className="px-4 py-3">Date & Time</th>
                 <th scope="col" className="px-4 py-3">Category</th>
@@ -248,12 +253,14 @@ export function SlotTable({
                     } ${pastOpen ? "opacity-60" : ""}`}
                   >
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(slot.id)}
-                        className="rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-0"
-                      />
+                      {canManage && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(slot.id)}
+                          className="rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-0"
+                        />
+                      )}
                     </td>
 
                     {/* Date & Time */}
@@ -322,13 +329,15 @@ export function SlotTable({
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
                             <Clock className="size-3" /> Held in Checkout
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => onForceRelease(slot)}
-                            className="block text-[10px] font-mono text-amber-400 hover:underline"
-                          >
-                            Force release hold
-                          </button>
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => onForceRelease(slot)}
+                              className="block text-[10px] font-mono text-amber-400 hover:underline"
+                            >
+                              Force release hold
+                            </button>
+                          )}
                         </div>
                       )}
 
@@ -361,6 +370,7 @@ export function SlotTable({
 
                     {/* Actions */}
                     <td className="px-4 py-3 text-right sticky right-0 bg-[#0f0f12]">
+                      {canManage && (
                       <div className="flex items-center justify-end gap-1">
                         {/* Book on behalf of a customer */}
                         {slot.status === "AVAILABLE" && !pastOpen && (
@@ -433,6 +443,7 @@ export function SlotTable({
                           )}
                         </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 );

@@ -6,6 +6,10 @@ import { currencySymbol } from "@/lib/money";
 import { loadProjectOrdering, toFrameOption, toSizeOption } from "@/lib/prints/project-ordering";
 import { PageHeader, PageShell } from "@/components/ui/page";
 import { VisualizerShell } from "@/components/visualizer/visualizer-shell";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { canAccessProject } from "@/lib/auth/access-guard";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface AdminProjectPrintsPageProps {
   params: Promise<{ tenantSlug: string; projectId: string }>;
@@ -22,19 +26,29 @@ export async function generateMetadata({ params }: AdminProjectPrintsPageProps):
 
 /**
  * Staff order framed prints for a client from that client's gallery, inside the admin console.
- * Access is enforced by the admin layout (studio staff or super-admin only). Placing goes
- * through the same placePrintOrder rules as the client: no ordering until the balance is paid.
+ * Needs Print orders MANAGE and the project's gallery (Galleries, with canAccessProject). Placing
+ * goes through the same placePrintOrder rules as the client: no ordering until the balance is paid.
  */
 export default async function AdminProjectPrintsPage({ params }: AdminProjectPrintsPageProps) {
   const { tenantSlug, projectId } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant) notFound();
 
+  const viewer = await adminPageAccess(tenantSlug);
+  if (
+    !viewer ||
+    !levelAtLeast(viewer.access.areas.printOrders, "MANAGE") ||
+    !levelAtLeast(viewer.access.areas.galleries, "OWN")
+  ) {
+    return <NoAccess tenantSlug={tenantSlug} />;
+  }
+
   const project = await db.project.findFirst({
     where: { id: projectId, tenantId: tenant.id },
     select: { id: true, clientId: true, title: true, client: { select: { name: true } } },
   });
   if (!project) notFound();
+  if (!(await canAccessProject(viewer.user, viewer.access, tenant.id, project.id))) return <NoAccess tenantSlug={tenantSlug} />;
 
   const [printSizes, frameDesigns, { photos, ordering }] = await Promise.all([
     db.printSize.findMany({ where: { tenantId: tenant.id, isAvailable: true }, orderBy: { widthInches: "asc" } }),

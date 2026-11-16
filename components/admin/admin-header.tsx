@@ -6,6 +6,8 @@ import { AdminUserNav } from "@/components/admin/admin-user-nav";
 import { disciplineLabel } from "@/lib/labels";
 import { ToastAnchor } from "@/components/ui/toast-anchor";
 import type { SessionUser } from "@/lib/auth/session";
+import { levelAtLeast, loadAccess } from "@/lib/auth/access";
+import { isStudioOwner } from "@/lib/auth/admin-page";
 
 interface AdminHeaderProps {
   tenant: { id: string; name: string; slug: string; discipline: string };
@@ -20,10 +22,22 @@ interface AdminHeaderProps {
  * the team always sees the same bar.
  */
 export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
-  // Live counts for the menu badges: payments to verify, print orders to start.
+  // The menu shows only what this person can open.
+  const [access, member] = await Promise.all([
+    loadAccess({ id: user.id, role: user.role, tenantId: tenant.id }),
+    db.user.findUnique({ where: { id: user.id }, select: { teamRole: { select: { name: true } } } }),
+  ]);
+  const isOwner = isStudioOwner(user, tenant.id);
+  // Under their name: the owner is the studio owner; a team member shows their role ("Front desk").
+  const roleLabel =
+    user.role === "STUDIO_OWNER" ? "Studio owner" : (member?.teamRole?.name ?? user.role.replace(/_/g, " "));
+
+  // Live counts for the menu badges, for those who see them: payments to verify, print orders to start.
   const [pendingCount, newPrintOrderCount] = await Promise.all([
-    db.milestoneInvoice.count({ where: { tenantId: tenant.id, status: "PENDING_VERIFICATION" } }),
-    db.printOrder.count({ where: { tenantId: tenant.id, status: "NEW" } }),
+    access.ticks.approvePayments || levelAtLeast(access.areas.invoices, "VIEW")
+      ? db.milestoneInvoice.count({ where: { tenantId: tenant.id, status: "PENDING_VERIFICATION" } })
+      : 0,
+    levelAtLeast(access.areas.printOrders, "VIEW") ? db.printOrder.count({ where: { tenantId: tenant.id, status: "NEW" } }) : 0,
   ]);
 
   return (
@@ -65,13 +79,19 @@ export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
               <span className="hidden sm:inline">View studio website</span>
             </Link>
             <div className="h-4 w-px bg-zinc-800" />
-            <AdminUserNav tenantSlug={tenant.slug} user={user} />
+            <AdminUserNav tenantSlug={tenant.slug} user={user} roleLabel={roleLabel} />
           </div>
         </div>
 
         {/* Administrative Domain Navigation Tabs */}
         <div className="py-1">
-          <AdminNavBar tenantSlug={tenant.slug} pendingVerificationCount={pendingCount} newPrintOrderCount={newPrintOrderCount} />
+          <AdminNavBar
+            tenantSlug={tenant.slug}
+            access={access}
+            isOwner={isOwner}
+            pendingVerificationCount={pendingCount}
+            newPrintOrderCount={newPrintOrderCount}
+          />
         </div>
       </div>
     </header>

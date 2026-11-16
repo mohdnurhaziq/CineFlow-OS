@@ -5,6 +5,9 @@ import { db } from "@/lib/db";
 import { FramesManager } from "@/components/admin/frames/frames-manager";
 import type { FrameDesignRow } from "@/components/admin/frames/frame-design-dialog";
 import type { PrintSizeRow } from "@/components/admin/frames/print-size-dialog";
+import { levelAtLeast } from "@/lib/auth/access";
+import { adminPageAccess } from "@/lib/auth/admin-page";
+import { NoAccess } from "@/components/admin/no-access";
 
 interface FramesPageProps {
   params: Promise<{
@@ -25,8 +28,11 @@ export async function generateMetadata({
   };
 }
 
+// Catalog VIEW.
 export default async function AdminFramesPage({ params }: FramesPageProps) {
   const { tenantSlug } = await params;
+  const viewer = await adminPageAccess(tenantSlug);
+  if (!viewer || !levelAtLeast(viewer.access.areas.catalog, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
 
   // 1. Resolve Tenant
   const tenant = await db.tenant.findUnique({
