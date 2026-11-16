@@ -1,7 +1,7 @@
 # Graph Report - CineFlow-OS  (2026-11-16)
 
 ## Corpus Check
-- 562 files · ~1,139,643 words
+- 562 files · ~1,139,685 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 16 file(s) not represented in the graph (top: .css 10, (none) 4, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a4f7c385`
+- Built from commit: `4bd4b673`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -301,16 +301,16 @@
 10. `useDialog()` - 59 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `BUG-20261105-08: Modals ignored Escape and weren't announced as dialogs` --references--> `useDialog()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/use-dialog.ts
-- `Task 4: Shipping zones in Settings → Delivery` --references--> `zoneForState()`  [INFERRED]
-  docs/superpowers/plans/2026-11-15-wall-art-print-orders.md → lib/prints/zones.ts
-- `BUG-20261105-20: Staff could approve payments and change prices` --references--> `requireOwner()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/auth/guard.ts
+- `BUG-20261106-06: Print orders and invoice payments needed no sign-in` --references--> `processInvoicePayment()`  [INFERRED]
+  docs/BUG_FIX_LOG.md → lib/actions/checkout.ts
+- `Current state (what exists today)` --references--> `onInvoicePaid()`  [INFERRED]
+  docs/superpowers/specs/2026-11-15-wall-art-print-orders-design.md → lib/bookings/billing.ts
+- `Pricing` --references--> `onInvoicePaid()`  [INFERRED]
+  docs/superpowers/specs/2026-11-15-wall-art-print-orders-design.md → lib/bookings/billing.ts
+- `BUG-20261105-02: Online payments charged ringgit for every currency` --references--> `getCheckoutGateway()`  [INFERRED]
+  docs/BUG_FIX_LOG.md → lib/payments/settle.ts
 - `BUG-20261106-08: Wrong currency symbol on Gear and Visualizer` --references--> `currencySymbol()`  [INFERRED]
   docs/BUG_FIX_LOG.md → lib/money.ts
-- `Task 4: Projects page tabs` --references--> `projectListWhere()`  [INFERRED]
-  docs/superpowers/plans/2026-11-14-every-booking-gets-a-gallery.md → lib/projects/list.ts
 
 ## Import Cycles
 - None detected.
@@ -1399,17 +1399,17 @@ Nodes (3): ForgotPasswordPage(), ForgotPasswordPageProps, ForgotPasswordForm()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `Skeleton`, `actions/print-orders.ts`, `zod`, `settings-ui.tsx`, `Step 4: Map Tokens to the Theme`, `visualizer-shell.tsx`, `admin-nav-bar.tsx`, `forgot-password/page.tsx`, `services-dashboard.tsx`, `[orderId]/page.tsx`, `labels.ts`, `admin-booking-lifecycle.ts`, `Critical Rules`, `[clientId]/page.tsx`, `included-prints-card.tsx`, `slot-hold/page.tsx`, `errorMessageOf`, `Styling & Customization`, `Step 4: Map Tokens to the Theme`, `tier10-authorization.test.ts`, `ui/page.tsx`, `Critical Rules`, `db.ts`, `Styling & Customization`, `bookings-console.tsx`, `client-dashboard.tsx`?**
-  _High betweenness centrality (0.140) - this node is a cross-community bridge._
+  _High betweenness centrality (0.093) - this node is a cross-community bridge._
 - **What connects `RFC-4180`, `Multi-Tenant Seed Script (prisma/seed.ts)`, `Local File Upload Route (app/api/upload/route.ts)` to the rest of the system?**
   _25 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.agents/skills/design-taste-frontend/scripts/assets.mjs` be split into smaller, more focused modules?**
   _Cohesion score 0.06648426812585499 - nodes in this community are weakly interconnected._
 - **Why does `next` connect `next` to `actions/admin-cms.ts`, `deliverables/route.ts`, `print-order-preview-dialog.tsx`, `actionErrorMessage`, `actions/print-orders.ts`, `zod`, `admin-bookings.ts`, `gear-dashboard.tsx`, `actions/checkout.ts`, `admin-projects.ts`, `settings-ui.tsx`, `actions/logistics.ts`, `admin-invoices.ts`, `visualizer-shell.tsx`, `services-dashboard.tsx`, `forgot-password/page.tsx`, `admin-nav-bar.tsx`, `[orderId]/page.tsx`, `(saas)/layout.tsx`, `admin-proposals.ts`, `actions/logistics.ts`, `admin-services.ts`, `actions/onboarding.ts`, `labels.ts`, `ref_node_path`, `cn`, `admin-booking-lifecycle.ts`, `(saas)/page.tsx`, `[clientId]/page.tsx`, `actions/admin-frames.ts`, `checkout-shell.tsx`, `verification/page.tsx`, `included-prints-card.tsx`, `slot-hold/page.tsx`, `actions/gear.ts`, `errorMessageOf`, `slot-time.ts`, `tier20-print-orders.test.ts`, `auth/session.ts`, `gallery.ts`, `tier9-toyyibpay-gateway.test.ts`, `package.json`, `getCurrentUser`, `02-saas-showcase.test.ts`, `tier15-projects.test.ts`, `tier10-authorization.test.ts`, `calendar-admin-dashboard.tsx`, `admin-invoices.ts`, `runner.ts`, `ui/page.tsx`, `errorMessageOf`, `actions/admin-settings.ts`, `04-logistics-gear-wall.test.ts`, `db.ts`, `proposal-viewer.tsx`, `bookings-console.tsx`, `vault.ts`, `client-dashboard.tsx`, `admin-calendar.ts`, `app/layout.tsx`?**
-  _High betweenness centrality (0.102) - this node is a cross-community bridge._
+  _High betweenness centrality (0.087) - this node is a cross-community bridge._
 - **Should `notifications.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.10591133004926108 - nodes in this community are weakly interconnected._
 - **Why does `CineFlow OS — Server Actions & API Specification` connect `CineFlow OS — Server Actions & API Specification` to `requireStaff`, `6. Deliverables Vault & Print Visualizer Actions (`src/server/actions/deliverables.ts`)`, `2. Cinema-Style Booking Actions (`src/server/actions/booking.ts`)`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+  _High betweenness centrality (0.057) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._

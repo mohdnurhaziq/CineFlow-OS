@@ -53,9 +53,16 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <SignedOutNotice />
         </Suspense>
+        {/*
+          Pop-up messages. Top centre, so a message never sits on the buttons pages keep at the
+          bottom of the screen, and just below the area's sticky header when there is one: each
+          header's <ToastAnchor /> sets --toast-top to its height.
+        */}
         <Toaster
           theme="dark"
-          position="bottom-right"
+          position="top-center"
+          offset={{ top: "var(--toast-top, 24px)" }}
+          mobileOffset={{ top: "var(--toast-top, 16px)" }}
           toastOptions={{
             style: {
               background: "#121215",

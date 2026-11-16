@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "app/layout.tsx": {
-    "mtime": 1794651982.3952236,
-    "seen": 1794652869.1325214,
-    "ast_hash": "449f2ab55ce56cff4b588cddf27a9ec6",
+    "mtime": 1794795023.6377997,
+    "seen": 1794795292.3009741,
+    "ast_hash": "69cc28f2b12b0a9b2c8060309363df3a",
     "semantic_hash": ""
   },
   "app/not-found.tsx": {
@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "components/booking/cinema-booking-shell.tsx": {
-    "mtime": 1794752024.252342,
-    "seen": 1794752616.2057645,
-    "ast_hash": "7ac1b627bdab3951a837603e29161355",
+    "mtime": 1794795023.6190958,
+    "seen": 1794795292.3011425,
+    "ast_hash": "5d90344725f6eb21068bb1bd1f02dccf",
     "semantic_hash": ""
   },
   "components/booking/cinema-slot-grid.tsx": {
@@ -1464,14 +1464,14 @@
     "semantic_hash": ""
   },
   "public/uploads/deliverables/masters/aurora_60s_prores422hq_master.mov": {
-    "mtime": 1794768537.559484,
-    "seen": 1794768599.3712797,
+    "mtime": 1794795075.2941082,
+    "seen": 1794795292.301919,
     "ast_hash": "33a1e13c7994beb12a9907c1e60e3765",
     "semantic_hash": "33a1e13c7994beb12a9907c1e60e3765"
   },
   "public/uploads/deliverables/previews/aurora_60s_stream_proxy.mp4": {
-    "mtime": 1794768537.555485,
-    "seen": 1794768599.3712819,
+    "mtime": 1794795075.2903235,
+    "seen": 1794795292.3019211,
     "ast_hash": "33a1e13c7994beb12a9907c1e60e3765",
     "semantic_hash": "33a1e13c7994beb12a9907c1e60e3765"
   },
@@ -1848,206 +1848,206 @@
     "semantic_hash": ""
   },
   "public/uploads/deliverables/masters/aurora_hero_01_master.jpg": {
-    "mtime": 1794768537.5575166,
-    "seen": 1794768599.371214,
+    "mtime": 1794795075.293112,
+    "seen": 1794795292.3018641,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/masters/aurora_hero_02_master.jpg": {
-    "mtime": 1794768537.5584893,
-    "seen": 1794768599.3712156,
+    "mtime": 1794795075.293112,
+    "seen": 1794795292.301866,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/masters/farah_convo_01_master.jpg": {
-    "mtime": 1794768537.559484,
-    "seen": 1794768599.3712177,
+    "mtime": 1794795075.2941082,
+    "seen": 1794795292.3018677,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/masters/farah_family_02_master.jpg": {
-    "mtime": 1794768537.559484,
-    "seen": 1794768599.3712194,
+    "mtime": 1794795075.2956176,
+    "seen": 1794795292.3018694,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/previews/aurora_hero_01_watermarked.jpg": {
-    "mtime": 1794768537.5534828,
-    "seen": 1794768599.3712218,
+    "mtime": 1794795075.2903235,
+    "seen": 1794795292.301871,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/previews/aurora_hero_02_watermarked.jpg": {
-    "mtime": 1794768537.554481,
-    "seen": 1794768599.3712234,
+    "mtime": 1794795075.2903235,
+    "seen": 1794795292.301873,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/previews/farah_convo_01_preview.jpg": {
-    "mtime": 1794768537.555485,
-    "seen": 1794768599.3712256,
+    "mtime": 1794795075.291906,
+    "seen": 1794795292.3018744,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/previews/farah_family_02_preview.jpg": {
-    "mtime": 1794768537.5575166,
-    "seen": 1794768599.3712277,
+    "mtime": 1794795075.291906,
+    "seen": 1794795292.301876,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/thumbnails/aurora_hero_01_thumb.jpg": {
-    "mtime": 1794768537.560994,
-    "seen": 1794768599.3712294,
+    "mtime": 1794795075.2956176,
+    "seen": 1794795292.3018775,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/thumbnails/aurora_hero_02_thumb.jpg": {
-    "mtime": 1794768537.5613093,
-    "seen": 1794768599.3712313,
+    "mtime": 1794795075.2966275,
+    "seen": 1794795292.301879,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/thumbnails/aurora_video_thumb.jpg": {
-    "mtime": 1794768537.562454,
-    "seen": 1794768599.371233,
+    "mtime": 1794795075.2971344,
+    "seen": 1794795292.3018806,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/thumbnails/farah_convo_01_thumb.jpg": {
-    "mtime": 1794768537.562454,
-    "seen": 1794768599.371235,
+    "mtime": 1794795075.298144,
+    "seen": 1794795292.301882,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/deliverables/thumbnails/farah_family_02_thumb.jpg": {
-    "mtime": 1794768537.562454,
-    "seen": 1794768599.3712366,
+    "mtime": 1794795075.298144,
+    "seen": 1794795292.3018837,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/frames/apex-black.png": {
-    "mtime": 1794768537.5647998,
-    "seen": 1794768599.3712387,
+    "mtime": 1794795075.3006613,
+    "seen": 1794795292.3018851,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/frames/apex-gold.png": {
-    "mtime": 1794768537.5657928,
-    "seen": 1794768599.3712406,
+    "mtime": 1794795075.3016646,
+    "seen": 1794795292.301887,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/frames/apex-teak.png": {
-    "mtime": 1794768537.566794,
-    "seen": 1794768599.3712425,
+    "mtime": 1794795075.3016646,
+    "seen": 1794795292.3018885,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/frames/champagne-gold.png": {
-    "mtime": 1794768537.5647998,
-    "seen": 1794768599.3712442,
+    "mtime": 1794795075.2996526,
+    "seen": 1794795292.3018901,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/frames/matte-black.png": {
-    "mtime": 1794768537.5637825,
-    "seen": 1794768599.3712463,
+    "mtime": 1794795075.298144,
+    "seen": 1794795292.3018916,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/frames/warm-walnut.png": {
-    "mtime": 1794768537.5637825,
-    "seen": 1794768599.3712482,
+    "mtime": 1794795075.2996526,
+    "seen": 1794795292.3018935,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/logos/apex-logo.svg": {
-    "mtime": 1794768537.548804,
-    "seen": 1794768599.3712502,
+    "mtime": 1794795075.2858126,
+    "seen": 1794795292.301895,
     "ast_hash": "ccea6d5a470b7f9c73cd76ff495471b6",
     "semantic_hash": ""
   },
   "public/uploads/logos/lumina-logo.svg": {
-    "mtime": 1794768537.548804,
-    "seen": 1794768599.371252,
+    "mtime": 1794795075.2858126,
+    "seen": 1794795292.3018963,
     "ast_hash": "b8add2b5e8c5348e37a459291a6c28ee",
     "semantic_hash": ""
   },
   "public/uploads/qrcodes/apex_duitnow_qr.png": {
-    "mtime": 1794768537.5508106,
-    "seen": 1794768599.371254,
+    "mtime": 1794795075.287822,
+    "seen": 1794795292.301898,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/qrcodes/lumina_qr.png": {
-    "mtime": 1794768537.5508106,
-    "seen": 1794768599.3712559,
+    "mtime": 1794795075.286812,
+    "seen": 1794795292.3018994,
     "ast_hash": "2cd8bde463f5d82aae0f0cec061d6b8f",
     "semantic_hash": ""
   },
   "public/uploads/receipts/duitnow_receipt_farah.jpg": {
-    "mtime": 1794768537.5522237,
-    "seen": 1794768599.3712575,
+    "mtime": 1794795075.2888136,
+    "seen": 1794795292.301901,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/receipts/duitnow_slip_kamarudin.jpg": {
-    "mtime": 1794768537.5534828,
-    "seen": 1794768599.3712595,
+    "mtime": 1794795075.2888136,
+    "seen": 1794795292.3019025,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/receipts/receipt_sample_qr.jpg": {
-    "mtime": 1794768537.5522237,
-    "seen": 1794768599.3712614,
+    "mtime": 1794795075.287822,
+    "seen": 1794795292.3019044,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/apex_convo_01.jpg": {
-    "mtime": 1794768537.5697937,
-    "seen": 1794768599.3712633,
+    "mtime": 1794795075.3054905,
+    "seen": 1794795292.3019059,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/apex_convo_02.jpg": {
-    "mtime": 1794768537.5697937,
-    "seen": 1794768599.3712652,
+    "mtime": 1794795075.3069985,
+    "seen": 1794795292.3019078,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/apex_convo_showcase.jpg": {
-    "mtime": 1794768537.5687957,
-    "seen": 1794768599.371267,
+    "mtime": 1794795075.3054905,
+    "seen": 1794795292.301909,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/apex_raya_showcase.jpg": {
-    "mtime": 1794768537.5687957,
-    "seen": 1794768599.3712692,
+    "mtime": 1794795075.3054905,
+    "seen": 1794795292.3019109,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/lumina_01_a.jpg": {
-    "mtime": 1794768537.5678082,
-    "seen": 1794768599.3712711,
+    "mtime": 1794795075.302982,
+    "seen": 1794795292.3019123,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/lumina_01_b.jpg": {
-    "mtime": 1794768537.5687957,
-    "seen": 1794768599.3712733,
+    "mtime": 1794795075.304481,
+    "seen": 1794795292.3019142,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/lumina_showcase_01.jpg": {
-    "mtime": 1794768537.566794,
-    "seen": 1794768599.3712754,
+    "mtime": 1794795075.302982,
+    "seen": 1794795292.3019156,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
   "public/uploads/showcase/lumina_showcase_02.jpg": {
-    "mtime": 1794768537.5678082,
-    "seen": 1794768599.3712776,
+    "mtime": 1794795075.302982,
+    "seen": 1794795292.3019176,
     "ast_hash": "8f4341201a23609636243f91f2447e95",
     "semantic_hash": ""
   },
@@ -3582,9 +3582,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/manual/slot-hold/page.tsx": {
-    "mtime": 1794768510.125221,
-    "seen": 1794768599.3700445,
-    "ast_hash": "ff99da9bf37f202fc03aea87fbe6c936",
+    "mtime": 1794795023.6393123,
+    "seen": 1794795292.3008997,
+    "ast_hash": "a4372d2a3009aaf563e5c94243565056",
     "semantic_hash": ""
   },
   "components/admin/manual/manual-ui.tsx": {

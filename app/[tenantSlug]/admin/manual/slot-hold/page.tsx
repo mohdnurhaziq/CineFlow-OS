@@ -149,8 +149,8 @@ export default async function SlotHoldManualPage({ params }: SlotHoldManualPageP
             [
               "They select a time",
               <>
-                A message &quot;Time selected&quot; with the start time. The slot is marked <Ui>SELECTED</Ui>, and a bar shows the date
-                and time with <Ui>Clear selection</Ui> and <Ui>Proceed to Booking</Ui>.
+                The slot is marked <Ui>SELECTED</Ui>, and a bar at the bottom of the page shows the date and time with{" "}
+                <Ui>Clear selection</Ui> and <Ui>Proceed to Booking</Ui>.
               </>,
             ],
             [
@@ -176,7 +176,7 @@ export default async function SlotHoldManualPage({ params }: SlotHoldManualPageP
             ],
             [
               "They clear their selection",
-              <>&quot;Selection cleared.&quot; The slot is available to everyone again at once.</>,
+              <>The bar disappears and the slot is available to everyone again at once.</>,
             ],
           ]}
         />

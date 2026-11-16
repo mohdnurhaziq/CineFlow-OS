@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MessageSquare, Calendar, Aperture, ArrowLeft } from "lucide-react";
 import { ClientAccountMenu } from "@/components/account/client-account-menu";
 import { disciplineLabel } from "@/lib/labels";
+import { ToastAnchor } from "@/components/ui/toast-anchor";
 
 interface ShowcaseNavProps {
   tenant: {
@@ -31,6 +32,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-[#09090b]/85 backdrop-blur-md">
+      <ToastAnchor />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-3">

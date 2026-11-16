@@ -116,7 +116,7 @@ export function CinemaBookingShell({
     });
 
     if (res.success && res.slot && res.heldUntil) {
-      toast.success(`Time selected: ${slot.startTime}`);
+      // No pop-up here: the bar at the bottom of the page already shows the selection.
       setHeldSlot(res.slot);
       setHeldUntil(res.heldUntil);
 
@@ -166,7 +166,6 @@ export function CinemaBookingShell({
       });
 
       if (res.success) {
-        toast.info("Selection cleared.");
         setHeldSlot(null);
         setHeldUntil(null);
         setSlots((prev) =>
@@ -381,8 +380,8 @@ export function CinemaBookingShell({
       {heldSlot && heldUntil && (
         <div className="fixed bottom-0 inset-x-0 z-40 p-4 sm:p-5 border-t border-zinc-800 bg-[#09090b]/95 backdrop-blur-xl shadow-2xl animate-slideUp">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Slot Info */}
-            <div className="flex items-center gap-4">
+            {/* Slot Info (announced to screen readers, since no pop-up repeats it) */}
+            <div role="status" className="flex items-center gap-4">
               <div
                 className="size-10 rounded-xl flex items-center justify-center font-bold text-black shrink-0"
                 style={{ backgroundColor: tenant.brandColor || "#f59e0b" }}

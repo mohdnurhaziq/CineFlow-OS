@@ -7,6 +7,7 @@ import { AdminUserNav } from "@/components/admin/admin-user-nav";
 import { getCurrentUser } from "@/lib/auth/session";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { disciplineLabel } from "@/lib/labels";
+import { ToastAnchor } from "@/components/ui/toast-anchor";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -59,6 +60,7 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-amber-500/20 selection:text-amber-400 print:bg-white print:min-h-0">
       {/* Studio Admin Top Navigation Bar */}
       <header className="border-b border-zinc-800 bg-[#121215]/95 backdrop-blur-md sticky top-0 z-40 print:hidden">
+        <ToastAnchor />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Top Brand Bar */}
           <div className="h-16 flex items-center justify-between border-b border-zinc-800/60">

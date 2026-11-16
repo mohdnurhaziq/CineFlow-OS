@@ -6,6 +6,7 @@ import { CalendarPlus } from "lucide-react";
 import { ClientNavBar } from "./client-nav-bar";
 import { ClientUserNav } from "./client-user-nav";
 import { disciplineLabel } from "@/lib/labels";
+import { ToastAnchor } from "@/components/ui/toast-anchor";
 
 interface ClientAccountHeaderProps {
   tenant: {
@@ -33,6 +34,7 @@ export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHea
 
   return (
     <header className="border-b border-zinc-800 bg-[#121215]/95 backdrop-blur-md sticky top-0 z-40 print:hidden">
+      <ToastAnchor />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Tier 1: Studio Brand & Client Identity Bar */}
         <div className="h-16 flex items-center justify-between border-b border-zinc-800/60 gap-3">
