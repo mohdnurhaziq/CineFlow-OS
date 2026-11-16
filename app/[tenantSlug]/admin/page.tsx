@@ -11,6 +11,8 @@ import { NoAccess } from "@/components/admin/no-access";
 import { getSetupChecklist, type SetupChecklist as SetupChecklistData } from "@/lib/onboarding/checklist";
 import { StudioDashboard } from "@/components/admin/studio-dashboard";
 import { SetupChecklist } from "@/components/admin/onboarding/setup-checklist";
+import { countUnassignedUpcoming } from "@/lib/bookings/schedule";
+import { studioNow } from "@/lib/slot-time";
 import { DashboardTour } from "@/components/admin/onboarding/dashboard-tour";
 
 interface AdminPageProps {
@@ -74,6 +76,11 @@ export default async function AdminDashboardPage({ params }: AdminPageProps) {
     notFound();
   }
 
+  // The flag is for whoever sees every booking (VIEW or more), not "Only their own".
+  const unassignedUpcoming = levelAtLeast(viewer.access.areas.bookings, "VIEW")
+    ? await countUnassignedUpcoming(analytics.tenant.id, studioNow().dateKey)
+    : 0;
+
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/+$/, "");
   const bookingUrl = `${appUrl}/${tenantSlug}`;
 
@@ -81,6 +88,7 @@ export default async function AdminDashboardPage({ params }: AdminPageProps) {
     <PageShell>
       <StudioDashboard
         data={analytics}
+        unassignedUpcoming={unassignedUpcoming}
         guide={
           onboarding.checklist ? (
             <SetupChecklist tenantSlug={tenantSlug} checklist={onboarding.checklist} bookingUrl={bookingUrl} />

@@ -59,6 +59,8 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
       }
 
       const isClient = result.user?.role === "CLIENT";
+      // Team accounts (not the owner) start on their own schedule.
+      const isTeam = !isClient && result.user?.role !== "STUDIO_OWNER" && result.user?.role !== "SUPER_ADMIN";
       const callbackPath = (callbackUrl?.split("?")[0] ?? "").replace(/\/+$/, "").toLowerCase();
       const tenantRoot = `/${tenantSlug}`.toLowerCase();
       const isShowcaseRoot =
@@ -69,6 +71,8 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
           : `/${tenantSlug}/account`
         : callbackUrl && !isShowcaseRoot
         ? callbackUrl
+        : isTeam
+        ? `/${tenantSlug}/admin/schedule`
         : `/${tenantSlug}/admin`;
       window.location.href = target;
     } catch {

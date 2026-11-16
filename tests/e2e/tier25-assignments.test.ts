@@ -15,6 +15,7 @@ import { cancelBooking, rescheduleBooking } from "@/lib/actions/admin-booking-li
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { removeTeamMember } from "@/lib/actions/admin-team";
 import { getNotificationHistory } from "@/lib/notifications";
+import { loadSchedule, countUnassignedUpcoming } from "@/lib/bookings/schedule";
 
 type Row = { id: string; email: string; name: string; role: string; tenantId: string | null };
 const sess = (u: Row, slug: string | null) => ({ id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenantId, tenantSlug: slug });
@@ -317,6 +318,75 @@ export async function runTier25AssignmentTests(harness: TestHarness) {
       // The calendar and full-page booking pages use this: the list only for Bookings MANAGE.
       harness.assertEqual((await loadAssignableFor(f.lumina.id, true)).length, people.length, "MANAGE gets the picker list");
       harness.assertEqual((await loadAssignableFor(f.lumina.id, false)).length, 0, "below MANAGE gets none");
+    });
+  });
+
+  await harness.test("T25-SCHED-01: a member's schedule holds only their upcoming sessions", async () => {
+    await withFixture(async (f) => {
+      const a = await f.mkMember("sa");
+      const b = await f.mkMember("sb");
+      const later = await f.mkBooking("late", { slotId: (await f.mkSlot("booked", 22, "02:00 PM")).id });
+      const early = await f.mkBooking("early", { slotId: (await f.mkSlot("booked", 22, "09:00 AM")).id });
+      const nextDay = await f.mkBooking("next", { slotId: (await f.mkSlot("booked", 23, "09:00 AM")).id });
+      const cancelled = await f.mkBooking("cx", { slotId: (await f.mkSlot("booked", 24, "09:00 AM")).id, status: "CANCELLED" });
+      const theirs = await f.mkBooking("theirs", { slotId: (await f.mkSlot("booked", 25, "09:00 AM")).id });
+      const past = await f.mkBooking("past", { status: "COMPLETED" });
+      await db.clientBooking.update({ where: { id: past.id }, data: { targetDate: "2020-01-01" } });
+      const tenantId = f.lumina.id;
+      for (const x of [later, early, nextDay, cancelled, past]) {
+        await db.bookingAssignment.create({ data: { bookingId: x.id, userId: a.id, tenantId } });
+      }
+      await db.bookingAssignment.create({ data: { bookingId: theirs.id, userId: b.id, tenantId } });
+      await db.bookingAssignment.create({ data: { bookingId: later.id, userId: b.id, tenantId } });
+
+      const today = studioNow().dateKey;
+      const days = await loadSchedule(tenantId, a.id, { from: today });
+      const sessions = days.flatMap((d) => d.sessions);
+      harness.assertEqual(sessions.length, 3, "three upcoming sessions (cancelled, past and other people's left out)");
+      harness.assertEqual(sessions.map((x) => x.bookingId).join(), [early.id, later.id, nextDay.id].join(), "in date then time order");
+      harness.assertEqual(days.length, 2, "grouped into two days");
+      harness.assertEqual(days[0]?.sessions.length, 2, "two sessions on the first day");
+      harness.assertEqual(sessions[0]?.clientName, "Mira Client", "carries the client");
+      harness.assertEqual(sessions[0]?.packageName, "Family Portrait", "and the package");
+      harness.assert(!sessions.some((x) => x.bookingId === theirs.id), "another member's booking is absent");
+
+      const mine = await loadSchedule(tenantId, b.id, { from: today });
+      harness.assertEqual(mine.flatMap((d) => d.sessions).map((x) => x.bookingId).sort().join(), [theirs.id, later.id].sort().join(), "the other member sees theirs");
+
+      const pastDays = await loadSchedule(tenantId, a.id, { from: today, past: true });
+      harness.assertEqual(pastDays.flatMap((d) => d.sessions).map((x) => x.bookingId).join(), past.id, "past view holds the past session only");
+
+      const wrongStudio = await loadSchedule(f.apex.id, a.id, { from: today });
+      harness.assertEqual(wrongStudio.length, 0, "another studio's schedule shows nothing of theirs");
+    });
+  });
+
+  await harness.test("T25-SCHED-02: the overview counts unassigned bookings", async () => {
+    await withFixture(async (f) => {
+      const today = studioNow().dateKey;
+      const a = await f.mkMember("sc");
+      const expected = async () => {
+        const rows = await loadAdminBookings(f.lumina.id, { id: f.owner.id, access: FULL_ACCESS });
+        return rows.filter((r) => isUnassigned(r, today)).length;
+      };
+      const before = await countUnassignedUpcoming(f.lumina.id, today);
+      harness.assertEqual(before, await expected(), "matches the Unassigned filter");
+
+      const open = await f.mkBooking("o1", { slotId: (await f.mkSlot("booked", 26, "09:00 AM")).id });
+      await f.mkBooking("o2", { slotId: (await f.mkSlot("booked", 27, "09:00 AM")).id, status: "PENDING" });
+      const staffed = await f.mkBooking("o3", { slotId: (await f.mkSlot("booked", 28, "09:00 AM")).id });
+      await f.mkBooking("o4", { slotId: (await f.mkSlot("booked", 29, "09:00 AM")).id, status: "CANCELLED" });
+      await f.mkBooking("o5", { slotId: (await f.mkSlot("booked", 30, "09:00 AM")).id, status: "COMPLETED" });
+      const old = await f.mkBooking("o6");
+      await db.clientBooking.update({ where: { id: old.id }, data: { targetDate: "2020-01-01" } });
+      await db.bookingAssignment.create({ data: { bookingId: staffed.id, userId: a.id, tenantId: f.lumina.id } });
+
+      const after = await countUnassignedUpcoming(f.lumina.id, today);
+      harness.assertEqual(after - before, 2, "two new unassigned upcoming bookings (pending and confirmed)");
+      harness.assertEqual(after, await expected(), "still matches the Unassigned filter");
+      await db.bookingAssignment.create({ data: { bookingId: open.id, userId: a.id, tenantId: f.lumina.id } });
+      harness.assertEqual(await countUnassignedUpcoming(f.lumina.id, today), after - 1, "assigning one lowers the count");
+      harness.assertEqual(await countUnassignedUpcoming(f.apex.id, today), await countUnassignedUpcoming(f.apex.id, today), "scoped by studio");
     });
   });
 }

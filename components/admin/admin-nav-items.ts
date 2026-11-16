@@ -14,6 +14,7 @@ import {
   Users,
   Images,
   BookOpen,
+  CalendarClock,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { levelAtLeast, type AccessArea, type AccessLevel, type AccessMap } from "@/lib/auth/access";
@@ -39,7 +40,7 @@ export interface NavSubItem {
 }
 
 export type AdminNavEntry =
-  | { kind: "link"; id: "overview" | "clients" | "settings" | "manual"; href: string; label: string; icon: Icon; tour?: string }
+  | { kind: "link"; id: "schedule" | "overview" | "clients" | "settings" | "manual"; href: string; label: string; icon: Icon; tour?: string }
   | { kind: "group"; id: "production" | "finance" | "catalog"; label: string; icon: Icon; items: NavSubItem[] };
 
 /** Who may see an item: an area at a level, a check of their own, or everyone. */
@@ -53,8 +54,13 @@ export function visibleNavItems(tenantSlug: string, access: AccessMap, isOwner: 
   const item = (rule: Rule, sub: NavSubItem): NavSubItem[] => (can(rule, access, isOwner) ? [sub] : []);
   const group = (entry: Extract<AdminNavEntry, { kind: "group" }>): AdminNavEntry[] => (entry.items.length > 0 ? [entry] : []);
 
+  // My schedule: every team member's own sessions. First for team members, after Overview for the owner.
+  const schedule: AdminNavEntry = { kind: "link", id: "schedule", href: `${base}/schedule`, label: "My schedule", icon: CalendarClock };
+
   return [
+    ...(isOwner ? [] : [schedule]),
     { kind: "link", id: "overview", href: base, label: "Overview", icon: LayoutDashboard },
+    ...(isOwner ? [schedule] : []),
     // Clients: their own tab, since a client spans bookings, projects and invoices.
     ...(can({ area: "clients", level: "VIEW" }, access, isOwner)
       ? [{ kind: "link" as const, id: "clients" as const, href: `${base}/clients`, label: "Clients", icon: Users }]

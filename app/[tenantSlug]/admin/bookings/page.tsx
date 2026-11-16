@@ -6,13 +6,14 @@ import { loadAdminBookings } from "@/lib/bookings/admin-list";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
-import { BookingsConsole } from "@/components/admin/bookings/bookings-console";
+import { BookingsConsole, type FilterId } from "@/components/admin/bookings/bookings-console";
 import { loadBookableSlots } from "@/lib/bookings/bookable-slots";
 import { loadAssignableFor } from "@/lib/team/members";
 import { studioNow } from "@/lib/slot-time";
 
 interface BookingsPageProps {
   params: Promise<{ tenantSlug: string }>;
+  searchParams: Promise<{ filter?: string }>;
 }
 
 export async function generateMetadata({ params }: BookingsPageProps): Promise<Metadata> {
@@ -22,8 +23,9 @@ export async function generateMetadata({ params }: BookingsPageProps): Promise<M
 }
 
 // Bookings access; at "Only their own", the list holds only the bookings they are assigned to.
-export default async function AdminBookingsPage({ params }: BookingsPageProps) {
+export default async function AdminBookingsPage({ params, searchParams }: BookingsPageProps) {
   const { tenantSlug } = await params;
+  const { filter } = await searchParams;
   const viewer = await adminPageAccess(tenantSlug);
   if (!viewer || !levelAtLeast(viewer.access.areas.bookings, "OWN")) return <NoAccess tenantSlug={tenantSlug} />;
   // "New booking" is for Bookings MANAGE: only they get the open slots and the client list.
@@ -73,6 +75,7 @@ export default async function AdminBookingsPage({ params }: BookingsPageProps) {
         currency={tenant.currency}
         bookings={bookings}
         today={studioNow().dateKey}
+        initialFilter={filter === "unassigned" ? ("unassigned" satisfies FilterId) : undefined}
         assignable={assignable}
         newBooking={{ slots, categories, clients, packages }}
       />

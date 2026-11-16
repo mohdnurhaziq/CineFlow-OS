@@ -27,9 +27,11 @@ interface StudioDashboardProps {
   data: StudioAnalyticsData;
   /** Onboarding help (setup checklist) shown between the header and the KPI cards. */
   guide?: React.ReactNode;
+  /** Upcoming bookings with nobody assigned (0 when the viewer can't see every booking). */
+  unassignedUpcoming?: number;
 }
 
-export function StudioDashboard({ data, guide }: StudioDashboardProps) {
+export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioDashboardProps) {
   const { sections, tenant, kpis, proposalsSummary, recentInvoices, upcomingCallSheets, gearAlerts } = data;
   const nothingToShow = !sections.money && !sections.work && !sections.gear && !sections.proposals && !sections.shoots;
   const currency = tenant.currency || "USD";
@@ -116,6 +118,19 @@ export function StudioDashboard({ data, guide }: StudioDashboardProps) {
       />
 
       {guide}
+
+      {unassignedUpcoming > 0 && (
+        <Link
+          href={`/${tenant.slug}/admin/bookings?filter=unassigned`}
+          className="flex items-center gap-2 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-200 hover:bg-amber-500/15 transition-colors"
+        >
+          <AlertTriangle className="size-4 text-amber-400 shrink-0" aria-hidden="true" />
+          <span className="flex-1">
+            {unassignedUpcoming} upcoming {unassignedUpcoming === 1 ? "booking has" : "bookings have"} nobody assigned
+          </span>
+          <ChevronRight className="size-4 text-amber-400" aria-hidden="true" />
+        </Link>
+      )}
 
       {nothingToShow && (
         <p className="text-sm text-zinc-400">Use the menu above for the parts of the studio you work on.</p>

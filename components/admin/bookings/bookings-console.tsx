@@ -23,7 +23,7 @@ import {
   formatPaymentMethod,
 } from "./booking-details-dialog";
 
-type FilterId = "upcoming" | "unassigned" | "verify" | "confirmed" | "past" | "cancelled" | "all";
+export type FilterId = "upcoming" | "unassigned" | "verify" | "confirmed" | "past" | "cancelled" | "all";
 
 interface BookingsConsoleProps {
   tenantSlug: string;
@@ -31,6 +31,8 @@ interface BookingsConsoleProps {
   bookings: BookingDetails[];
   /** Today's date (YYYY-MM-DD), computed on the server so the first render matches. */
   today: string;
+  /** Opens on this chip (the Overview links to "unassigned"). */
+  initialFilter?: FilterId;
   tenantId: string;
   /** Bookings MANAGE: new bookings, moving and cancelling. */
   canManage: boolean;
@@ -64,6 +66,7 @@ export function BookingsConsole({
   currency,
   bookings,
   today,
+  initialFilter,
   tenantId,
   canManage,
   canRecordPayments,
@@ -73,7 +76,8 @@ export function BookingsConsole({
   const [newBookingOpen, setNewBookingOpen] = useState(false);
   // Open on whatever needs the owner's attention first.
   const [filter, setFilter] = useState<FilterId>(() =>
-    bookings.some((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b))) ? "verify" : "upcoming"
+    initialFilter ??
+    (bookings.some((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b))) ? "verify" : "upcoming")
   );
   const [query, setQuery] = useState("");
   // Track the open booking by id so it shows fresh data after an action refreshes the list.
