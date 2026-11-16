@@ -109,8 +109,8 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
               <ManualLink href={`${manual}/slot-hold`}>Slot holds</ManualLink>.
             </>,
             <>
-              <B>The deposit is confirmed.</B> Online payments confirm themselves. A bank transfer or cash payment is approved by
-              the owner. The booking is now confirmed and its gallery is created. See{" "}
+              <B>The deposit is confirmed.</B> Online payments confirm themselves. A bank transfer or cash payment is approved in Verification by
+              the owner or a team member given <Ui>Approve or reject payments</Ui>. The booking is now confirmed and its gallery is created. See{" "}
               <ManualLink href={`${manual}/payments`}>Payments</ManualLink>.
             </>,
             <>

@@ -19,7 +19,7 @@ interface SettingsManualPageProps {
 
 export const metadata: Metadata = {
   title: "Settings and your team | Manual | Studio Admin",
-  description: "Every setting explained, who can sign in, and what the owner and other team members can each do.",
+  description: "Every setting explained, who can sign in, and who can do what.",
 };
 
 const SECTIONS = [
@@ -29,7 +29,7 @@ const SECTIONS = [
   { id: "delivery", title: "Photo delivery" },
   { id: "plan", title: "Plan" },
   { id: "roles", title: "Your team's roles" },
-  { id: "owner-only", title: "What only the owner can do" },
+  { id: "owner-only", title: "Who can do what" },
   { id: "sign-in", title: "Signing in and passwords" },
   { id: "guidelines", title: "Guidelines" },
   { id: "questions", title: "Common questions" },
@@ -46,7 +46,7 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
       icon={Settings}
       area="Studio setup"
       title="Settings and your team"
-      description="What every setting does, who can sign in to the admin console, and which tasks are kept for the studio owner."
+      description="What every setting does, who can sign in to the admin console, and who can do what."
       sections={SECTIONS}
     >
       <ManualSection id="in-short" title="In short">
@@ -173,10 +173,11 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
         />
       </ManualSection>
 
-      <ManualSection id="owner-only" title="What only the owner can do">
+      <ManualSection id="owner-only" title="Who can do what">
         <ManualTable
           head={["Task", "Who can do it"]}
           rows={[
+            [<B key="g">Can be given to a team member</B>, ""],
             ["Approve or reject a payment in Verification", <>The owner, and anyone given <Ui key="a">Approve or reject payments</Ui></>],
             [
               "Record a payment, cancel an invoice, book a customer as already paid, cancel a booking or order that has a payment",
@@ -186,8 +187,9 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
               "Set a package price or slot fee, delete a category, send a proposal, create an invoice",
               <>The owner, and anyone given <Ui key="c">Set prices</Ui></>,
             ],
-            ["Change the studio, payment and photo delivery settings", "The owner only"],
-            ["Invite, change or remove team members, and edit roles", "The owner only"],
+            [<B key="o">Never given: the owner only</B>, ""],
+            ["Studio settings: change the studio, payment and photo delivery settings", "The owner only"],
+            ["Team & roles: invite, change or remove team members, and edit roles", "The owner only"],
           ]}
         />
         <ManualP>

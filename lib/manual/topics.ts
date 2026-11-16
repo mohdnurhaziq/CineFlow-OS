@@ -98,7 +98,7 @@ export const MANUAL_TOPICS: ManualTopic[] = [
     slug: "settings-and-team",
     title: "Settings and your team",
     summary:
-      "What every setting does, who can sign in to the admin console, and the tasks that only the studio owner can do.",
+      "What every setting does, who can sign in to the admin console, and who can do what.",
     area: "Studio setup",
   },
 ];
