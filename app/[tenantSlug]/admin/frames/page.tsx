@@ -69,6 +69,7 @@ export default async function AdminFramesPage({ params }: FramesPageProps) {
         matBoardPrice={tenant.matBoardPrice}
         initialFrames={frames as unknown as FrameDesignRow[]}
         initialSizes={printSizes as unknown as PrintSizeRow[]}
+        canManage={levelAtLeast(viewer.access.areas.catalog, "MANAGE")}
       />
     </PageShell>
   );

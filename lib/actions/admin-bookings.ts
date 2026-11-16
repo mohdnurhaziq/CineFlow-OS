@@ -5,6 +5,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { AuthorizationError } from "@/lib/auth/guard";
 import { canAccessBooking, requireAccess } from "@/lib/auth/access-guard";
+import { levelAtLeast } from "@/lib/auth/access";
 import { loadBookingDetails } from "@/lib/bookings/details";
 import { resolveBookingPricing } from "@/lib/bookings/pricing";
 import { nextInvoiceNumber, onInvoicePaid } from "@/lib/bookings/billing";
@@ -215,7 +216,11 @@ export async function getBookingDetails(input: { tenantId: string; bookingId: st
     if (!(await canAccessBooking(user, user.access, input.tenantId, input.bookingId))) {
       throw new AuthorizationError("FORBIDDEN: This booking isn't assigned to you.");
     }
-    const [booking] = await loadBookingDetails(input.tenantId, { bookingId: input.bookingId });
+    // Prices, amounts and invoices only with Invoices access.
+    const [booking] = await loadBookingDetails(input.tenantId, {
+      bookingId: input.bookingId,
+      money: levelAtLeast(user.access.areas.invoices, "VIEW"),
+    });
     if (!booking) return { success: false as const, error: "Booking not found" };
     return { success: true as const, booking };
   } catch (err) {

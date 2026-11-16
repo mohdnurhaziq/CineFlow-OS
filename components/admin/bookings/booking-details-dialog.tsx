@@ -45,19 +45,19 @@ export function bookingStage(b: BookingDetails): BookingStage {
   if (b.status === "NO_SHOW") return "NO_SHOW";
   if (b.status === "DELIVERED") return "DELIVERED";
   if (b.status === "COMPLETED") {
-    const balance = b.balanceInvoice?.status;
+    const balance = b.balanceInvoiceStatus;
     return balance && balance !== "PAID" && balance !== "VOID" ? "DONE_BALANCE_DUE" : "DONE";
   }
   if (b.status === "CONFIRMED") {
-    const balance = b.balanceInvoice?.status;
+    const balance = b.balanceInvoiceStatus;
     if (balance === "PAID") return "FULLY_PAID";
     if (balance === "PENDING_VERIFICATION") return "BALANCE_VERIFYING";
     if (balance === "PENDING" || balance === "OVERDUE" || balance === "REJECTED") return "BALANCE_DUE";
     return "CONFIRMED";
   }
-  if (b.invoice?.status === "PENDING_VERIFICATION") return "VERIFYING";
-  if (b.invoice?.status === "PENDING") return "AWAITING_PAYMENT";
-  if (b.invoice?.status === "REJECTED") return "REJECTED";
+  if (b.depositInvoiceStatus === "PENDING_VERIFICATION") return "VERIFYING";
+  if (b.depositInvoiceStatus === "PENDING") return "AWAITING_PAYMENT";
+  if (b.depositInvoiceStatus === "REJECTED") return "REJECTED";
   return "PENDING";
 }
 
@@ -330,7 +330,7 @@ export function BookingDetailsBody({
         </Link>
       )}
 
-      {(stage === "VERIFYING" || stage === "BALANCE_VERIFYING") && (
+      {booking.money && (stage === "VERIFYING" || stage === "BALANCE_VERIFYING") && (
         <Link
           href={`/${tenantSlug}/admin/verification`}
           className="flex items-center justify-between gap-3 p-3 rounded-xl border border-blue-500/30 bg-blue-500/10 text-xs text-blue-200 hover:bg-blue-500/15 transition-colors"
@@ -367,13 +367,15 @@ export function BookingDetailsBody({
         <Row label="Package">
           {booking.packageName ?? <span className="text-zinc-500">None chosen</span>}
         </Row>
-        <Row label="Session price">
-          {booking.sessionPrice != null ? (
-            formatCurrency(booking.sessionPrice, currency)
-          ) : (
-            <span className="text-zinc-500">Not set</span>
-          )}
-        </Row>
+        {booking.money && (
+          <Row label="Session price">
+            {booking.sessionPrice != null ? (
+              formatCurrency(booking.sessionPrice, currency)
+            ) : (
+              <span className="text-zinc-500">Not set</span>
+            )}
+          </Row>
+        )}
         {!booking.slot && (
           <Row label="Slot">
             <span className="text-zinc-500">Released</span>
@@ -387,6 +389,8 @@ export function BookingDetailsBody({
         </p>
       </Section>
 
+      {/* Money: only with Invoices access (the server leaves it out otherwise). */}
+      {booking.money && (
       <Section title="Deposit & payment" icon={Receipt}>
         <Row label="Deposit">
           {formatCurrency(booking.depositAmount, currency)}{" "}
@@ -438,7 +442,9 @@ export function BookingDetailsBody({
           </Row>
         )}
       </Section>
+      )}
 
+      {booking.money && (
       <Section title="Balance" icon={Receipt}>
         {booking.balanceInvoice ? (
           <>
@@ -492,6 +498,7 @@ export function BookingDetailsBody({
           </Row>
         )}
       </Section>
+      )}
 
       {booking.cancelReason && (
         <p className="text-xs text-zinc-400">

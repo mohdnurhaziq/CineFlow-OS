@@ -41,6 +41,8 @@ interface CmsManagerProps {
   initialItems: ShowcaseItemRow[];
   categories: CategoryOption[];
   packages: PackageOption[];
+  /** Catalog MANAGE: may add, edit, feature and delete portfolio items. Read-only without it. */
+  canManage: boolean;
 }
 
 export function CmsManager({
@@ -49,6 +51,7 @@ export function CmsManager({
   initialItems,
   categories,
   packages,
+  canManage,
 }: CmsManagerProps) {
   const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
@@ -143,17 +146,19 @@ export function CmsManager({
             <ExternalLink className="size-3 text-amber-400" />
           </Link>
 
-          <button
-            type="button"
-            onClick={() => {
-              setItemToEdit(null);
-              setIsDialogOpen(true);
-            }}
-            className={buttonVariants()}
-          >
-            <Plus className="size-4" />
-            <span>New Portfolio Item</span>
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => {
+                setItemToEdit(null);
+                setIsDialogOpen(true);
+              }}
+              className={buttonVariants()}
+            >
+              <Plus className="size-4" />
+              <span>New Portfolio Item</span>
+            </button>
+          )}
           </>
         }
       />
@@ -314,6 +319,7 @@ export function CmsManager({
                   {/* Star Toggle */}
                   <button
                     type="button"
+                    disabled={!canManage}
                     onClick={() => handleToggleFeatured(item)}
                     className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/60 backdrop-blur-md text-white hover:scale-110 transition-transform"
                     title={item.isFeatured ? "Featured Spotlight" : "Click to Feature"}
@@ -356,6 +362,7 @@ export function CmsManager({
                       Sort: {item.sortOrder}
                     </span>
 
+                    {canManage && (
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -383,6 +390,7 @@ export function CmsManager({
                         )}
                       </button>
                     </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -392,6 +400,7 @@ export function CmsManager({
       )}
 
       {/* Dialog Modal */}
+      {canManage && (
       <ShowcaseItemDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
@@ -402,6 +411,7 @@ export function CmsManager({
         itemToEdit={itemToEdit}
         onSuccess={handleSuccess}
       />
+      )}
       {confirmDialog}
     </div>
   );

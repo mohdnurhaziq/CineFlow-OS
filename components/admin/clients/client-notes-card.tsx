@@ -13,10 +13,12 @@ interface ClientNotesCardProps {
   tenantSlug: string;
   clientId: string;
   notes: string;
+  /** Clients MANAGE: may change the notes. Without it they are shown read-only. */
+  canManage: boolean;
 }
 
 /** The studio's private notes about a client. Saved explicitly; never shown to the client. */
-export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes }: ClientNotesCardProps) {
+export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes, canManage }: ClientNotesCardProps) {
   const router = useRouter();
   const [value, setValue] = useState(notes);
   const [saved, setSaved] = useState(notes);
@@ -50,6 +52,9 @@ export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes }: Clien
           Only your team sees these
         </span>
       </h2>
+      {!canManage ? (
+        <p className="p-4 text-sm text-zinc-300 whitespace-pre-wrap">{notes.trim() || <span className="text-zinc-500">No notes yet.</span>}</p>
+      ) : (
       <div className="p-4 space-y-3">
         <label htmlFor={`notes-${clientId}`} className="sr-only">
           Studio notes about this client
@@ -89,6 +94,7 @@ export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes }: Clien
           </div>
         </div>
       </div>
+      )}
     </section>
   );
 }

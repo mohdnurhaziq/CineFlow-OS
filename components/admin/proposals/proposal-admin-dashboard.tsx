@@ -27,8 +27,10 @@ interface ProposalAdminDashboardProps {
   currency: string;
   initialTemplates: ProposalAddOnTemplateRow[];
   initialProposals: ProposalRow[];
-  /** "New proposal" button, for the owner. */
+  /** "New proposal" button, for those with the setPrices permission. */
   newProposal?: React.ReactNode;
+  /** Proposals MANAGE: may add, edit, switch and delete add-on templates. Read-only without it. */
+  canManage: boolean;
 }
 
 export function ProposalAdminDashboard({
@@ -38,6 +40,7 @@ export function ProposalAdminDashboard({
   initialTemplates,
   initialProposals,
   newProposal,
+  canManage,
 }: ProposalAdminDashboardProps) {
   const router = useRouter();
 
@@ -94,7 +97,7 @@ export function ProposalAdminDashboard({
         actions={
           <>
           {newProposal}
-          {activeTab === "templates" && (
+          {canManage && activeTab === "templates" && (
             <button
               type="button"
               onClick={() => {
@@ -212,6 +215,7 @@ export function ProposalAdminDashboard({
             setIsDialogOpen(true);
           }}
           onSuccess={handleSuccess}
+          canManage={canManage}
         />
       )}
 
@@ -225,6 +229,7 @@ export function ProposalAdminDashboard({
       )}
 
       {/* Create/Edit Dialog */}
+      {canManage && (
       <AddOnTemplateDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
@@ -234,6 +239,7 @@ export function ProposalAdminDashboard({
         templateToEdit={templateToEdit}
         onSuccess={handleSuccess}
       />
+      )}
     </div>
   );
 }

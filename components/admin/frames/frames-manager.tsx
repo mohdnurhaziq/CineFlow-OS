@@ -44,6 +44,8 @@ interface FramesManagerProps {
   matBoardPrice: number;
   initialFrames: FrameDesignRow[];
   initialSizes: PrintSizeRow[];
+  /** Catalog MANAGE: may add, edit, hide and delete frames and sizes, and set the mat price. Read-only without it. */
+  canManage: boolean;
 }
 
 export function FramesManager({
@@ -53,6 +55,7 @@ export function FramesManager({
   matBoardPrice,
   initialFrames,
   initialSizes,
+  canManage,
 }: FramesManagerProps) {
   const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
@@ -192,6 +195,7 @@ export function FramesManager({
         title="Frames &amp; prints"
         description="The print sizes and frame finishes clients can order, and preview on their wall."
         actions={
+          canManage && (
           <>
           {activeTab === "frames" ? (
             <button
@@ -219,6 +223,7 @@ export function FramesManager({
             </button>
           )}
           </>
+          )
         }
       />
 
@@ -259,10 +264,12 @@ export function FramesManager({
             min="0"
             value={matPrice}
             onChange={(e) => setMatPrice(e.target.value)}
+            readOnly={!canManage}
             className="w-full sm:max-w-40 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
           />
           <p className="text-[11px] text-zinc-400 mt-1">Added to a framed print when the client chooses a mat board.</p>
         </div>
+        {canManage && (
         <button
           type="button"
           onClick={handleSaveMatPrice}
@@ -272,6 +279,7 @@ export function FramesManager({
           {matSaving ? <Loader2 className="size-3.5 animate-spin" /> : null}
           <span>Save mat price</span>
         </button>
+        )}
       </div>
 
       {/* KPI Metrics Summary Bar */}
@@ -393,6 +401,7 @@ export function FramesManager({
                         <td className="px-4 py-3 text-center">
                           <button
                             type="button"
+                            disabled={!canManage}
                             onClick={() => handleToggleFrame(frame)}
                             className="inline-flex items-center gap-1 transition-colors"
                           >
@@ -408,6 +417,7 @@ export function FramesManager({
                           </button>
                         </td>
                         <td className="px-4 py-3 text-right">
+                          {canManage && (
                           <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
@@ -434,6 +444,7 @@ export function FramesManager({
                               )}
                             </button>
                           </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -487,6 +498,7 @@ export function FramesManager({
                         <td className="px-4 py-3 text-center">
                           <button
                             type="button"
+                            disabled={!canManage}
                             onClick={() => handleToggleSize(size)}
                             className="inline-flex items-center gap-1 transition-colors"
                           >
@@ -502,6 +514,7 @@ export function FramesManager({
                           </button>
                         </td>
                         <td className="px-4 py-3 text-right">
+                          {canManage && (
                           <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
@@ -528,6 +541,7 @@ export function FramesManager({
                               )}
                             </button>
                           </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -540,6 +554,8 @@ export function FramesManager({
       )}
 
       {/* Dialog Modals */}
+      {canManage && (
+      <>
       <FrameDesignDialog
         isOpen={isFrameDialogOpen}
         onClose={() => setIsFrameDialogOpen(false)}
@@ -559,6 +575,8 @@ export function FramesManager({
         sizeToEdit={sizeToEdit}
         onSuccess={handleSuccess}
       />
+      </>
+      )}
       {confirmDialog}
     </div>
   );

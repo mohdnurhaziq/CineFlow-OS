@@ -11,6 +11,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { canAccessProject } from "@/lib/auth/access-guard";
 import { NoAccess } from "@/components/admin/no-access";
+import { projectPagePowers } from "@/lib/auth/page-powers";
 
 interface ProjectPageProps {
   params: Promise<{ tenantSlug: string; projectId: string }>;
@@ -34,6 +35,8 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
   if (!viewer || !levelAtLeast(viewer.access.areas.galleries, "OWN")) return <NoAccess tenantSlug={tenantSlug} />;
   if (!(await db.project.findFirst({ where: { id: projectId, tenantId: tenant.id }, select: { id: true } }))) notFound();
   if (!(await canAccessProject(viewer.user, viewer.access, tenant.id, projectId))) return <NoAccess tenantSlug={tenantSlug} />;
+  const powers = projectPagePowers(viewer.access);
+  const money = powers.money;
 
   // A session whose time has passed counts as shot.
   await catchUpShotStages(tenant.id);
@@ -55,7 +58,8 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
       callSheets: { orderBy: { shootDate: "asc" } },
       reservations: { include: { item: { select: { name: true, sku: true } } }, orderBy: { startDate: "asc" } },
       deliverables: { include: { items: { orderBy: { id: "asc" } } }, orderBy: { createdAt: "asc" } },
-      invoices: { select: { id: true, invoiceNumber: true, milestoneType: true, amount: true, status: true }, orderBy: { createdAt: "asc" } },
+      // Money only with Invoices access: without it the invoices aren't loaded at all.
+      ...(money ? { invoices: { select: { id: true, invoiceNumber: true, milestoneType: true, amount: true, status: true }, orderBy: { createdAt: "asc" as const } } } : {}),
       shotItems: { orderBy: [{ sceneNumber: "asc" }, { sortOrder: "asc" }] },
     },
   });
@@ -67,16 +71,18 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
     orderBy: { name: "asc" },
   });
 
-  // One line for the header: paid in full, or what is still owed.
-  const open = project.invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE");
-  const checking = project.invoices.filter((i) => i.status === "PENDING_VERIFICATION");
+  // One line for the header: paid in full, or what is still owed (only with Invoices access).
+  const invoices = "invoices" in project ? project.invoices : [];
+  const open = invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE");
+  const checking = invoices.filter((i) => i.status === "PENDING_VERIFICATION");
   const sum = (rows: { amount: number }[]) => rows.reduce((n, i) => n + i.amount, 0);
-  const payment: JobPayment =
-    open.length > 0
+  const payment: JobPayment | null = !money
+    ? null
+    : open.length > 0
       ? { label: `${formatMoney(tenant.currency, sum(open))} due`, tone: "due" }
       : checking.length > 0
         ? { label: `${formatMoney(tenant.currency, sum(checking))} being checked`, tone: "due" }
-        : project.invoices.some((i) => i.status === "PAID")
+        : invoices.some((i) => i.status === "PAID")
           ? { label: "Paid in full", tone: "paid" }
           : { label: "No invoices yet", tone: "neutral" };
 
@@ -101,13 +107,17 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
         gear={gear}
         booking={booking}
         payment={payment}
+        money={money ? { budget: project.budget, invoices } : null}
+        canEditGallery={powers.canEditGallery}
+        canChangeKind={powers.canChangeKind}
+        canManageProduction={powers.canManageProduction}
+        canOrderPrints={powers.canOrderPrints}
         project={{
           id: project.id,
           title: project.title,
           projectNumber: project.projectNumber,
           status: project.status,
           kind: project.kind,
-          budget: project.budget,
           isFinalBalancePaid: project.isFinalBalancePaid,
           filesReleased: filesReleased(project, tenant),
           client: project.client,
@@ -139,7 +149,6 @@ export default async function AdminProjectPage({ params }: ProjectPageProps) {
               clientNotes: i.clientNotes,
             })),
           })),
-          invoices: project.invoices,
           shotItems: project.shotItems.map((s) => ({
             id: s.id,
             projectId: s.projectId,

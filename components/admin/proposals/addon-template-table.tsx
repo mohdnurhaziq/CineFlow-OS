@@ -26,6 +26,8 @@ interface AddOnTemplateTableProps {
   currency: string;
   onEdit: (template: ProposalAddOnTemplateRow) => void;
   onSuccess: () => void;
+  /** Proposals MANAGE: may edit, switch and delete templates. Read-only without it. */
+  canManage: boolean;
 }
 
 export function AddOnTemplateTable({
@@ -35,6 +37,7 @@ export function AddOnTemplateTable({
   currency,
   onEdit,
   onSuccess,
+  canManage,
 }: AddOnTemplateTableProps) {
   const { confirm, confirmDialog } = useConfirm();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -149,6 +152,7 @@ export function AddOnTemplateTable({
                   <td className="px-4 py-3 text-center">
                     <button
                       type="button"
+                      disabled={!canManage}
                       onClick={() => handleToggleDefault(t)}
                       className="inline-flex items-center gap-1 transition-colors"
                       title="Toggle auto-select default"
@@ -167,6 +171,7 @@ export function AddOnTemplateTable({
                   <td className="px-4 py-3 text-center">
                     <button
                       type="button"
+                      disabled={!canManage}
                       onClick={() => handleToggleActive(t)}
                       className="inline-flex items-center gap-1 transition-colors"
                       title="Toggle active status"
@@ -183,6 +188,7 @@ export function AddOnTemplateTable({
                     </button>
                   </td>
                   <td className="px-4 py-3 text-right">
+                    {canManage && (
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
@@ -206,6 +212,7 @@ export function AddOnTemplateTable({
                         )}
                       </button>
                     </div>
+                    )}
                   </td>
                 </tr>
               ))}

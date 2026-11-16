@@ -30,7 +30,8 @@ export function DeliverPanel({
   isFinalBalancePaid: boolean;
   status: string;
   pending: boolean;
-  onNotify: () => void;
+  /** Tells the client; without it (no Galleries edit access) the button isn't shown. */
+  onNotify?: () => void;
 }) {
   const firstName = clientName.split(/\s+/)[0] || clientName;
   const photos = items.filter((i) => i.itemType === "PHOTO").length;
@@ -87,6 +88,7 @@ export function DeliverPanel({
             </div>
           )}
 
+          {onNotify && (
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -98,6 +100,7 @@ export function DeliverPanel({
             </button>
             <span className="text-sm text-zinc-400">{sent ? "Already sent. Send again after adding more photos." : "Send once every photo is uploaded."}</span>
           </div>
+          )}
         </>
       )}
     </div>

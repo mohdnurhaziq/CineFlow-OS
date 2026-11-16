@@ -42,6 +42,7 @@ export function JobHeader({
   plannedShoot,
   payment,
   pending,
+  canChangeStage,
   onStageChange,
 }: {
   tenantSlug: string;
@@ -53,15 +54,18 @@ export function JobHeader({
   booking: JobBooking | null;
   /** A production without a booking: its next planned shoot day, from the call sheets. */
   plannedShoot?: { date: string; time: string } | null;
-  payment: JobPayment;
+  /** Only with Invoices access; without it the Payment cell isn't shown. */
+  payment: JobPayment | null;
   pending: boolean;
+  /** Galleries OWN (their own project) or MANAGE; otherwise the stage is shown but can't be changed. */
+  canChangeStage: boolean;
   onStageChange: (stage: Stage) => void;
 }) {
   const stepIndex = SESSION_STEPS.findIndex((s) => s.stages.includes(status as Stage));
   const shootDate = booking?.date ?? plannedShoot?.date ?? null;
   const shootDay = shootDate ? formatSlotDate(shootDate, { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : null;
   const shootTime = booking?.startTime ? (booking.endTime ? `${booking.startTime} – ${booking.endTime}` : booking.startTime) : plannedShoot ? `Call ${plannedShoot.time}` : null;
-  const toneCls = payment.tone === "paid" ? "text-emerald-400" : payment.tone === "due" ? "text-amber-300" : "text-zinc-400";
+  const toneCls = payment?.tone === "paid" ? "text-emerald-400" : payment?.tone === "due" ? "text-amber-300" : "text-zinc-400";
 
   return (
     <header className="space-y-5">
@@ -80,7 +84,7 @@ export function JobHeader({
         </p>
       </div>
 
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-px rounded-xl overflow-hidden border border-zinc-800 bg-zinc-800">
+      <dl className={`grid grid-cols-2 ${payment ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-px rounded-xl overflow-hidden border border-zinc-800 bg-zinc-800`}>
         <div className="bg-[#0d0d10] px-4 py-3">
           <dt className="text-xs text-zinc-400">Shoot</dt>
           <dd className="text-sm font-semibold text-white mt-1">
@@ -92,10 +96,12 @@ export function JobHeader({
           <dt className="text-xs text-zinc-400">Package</dt>
           <dd className="text-sm font-semibold text-white mt-1">{booking?.packageName ?? "—"}</dd>
         </div>
-        <div className="bg-[#0d0d10] px-4 py-3">
-          <dt className="text-xs text-zinc-400">Payment</dt>
-          <dd className={`text-sm font-semibold mt-1 ${toneCls}`}>{payment.label}</dd>
-        </div>
+        {payment && (
+          <div className="bg-[#0d0d10] px-4 py-3">
+            <dt className="text-xs text-zinc-400">Payment</dt>
+            <dd className={`text-sm font-semibold mt-1 ${toneCls}`}>{payment.label}</dd>
+          </div>
+        )}
         <div className="bg-[#0d0d10] px-4 py-3">
           <dt className="text-xs text-zinc-400">{booking ? "Booking" : "Project"}</dt>
           <dd className="text-sm font-semibold mt-1">
@@ -135,7 +141,7 @@ export function JobHeader({
             <span>Change</span>
             <select
               value={SESSION_STEPS[stepIndex]?.set ?? "PRE_PRODUCTION"}
-              disabled={pending}
+              disabled={pending || !canChangeStage}
               onChange={(e) => onStageChange(e.target.value as Stage)}
               className="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white focus:outline-none focus:border-amber-500"
             >
@@ -153,7 +159,7 @@ export function JobHeader({
           <span>Stage</span>
           <select
             value={status}
-            disabled={pending}
+            disabled={pending || !canChangeStage}
             onChange={(e) => onStageChange(e.target.value as Stage)}
             className="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white focus:outline-none focus:border-amber-500"
           >

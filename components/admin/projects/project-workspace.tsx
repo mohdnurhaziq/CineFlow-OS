@@ -38,7 +38,6 @@ interface ProjectWorkspaceProps {
     status: string;
     /** SESSION: files + payments only. PRODUCTION: also shoot days, shot list and gear. */
     kind: string;
-    budget: number;
     isFinalBalancePaid: boolean;
     /** Full-resolution files open to the client: paid, or the studio releases them before payment. */
     filesReleased: boolean;
@@ -58,12 +57,25 @@ interface ProjectWorkspaceProps {
         clientNotes?: string | null;
       }>;
     }>;
-    invoices: Array<{ id: string; invoiceNumber: string; milestoneType: string; amount: number; status: string }>;
     shotItems: ShotItemData[];
   };
+  /** Budget and invoices: only with Invoices access (left out on the server otherwise). */
+  money: {
+    budget: number;
+    invoices: Array<{ id: string; invoiceNumber: string; milestoneType: string; amount: number; status: string }>;
+  } | null;
   /** The booking this project came from, if any. */
   booking: JobBooking | null;
-  payment: JobPayment;
+  /** The header's payment line: only with Invoices access. */
+  payment: JobPayment | null;
+  /** Galleries OWN (their own project) or MANAGE: upload and remove files, tell the client, change the stage. */
+  canEditGallery: boolean;
+  /** Galleries MANAGE: change the project type. */
+  canChangeKind: boolean;
+  /** Production MANAGE: add and delete shoot days, edit the shot list, reserve and release gear. */
+  canManageProduction: boolean;
+  /** Print orders MANAGE: order framed prints for the client. */
+  canOrderPrints: boolean;
 }
 
 const field =
@@ -99,7 +111,20 @@ function Section({
 }
 
 /** One project's working page: stage, shoot days, gear, files for the client, and payments. */
-export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project, booking, payment }: ProjectWorkspaceProps) {
+export function ProjectWorkspace({
+  tenantId,
+  tenantSlug,
+  currency,
+  gear,
+  project,
+  money,
+  booking,
+  payment,
+  canEditGallery,
+  canChangeKind,
+  canManageProduction,
+  canOrderPrints,
+}: ProjectWorkspaceProps) {
   const router = useRouter();
   const { confirm, confirmDialog } = useConfirm();
   const [pending, start] = useTransition();
@@ -191,6 +216,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
           plannedShoot={nextShootDay}
           payment={payment}
           pending={pending}
+          canChangeStage={canEditGallery}
           onStageChange={(status) => run(() => updateProjectStatus({ tenantId, projectId: project.id, status }), "Stage updated.")}
         />
       </div>
@@ -203,6 +229,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
             icon={CalendarDays}
             title="Shoot days"
             aside={
+              canManageProduction &&
               !sheetOpen && (
                 <button type="button" className={primary} onClick={() => setSheetOpen(true)}>
                   Add shoot day
@@ -210,7 +237,9 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
               )
             }
           >
-            {project.callSheets.length === 0 && !sheetOpen && <p className={small}>No shoot days yet. Add one to share a call sheet with the crew.</p>}
+            {project.callSheets.length === 0 && !sheetOpen && (
+              <p className={small}>{canManageProduction ? "No shoot days yet. Add one to share a call sheet with the crew." : "No shoot days yet."}</p>
+            )}
             <ul className="divide-y divide-zinc-800">
               {project.callSheets.map((c) => (
                 <li key={c.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -224,6 +253,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                     <Link href={`/${tenantSlug}/set-hud/${c.id}`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
                       Call sheet <ExternalLink className="size-3" />
                     </Link>
+                    {canManageProduction && (
                     <button
                       type="button"
                       aria-label={`Delete ${c.title}`}
@@ -235,11 +265,12 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                     >
                       <Trash2 className="size-3.5" />
                     </button>
+                    )}
                   </div>
                 </li>
               ))}
             </ul>
-            {sheetOpen && (
+            {canManageProduction && sheetOpen && (
               <form
                 className="space-y-3"
                 onSubmit={(e) => {
@@ -306,7 +337,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
             initialShots={project.shotItems}
             projectId={project.id}
             tenantSlug={tenantSlug}
-            allowManage={true}
+            allowManage={canManageProduction}
           />
 
           {/* Gear */}
@@ -338,7 +369,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                     >
                       {r.status === "RESERVED" ? "Check-out →" : r.status === "CHECKED_OUT" ? "Check-in return →" : "View audit →"}
                     </Link>
-                    {r.status === "RESERVED" && (
+                    {canManageProduction && r.status === "RESERVED" && (
                       <button
                         type="button"
                         className="text-xs text-zinc-400 hover:text-red-400"
@@ -351,6 +382,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                 </li>
               ))}
             </ul>
+            {canManageProduction && (
             <form
               className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end"
               onSubmit={(e) => {
@@ -395,6 +427,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                 </button>
               </div>
             </form>
+            )}
           </Section>
         </>
       )}
@@ -406,16 +439,18 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
         title={`Photos for ${project.client.name.split(/\s+/)[0]} (${fileCount})`}
         aside={
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <Link href={`/${tenantSlug}/admin/projects/${project.id}/prints`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
-              <Frame className="size-3.5" /> Order framed prints for client
-            </Link>
+            {canOrderPrints && (
+              <Link href={`/${tenantSlug}/admin/projects/${project.id}/prints`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
+                <Frame className="size-3.5" /> Order framed prints for client
+              </Link>
+            )}
             <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
               See what the client sees <ExternalLink className="size-3.5" />
             </Link>
           </div>
         }
       >
-        <PhotoUploader projectId={project.id} albums={project.galleries.map((g) => g.title)} />
+        {canEditGallery && <PhotoUploader projectId={project.id} albums={project.galleries.map((g) => g.title)} />}
         {albums.map((g) => (
           <div key={g.id} className="space-y-2">
             {albums.length > 1 && <div className="text-sm font-semibold text-zinc-300">{g.title}</div>}
@@ -445,6 +480,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                     )}
                     <div className="px-2.5 py-2 flex items-center justify-between gap-1">
                       <span className="text-sm text-zinc-300 truncate">{i.title}</span>
+                      {canEditGallery && (
                       <button
                         type="button"
                         aria-label={`Remove ${i.title}`}
@@ -456,6 +492,7 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
                       >
                         <Trash2 className="size-4" />
                       </button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -471,18 +508,19 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
           isFinalBalancePaid={project.isFinalBalancePaid}
           status={project.status}
           pending={pending}
-          onNotify={notifyPhotosReady}
+          onNotify={canEditGallery ? notifyPhotosReady : undefined}
         />
       </Section>
 
-      {/* Payments */}
+      {/* Payments: only with Invoices access */}
+      {money && (
       <Section icon={Receipt} title="Payments">
-        <p className={small}>Budget {formatMoney(currency, project.budget)}</p>
-        {project.invoices.length === 0 ? (
+        <p className={small}>Budget {formatMoney(currency, money.budget)}</p>
+        {money.invoices.length === 0 ? (
           <p className={small}>No invoices yet.</p>
         ) : (
           <ul className="divide-y divide-zinc-800">
-            {project.invoices.map((inv) => (
+            {money.invoices.map((inv) => (
               <li key={inv.id} className="py-2 flex items-center justify-between gap-3 text-sm">
                 <Link href={`/${tenantSlug}/admin/invoices/${inv.id}`} className="font-mono text-amber-400 hover:underline">
                   {inv.invoiceNumber}
@@ -495,13 +533,14 @@ export function ProjectWorkspace({ tenantId, tenantSlug, currency, gear, project
           </ul>
         )}
       </Section>
+      )}
       {/* Rarely changed, so it lives at the foot of the page. */}
       <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-400 border-t border-zinc-800 pt-5">
         <label htmlFor="project-kind">Project type</label>
         <select
           id="project-kind"
           value={isSession ? "SESSION" : "PRODUCTION"}
-          disabled={pending}
+          disabled={pending || !canChangeKind}
           onChange={(e) =>
             run(
               () => updateProjectKind({ tenantId, projectId: project.id, kind: e.target.value as "SESSION" | "PRODUCTION" }),

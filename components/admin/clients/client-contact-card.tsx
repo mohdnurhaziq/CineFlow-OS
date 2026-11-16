@@ -23,12 +23,14 @@ interface ClientContactCardProps {
   };
   clientSinceLabel: string;
   bookingCount: number;
+  /** Clients MANAGE: may edit the contact details. Without it the card is read-only. */
+  canManage: boolean;
 }
 
 const inputClass =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors";
 
-export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLabel, bookingCount }: ClientContactCardProps) {
+export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLabel, bookingCount, canManage }: ClientContactCardProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(client.name);
@@ -71,7 +73,7 @@ export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLab
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight break-words">{client.name}</h1>
           <ClientAccountBadge status={client.accountStatus} />
         </div>
-        {!editing && (
+        {canManage && !editing && (
           <button
             type="button"
             onClick={startEditing}
@@ -83,7 +85,7 @@ export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLab
         )}
       </div>
 
-      {editing ? (
+      {canManage && editing ? (
         <form onSubmit={save} className="space-y-3">
           {error && (
             <div role="alert" className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2 text-xs text-rose-300">

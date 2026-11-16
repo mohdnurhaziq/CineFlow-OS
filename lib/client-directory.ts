@@ -131,8 +131,16 @@ export async function loadClientDirectory(tenantId: string): Promise<ClientDirec
     .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
 }
 
-/** One client of this studio with everything they have with it, or null if not this studio's client. */
-export async function loadClientProfile(tenantId: string, clientId: string) {
+/**
+ * One client of this studio with everything they have with it, or null if not this studio's client.
+ * Money (invoices, totals, prices and budgets) only with `money` (Invoices VIEW); proposals only with
+ * `proposals` (Proposals VIEW). What's left out is never loaded: empty lists and nulls.
+ */
+export async function loadClientProfile(
+  tenantId: string,
+  clientId: string,
+  show: { money: boolean; proposals: boolean } = { money: true, proposals: true }
+) {
   const client = await db.user.findFirst({
     where: { id: clientId, tenantId, role: "CLIENT" },
     select: {
@@ -168,7 +176,9 @@ export async function loadClientProfile(tenantId: string, clientId: string) {
       orderBy: { updatedAt: "desc" },
       select: { id: true, projectNumber: true, title: true, status: true, budget: true, shootDates: true, updatedAt: true },
     }),
-    db.milestoneInvoice.findMany({
+    !show.money
+      ? []
+      : db.milestoneInvoice.findMany({
       where: { tenantId, clientId: client.id },
       orderBy: { createdAt: "desc" },
       select: {
@@ -182,7 +192,9 @@ export async function loadClientProfile(tenantId: string, clientId: string) {
         paidAt: true,
       },
     }),
-    db.proposal.findMany({
+    !show.proposals
+      ? []
+      : db.proposal.findMany({
       where: { tenantId, clientId: client.id },
       orderBy: { createdAt: "desc" },
       select: { id: true, proposalNumber: true, title: true, status: true, totalPrice: true, createdAt: true },
@@ -192,7 +204,10 @@ export async function loadClientProfile(tenantId: string, clientId: string) {
   const bookings = [
     ...linkedBookings,
     ...unlinkedBookings.filter((b) => b.clientEmail.trim().toLowerCase() === email),
-  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  ]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    // Prices are money: left out without Invoices access.
+    .map((b) => (show.money ? b : { ...b, sessionPrice: null, depositAmount: null }));
 
   // The latest phone a booking was made with, for clients whose account has none.
   const bookingPhone = bookings.find((b) => b.clientPhone.trim())?.clientPhone ?? null;
@@ -210,10 +225,11 @@ export async function loadClientProfile(tenantId: string, clientId: string) {
       createdAt: client.createdAt,
     },
     bookings,
-    projects,
+    projects: projects.map((p) => ({ ...p, budget: show.money ? p.budget : null })),
     invoices,
     proposals,
-    money: summarizeInvoices(invoices),
+    /** Paid and outstanding totals, or null without Invoices access. */
+    money: show.money ? summarizeInvoices(invoices) : null,
   };
 }
 

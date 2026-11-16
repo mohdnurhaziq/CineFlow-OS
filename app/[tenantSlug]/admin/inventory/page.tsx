@@ -88,6 +88,7 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
         initialBundles={bundles as unknown as KitBundleRow[]}
         initialReservations={reservations as unknown as ReservationWithDetails[]}
         inspectorName={user?.name ?? "Studio staff"}
+        canManage={levelAtLeast(viewer.access.areas.production, "MANAGE")}
       />
     </PageShell>
   );

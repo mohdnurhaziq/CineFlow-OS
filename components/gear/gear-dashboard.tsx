@@ -51,6 +51,12 @@ interface GearDashboardProps {
   initialReservations: ReservationWithDetails[];
   /** The signed-in staff member, shown as the inspector on check-out and check-in. */
   inspectorName: string;
+  /**
+   * Production MANAGE: add, edit and delete gear and kits, quarantine and clear maintenance.
+   * Without it (Production VIEW) only the on-set actions stay: check-out and check-in
+   * inspections, and the scan console's check-out, return and flags.
+   */
+  canManage: boolean;
 }
 
 export function GearDashboard({
@@ -61,6 +67,7 @@ export function GearDashboard({
   initialBundles,
   initialReservations,
   inspectorName,
+  canManage,
 }: GearDashboardProps) {
   const { confirm, confirmDialog } = useConfirm();
   const [activeTab, setActiveTab] = useState<"ITEMS" | "BUNDLES" | "RESERVATIONS">("ITEMS");
@@ -206,7 +213,7 @@ export function GearDashboard({
             <span>Scan Asset / SKU</span>
           </button>
 
-          {activeTab === "ITEMS" && (
+          {canManage && activeTab === "ITEMS" && (
             <button
               type="button"
               onClick={() => {
@@ -220,7 +227,7 @@ export function GearDashboard({
             </button>
           )}
 
-          {activeTab === "BUNDLES" && (
+          {canManage && activeTab === "BUNDLES" && (
             <button
               type="button"
               onClick={() => {
@@ -430,6 +437,7 @@ export function GearDashboard({
                             {item.location || "Vault A"}
                           </td>
                           <td className="py-3.5 px-4 text-right">
+                            {canManage && (
                             <div className="flex items-center justify-end gap-1.5">
                               {item.status === "MAINTENANCE" ? (
                                 <button
@@ -470,6 +478,7 @@ export function GearDashboard({
                                 <Trash2 className="size-3.5" />
                               </button>
                             </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -555,6 +564,7 @@ export function GearDashboard({
                         Inspect BOM & Availability
                       </button>
 
+                      {canManage && (
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -576,6 +586,7 @@ export function GearDashboard({
                           <Trash2 className="size-3.5" />
                         </button>
                       </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -739,6 +750,7 @@ export function GearDashboard({
       )}
 
       {/* Dialog Modals */}
+      {canManage && (
       <GearItemDialog
         isOpen={isItemDialogOpen}
         onClose={() => setIsItemDialogOpen(false)}
@@ -747,7 +759,9 @@ export function GearDashboard({
         itemToEdit={itemToEdit}
         onSuccess={() => router.refresh()}
       />
+      )}
 
+      {canManage && (
       <KitBundleDialog
         isOpen={isBundleDialogOpen}
         onClose={() => setIsBundleDialogOpen(false)}
@@ -757,6 +771,7 @@ export function GearDashboard({
         bundleToEdit={bundleToEdit}
         onSuccess={() => router.refresh()}
       />
+      )}
 
       <KitBundleBomViewer
         bundle={inspectingBundle}
@@ -782,6 +797,7 @@ export function GearDashboard({
         tenantSlug={tenantSlug}
         items={items}
         reservations={reservations}
+        canManage={canManage}
         onOpenCheckOut={(res) => {
           setInspectionReservation(res);
           setInspectionMode("PRE_SHOOT");

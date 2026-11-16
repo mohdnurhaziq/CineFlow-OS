@@ -72,6 +72,7 @@ export default async function AdminCmsPage({ params }: CmsPageProps) {
         initialItems={items as unknown as ShowcaseItemRow[]}
         categories={categories as unknown as CategoryOption[]}
         packages={packages as unknown as PackageOption[]}
+        canManage={levelAtLeast(viewer.access.areas.catalog, "MANAGE")}
       />
     </PageShell>
   );

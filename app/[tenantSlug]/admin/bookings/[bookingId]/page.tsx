@@ -41,7 +41,8 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
   if (!(await db.clientBooking.findFirst({ where: { id: bookingId, tenantId: tenant.id }, select: { id: true } }))) notFound();
   if (!(await canAccessBooking(viewer.user, viewer.access, tenant.id, bookingId))) return <NoAccess tenantSlug={tenantSlug} />;
 
-  const [booking] = await loadBookingDetails(tenant.id, { bookingId });
+  // Prices, amounts and invoices only with Invoices access.
+  const [booking] = await loadBookingDetails(tenant.id, { bookingId, money: levelAtLeast(viewer.access.areas.invoices, "VIEW") });
   if (!booking) notFound();
   const canManage = levelAtLeast(viewer.access.areas.bookings, "MANAGE");
 

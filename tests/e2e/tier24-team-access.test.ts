@@ -41,7 +41,11 @@ import { NoAccess } from "@/components/admin/no-access";
 import { POST as uploadDeliverables } from "@/app/api/deliverables/route";
 import AdminBookingPage from "@/app/[tenantSlug]/admin/bookings/[bookingId]/page";
 import AdminProjectPage from "@/app/[tenantSlug]/admin/projects/[projectId]/page";
-import { provideReactGlobal } from "./react-tree";
+import AdminClientPage from "@/app/[tenantSlug]/admin/clients/[clientId]/page";
+import InventoryPage from "@/app/[tenantSlug]/admin/inventory/page";
+import { loadClientProfile } from "@/lib/client-directory";
+import { projectPagePowers } from "@/lib/auth/page-powers";
+import { findProp, provideReactGlobal } from "./react-tree";
 
 export async function runTier24TeamAccessTests(harness: TestHarness) {
   harness.setSuite("Tier 24", "Team Access");
@@ -717,6 +721,132 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
     harness.assert(found.length === 0, "no page or component uses OWNER_ROLES or currentUserIsOwner", `Found in: ${found.join(", ")}`);
     const ownerHelper = await fs.stat(path.join(process.cwd(), "lib", "auth", "owner.ts")).then(() => true, () => false);
     harness.assert(!ownerHelper, "lib/auth/owner.ts is removed");
+  });
+
+  // ---- Each part of a page follows its own area ---------------------------------------------
+  /** Every element in a server-rendered tree whose props match. */
+  const findElements = (node: unknown, match: (props: Record<string, unknown>) => boolean): Record<string, unknown>[] => {
+    if (!node || typeof node !== "object") return [];
+    if (Array.isArray(node)) return node.flatMap((n) => findElements(n, match));
+    const props = (node as { props?: Record<string, unknown> }).props;
+    if (!props) return [];
+    return [...(match(props) ? [props] : []), ...findElements(props.children, match)];
+  };
+  const NO_MONEY = { bookings: "VIEW", galleries: "VIEW", clients: "VIEW", production: "VIEW" };
+  const WITH_MONEY = { ...NO_MONEY, invoices: "VIEW", proposals: "VIEW" };
+
+  await harness.test("T24-REDACT-01: booking money only with Invoices access", async () => {
+    await withFixture(async (f) => {
+      const deposit = await db.milestoneInvoice.findFirstOrThrow({
+        where: { tenantId: f.lumina.id, milestoneType: "BOOKING_DEPOSIT", bookingId: { not: null }, booking: { sessionPrice: { not: null } } },
+      });
+      const bookingId = deposit.bookingId!;
+      const noMoney = await f.mkMember("redact-b-no", await f.mkRole("Redact b no", accessJson(NO_MONEY)));
+      const withMoney = await f.mkMember("redact-b-yes", await f.mkRole("Redact b yes", accessJson(WITH_MONEY)));
+
+      const listed = (await loadAdminBookings(f.lumina.id, { id: noMoney.id, access: await loadAccess(noMoney) })).find((b) => b.id === bookingId)!;
+      const popup = await withSession(sess(noMoney, "lumina-cine"), () => getBookingDetails({ tenantId: f.lumina.id, bookingId }));
+      harness.assert(popup.success, "pop-up opens without Invoices access", JSON.stringify(popup));
+      for (const [where, b] of [["list", listed], ["pop-up", popup.success ? popup.booking : null]] as const) {
+        harness.assert(!!b, `${where}: booking found`);
+        if (!b) continue;
+        harness.assertEqual(b.money, false, `${where}: money flag off`);
+        harness.assertEqual(b.sessionPrice, null, `${where}: no session price`);
+        harness.assertEqual(b.depositAmount, 0, `${where}: no deposit amount`);
+        harness.assertEqual(b.invoice, null, `${where}: no deposit invoice`);
+        harness.assertEqual(b.balanceInvoice, null, `${where}: no balance invoice`);
+        harness.assert(!JSON.stringify(b).includes(deposit.invoiceNumber), `${where}: invoice number absent`);
+        harness.assertEqual(b.depositInvoiceStatus, deposit.status, `${where}: the status stays, for the stage`);
+      }
+      const page = await withSession(sess(noMoney, "lumina-cine"), () =>
+        AdminBookingPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", bookingId }) })
+      );
+      const shown = findProp<{ money: boolean; invoice: unknown }>(page, "booking");
+      harness.assert(shown?.money === false && shown.invoice === null, "booking page passes no money", JSON.stringify(shown?.invoice));
+
+      const full = await withSession(sess(withMoney, "lumina-cine"), () => getBookingDetails({ tenantId: f.lumina.id, bookingId }));
+      harness.assert(full.success && full.booking.money && full.booking.invoice?.invoiceNumber === deposit.invoiceNumber, "Invoices VIEW sees the invoice");
+      harness.assert(full.success && full.booking.sessionPrice != null, "Invoices VIEW sees the session price");
+    });
+  });
+
+  await harness.test("T24-REDACT-02: a project's budget, invoices and payment line only with Invoices access", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const project = await db.project.findFirstOrThrow({ where: { tenantId: f.lumina.id, invoices: { some: {} } } });
+      const noMoney = await f.mkMember("redact-p-no", await f.mkRole("Redact p no", accessJson(NO_MONEY)));
+      const withMoney = await f.mkMember("redact-p-yes", await f.mkRole("Redact p yes", accessJson(WITH_MONEY)));
+      const render = (u: Row) =>
+        withSession(sess(u, "lumina-cine"), () => AdminProjectPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: project.id }) }));
+
+      const hidden = await render(noMoney);
+      harness.assertEqual(findProp(hidden, "money"), null, "no budget or invoices passed");
+      harness.assertEqual(findProp(hidden, "payment"), null, "no payment line passed");
+      const passed = findProp<Record<string, unknown>>(hidden, "project")!;
+      harness.assert(!("budget" in passed) && !("invoices" in passed), "the project itself carries no budget or invoices");
+
+      const shown = await render(withMoney);
+      const money = findProp<{ budget: number; invoices: unknown[] } | null>(shown, "money");
+      harness.assert(!!money && money.invoices.length > 0 && money.budget === project.budget, "Invoices VIEW gets budget and invoices");
+      harness.assert(findProp(shown, "payment") !== null, "Invoices VIEW gets the payment line");
+    });
+  });
+
+  await harness.test("T24-REDACT-03: a client's money only with Invoices access, proposals only with Proposals access", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const client = await db.user.findFirstOrThrow({ where: { tenantId: f.lumina.id, role: "CLIENT", invoices: { some: {} } } });
+      const hiddenProfile = (await loadClientProfile(f.lumina.id, client.id, { money: false, proposals: false }))!;
+      harness.assertEqual(hiddenProfile.invoices.length, 0, "loader: no invoices");
+      harness.assertEqual(hiddenProfile.money, null, "loader: no money totals");
+      harness.assertEqual(hiddenProfile.proposals.length, 0, "loader: no proposals");
+      harness.assert(hiddenProfile.projects.every((p) => p.budget === null), "loader: no project budgets");
+      harness.assert(hiddenProfile.bookings.every((b) => b.sessionPrice === null && b.depositAmount === null), "loader: no booking prices");
+
+      const noMoney = await f.mkMember("redact-c-no", await f.mkRole("Redact c no", accessJson(NO_MONEY)));
+      const withMoney = await f.mkMember("redact-c-yes", await f.mkRole("Redact c yes", accessJson(WITH_MONEY)));
+      const render = (u: Row) =>
+        withSession(sess(u, "lumina-cine"), () => AdminClientPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", clientId: client.id }) }));
+      const titles = (tree: unknown) => findElements(tree, (p) => typeof p.title === "string").map((p) => p.title);
+
+      const hidden = await render(noMoney);
+      harness.assert(!titles(hidden).includes("Invoices"), "no Invoices section", JSON.stringify(titles(hidden)));
+      harness.assert(!titles(hidden).includes("Proposals"), "no Proposals section");
+      harness.assertEqual(findProp(hidden, "canManage"), false, "contact card and notes are read-only at Clients VIEW");
+      const shown = await render(withMoney);
+      harness.assert(titles(shown).includes("Invoices") && titles(shown).includes("Proposals"), "both sections with access", JSON.stringify(titles(shown)));
+    });
+  });
+
+  await harness.test("T24-VIEW-01: below MANAGE, pages show no edit controls", async () => {
+    await provideReactGlobal();
+    await withFixture(async (f) => {
+      const viewer = await f.mkMember("view-gear", await f.mkRole("Gear view", accessJson({ production: "VIEW", galleries: "VIEW" })));
+      const manager = await f.mkMember("manage-gear", await f.mkRole("Gear manage", accessJson({ production: "MANAGE", galleries: "MANAGE" })));
+      const gear = (u: Row) => withSession(sess(u, "lumina-cine"), () => InventoryPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }) }));
+      harness.assertEqual(findProp(await gear(viewer), "canManage"), false, "Gear at Production VIEW: no edit controls");
+      harness.assertEqual(findProp(await gear(manager), "canManage"), true, "Gear at Production MANAGE: edit controls");
+
+      const project = await f.mkProject(f.lumina.id, "view-ws", f.luminaOwner.id);
+      const workspace = (u: Row) =>
+        withSession(sess(u, "lumina-cine"), () => AdminProjectPage({ params: Promise.resolve({ tenantSlug: "lumina-cine", projectId: project.id }) }));
+      const asViewer = await workspace(viewer);
+      for (const power of ["canEditGallery", "canChangeKind", "canManageProduction", "canOrderPrints"]) {
+        harness.assertEqual(findProp(asViewer, power), false, `workspace at VIEW: ${power} off`);
+      }
+      const asManager = await workspace(manager);
+      for (const power of ["canEditGallery", "canChangeKind", "canManageProduction"]) {
+        harness.assertEqual(findProp(asManager, power), true, `workspace at MANAGE: ${power} on`);
+      }
+
+      // OWN works fully on their own project (the page has already checked it is theirs).
+      const own = projectPagePowers(parseAccess(accessJson({ galleries: "OWN", production: "VIEW" })));
+      harness.assertEqual(own.canEditGallery, true, "Galleries OWN edits their own gallery");
+      harness.assertEqual(own.canChangeKind, false, "but the project type is Galleries MANAGE");
+      harness.assertEqual(own.canManageProduction, false, "and shoot days need Production MANAGE");
+      const owner = projectPagePowers(FULL_ACCESS);
+      harness.assert(Object.values(owner).every(Boolean), "the owner has every power");
+    });
   });
 }
 

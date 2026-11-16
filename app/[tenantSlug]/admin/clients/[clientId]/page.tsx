@@ -126,21 +126,31 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
   });
   if (!tenant) notFound();
 
-  const profile = await loadClientProfile(tenant.id, clientId);
+  // Each part follows its own area: money with Invoices VIEW, proposals with Proposals VIEW.
+  const show = {
+    money: levelAtLeast(viewer.access.areas.invoices, "VIEW"),
+    proposals: levelAtLeast(viewer.access.areas.proposals, "VIEW"),
+  };
+  const canManage = levelAtLeast(viewer.access.areas.clients, "MANAGE");
+  const profile = await loadClientProfile(tenant.id, clientId, show);
   if (!profile) notFound();
 
   const { client, bookings, projects, invoices, proposals, money } = profile;
   const base = `/${tenant.slug}/admin`;
 
-  const stats = [
+  const stats: { label: string; value: string; highlight?: boolean }[] = [
     { label: "Bookings", value: String(bookings.length) },
     { label: "Galleries", value: String(projects.length) },
-    { label: "Paid", value: formatMoney(tenant.currency, money.paid) },
-    {
-      label: "Balance due",
-      value: money.outstanding > 0 ? formatMoney(tenant.currency, money.outstanding) : "—",
-      highlight: money.outstanding > 0,
-    },
+    ...(money
+      ? [
+          { label: "Paid", value: formatMoney(tenant.currency, money.paid) },
+          {
+            label: "Balance due",
+            value: money.outstanding > 0 ? formatMoney(tenant.currency, money.outstanding) : "—",
+            highlight: money.outstanding > 0,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -160,10 +170,11 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
         }}
         clientSinceLabel={formatDate(client.createdAt)}
         bookingCount={bookings.length}
+        canManage={canManage}
       />
 
       {/* Stats */}
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <dl className={cn("grid grid-cols-2 gap-3", money ? "sm:grid-cols-4" : "sm:grid-cols-2")}>
         {stats.map((s) => (
           <div key={s.label} className="rounded-xl border border-zinc-800 bg-[#121215] px-4 py-3">
             <dt className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{s.label}</dt>
@@ -172,7 +183,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
         ))}
       </dl>
 
-      <ClientNotesCard tenantId={tenant.id} tenantSlug={tenant.slug} clientId={client.id} notes={client.staffNotes} />
+      <ClientNotesCard tenantId={tenant.id} tenantSlug={tenant.slug} clientId={client.id} notes={client.staffNotes} canManage={canManage} />
 
       <Section title="Bookings" icon={CalendarCheck} count={bookings.length} empty="No bookings yet.">
         {bookings.map((b) => (
@@ -186,7 +197,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
               </>
             }
             meta={`${b.packageName || humanize(b.serviceTier)} · ${b.targetDate ? formatDate(b.targetDate) : "No date set"}`}
-            right={b.sessionPrice != null ? formatMoney(tenant.currency, b.sessionPrice) : null}
+            right={money && b.sessionPrice != null ? formatMoney(tenant.currency, b.sessionPrice) : null}
           />
         ))}
       </Section>
@@ -203,11 +214,12 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
               </>
             }
             meta={`${p.projectNumber}${p.shootDates ? ` · ${formatDate(p.shootDates)}` : ""}`}
-            right={formatMoney(tenant.currency, p.budget)}
+            right={p.budget != null ? formatMoney(tenant.currency, p.budget) : null}
           />
         ))}
       </Section>
 
+      {money && (
       <Section title="Invoices" icon={Receipt} count={invoices.length} empty="No invoices yet.">
         {invoices.map((inv) => (
           <Row
@@ -226,7 +238,9 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
           />
         ))}
       </Section>
+      )}
 
+      {show.proposals && (
       <Section title="Proposals" icon={FileText} count={proposals.length} empty="No proposals yet.">
         {proposals.map((pr) => (
           <Row
@@ -243,6 +257,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
           />
         ))}
       </Section>
+      )}
     </PageShell>
   );
 }

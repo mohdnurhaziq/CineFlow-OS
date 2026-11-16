@@ -19,6 +19,15 @@ export interface BookingInvoiceSummary {
 }
 
 export interface BookingDetails {
+  /**
+   * False when the viewer has no Invoices access: the session price, deposit amount, payment
+   * method and both invoices are left out (null / 0) on the server. Statuses stay, for the stage.
+   */
+  money: boolean;
+  /** The deposit invoice's status, for the booking's stage (kept without Invoices access). */
+  depositInvoiceStatus: string | null;
+  /** The balance invoice's status, for the booking's stage (kept without Invoices access). */
+  balanceInvoiceStatus: string | null;
   id: string;
   trackingCode: string;
   status: string;
@@ -68,8 +77,14 @@ const SAME_TRANSACTION_MS = 5 * 60 * 1000;
 
 export async function loadBookingDetails(
   tenantId: string,
-  opts: { bookingId?: string; bookingIds?: string[] } = {}
+  opts: {
+    bookingId?: string;
+    bookingIds?: string[];
+    /** Include prices, amounts and invoices: only for viewers with Invoices VIEW. Default true. */
+    money?: boolean;
+  } = {}
 ): Promise<BookingDetails[]> {
+  const money = opts.money ?? true;
   const bookings = await db.clientBooking.findMany({
     where: {
       tenantId,
@@ -153,6 +168,9 @@ export async function loadBookingDetails(
     const inv = matched.get(b.id);
     const balance = balances.filter((x) => x.bookingId === b.id).at(-1);
     return {
+      money,
+      depositInvoiceStatus: inv?.status ?? null,
+      balanceInvoiceStatus: balance?.status ?? null,
       id: b.id,
       trackingCode: b.trackingCode,
       status: b.status,
@@ -163,11 +181,11 @@ export async function loadBookingDetails(
       discipline: b.discipline,
       serviceTier: b.serviceTier,
       creativeBrief: b.creativeBrief,
-      paymentMethod: b.paymentMethod,
-      depositAmount: b.depositAmount,
+      paymentMethod: money ? b.paymentMethod : null,
+      depositAmount: money ? b.depositAmount : 0,
       depositPaid: b.depositPaid,
       packageName: b.packageName,
-      sessionPrice: b.sessionPrice,
+      sessionPrice: money ? b.sessionPrice : null,
       createdAt: b.createdAt.toISOString(),
       sessionDate: b.slot ? b.slot.date.toISOString().slice(0, 10) : b.targetDate ?? null,
       slot: b.slot
@@ -177,11 +195,11 @@ export async function loadBookingDetails(
             endTime: b.slot.endTime,
             status: b.slot.status,
             campaignTitle: b.slot.campaignTitle,
-            price: b.slot.price,
+            price: money ? b.slot.price : 0,
           }
         : null,
-      invoice: inv ? summarize(inv) : null,
-      balanceInvoice: balance ? summarize(balance) : null,
+      invoice: money && inv ? summarize(inv) : null,
+      balanceInvoice: money && balance ? summarize(balance) : null,
       cancelReason: b.cancelReason,
       completedAt: b.completedAt ? b.completedAt.toISOString() : null,
       deliveredAt: b.deliveredAt ? b.deliveredAt.toISOString() : null,

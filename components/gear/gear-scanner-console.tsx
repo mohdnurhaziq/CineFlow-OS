@@ -31,6 +31,8 @@ interface GearScannerConsoleProps {
   onOpenCheckOut: (res: ReservationWithDetails) => void;
   onOpenCheckIn: (res: ReservationWithDetails) => void;
   onItemUpdated?: () => void;
+  /** Production MANAGE: may clear an item from maintenance. Check-out, return and the flags are for everyone. */
+  canManage: boolean;
 }
 
 export function GearScannerConsole({
@@ -43,6 +45,7 @@ export function GearScannerConsole({
   onOpenCheckOut,
   onOpenCheckIn,
   onItemUpdated,
+  canManage,
 }: GearScannerConsoleProps) {
   const dialog = useDialog(isOpen, onClose);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -298,6 +301,7 @@ export function GearScannerConsole({
 
               {/* Maintenance Quarantine Actions */}
               {matchedItem.status === "MAINTENANCE" ? (
+                canManage && (
                 <button
                   type="button"
                   disabled={isPending}
@@ -307,6 +311,7 @@ export function GearScannerConsole({
                   {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
                   <span>Return to Fleet (Cleared)</span>
                 </button>
+                )
               ) : (
                 <div className="flex items-center gap-1.5">
                   <button

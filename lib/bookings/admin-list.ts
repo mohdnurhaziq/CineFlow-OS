@@ -10,19 +10,21 @@ export interface ListViewer {
 
 /**
  * The Bookings page list: every booking of the studio (newest first) for Bookings VIEW and up,
- * only the bookings they are assigned to at OWN, nothing without Bookings access.
+ * only the bookings they are assigned to at OWN, nothing without Bookings access. Prices, amounts
+ * and invoices only with Invoices VIEW.
  *
  * Not a "use server" module: callers must authorize first.
  */
 export async function loadAdminBookings(tenantId: string, viewer: ListViewer): Promise<BookingDetails[]> {
   const level = viewer.access.areas.bookings;
   if (level === "NONE") return [];
-  if (levelAtLeast(level, "VIEW")) return loadBookingDetails(tenantId);
+  const money = levelAtLeast(viewer.access.areas.invoices, "VIEW");
+  if (levelAtLeast(level, "VIEW")) return loadBookingDetails(tenantId, { money });
   // loadBookingDetails keeps to this studio's bookings, whatever the assignment rows say.
   const assigned = await db.bookingAssignment.findMany({
     where: { userId: viewer.id, booking: { tenantId } },
     select: { bookingId: true },
   });
   if (assigned.length === 0) return [];
-  return loadBookingDetails(tenantId, { bookingIds: assigned.map((a) => a.bookingId) });
+  return loadBookingDetails(tenantId, { bookingIds: assigned.map((a) => a.bookingId), money });
 }

@@ -225,8 +225,12 @@ export function BookingsConsole({
                   <span className="hidden md:block text-[11px] font-mono text-amber-400/90 truncate">{b.trackingCode}</span>
 
                   <span className="min-w-0 col-span-2 md:col-span-1 text-[11px] text-zinc-400">
-                    <span className="text-zinc-200">{formatCurrency(b.depositAmount, currency)}</span>
-                    <span className="text-zinc-500"> · {formatPaymentMethod(b.paymentMethod)}</span>
+                    {b.money && (
+                      <>
+                        <span className="text-zinc-200">{formatCurrency(b.depositAmount, currency)}</span>
+                        <span className="text-zinc-500"> · {formatPaymentMethod(b.paymentMethod)}</span>
+                      </>
+                    )}
                   </span>
 
                   <span className="hidden md:block justify-self-end">

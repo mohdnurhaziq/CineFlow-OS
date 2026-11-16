@@ -102,6 +102,7 @@ export default async function AdminProposalsPage({ params }: ProposalsPageProps)
         currency={tenant.currency}
         initialTemplates={templates as unknown as ProposalAddOnTemplateRow[]}
         initialProposals={proposals as unknown as ProposalRow[]}
+        canManage={levelAtLeast(viewer.access.areas.proposals, "MANAGE")}
       />
     </PageShell>
   );
