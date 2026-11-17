@@ -43,6 +43,7 @@ import { runTier22PopupTests } from "./tier22-popups.test";
 import { runTier23PageHeaderTests } from "./tier23-page-headers.test";
 import { runTier24TeamAccessTests } from "./tier24-team-access.test";
 import { runTier25AssignmentTests } from "./tier25-assignments.test";
+import { runTier26AccessMatrixTests } from "./tier26-access-matrix.test";
 
 // The suite creates and mutates lots of records; refuse to run against anything but the
 // throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
@@ -208,6 +209,11 @@ async function runMasterTestSuite() {
     // Tier 25: Assigning team members to bookings, with emails
     // --------------------------------------------------------------------------
     await runTier25AssignmentTests(harness);
+
+    // --------------------------------------------------------------------------
+    // Tier 26: The access table: every action, upload folder and admin page
+    // --------------------------------------------------------------------------
+    await runTier26AccessMatrixTests(harness);
   } catch (err) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {
