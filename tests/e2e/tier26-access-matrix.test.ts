@@ -334,6 +334,7 @@ const ACTIONS: Record<string, Row> = {
   ],
   "admin-services.ts#deleteServicePackage": [["tick:setPrices"], (c) => [{ ...c.t, id: M }]],
   "admin-services.ts#togglePackageFeatured": [["area:services:MANAGE"], (c) => [{ ...c.t, id: M, isFeatured: true }]],
+  "admin-services.ts#togglePackageActive": [["area:services:MANAGE"], (c) => [{ ...c.t, id: M, isActive: true }]],
   "admin-services.ts#createCampaignCategory": [["area:services:MANAGE"], (c) => [{ ...c.t, name: "T26 category", slug: "t26-category" }]],
   "admin-services.ts#updateCampaignCategory": [["area:services:MANAGE"], (c) => [{ ...c.t, id: M, name: "T26 category", slug: "t26-category" }]],
   "admin-services.ts#deleteCampaignCategory": [["tick:setPrices"], (c) => [{ ...c.t, id: M }]],

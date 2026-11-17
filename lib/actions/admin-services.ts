@@ -12,6 +12,7 @@ import {
   UpdateServicePackageSchema,
   DeleteServicePackageSchema,
   TogglePackageFeaturedSchema,
+  TogglePackageActiveSchema,
   CreateCampaignCategorySchema,
   UpdateCampaignCategorySchema,
   DeleteCampaignCategorySchema,
@@ -20,6 +21,7 @@ import {
   type UpdateServicePackageInput,
   type DeleteServicePackageInput,
   type TogglePackageFeaturedInput,
+  type TogglePackageActiveInput,
   type CreateCampaignCategoryInput,
   type UpdateCampaignCategoryInput,
   type DeleteCampaignCategoryInput,
@@ -268,6 +270,37 @@ export async function togglePackageFeatured(input: TogglePackageFeaturedInput) {
       success: false,
       error: "TOGGLE_FEATURED_FAILED",
       message: actionErrorMessage(error, "Failed to toggle package featured status."),
+    };
+  }
+}
+
+/**
+ * Switches a package on or off. Off keeps it, and the bookings made with it, but stops offering it
+ * for new bookings: the website, the booking page, checkout and staff New booking all leave it out.
+ */
+export async function togglePackageActive(input: TogglePackageActiveInput) {
+  try {
+    const validated = TogglePackageActiveSchema.parse(input);
+    await requireAccess(validated.tenantId, "services", "MANAGE");
+    const { id, tenantId, tenantSlug, isActive } = validated;
+
+    const existing = await db.servicePackage.findFirst({ where: { id, tenantId } });
+    if (!existing) {
+      return { success: false, error: "PACKAGE_NOT_FOUND", message: "Service package not found or does not belong to studio." };
+    }
+
+    const updated = await db.servicePackage.update({ where: { id }, data: { isActive } });
+
+    safeRevalidate(`/${tenantSlug}/admin/services`);
+    safeRevalidate(`/${tenantSlug}`);
+    safeRevalidate(`/${tenantSlug}/book`);
+
+    return { success: true, package: updated };
+  } catch (error) {
+    return {
+      success: false,
+      error: "TOGGLE_ACTIVE_FAILED",
+      message: actionErrorMessage(error, "Could not switch the package on or off."),
     };
   }
 }

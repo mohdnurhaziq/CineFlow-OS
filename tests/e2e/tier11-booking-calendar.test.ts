@@ -3,6 +3,7 @@
  * - Slot time helpers (clock-time parsing, session blocks, studio time zone)
  * - Sessions that have already started can't be held, checked out or offered
  * - The booking page offers only upcoming slots
+ * - A switched-off package is kept but no longer offered for new bookings
  */
 
 import { db } from "@/lib/db";
@@ -14,6 +15,9 @@ import BookingPage from "@/app/[tenantSlug]/book/page";
 import { withSession } from "./mocks/session";
 import { packageRangeFor } from "@/lib/bookings/package-range";
 import { findProp, provideReactGlobal } from "./react-tree";
+import { packagesForCategory, resolveBookingPricing } from "@/lib/bookings/pricing";
+import { togglePackageActive } from "@/lib/actions/admin-services";
+import WebsitePage from "@/app/[tenantSlug]/page";
 
 const DAY_MS = 86_400_000;
 
@@ -37,6 +41,8 @@ export async function runTier11BookingCalendarTests(harness: TestHarness) {
     await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t11-" } } });
     await db.bookingSlot.deleteMany({ where: { id: { in: createdSlotIds } } });
     await db.user.deleteMany({ where: { email: { startsWith: "t11-" } } });
+    await db.showcaseItem.deleteMany({ where: { tenantId: lumina.id, title: { startsWith: "T11 " } } });
+    await db.servicePackage.deleteMany({ where: { tenantId: lumina.id, name: { startsWith: "T11 " } } });
   });
 
   const makeSlot = async (dateKey: string, startTime: string, endTime: string) => {
@@ -196,5 +202,56 @@ export async function runTier11BookingCalendarTests(harness: TestHarness) {
     );
     harness.assertEqual(packageRangeFor(packages, "CONVOCATION"), null, "No packages: null, so the slot fee fields show");
     harness.assertEqual(packageRangeFor([], "WEDDING"), null, "Empty package list: null");
+  });
+
+  await harness.test("T11-PKG-OFF-01: a switched-off package is kept but not offered for new bookings", async () => {
+    const category = `T11_CAT_${run.toUpperCase()}`;
+    const make = (name: string, price: number, isActive: boolean) =>
+      db.servicePackage.create({
+        data: {
+          tenantId: lumina.id, category, name, discipline: "PHOTOGRAPHY", price, depositPrice: 50,
+          description: "t11", deliverables: "t11", turnaround: "1 week", isActive,
+        },
+      });
+    const on = await make(`T11 On ${run}`, 400, true);
+    const off = await make(`T11 Off ${run}`, 300, false);
+    const slot = { category, price: 0, depositRequired: 50 };
+
+    const offered = await packagesForCategory(db, lumina.id, category);
+    harness.assertEqual(offered.map((p) => p.id).join(","), on.id, "Only the switched-on package is offered for the category");
+    const refused = await resolveBookingPricing(db, { tenantId: lumina.id, slot, packageId: off.id, packageRequired: true });
+    harness.assertEqual(refused.ok ? "booked" : refused.error, "PACKAGE_NOT_FOUND", "Booking the switched-off package is refused");
+    const allowed = await resolveBookingPricing(db, { tenantId: lumina.id, slot, packageId: on.id, packageRequired: true });
+    harness.assert(allowed.ok && allowed.pricing.sessionPrice === 400, "The switched-on package still books at its price");
+
+    await provideReactGlobal();
+    const bookPage = await withSession(null, () =>
+      BookingPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }), searchParams: Promise.resolve({}) })
+    );
+    const bookIds = (findProp<Array<{ id: string }>>(bookPage, "packages") ?? []).map((p) => p.id);
+    harness.assert(bookIds.includes(on.id) && !bookIds.includes(off.id), "The booking page lists the on package, not the off one");
+
+    const showcase = await db.showcaseItem.create({
+      data: { tenantId: lumina.id, category, title: `T11 Work ${run}`, clientName: "t11", discipline: "PHOTOGRAPHY", coverImageUrl: "/t11.jpg", servicePackageId: off.id },
+    });
+    const site = await withSession(null, () =>
+      WebsitePage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }), searchParams: Promise.resolve({}) })
+    );
+    const siteIds = (findProp<Array<{ id: string }>>(site, "packages") ?? []).map((p) => p.id);
+    harness.assert(siteIds.includes(on.id) && !siteIds.includes(off.id), "The website lists the on package, not the off one");
+    const work = (findProp<Array<{ id: string; servicePackage: unknown }>>(site, "showcaseItems") ?? []).find((i) => i.id === showcase.id);
+    harness.assert(!!work && work.servicePackage === null, "Portfolio work linked to the off package shows no package");
+
+    const owner = await db.user.findFirst({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } });
+    const asOwner = { id: owner!.id, email: owner!.email, name: owner!.name, role: owner!.role, tenantId: lumina.id, tenantSlug: "lumina-cine" };
+    const switched = await withSession(asOwner, () => togglePackageActive({ id: on.id, tenantId: lumina.id, tenantSlug: "lumina-cine", isActive: false }));
+    harness.assert(switched.success === true, "The owner switches a package off");
+    harness.assertEqual(await db.servicePackage.count({ where: { id: { in: [on.id, off.id] } } }), 2, "Switched-off packages are kept, not deleted");
+    harness.assertEqual((await packagesForCategory(db, lumina.id, category)).length, 0, "With every package off, none is offered");
+    const noPackage = await resolveBookingPricing(db, { tenantId: lumina.id, slot, packageRequired: true });
+    harness.assert(noPackage.ok, "With none offered, the slot books at its own price, as for a category with no packages");
+    const anon = await withSession(null, () => togglePackageActive({ id: off.id, tenantId: lumina.id, tenantSlug: "lumina-cine", isActive: true }));
+    harness.assert(anon.success === false, "Someone signed out can't switch a package on");
+    harness.assertEqual((await db.servicePackage.findUnique({ where: { id: off.id } }))?.isActive, false, "…and it stays off");
   });
 }

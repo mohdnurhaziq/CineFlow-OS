@@ -85,7 +85,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
 
   // Packages set the price and deposit of a booking.
   const packages = await db.servicePackage.findMany({
-    where: { tenantId: tenant.id },
+    where: { tenantId: tenant.id, isActive: true },
     select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true },
     orderBy: { price: "asc" },
   });

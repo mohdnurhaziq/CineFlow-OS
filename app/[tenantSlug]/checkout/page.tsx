@@ -131,7 +131,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const packages = slot
     ? (
         await db.servicePackage.findMany({
-          where: { tenantId: tenant.id },
+          where: { tenantId: tenant.id, isActive: true },
           select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true },
           orderBy: { price: "asc" },
         })

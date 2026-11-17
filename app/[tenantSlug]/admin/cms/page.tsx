@@ -58,11 +58,13 @@ export default async function AdminCmsPage({ params }: CmsPageProps) {
   });
 
   // 4. Fetch packages for linking
-  const packages = await db.servicePackage.findMany({
+  const packageRows = await db.servicePackage.findMany({
     where: { tenantId: tenant.id },
-    select: { id: true, name: true },
+    select: { id: true, name: true, isActive: true },
     orderBy: { name: "asc" },
   });
+  // Switched-off packages can still be linked, but the website won't show them.
+  const packages = packageRows.map((p) => ({ id: p.id, name: p.isActive ? p.name : `${p.name} (off)` }));
 
   return (
     <PageShell>

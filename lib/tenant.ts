@@ -12,7 +12,7 @@ export async function getTenantBySlug(slug: string) {
         orderBy: { sortOrder: "asc" },
       },
       servicePackages: {
-        where: { isFeatured: true },
+        where: { isFeatured: true, isActive: true },
       },
       printSizes: {
         orderBy: { widthInches: "asc" },

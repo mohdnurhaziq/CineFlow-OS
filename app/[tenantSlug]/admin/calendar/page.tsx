@@ -109,9 +109,9 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
       })
     : [];
 
-  // 6. Service packages (set a booking's price and deposit)
+  // 6. Service packages that are switched on (set a booking's price and deposit)
   const packages = await db.servicePackage.findMany({
-    where: { tenantId: tenant.id },
+    where: { tenantId: tenant.id, isActive: true },
     select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true, discipline: true },
     orderBy: { price: "asc" },
   });

@@ -628,6 +628,8 @@ model ServicePackage {
   deliverables String
   turnaround   String
   isFeatured   Boolean        @default(false)
+  /// Switched off: kept with its bookings, but no longer offered for new ones (website, booking, checkout, staff).
+  isActive     Boolean        @default(true)
 
   tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   showcases    ShowcaseItem[]
@@ -637,6 +639,7 @@ model ServicePackage {
   @@index([tenantId])
   @@index([tenantId, category])
   @@index([tenantId, isFeatured])
+  @@index([tenantId, isActive])
 }
 
 model ShowcaseItem {

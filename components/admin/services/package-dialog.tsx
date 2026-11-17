@@ -37,6 +37,8 @@ export interface PackageRow {
   deliverables: string;
   turnaround: string;
   isFeatured: boolean;
+  /** Switched off: kept, but not offered for new bookings. */
+  isActive: boolean;
   includedPrints?: IncludedPrintLine[];
 }
 

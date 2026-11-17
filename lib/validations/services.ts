@@ -60,6 +60,15 @@ export const TogglePackageFeaturedSchema = z.object({
 
 export type TogglePackageFeaturedInput = z.infer<typeof TogglePackageFeaturedSchema>;
 
+export const TogglePackageActiveSchema = z.object({
+  id: z.string().min(1, "Package ID is required"),
+  tenantId: z.string().min(1, "Tenant ID is required"),
+  tenantSlug: z.string().min(1, "Tenant slug is required"),
+  isActive: z.boolean(),
+});
+
+export type TogglePackageActiveInput = z.infer<typeof TogglePackageActiveSchema>;
+
 export const CreateCampaignCategorySchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
   tenantSlug: z.string().min(1, "Tenant slug is required"),

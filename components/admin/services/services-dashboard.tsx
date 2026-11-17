@@ -3,7 +3,7 @@
 import { tabClass, tabListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Package,
@@ -19,8 +19,11 @@ import {
   Camera,
   Layers as LayersIcon,
   Loader2,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
-import { deleteServicePackage, togglePackageFeatured } from "@/lib/actions/admin-services";
+import { toast } from "sonner";
+import { deleteServicePackage, togglePackageActive, togglePackageFeatured } from "@/lib/actions/admin-services";
 import { PackageDialog, type PackageRow, type PrintOption, type FrameOption } from "./package-dialog";
 import { CategoryDialog, type CategoryRow } from "./category-dialog";
 import { CategoryList } from "./category-list";
@@ -74,8 +77,16 @@ export function ServicesDashboard({
     router.refresh();
   };
 
+  // The Active switch shows its new state as soon as it's saved, before the refresh catches up,
+  // so a second click doesn't switch it straight back.
+  const [activeNow, setActiveNow] = useState<Record<string, boolean>>({});
+  const [switchingId, setSwitchingId] = useState<string | null>(null);
+  const switching = useRef(false);
+  useEffect(() => setActiveNow({}), [initialPackages]);
+  const packages = initialPackages.map((p) => ({ ...p, isActive: activeNow[p.id] ?? p.isActive }));
+
   // Filter packages
-  const filteredPackages = initialPackages.filter((pkg) => {
+  const filteredPackages = packages.filter((pkg) => {
     const matchesSearch =
       pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pkg.deliverables.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,8 +99,9 @@ export function ServicesDashboard({
   });
 
   // KPI Calculations
-  const totalPackages = initialPackages.length;
-  const featuredPackages = initialPackages.filter((p) => p.isFeatured).length;
+  const totalPackages = packages.length;
+  const featuredPackages = packages.filter((p) => p.isFeatured && p.isActive).length;
+  const activePackages = packages.filter((p) => p.isActive).length;
   const totalCategories = initialCategories.length;
   const activeCategories = initialCategories.filter((c) => c.isActive).length;
 
@@ -106,10 +118,31 @@ export function ServicesDashboard({
       if (res.success) {
         handleSuccess();
       } else {
-        alert(res.message || "Failed to delete package.");
+        toast.error(res.message || "Could not delete the package.");
       }
     } finally {
       setDeletingPackageId(null);
+    }
+  };
+
+  // Off keeps the package and its bookings, but stops offering it for new bookings.
+  const handleToggleActive = async (pkg: PackageRow) => {
+    // A ref, not state: two clicks in the same instant must not both send.
+    if (switching.current) return;
+    switching.current = true;
+    setSwitchingId(pkg.id);
+    try {
+      const res = await togglePackageActive({ id: pkg.id, tenantId, tenantSlug, isActive: !pkg.isActive });
+      if (!res.success) {
+        toast.error(res.message || "Could not switch the package on or off.");
+        return;
+      }
+      setActiveNow((m) => ({ ...m, [pkg.id]: !pkg.isActive }));
+      toast.success(pkg.isActive ? `"${pkg.name}" is switched off. Clients can't book it now.` : `"${pkg.name}" is offered again.`);
+      handleSuccess();
+    } finally {
+      switching.current = false;
+      setSwitchingId(null);
     }
   };
 
@@ -183,7 +216,9 @@ export function ServicesDashboard({
           <span className="text-2xl font-bold font-mono text-white mt-1 block">
             {totalPackages}
           </span>
-          <span className="text-[11px] text-zinc-400 mt-0.5 block">Configured offerings</span>
+          <span className="text-[11px] text-zinc-400 mt-0.5 block">
+            {activePackages === totalPackages ? "All offered to clients" : `${activePackages} offered, ${totalPackages - activePackages} switched off`}
+          </span>
         </div>
 
         <div className="p-4 rounded-2xl border border-zinc-800 bg-[#0d0d10]">
@@ -304,12 +339,14 @@ export function ServicesDashboard({
                   <div
                     key={pkg.id}
                     className={`relative rounded-2xl border p-5 flex flex-col justify-between transition-all ${
-                      pkg.isFeatured
+                      !pkg.isActive
+                        ? "bg-[#0d0d10] border-zinc-800 border-dashed"
+                        : pkg.isFeatured
                         ? "bg-[#111115] border-amber-500/30 shadow-lg shadow-amber-500/5"
                         : "bg-[#0d0d10] border-zinc-800 hover:border-zinc-700"
                     }`}
                   >
-                    <div>
+                    <div className={pkg.isActive ? "" : "opacity-60"}>
                       {/* Top Badges & Actions */}
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -404,17 +441,43 @@ export function ServicesDashboard({
                       </div>
                     </div>
 
-                    {/* Footer turnaround */}
-                    <div className="pt-3 border-t border-zinc-800/60 flex items-center justify-between text-[11px] font-mono text-zinc-400">
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3 text-amber-400" />
-                        {pkg.turnaround}
+                    {/* Footer: turnaround, featured, and whether it's offered */}
+                    <div className="pt-3 border-t border-zinc-800/60 flex items-center justify-between gap-2 text-[11px] font-mono text-zinc-400">
+                      <span className={`flex items-center gap-1 min-w-0 ${pkg.isActive ? "" : "opacity-60"}`}>
+                        <Clock className="size-3 text-amber-400 shrink-0" />
+                        <span className="truncate">{pkg.turnaround}</span>
                       </span>
-                      {pkg.isFeatured && (
-                        <span className="flex items-center gap-1 text-amber-400/90">
-                          <Sparkles className="size-3" /> Featured
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {pkg.isFeatured && pkg.isActive && (
+                          <span className="flex items-center gap-1 text-amber-400/90">
+                            <Sparkles className="size-3" /> Featured
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          disabled={!canManage || switchingId === pkg.id}
+                          onClick={() => handleToggleActive(pkg)}
+                          aria-pressed={pkg.isActive}
+                          title={
+                            !canManage
+                              ? "Switching packages on or off needs Services: Manage"
+                              : pkg.isActive
+                              ? "Switch off: keep it, but stop offering it for new bookings"
+                              : "Switch on: offer it for new bookings again"
+                          }
+                          className="disabled:cursor-not-allowed"
+                        >
+                          {pkg.isActive ? (
+                            <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle className="size-3" /> Active
+                            </span>
+                          ) : (
+                            <span className="text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <XCircle className="size-3" /> Inactive
+                            </span>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

@@ -153,8 +153,16 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
               <B>A price change affects new bookings only.</B> A booking keeps the deposit and price it was made with.
             </>,
             <>The deposit can&apos;t be more than the total price.</>,
-            <>Deleting a package stops clients booking it. Bookings already made with it are not changed.</>,
-            <>Anyone with <Ui>Services</Ui>: Manage can turn the Featured mark on or off; editing the rest needs <Ui>Set prices</Ui>.</>,
+            <>
+              To stop offering a package for a while, click its <Ui>Active</Ui> switch so it reads <Ui>Inactive</Ui>. It disappears from your
+              website, the booking page, checkout and staff <Ui>New booking</Ui>, but it&apos;s kept, with its prices and the bookings made
+              with it. Click again to offer it again.
+            </>,
+            <>Deleting a package stops clients booking it for good. Bookings already made with it are not changed.</>,
+            <>
+              Anyone with <Ui>Services</Ui>: Manage can turn the Featured mark and the Active switch on or off; editing the rest needs{" "}
+              <Ui>Set prices</Ui>.
+            </>,
           ]}
         />
       </ManualSection>
@@ -209,7 +217,10 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
             <>Enter a title and, if you like, the client or brand name.</>,
             <>Choose the category and discipline, so visitors can filter to the kind of work they want.</>,
             <>Add the cover image. For a film, also add the video link from your video host.</>,
-            <>Optionally link the item to the package it was shot under, so a visitor who likes it can find that package.</>,
+            <>
+              Optionally link the item to the package it was shot under, so a visitor who likes it can find that package. A package
+              that is switched off is marked <Ui>(off)</Ui> in the list and isn&apos;t shown with the item on your website.
+            </>,
             <>
               Tick <Ui>Featured Showcase</Ui> to pin it at the top of your page.
             </>,
@@ -232,7 +243,7 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
           head={["Task", "Who can do it"]}
           rows={[
             ["Create, edit or delete a package", <>The owner, and anyone given <Ui key="a">Set prices</Ui></>],
-            ["Mark a package as featured", <>The owner, and anyone with <Ui key="b">Services</Ui>: Manage</>],
+            ["Mark a package as featured, or switch it on or off", <>The owner, and anyone with <Ui key="b">Services</Ui>: Manage</>],
             ["Create or edit a category, turn it on or off", <>The owner, and anyone with <Ui key="c">Services</Ui>: Manage</>],
             ["Delete a category", <>The owner, and anyone given <Ui key="d">Set prices</Ui></>],
             ["Add, edit or delete showcase items", <>The owner, and anyone with <Ui key="e">Catalog &amp; website</Ui>: Manage</>],
@@ -274,8 +285,8 @@ export default async function ServicesManualPage({ params }: ServicesManualPageP
         <div className="space-y-5">
           <ManualQa question="A client says no packages appear when they book.">
             <p>
-              The slot&apos;s category has no packages. Add a package to that category in Services, or check that the slot was
-              created under the category you intended.
+              The slot&apos;s category has no packages that are switched on. Add a package to that category in Services, or switch an
+              inactive one back on, or check that the slot was created under the category you intended.
             </p>
           </ManualQa>
           <ManualQa question="I raised a price. Do clients who already booked pay more?">

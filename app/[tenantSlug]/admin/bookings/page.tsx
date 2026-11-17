@@ -57,7 +57,7 @@ export default async function AdminBookingsPage({ params, searchParams }: Bookin
       : [],
     canManage
       ? db.servicePackage.findMany({
-          where: { tenantId: tenant.id },
+          where: { tenantId: tenant.id, isActive: true },
           select: { id: true, name: true, category: true, price: true, depositPrice: true, description: true, deliverables: true, discipline: true },
           orderBy: { price: "asc" },
         })

@@ -88,8 +88,9 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
   });
 
   // 3. Fetch scoped Service Packages
+  // Switched-off packages aren't offered.
   const packageRows = await db.servicePackage.findMany({
-    where: { tenantId: tenant.id },
+    where: { tenantId: tenant.id, isActive: true },
     orderBy: [{ isFeatured: "desc" }, { price: "asc" }],
     select: {
       id: true,
@@ -111,7 +112,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
   }));
 
   // 4. Fetch scoped Showcase Items
-  const showcaseItems = await db.showcaseItem.findMany({
+  const showcaseRows = await db.showcaseItem.findMany({
     where: { tenantId: tenant.id },
     include: {
       servicePackage: {
@@ -120,11 +121,19 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
           name: true,
           discipline: true,
           price: true,
+          isActive: true,
         },
       },
     },
     orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }],
   });
+  // A portfolio item linked to a switched-off package shows no package.
+  const showcaseItems = showcaseRows.map(({ servicePackage, ...item }) => ({
+    ...item,
+    servicePackage: servicePackage?.isActive
+      ? { id: servicePackage.id, name: servicePackage.name, discipline: servicePackage.discipline, price: servicePackage.price }
+      : null,
+  }));
 
   // 5. Fetch Studio Lead for WhatsApp / inquiries
   const studioLead = await db.user.findFirst({

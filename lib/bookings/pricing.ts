@@ -28,7 +28,8 @@ export type PricingResult = { ok: true; pricing: BookingPricing } | { ok: false;
 export { sameCategory };
 
 export async function packagesForCategory(tx: Tx, tenantId: string, category: string) {
-  const all = await tx.servicePackage.findMany({ where: { tenantId }, orderBy: { price: "asc" } });
+  // Only packages that are switched on are offered.
+  const all = await tx.servicePackage.findMany({ where: { tenantId, isActive: true }, orderBy: { price: "asc" } });
   return all.filter((p) => sameCategory(p.category, category));
 }
 
@@ -48,7 +49,8 @@ export async function resolveBookingPricing(
   const { tenantId, slot, packageId, packageRequired } = input;
 
   if (packageId) {
-    const pkg = await tx.servicePackage.findFirst({ where: { id: packageId, tenantId } });
+    // A switched-off package can't be booked, even if a stale page still offers it.
+    const pkg = await tx.servicePackage.findFirst({ where: { id: packageId, tenantId, isActive: true } });
     if (!pkg) return { ok: false, error: "PACKAGE_NOT_FOUND", message: "The selected package is not available." };
     if (!sameCategory(pkg.category, slot.category)) {
       return { ok: false, error: "PACKAGE_MISMATCH", message: "The selected package is not offered for this session." };
