@@ -19,6 +19,18 @@ export function invoiceBookingId(
   return bookingByProject.get(inv.projectId) ?? null;
 }
 
+/**
+ * The proposal whose card this invoice belongs in: its own, or, for a print order, the proposal
+ * billed for the same gallery (`proposalByProject`, from the proposal's own invoices).
+ */
+export function invoiceProposalId(
+  inv: { proposalId: string | null; projectId: string | null },
+  proposalByProject: ReadonlyMap<string, string>
+): string | null {
+  if (inv.proposalId) return inv.proposalId;
+  return inv.projectId ? proposalByProject.get(inv.projectId) ?? null : null;
+}
+
 export interface BillSums {
   totalAmount: number;
   paidAmount: number;

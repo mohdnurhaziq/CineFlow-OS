@@ -35,7 +35,7 @@ import { currencySymbol, formatMoney } from "@/lib/money";
 import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
 import type { FramedPrintsData } from "@/lib/prints/gallery";
 import { milestoneLabel } from "@/lib/labels";
-import { BOOKING_MILESTONES, PROPOSAL_MILESTONES, billSums, invoiceBookingId } from "@/lib/invoices/bill-groups";
+import { BOOKING_MILESTONES, PROPOSAL_MILESTONES, billSums, invoiceBookingId, invoiceProposalId } from "@/lib/invoices/bill-groups";
 import { cn } from "@/lib/utils";
 
 type BookingRow = ClientBooking & {
@@ -274,7 +274,8 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
     invoices: InvoiceRow[];
   }
 
-  const { invoiceGroups, standaloneInvoices } = useMemo(() => {
+  // Every bill, unfiltered: the Overview shows the ones that need attention, the Invoices tab filters them.
+  const { allGroups, allStandalone } = useMemo(() => {
     const activeList = showVoidInvoices
       ? invoices
       : invoices.filter((i) => i.status !== "VOID" && i.status !== "CANCELLED");
@@ -284,17 +285,22 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
     const standalone: InvoiceRow[] = [];
     // A print order is billed against the booking's gallery, so it joins that booking's card.
     const bookingByProject = new Map(bookings.flatMap((b) => (b.project ? [[b.project.id, b.id] as const] : [])));
+    // Likewise for a proposal: its own invoices name the gallery it was billed for.
+    const proposalByProject = new Map(
+      invoices.flatMap((i) => (i.proposalId && i.projectId ? [[i.projectId, i.proposalId] as const] : []))
+    );
 
     for (const inv of activeList) {
       const bookingId = invoiceBookingId(inv, bookingByProject);
+      const proposalId = bookingId ? null : invoiceProposalId(inv, proposalByProject);
       if (bookingId) {
         const arr = bookingMap.get(bookingId) || [];
         arr.push(inv);
         bookingMap.set(bookingId, arr);
-      } else if (inv.proposalId) {
-        const arr = proposalMap.get(inv.proposalId) || [];
+      } else if (proposalId) {
+        const arr = proposalMap.get(proposalId) || [];
         arr.push(inv);
-        proposalMap.set(inv.proposalId, arr);
+        proposalMap.set(proposalId, arr);
       } else {
         standalone.push(inv);
       }
@@ -305,9 +311,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
       const rank = (i: InvoiceRow) => (i.milestoneType === lead ? 0 : plan.has(i.milestoneType) ? 1 : 2);
       return rank(a) - rank(b) || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     };
-    const keep = (sums: { balanceDue: number; paidAmount: number; hasReview: boolean }) =>
-      !(invoiceFilter === "unpaid" && sums.balanceDue <= 0 && !sums.hasReview) && !(invoiceFilter === "paid" && sums.paidAmount <= 0);
-
     const groups: InvoiceGroup[] = [];
 
     for (const [bookingId, groupInvoices] of bookingMap.entries()) {
@@ -320,7 +323,6 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
         "Studio Photoshoot Session";
       const trackingCode = matchedBooking?.trackingCode || first?.booking?.trackingCode;
       const sums = billSums(matchedBooking?.sessionPrice, groupInvoices, BOOKING_MILESTONES);
-      if (!keep(sums)) continue;
       groups.push({ id: bookingId, type: "booking", title, trackingCode, ...sums, invoices: groupInvoices });
     }
 
@@ -330,18 +332,36 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
       const title = matchedProposal?.title || "Production Contract";
       const trackingCode = matchedProposal?.proposalNumber;
       const sums = billSums(matchedProposal?.totalPrice, groupInvoices, PROPOSAL_MILESTONES);
-      if (!keep(sums)) continue;
       groups.push({ id: proposalId, type: "proposal", title, trackingCode, ...sums, invoices: groupInvoices });
     }
 
-    const filteredStandalone = standalone.filter((inv) => {
-      if (invoiceFilter === "unpaid") return inv.status === "PENDING" || inv.status === "OVERDUE" || inv.status === "PENDING_VERIFICATION";
-      if (invoiceFilter === "paid") return inv.status === "PAID";
-      return true;
-    });
+    return { allGroups: groups, allStandalone: standalone };
+  }, [invoices, bookings, proposals, showVoidInvoices]);
 
-    return { invoiceGroups: groups, standaloneInvoices: filteredStandalone };
-  }, [invoices, bookings, proposals, showVoidInvoices, invoiceFilter]);
+  const { invoiceGroups, standaloneInvoices } = useMemo(() => {
+    const keep = (g: InvoiceGroup) =>
+      !(invoiceFilter === "unpaid" && g.balanceDue <= 0 && !g.hasReview) && !(invoiceFilter === "paid" && g.paidAmount <= 0);
+    return {
+      invoiceGroups: allGroups.filter(keep),
+      standaloneInvoices: allStandalone.filter((inv) => {
+        if (invoiceFilter === "unpaid") return inv.status === "PENDING" || inv.status === "OVERDUE" || inv.status === "PENDING_VERIFICATION";
+        if (invoiceFilter === "paid") return inv.status === "PAID";
+        return true;
+      }),
+    };
+  }, [allGroups, allStandalone, invoiceFilter]);
+
+  // Overview: one line per bill (a booking with all its invoices, or a lone invoice), what's due first.
+  const overviewBills = useMemo(() => {
+    const lone = allStandalone
+      .filter((inv) => inv.status !== "VOID" && inv.status !== "CANCELLED")
+      .map((inv) => ({ id: inv.id, title: getMilestoneLabel(inv.milestoneType), trackingCode: inv.invoiceNumber, ...billSums(0, [inv], new Set()), invoices: [inv] }));
+    const urgency = (b: { balanceDue: number; hasReview: boolean }) => (b.balanceDue > 0 ? 0 : b.hasReview ? 1 : 2);
+    const latest = (b: { invoices: InvoiceRow[] }) => Math.max(...b.invoices.map((i) => new Date(i.createdAt).getTime()));
+    return [...allGroups, ...lone]
+      .filter((b) => b.invoices.some((i) => i.status !== "VOID" && i.status !== "CANCELLED"))
+      .sort((a, b) => urgency(a) - urgency(b) || latest(b) - latest(a));
+  }, [allGroups, allStandalone]);
 
   return (
     <div className="w-full">
@@ -703,60 +723,75 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     </button>
                   </div>
 
-                  <div className="space-y-2">
-                    {unpaidInvoices.length > 0 ? (
-                      unpaidInvoices.slice(0, 1).map((inv) => (
-                        <div
-                          key={inv.id}
-                          className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs font-mono"
-                        >
-                          <div>
-                            <div className="font-bold text-white flex items-center gap-1.5">
-                              <span>{inv.invoiceNumber}</span>
-                              <span className="text-[10px] text-amber-300">({humanize(inv.milestoneType)})</span>
-                            </div>
-                            <div className="text-[11px] text-zinc-400">
-                              Due: {formatDate(inv.dueDate)}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-amber-400">{money(inv.amount)}</div>
-                            <Link
-                              href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
-                              className="text-[10px] font-bold text-amber-300 hover:underline uppercase inline-flex items-center gap-0.5"
-                            >
-                              Pay Now →
-                            </Link>
-                          </div>
-                        </div>
-                      ))
-                    ) : null}
-
-                    {paidInvoices.slice(0, unpaidInvoices.length > 0 ? 1 : 2).map((inv) => (
-                      <div
-                        key={inv.id}
-                        className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800/80 flex items-center justify-between text-xs font-mono"
-                      >
-                        <div>
-                          <div className="font-semibold text-zinc-200">
-                            {inv.invoiceNumber} · {humanize(inv.milestoneType)}
-                          </div>
-                          <div className="text-[11px] text-zinc-500">
-                            Paid {inv.paidAt ? formatDate(inv.paidAt) : ""}
-                          </div>
-                        </div>
-                        <div className="text-right flex items-center gap-2">
-                          <span className="font-bold text-white">{money(inv.amount)}</span>
-                          <Link
-                            href={`/${tenant.slug}/account/invoices/${inv.id}`}
-                            className="px-2 py-0.5 rounded text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors"
+                  {overviewBills.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-zinc-500">No bills yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {overviewBills.slice(0, 3).map((bill) => {
+                        const payable = bill.invoices.find((i) => i.status === "PENDING" || i.status === "OVERDUE");
+                        const lone = bill.invoices.length === 1 ? bill.invoices[0] : null;
+                        return (
+                          <div
+                            key={bill.id}
+                            className={cn(
+                              "p-3 rounded-xl border text-xs font-mono space-y-2",
+                              bill.balanceDue > 0 ? "bg-amber-500/10 border-amber-500/30" : "bg-zinc-900/70 border-zinc-800/80"
+                            )}
                           >
-                            Receipt
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="font-bold text-white truncate">{bill.title}</div>
+                                <div className="text-[11px] text-zinc-400">
+                                  {bill.trackingCode ? `${bill.trackingCode} · ` : ""}
+                                  {bill.invoices.length} {bill.invoices.length === 1 ? "invoice" : "invoices"}
+                                </div>
+                              </div>
+                              {bill.isFullyPaid ? (
+                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                  Settled
+                                </span>
+                              ) : bill.balanceDue > 0 ? (
+                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                  {money(bill.balanceDue)} due
+                                </span>
+                              ) : bill.hasReview ? (
+                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                  Under review
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+                              <div
+                                className={cn("h-full", bill.isFullyPaid ? "bg-emerald-500" : "bg-amber-400")}
+                                style={{ width: `${Math.min(100, Math.max(0, bill.percentage))}%` }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between gap-2 text-[11px]">
+                              <span className="text-zinc-400">
+                                {money(bill.paidAmount)} of {money(bill.totalAmount)} paid
+                              </span>
+                              {payable ? (
+                                <Link
+                                  href={`/${tenant.slug}/checkout?invoiceId=${payable.id}`}
+                                  className="shrink-0 whitespace-nowrap font-bold text-amber-300 hover:underline uppercase"
+                                >
+                                  Pay now →
+                                </Link>
+                              ) : lone?.status === "PAID" ? (
+                                <Link href={`/${tenant.slug}/account/invoices/${lone.id}`} className="shrink-0 whitespace-nowrap text-zinc-300 hover:text-white hover:underline">
+                                  Receipt →
+                                </Link>
+                              ) : (
+                                <button type="button" onClick={() => switchTab("invoices")} className="shrink-0 whitespace-nowrap text-zinc-300 hover:text-white hover:underline">
+                                  Details →
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <button

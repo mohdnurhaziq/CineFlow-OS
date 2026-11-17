@@ -15,7 +15,7 @@ import ClientInvoicePage from "@/app/[tenantSlug]/account/invoices/[invoiceId]/p
 import AdminInvoicePage from "@/app/[tenantSlug]/admin/invoices/[invoiceId]/page";
 import { expectSuccess } from "./result-helpers";
 import { findProp, provideReactGlobal } from "./react-tree";
-import { BOOKING_MILESTONES, billSums, invoiceBookingId } from "@/lib/invoices/bill-groups";
+import { BOOKING_MILESTONES, billSums, invoiceBookingId, invoiceProposalId } from "@/lib/invoices/bill-groups";
 
 const DAY_MS = 86_400_000;
 
@@ -172,6 +172,10 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
     harness.assertEqual(invoiceBookingId({ bookingId: null, proposalId: null, projectId: "proj-other" }, byProject), null, "A gallery with no booking: on its own");
     harness.assertEqual(invoiceBookingId({ bookingId: null, proposalId: "prop-1", projectId: "proj-1" }, byProject), null, "A proposal invoice stays with its proposal");
     harness.assertEqual(invoiceBookingId({ bookingId: null, proposalId: null, projectId: null }, byProject), null, "A custom invoice: on its own");
+    const byProposalProject = new Map([["proj-2", "prop-1"]]);
+    harness.assertEqual(invoiceProposalId({ proposalId: "prop-1", projectId: "proj-2" }, byProposalProject), "prop-1", "Retainer: its own proposal");
+    harness.assertEqual(invoiceProposalId({ proposalId: null, projectId: "proj-2" }, byProposalProject), "prop-1", "Print order: the proposal billed for that gallery");
+    harness.assertEqual(invoiceProposalId({ proposalId: null, projectId: null }, byProposalProject), null, "A custom invoice: on its own");
   });
 
   await harness.test("T13-GROUP-02: the booking's bill totals the session and its extras", async () => {
