@@ -212,8 +212,9 @@ export default async function PrintsManualPage({ params }: PrintsManualPageProps
 
       <ManualSection id="shipping" title="Pickup, delivery and shipping fees">
         <ManualP>
-          Set where you deliver in <ManualLink href={`${admin}/settings?tab=delivery`}>Settings → Photo delivery</ManualLink>, under{" "}
-          <Ui>Shipping zones</Ui>. A zone is a name, a flat fee and the states it covers.
+          Set where you deliver in <ManualLink href={`${admin}/frames?tab=shipping`}>Frames &amp; Prints</ManualLink>, on the{" "}
+          <Ui>Shipping Zones</Ui> tab. A zone is a name, a flat fee and the states it covers. Changing zones needs Catalog &amp;
+          website: Manage; with View they are shown read-only.
         </ManualP>
         <ManualList
           items={[
@@ -346,8 +347,8 @@ export default async function PrintsManualPage({ params }: PrintsManualPageProps
           </ManualQa>
           <ManualQa question="A client can't choose delivery.">
             <p>
-              Their state is not in any of your shipping zones, or you have no zones yet. Add the state to a zone in Settings →
-              Photo delivery, or arrange pickup.
+              Their state is not in any of your shipping zones, or you have no zones yet. Add the state to a zone in Frames &amp; Prints →
+              Shipping Zones, or arrange pickup.
             </p>
           </ManualQa>
           <ManualQa question="A client wants to cancel a free order of included prints.">

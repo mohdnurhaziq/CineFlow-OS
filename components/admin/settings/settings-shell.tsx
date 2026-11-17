@@ -10,7 +10,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { DirtyContext, type StudioTenantData } from "./settings-ui";
 import { StudioTab } from "./studio-tab";
 import { PaymentsTab } from "./payments-tab";
-import { DeliveryTab, type ShippingZoneRow } from "./delivery-tab";
+import { DeliveryTab } from "./delivery-tab";
 import { TeamTab } from "./team-tab";
 import type { TeamRoleRow } from "./team-role-dialog";
 import type { TeamMemberRow } from "./team-member-dialog";
@@ -25,14 +25,12 @@ export function SettingsShell({
   tenant,
   tab,
   host,
-  zones,
   roles,
   members,
 }: {
   tenant: StudioTenantData;
   tab: SettingsTabId;
   host: string;
-  zones: ShippingZoneRow[];
   roles: TeamRoleRow[];
   members: TeamMemberRow[];
 }) {
@@ -96,7 +94,7 @@ export function SettingsShell({
         <div className="max-w-4xl space-y-6">
         {tab === "studio" && <StudioTab tenant={tenant} host={host} />}
         {tab === "payments" && <PaymentsTab tenant={tenant} />}
-        {tab === "delivery" && <DeliveryTab tenant={tenant} zones={zones} />}
+        {tab === "delivery" && <DeliveryTab tenant={tenant} />}
         {tab === "team" && <TeamTab tenant={{ id: tenant.id, slug: tenant.slug }} roles={roles} members={members} />}
         {tab === "plan" && <PlanTab tenant={tenant} />}
         </div>

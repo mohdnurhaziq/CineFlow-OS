@@ -8,11 +8,14 @@ import type { PrintSizeRow } from "@/components/admin/frames/print-size-dialog";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { parseZoneStates } from "@/lib/prints/zones";
+import type { FramesTab } from "@/components/admin/frames/frames-manager";
 
 interface FramesPageProps {
   params: Promise<{
     tenantSlug: string;
   }>;
+  searchParams?: Promise<{ tab?: string }>;
 }
 
 export async function generateMetadata({
@@ -28,9 +31,11 @@ export async function generateMetadata({
   };
 }
 
-// Catalog VIEW.
-export default async function AdminFramesPage({ params }: FramesPageProps) {
+// Catalog VIEW. Changing frames, sizes, the mat price or shipping zones needs Catalog MANAGE.
+export default async function AdminFramesPage({ params, searchParams }: FramesPageProps) {
   const { tenantSlug } = await params;
+  const { tab } = (await searchParams) ?? {};
+  const initialTab: FramesTab = tab === "sizes" || tab === "shipping" ? tab : "frames";
   const viewer = await adminPageAccess(tenantSlug);
   if (!viewer || !levelAtLeast(viewer.access.areas.catalog, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
 
@@ -60,6 +65,10 @@ export default async function AdminFramesPage({ params }: FramesPageProps) {
     orderBy: { widthInches: "asc" },
   });
 
+  // 4. Shipping zones for wall art orders
+  const zoneRows = await db.shippingZone.findMany({ where: { tenantId: tenant.id }, orderBy: { sortOrder: "asc" } });
+  const zones = zoneRows.map((z) => ({ name: z.name, fee: z.fee, states: parseZoneStates(z.statesJson) }));
+
   return (
     <PageShell>
       <FramesManager
@@ -69,6 +78,8 @@ export default async function AdminFramesPage({ params }: FramesPageProps) {
         matBoardPrice={tenant.matBoardPrice}
         initialFrames={frames as unknown as FrameDesignRow[]}
         initialSizes={printSizes as unknown as PrintSizeRow[]}
+        zones={zones}
+        initialTab={initialTab}
         canManage={levelAtLeast(viewer.access.areas.catalog, "MANAGE")}
       />
     </PageShell>

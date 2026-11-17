@@ -18,6 +18,7 @@ import {
   Layers,
   Loader2,
   AlertCircle,
+  Truck,
 } from "lucide-react";
 import {
   deleteFrameDesign,
@@ -36,6 +37,9 @@ import {
 } from "./print-size-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { ShippingZonesForm, type ShippingZoneRow } from "./shipping-zones-form";
+
+export type FramesTab = "frames" | "sizes" | "shipping";
 
 interface FramesManagerProps {
   tenantId: string;
@@ -44,7 +48,11 @@ interface FramesManagerProps {
   matBoardPrice: number;
   initialFrames: FrameDesignRow[];
   initialSizes: PrintSizeRow[];
-  /** Catalog MANAGE: may add, edit, hide and delete frames and sizes, and set the mat price. Read-only without it. */
+  /** Wall art shipping zones, shown on the Shipping tab. */
+  zones: ShippingZoneRow[];
+  /** The tab to open on (from ?tab=). */
+  initialTab?: FramesTab;
+  /** Catalog MANAGE: may add, edit, hide and delete frames and sizes, set the mat price and the shipping zones. Read-only without it. */
   canManage: boolean;
 }
 
@@ -55,12 +63,14 @@ export function FramesManager({
   matBoardPrice,
   initialFrames,
   initialSizes,
+  zones,
+  initialTab = "frames",
   canManage,
 }: FramesManagerProps) {
   const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"frames" | "sizes">("frames");
+  const [activeTab, setActiveTab] = useState<FramesTab>(initialTab);
 
   // Dialogs
   const [isFrameDialogOpen, setIsFrameDialogOpen] = useState(false);
@@ -209,7 +219,7 @@ export function FramesManager({
               <Plus className="size-4" />
               <span>Add Frame Molding</span>
             </button>
-          ) : (
+          ) : activeTab === "sizes" ? (
             <button
               type="button"
               onClick={() => {
@@ -221,7 +231,7 @@ export function FramesManager({
               <Plus className="size-4" />
               <span>Add Print Size</span>
             </button>
-          )}
+          ) : null}
           </>
           )
         }
@@ -342,6 +352,14 @@ export function FramesManager({
         >
           <Layers className="size-4" />
           <span>Print Dimensions ({initialSizes.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("shipping")}
+          className={tabClass(activeTab === "shipping")}
+        >
+          <Truck className="size-4" />
+          <span>Shipping Zones ({zones.length})</span>
         </button>
       </div>
 
@@ -551,6 +569,11 @@ export function FramesManager({
             </div>
           )}
         </div>
+      )}
+
+      {/* Tab 3: Shipping zones for wall art orders */}
+      {activeTab === "shipping" && (
+        <ShippingZonesForm tenantId={tenantId} tenantSlug={tenantSlug} currency={currency} zones={zones} canManage={canManage} />
       )}
 
       {/* Dialog Modals */}

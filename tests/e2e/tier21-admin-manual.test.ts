@@ -81,7 +81,7 @@ const QUOTED_LABELS: [string, string, string][] = [
   ["prints", "Start production", "components/admin/print-orders/print-order-actions.tsx"],
   ["prints", "Mark ready for pickup", "components/admin/print-orders/print-order-actions.tsx"],
   ["prints", "Cancel order", "components/admin/print-orders/print-order-actions.tsx"],
-  ["prints", "Shipping zones", "components/admin/settings/delivery-tab.tsx"],
+  ["prints", "Shipping Zones", "components/admin/frames/frames-manager.tsx"],
   ["clients-and-proposals", "Export CSV", "components/admin/clients/clients-directory.tsx"],
   ["clients-and-proposals", "New proposal", "components/admin/proposals/new-proposal-dialog.tsx"],
   ["clients-and-proposals", "Awaiting Signature", "components/admin/proposals/proposals-list.tsx"],

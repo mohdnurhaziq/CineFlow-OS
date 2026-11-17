@@ -129,15 +129,12 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
                 always releases everything.
               </>,
             ],
-            [
-              <Ui key="s">Shipping zones</Ui>,
-              "Where you deliver framed prints, and the flat fee for each zone. A state in no zone can only choose pickup.",
-            ],
           ]}
         />
         <ManualP>
-          See <ManualLink href={`${admin}/manual/galleries`}>Galleries</ManualLink> for delivery and{" "}
-          <ManualLink href={`${admin}/manual/prints`}>Framed prints</ManualLink> for shipping.
+          See <ManualLink href={`${admin}/manual/galleries`}>Galleries</ManualLink> for delivery. Shipping fees for framed prints
+          are set in <ManualLink href={`${admin}/frames?tab=shipping`}>Frames &amp; Prints → Shipping Zones</ManualLink>; see{" "}
+          <ManualLink href={`${admin}/manual/prints`}>Framed prints</ManualLink>.
         </ManualP>
       </ManualSection>
 
