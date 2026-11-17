@@ -57,6 +57,7 @@ export function CinemaBookingShell({
   const [sessionId, setSessionId] = useState<string>("");
   const [heldSlot, setHeldSlot] = useState<BookingSlotItem | null>(null);
   const [heldUntil, setHeldUntil] = useState<string | null>(null);
+  const [bookedSlotId, setBookedSlotId] = useState<string | null>(null);
   const [intakeOpen, setIntakeOpen] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
@@ -401,7 +402,14 @@ export function CinemaBookingShell({
       {/* 3-Field Booking Intake Modal */}
       <BookingIntakeModal
         isOpen={intakeOpen}
-        onClose={() => setIntakeOpen(false)}
+        onClose={() => {
+          setIntakeOpen(false);
+          // A booked slot stays held here only so the booking form can show its confirmation.
+          if (bookedSlotId) {
+            setHeldSlot(null);
+            setBookedSlotId(null);
+          }
+        }}
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         currency={tenant.currency}
@@ -413,7 +421,9 @@ export function CinemaBookingShell({
         categoryName={heldSlot ? categoryLabel(heldSlot.category) : undefined}
         initialPackageId={initialPackageId}
         onBookingConfirmed={() => {
-          setHeldSlot(null);
+          // Keep the slot until the form is closed: the form shows the confirmation, with the next
+          // step (upload the slip, or pay at the studio). Clearing it here closed the form at once.
+          setBookedSlotId(heldSlot?.id ?? null);
           setHeldUntil(null);
           setSlots((prev) =>
             prev.map((s) => (heldSlot && s.id === heldSlot.id ? { ...s, status: "BOOKED" } : s))

@@ -66,6 +66,7 @@ export function BookingIntakeModal({
 
   const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
   const [depositPaid, setDepositPaid] = useState(false);
+  const [confirmedInvoiceId, setConfirmedInvoiceId] = useState<string | null>(null);
   const [packageId, setPackageId] = useState<string | null>(initialPackageId ?? null);
 
   if (!isOpen || !slot) return null;
@@ -114,6 +115,7 @@ export function BookingIntakeModal({
         window.location.assign(result.paymentUrl);
       } else if (result.success && result.trackingCode) {
         setDepositPaid(result.status === "PAID");
+        setConfirmedInvoiceId(result.invoiceId ?? null);
         setConfirmedCode(result.trackingCode);
         onBookingConfirmed(result.trackingCode);
         toast.success(
@@ -170,11 +172,9 @@ export function BookingIntakeModal({
                   <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                     {depositPaid
                       ? "Your session slot has been permanently locked. A confirmation email and calendar invite have been dispatched."
-                      : `Your slot is held for 24 hours while your deposit is outstanding. ${
-                          formData.paymentMethod === "QR_CODE"
-                            ? "Upload your payment slip from My Account (Invoices) within 24 hours"
-                            : "Pay the deposit at the studio counter within 24 hours"
-                        }, or the slot is released.`}
+                      : formData.paymentMethod === "QR_CODE"
+                      ? "Your slot is held for 24 hours. Transfer the deposit, then upload the payment slip so the studio can confirm your booking. Without a slip, the slot is released after 24 hours."
+                      : "Your slot is held for 24 hours. Pay the deposit at the studio counter so they can confirm your booking. Unpaid, the slot is released after 24 hours."}
                   </p>
                 </div>
 
@@ -188,7 +188,11 @@ export function BookingIntakeModal({
 
                 {!depositPaid && (
                   <a
-                    href={`/${tenantSlug}/account`}
+                    href={
+                      formData.paymentMethod === "QR_CODE" && confirmedInvoiceId
+                        ? `/${tenantSlug}/checkout?invoiceId=${confirmedInvoiceId}`
+                        : `/${tenantSlug}/account`
+                    }
                     className="block w-full py-3 rounded-lg bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400 text-center"
                   >
                     {formData.paymentMethod === "QR_CODE" ? "Upload Payment Slip" : "Go to My Account"}

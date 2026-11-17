@@ -257,6 +257,7 @@ export async function createClientBooking(input: CreateBookingInput) {
       success: true,
       bookingId: result.bookingId,
       trackingCode: result.trackingCode,
+      invoiceId: result.invoiceId,
       invoiceNumber: result.invoiceNumber,
       status: result.status,
       // Present only when the client must finish paying on the gateway's page.
