@@ -215,11 +215,13 @@ export function OrderSummaryCard({
 
             <div className="pt-3 border-t border-zinc-800 flex justify-between items-baseline">
               <div>
-                <span className="text-sm font-bold text-white block">Total Settlement Due</span>
+                <span className="text-sm font-bold text-white block">Amount due</span>
                 <span className="text-[10px] text-emerald-400 font-mono">
                   {invoice.milestoneType === "FINAL_BALANCE_50" || invoice.milestoneType === "BOOKING_BALANCE"
-                    ? "Immediately unlocks 4K masters & ZIP"
-                    : "Locks production milestone"}
+                    ? "Unlocks your full-resolution downloads"
+                    : invoice.milestoneType === "BOOKING_DEPOSIT"
+                    ? "Confirms your booking"
+                    : ""}
                 </span>
               </div>
               <div className="text-2xl font-bold font-mono tabular-nums text-amber-400">
@@ -234,7 +236,7 @@ export function OrderSummaryCard({
         <div className="p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/60 flex items-center gap-3">
           <ShieldCheck className="size-5 text-amber-400 shrink-0" />
           <div className="text-[11px] text-zinc-400 leading-snug">
-            <span className="font-bold text-white">CineFlow Escrow Guarantee:</span> Official studio invoice and cryptographic booking receipt issued instantly.
+            You&apos;ll find the invoice, and the receipt once it&apos;s paid, in your account.
           </div>
         </div>
       </div>

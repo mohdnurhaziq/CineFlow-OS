@@ -66,7 +66,7 @@ export function QrPaymentForm({
       const data = await res.json();
       if (res.ok && data.success && data.url) {
         setProofUrl(data.url);
-        toast.success("Receipt slip uploaded successfully!");
+        toast.success("Slip attached. Press Submit to send it to the studio.");
       } else {
         throw new Error(data.error || "Failed to upload receipt.");
       }

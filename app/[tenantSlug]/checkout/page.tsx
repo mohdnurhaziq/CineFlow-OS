@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: CheckoutPageProps): Promise<M
   if (!tenant) return { title: "Checkout" };
 
   return {
-    title: `Secure Checkout & Production Escrow | ${tenant.name}`,
+    title: `Checkout | ${tenant.name}`,
     description: "Multi-option studio checkout for online cards, studio QR transfer, and cash counter.",
   };
 }

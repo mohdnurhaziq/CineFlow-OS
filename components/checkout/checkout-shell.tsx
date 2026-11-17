@@ -38,6 +38,8 @@ interface CheckoutShellProps {
     invoiceNumber: string;
     milestoneType: string;
     amount: number;
+    /** How the client chose to pay (QR_CODE, CASH, CARD), if already chosen. */
+    paymentMethod?: string | null;
     dueDate: Date | string;
     projectId?: string | null;
     client?: {
@@ -82,7 +84,14 @@ export function CheckoutShell({
   initialPackageId,
   invoiceDoneHref: invoiceDoneHrefProp,
 }: CheckoutShellProps) {
-  const [activeTab, setActiveTab] = useState<"CARD" | "QR_CODE" | "CASH">(cardMode === "OFF" ? "QR_CODE" : "CARD");
+  // An invoice opens on the way it's being paid: a QR deposit on the slip upload, cash on the counter.
+  const [activeTab, setActiveTab] = useState<"CARD" | "QR_CODE" | "CASH">(
+    invoice?.paymentMethod === "QR_CODE" || invoice?.paymentMethod === "CASH"
+      ? invoice.paymentMethod
+      : cardMode === "OFF"
+      ? "QR_CODE"
+      : "CARD"
+  );
 
   const [clientInfo, setClientInfo] = useState({
     name: initialData?.name || invoice?.client?.name || "",
@@ -298,10 +307,10 @@ export function CheckoutShell({
       {/* Page Title */}
       <div className="mb-8 space-y-1">
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
-          SECURE ESCROW CHECKOUT // {tenant.name.toUpperCase()}
+          CHECKOUT · {tenant.name.toUpperCase()}
         </span>
         <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-          {slot ? "Complete Studio Session Reservation" : "Settle Milestone Invoice"}
+          {slot ? "Complete Studio Session Reservation" : "Pay your invoice"}
         </h1>
       </div>
 
@@ -419,10 +428,7 @@ export function CheckoutShell({
           <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] space-y-6 shadow-xl">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
               <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
-                {isDirectInvoice ? "Select Settlement Channel" : "Step 2: Choose Payment Method"}
-              </span>
-              <span className="text-[10px] font-mono text-zinc-400">
-                100% Secure &amp; Self-Contained
+                {isDirectInvoice ? "Choose how to pay" : "Step 2: Choose Payment Method"}
               </span>
             </div>
 
