@@ -21,6 +21,15 @@ Entries from before 5 Nov 2026 were rebuilt from commit messages, so they are sh
 
 A test now lists every admin action (99), upload folder and admin page (22) with exactly the access it needs (Tier 26). For each one it checks that one step below is refused and exactly the need is allowed, so a check that asks for the wrong area or level fails the suite, not only a missing one. Proved by loosening one action and one page on purpose: 9 failures, then restored. A browser walkthrough on the Docker build signed in as each starter role (Photographer, Videographer, Crew, Front desk), each money permission, and a role with no access. Full E2E suite: 4795 assertions, 0 failures.
 
+### BUG-20261118-02: Overview "Billing & Receipts" listed invoices one by one
+
+- **Area:** Client account → Overview → Billing & Receipts
+- **Problem:** The box listed single invoices (one unpaid, one or two paid), so a client saw "Booking deposit" and "Booking balance" as separate items, and a slip under review didn't show at all. A print order from a proposal's gallery also sat apart from that proposal on the Invoices tab.
+- **Fix:** The box shows one line per bill (a booking or proposal with all its invoices, or a lone invoice): total, paid so far, a progress bar, a Settled / due / Under review badge, and Pay now, Receipt or Details. Bills with money due come first. A gallery's print order joins the proposal billed for that gallery, as it already did for bookings.
+- **Files:** `components/account/client-dashboard.tsx`, `lib/invoices/bill-groups.ts`
+- **Tests:** T13-GROUP-01
+- **Commit:** 130afdf
+
 ### BUG-20261118-01: A booking's print order sat outside its bill, and "All settled" showed while a slip was under review
 
 - **Area:** Client account → Invoices & Payment Receipts
