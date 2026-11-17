@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X, CheckCircle2, Loader2, Calendar, CreditCard, ArrowRight } from "lucide-react";
+import { X, CheckCircle2, Loader2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { createClientBooking, type CreateBookingInput } from "@/lib/actions/booking";
@@ -313,7 +313,8 @@ export function BookingIntakeModal({
                   </div>
                 </div>
 
-                {/* Submit & Checkout CTAs */}
+                {/* One finish button: card goes on to the payment page; QR and cash hold the slot
+                    for 24 hours, and the next screen says how to pay. */}
                 <div className="pt-3 space-y-2">
                   <button
                     type="button"
@@ -324,31 +325,16 @@ export function BookingIntakeModal({
                     {isPending ? (
                       <>
                         <Loader2 className="size-4 animate-spin" />
-                        Locking Reservation...
+                        Booking...
                       </>
                     ) : (
                       <>
                         <Calendar className="size-4" />
-                        Quick Confirm Booking
+                        Confirm booking
                       </>
                     )}
                   </button>
 
-                  <button
-                    type="button"
-                    disabled={!clientAccount}
-                    onClick={() => {
-                      const url = `/${tenantSlug}/checkout?slotId=${slot.id}&sessionId=${sessionId}&brief=${encodeURIComponent(
-                        formData.creativeBrief
-                      )}${chosen ? `&packageId=${chosen.id}` : ""}`;
-                      router.push(url);
-                    }}
-                    className="w-full py-2.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-300 hover:text-white font-medium text-xs font-mono flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <CreditCard className="size-3.5 text-amber-400" />
-                    <span>Proceed to Dedicated Checkout Page</span>
-                    <ArrowRight className="size-3.5" />
-                  </button>
                 </div>
               </div>
             )}
