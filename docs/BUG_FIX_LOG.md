@@ -17,6 +17,56 @@ Entries from before 5 Nov 2026 were rebuilt from commit messages, so they are sh
 
 ---
 
+## 2026-11-18: Client walkthrough
+
+A browser walkthrough of the client side on the Docker build, at phone width: a new client books a session, pays the deposit by QR slip, the owner approves it, and the client checks their account; then a delivered gallery, favourites, locked prints and a receipt (demo client). Ordering prints wasn't tried in the browser (it needs a paid gallery; Tier 20 covers it). Everything created was removed afterwards.
+
+### BUG-20261118-04: After a QR or cash booking, the client never saw how to pay
+
+- **Area:** Booking page (Quick Confirm Booking)
+- **Problem:** The booking form closed at once, leaving a short message on the calendar. The client never saw the "Booking received" screen, the QR or the slip upload, so there was no payment for the studio to check.
+- **Cause:** On success the calendar cleared the held slot, and the form hides itself without a slot. Its button also only went to My Account.
+- **Fix:** The slot is kept until the form is closed, so the confirmation shows; its Upload Payment Slip button opens that invoice's slip upload. The booking action now returns the invoice.
+- **Files:** `components/booking/cinema-booking-shell.tsx`, `components/booking/booking-intake-modal.tsx`, `lib/actions/booking.ts`
+- **Tests:** browser walkthrough
+- **Commit:** 05d4b4d
+
+### BUG-20261118-05: The account called an unpaid booking "Confirmed" and the balance "settled"
+
+- **Area:** Client account (Overview, My Bookings, Invoices & Receipts)
+- **Problem:** Before any deposit was paid, the session read "Confirmed", Balance due read $0.00 "All invoices settled & clear", the bill read "Under review" with no way to pay, the Unpaid filter read 0, and statuses showed as codes (PENDING_VERIFICATION, PENDING, "Qr Code"). A rejected slip was counted with cancelled invoices.
+- **Cause:** A QR deposit is stored as "awaiting verification" from the moment it's booked; the account read that as "the studio is checking a slip" even with no slip. The overview badge was hard-coded "Confirmed".
+- **Fix:** One rule for the client's side (`clientPayState`): unpaid, waiting for your payment (no slip yet, or cash to bring), under review (slip sent), slip not accepted, paid, cancelled. Owed invoices count toward the balance and the Unpaid filter; each shows a plain label and its next step (Pay now, Upload slip). Sessions read "Awaiting deposit" or "Payment under review" until confirmed. The top banner names the payment due first, says "Action required" only when it is (a deposit to pay, a rejected slip, or due within 3 days), and otherwise shows its date.
+- **Files:** `lib/invoices/client-status.ts`, `lib/invoices/bill-groups.ts`, `components/account/client-dashboard.tsx`
+- **Tests:** T13-PAY-01, T13-PAY-02, T13-GROUP-02
+- **Commit:** c7797fc
+
+### BUG-20261118-06: The booking email said "Confirmed" before the deposit was paid
+
+- **Area:** Booking emails
+- **Problem:** A QR or cash booking got "Confirmed: Production Session" at once, with no word on how to pay; a portrait client was told about "location ephemeris".
+- **Cause:** One email for every booking, paid or not.
+- **Fix:** Unpaid: "Booking received: please pay your deposit", with the next step (upload the slip, or pay at the studio, within 24 hours) and, for QR, a link straight to the slip upload. Paid: "Booking confirmed". Plain wording, and the approval email formats the session day as stored.
+- **Files:** `lib/notifications.ts`, `lib/bookings/confirmation-email.ts`, `lib/bookings/payment-approval.ts`
+- **Tests:** T13-PAY-02, T7-ADM-EMAIL-01
+- **Commit:** cad4c7e
+
+### BUG-20261118-07: Checkout opened on Card, claimed an "escrow guarantee", and said a slip was sent before it was
+
+- **Area:** Checkout
+- **Problem:** "Upload payment slip" opened checkout on Card. The page said "Secure Escrow Checkout" and "CineFlow Escrow Guarantee ... cryptographic booking receipt", neither of which exists. Attaching a slip said "uploaded successfully!" before it was submitted.
+- **Fix:** An invoice opens on its own payment method (QR or cash). Plain, accurate wording: "Pay your invoice", "Choose how to pay", "Amount due", "Confirms your booking". The attach message says to press Submit.
+- **Files:** `components/checkout/checkout-shell.tsx`, `components/checkout/order-summary-card.tsx`, `components/checkout/qr-payment-form.tsx`, `app/[tenantSlug]/checkout/page.tsx`
+- **Tests:** browser walkthrough
+- **Commit:** 1c5c445
+
+### BUG-20261118-08: Smaller things from the walkthrough
+
+- **Category codes shown as names:** sessions read "Studio-Portrait" and website cards "commercial"; they now show the studio's category name ("Studio Portraits"). `lib/bookings/category-name.ts`, `components/showcase/portfolio-grid.tsx`. Test: T13-PAY-01.
+- **No message after adding a slot:** the admin calendar now says "Slot added: Thu 19 Nov, 10:00 AM – 11:30 AM." `components/admin/calendar/single-slot-dialog.tsx`.
+- **Stage names cut off on a phone** ("Plann…"): on a phone the strip shows bars and icons, with the current stage named above it. `components/account/client-dashboard.tsx`.
+- **Commit:** c7797fc
+
 ## 2026-11-17: Full access check of every role and permission
 
 A test now lists every admin action (99), upload folder and admin page (22) with exactly the access it needs (Tier 26). For each one it checks that one step below is refused and exactly the need is allowed, so a check that asks for the wrong area or level fails the suite, not only a missing one. Proved by loosening one action and one page on purpose: 9 failures, then restored. A browser walkthrough on the Docker build signed in as each starter role (Photographer, Videographer, Crew, Front desk), each money permission, and a role with no access. Full E2E suite: 4795 assertions, 0 failures.
@@ -575,6 +625,9 @@ The manual describes the app as it is today; each item below is written there as
 - [x] **No screen to add or remove team members.** Fixed 2026-11-17: Settings has a Team tab where the owner invites, edits and removes team members, defines roles with per-area access, and assigns people to bookings (with a My schedule page). Manual: Team, roles and assigning shoots.
 - [ ] **Proposals have no draft or decline.** A proposal is sent the moment it is created; the "Draft" and "Declined" labels exist in the proposals list but nothing ever sets them. Either add Save as draft and a client Decline button, or remove the labels. (Clients and proposals)
 - [x] **A package can't be hidden.** It can only be deleted or moved to a switched-off category. Add an Active switch to packages, as categories, sizes and frames already have. (Services and your website) Fixed 2026-11-18: each package card has an Active / Inactive switch (Services: Manage). Inactive packages are kept with their bookings but left out of the website, booking page, checkout, staff New booking and calendar slot pricing, and the server refuses to book them. Manual: Services and your website. Test: T11-PKG-OFF-01. Commit: 5fc9181.
+- [ ] **Client pages use film-crew jargon.** Found in the client walkthrough (2026-11-18): "Cinema-Style Soundstage Calendar", "Main Production Stage", "Morning Call Session", "Quick account // 4 fields", "PAYWALL ACTIVE", "Streaming Review Proxy & 4K ProRes". Decide whether clients should see plainer words.
+- [ ] **The booking form has two finish buttons.** "Quick Confirm Booking" and "Proceed to Dedicated Checkout Page" do nearly the same thing; a client can't tell which to press.
+- [ ] **A tab left open across an update breaks its buttons.** After a new version is deployed, buttons on an already-open page (e.g. Sign out) fail with "Server Action not found" until the page is reloaded. Consider reloading the page when that happens.
 - [x] **A page-load error in the browser console.** React error #418 (server and browser rendered different text) appears on the client account, checkout and call sheet pages in the Docker build. Nothing visible breaks; likely a date or time formatted in a different time zone on the server and in the browser. Fixed 2026-11-18 (BUG-20261118-03, commit bb4b6ff): dates now use a fixed time zone. Test: T27-DATES-01.
 - [x] **Gear day rates show to everyone with Shoot days & gear access.** Found in the access walkthrough (2026-11-17): Photographer and Crew see each item's day rate and the kit's total ($2,620 in the demo). Other money is hidden without Invoices access; the design doesn't say whether gear rates count. Decide, then hide them the same way or leave as is. (Team, roles and assigning shoots) Fixed 2026-11-18: rates count as money. Without Invoices View, Gear & Fleet leaves out the Daily rental value card, the Daily rate column, kit rates and the rate fields in the edit forms; the server doesn't send them, and saving a form without the field keeps the existing rate. Manual: Team, roles and assigning shoots; Production → Your gear list. Test: T26-GEAR-01. Commit: 6dab402.
 - [x] **Shipping zones: the server allowed Catalog Manage, but the only screen was in owner-only Settings.** Fixed 2026-11-17: shipping zones moved to Frames & Prints → Shipping Zones (`?tab=shipping`), editable with Catalog & website: Manage and read-only with View. Settings → Photo delivery links there. Manual: Framed prints, Settings and your team. Test: T26-SHIP-01. Commit: e61eee3.
