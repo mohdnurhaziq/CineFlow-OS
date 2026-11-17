@@ -37,6 +37,7 @@ import type { FramedPrintsData } from "@/lib/prints/gallery";
 import { milestoneLabel } from "@/lib/labels";
 import { BOOKING_MILESTONES, PROPOSAL_MILESTONES, billSums, invoiceBookingId, invoiceProposalId } from "@/lib/invoices/bill-groups";
 import { cn } from "@/lib/utils";
+import { STUDIO_TIME_ZONE, formatSlotDate } from "@/lib/slot-time";
 
 type BookingRow = ClientBooking & {
   slot: BookingSlot | null;
@@ -156,24 +157,19 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   const [showVoidInvoices, setShowVoidInvoices] = useState(false);
 
   const money = (amount: number) => formatMoney(tenant.currency, amount);
-  const formatDate = (d: Date | string) => {
-    const dateObj = typeof d === "string" ? new Date(d) : d;
-    return dateObj.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+  // Dates read the same on the server and in the browser, whatever the viewer's time zone:
+  // otherwise the page renders one day on the server, another in the browser.
+  const LONG_DAY: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric", year: "numeric" };
+  /** A moment (paid, due) as the studio's calendar date. */
+  const formatDate = (d: Date | string) => new Date(d).toLocaleDateString("en-US", { ...LONG_DAY, timeZone: STUDIO_TIME_ZONE });
+  /** A shoot or session day, stored as a calendar day. */
+  const formatDay = (d: Date | string) => formatSlotDate(d, LONG_DAY, "en-US");
 
-  const formatShortDate = (d: Date | string) => {
-    const dateObj = typeof d === "string" ? new Date(d) : d;
-    return {
-      month: dateObj.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
-      day: dateObj.getDate(),
-      weekday: dateObj.toLocaleDateString("en-US", { weekday: "short" }),
-    };
-  };
+  const formatShortDate = (d: Date | string) => ({
+    month: formatSlotDate(d, { month: "short" }, "en-US").toUpperCase(),
+    day: new Date(d).getUTCDate(),
+    weekday: formatSlotDate(d, { weekday: "short" }, "en-US"),
+  });
 
   // Financial calculations
   const unpaidInvoices = useMemo(
@@ -436,7 +432,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300 font-mono">
-                  <span>📅 {formatDate(nextShoot.shootDate)}</span>
+                  <span>📅 {formatDay(nextShoot.shootDate)}</span>
                   <span>⏰ Call time {nextShoot.generalCallTime}</span>
                   <span className="flex items-center gap-1">
                     <MapPin className="size-3 text-zinc-400" />
@@ -565,7 +561,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     {spotlightNextShoot ? (
                       <p className="text-xs text-zinc-300 font-mono flex items-center gap-1.5 flex-wrap">
                         <CalendarClock className="size-3.5 text-amber-400" />
-                        <span>Next shoot: {formatDate(spotlightNextShoot.shootDate)} · {spotlightNextShoot.generalCallTime}</span>
+                        <span>Next shoot: {formatDay(spotlightNextShoot.shootDate)} · {spotlightNextShoot.generalCallTime}</span>
                         <span className="text-zinc-500">· {spotlightNextShoot.locationName}</span>
                       </p>
                     ) : (
@@ -988,7 +984,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               <CalendarClock className="size-4 text-amber-400 flex-shrink-0 mt-0.5" />
                               <div className="space-y-0.5">
                                 <div className="font-semibold text-white">
-                                  Upcoming Shoot: {formatDate(nextShootDay.shootDate)} · {nextShootDay.generalCallTime}
+                                  Upcoming Shoot: {formatDay(nextShootDay.shootDate)} · {nextShootDay.generalCallTime}
                                 </div>
                                 <div className="text-[11px] text-zinc-400 font-mono">
                                   📍 {nextShootDay.locationName}

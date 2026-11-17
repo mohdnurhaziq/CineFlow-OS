@@ -15,6 +15,7 @@ import {
 import { ReleaseSignaturePad } from "./release-signature-pad";
 import { submitDigitalRelease } from "@/lib/actions/logistics";
 import { errorMessageOf } from "@/lib/action-error";
+import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
 
 export interface ExistingRelease {
   id: string;
@@ -392,6 +393,7 @@ export function ReleaseFormShell({
                           day: "numeric",
                           year: "numeric",
                           hour: "2-digit",
+                          timeZone: STUDIO_TIME_ZONE,
                           minute: "2-digit",
                         })
                       : String(rel.signedAt);

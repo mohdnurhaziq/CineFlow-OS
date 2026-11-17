@@ -41,6 +41,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useRouter } from "next/navigation";
 import { checkoutWindow } from "@/lib/gear/checkout-window";
 import { toast } from "sonner";
+import { formatSlotDate } from "@/lib/slot-time";
 
 interface GearDashboardProps {
   tenantId: string;
@@ -627,11 +628,11 @@ export function GearDashboard({
 
                     const startStr =
                       res.startDate instanceof Date
-                        ? res.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                        ? formatSlotDate(res.startDate, { month: "short", day: "numeric" }, "en-US")
                         : String(res.startDate);
                     const endStr =
                       res.endDate instanceof Date
-                        ? res.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                        ? formatSlotDate(res.endDate, { month: "short", day: "numeric" }, "en-US")
                         : String(res.endDate);
 
                     return (

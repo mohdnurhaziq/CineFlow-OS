@@ -22,6 +22,7 @@ import type { SolarTimes } from "@/lib/solar";
 import { SolarHudStrip } from "./solar-hud-strip";
 import { CrewRosterCard } from "./crew-roster-card";
 import { ShotListHud, type ShotItemData } from "./shot-list-hud";
+import { formatSlotDate } from "@/lib/slot-time";
 
 export interface CallSheetDetails {
   id: string;
@@ -85,12 +86,12 @@ export function CallSheetShell({
 
   const formattedDate =
     callSheet.shootDate instanceof Date
-      ? callSheet.shootDate.toLocaleDateString("en-US", {
+      ? formatSlotDate(callSheet.shootDate, {
           weekday: "long",
           year: "numeric",
           month: "long",
           day: "numeric",
-        })
+        }, "en-US")
       : String(callSheet.shootDate);
 
   const tenantSlug = callSheet.project.tenant.slug;
