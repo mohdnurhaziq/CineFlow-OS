@@ -21,6 +21,26 @@ Entries from before 5 Nov 2026 were rebuilt from commit messages, so they are sh
 
 A test now lists every admin action (99), upload folder and admin page (22) with exactly the access it needs (Tier 26). For each one it checks that one step below is refused and exactly the need is allowed, so a check that asks for the wrong area or level fails the suite, not only a missing one. Proved by loosening one action and one page on purpose: 9 failures, then restored. A browser walkthrough on the Docker build signed in as each starter role (Photographer, Videographer, Crew, Front desk), each money permission, and a role with no access. Full E2E suite: 4795 assertions, 0 failures.
 
+### BUG-20261118-01: A booking's print order sat outside its bill, and "All settled" showed while a slip was under review
+
+- **Area:** Client account → Invoices & Payment Receipts
+- **Problem:** A booking's deposit and balance were grouped in one card, but a print order from that booking's gallery showed apart under "Direct Orders". The card's total was the session price only, and it said "All settled" even while a payment slip was waiting for review.
+- **Cause:** Cards grouped invoices by booking only; a print order is linked to the gallery, not the booking. The settled badge was checked before the review state.
+- **Fix:** Invoices linked to a booking's gallery join that booking's card; the total is the session price plus extras such as prints; a card with a slip under review isn't settled.
+- **Files:** `lib/invoices/bill-groups.ts`, `components/account/client-dashboard.tsx`
+- **Tests:** T13-GROUP-01, T13-GROUP-02
+- **Commit:** 0fab02e
+
+### BUG-20261117-04: A deleted account's cookie still signed in
+
+- **Area:** Sign-in sessions (`getCurrentUser`)
+- **Problem:** After an account was deleted from the database, its browser cookie still opened the admin. Team access was safe (it is read from the database, and a missing account gets none), but owner-only checks trust the role inside the cookie, so a deleted owner's cookie would still pass them.
+- **Cause:** The session check ended a session only when the account was marked removed or its password was reset; it treated a missing account as fine.
+- **Fix:** A missing account means no session.
+- **Files:** `lib/auth/token.ts`
+- **Tests:** T26-SESSION-01
+- **Commit:** 544d66b
+
 ### BUG-20261117-01: Booking showed "Upload photos" to people who can't open the gallery
 
 - **Area:** Booking details (page, Bookings pop-up, Calendar pop-up)
@@ -538,5 +558,5 @@ The manual describes the app as it is today; each item below is written there as
 - [ ] **A package can't be hidden.** It can only be deleted or moved to a switched-off category. Add an Active switch to packages, as categories, sizes and frames already have. (Services and your website)
 - [ ] **A page-load error in the browser console.** React error #418 (server and browser rendered different text) appears on the client account, checkout and call sheet pages in the Docker build. Nothing visible breaks; likely a date or time formatted in a different time zone on the server and in the browser.
 - [ ] **Gear day rates show to everyone with Shoot days & gear access.** Found in the access walkthrough (2026-11-17): Photographer and Crew see each item's day rate and the kit's total ($2,620 in the demo). Other money is hidden without Invoices access; the design doesn't say whether gear rates count. Decide, then hide them the same way or leave as is. (Team, roles and assigning shoots)
-- [ ] **Shipping zones: the server allows Catalog Manage, but the only screen is in owner-only Settings.** The design lists shipping zones under Catalog & website, yet they are edited in Settings → Photo delivery, which only the owner opens. Either move the shipping zones onto the Frames & Prints page, or make the action owner-only. (Settings and your team)
+- [x] **Shipping zones: the server allowed Catalog Manage, but the only screen was in owner-only Settings.** Fixed 2026-11-17: shipping zones moved to Frames & Prints → Shipping Zones (`?tab=shipping`), editable with Catalog & website: Manage and read-only with View. Settings → Photo delivery links there. Manual: Framed prints, Settings and your team. Test: T26-SHIP-01. Commit: e61eee3.
 - [x] **A held slot can still be edited or deleted in the Calendar.** Fixed 2026-11-16: edit, delete and batch delete refuse a slot whose hold is still running (`SLOT_HELD`) or that has a client booking (`SLOT_HAS_BOOKING`, use Move to another slot), checked again inside the write so a client who selects it at the same instant wins. A hold that has run out doesn't block, and editing such a slot opens it up. The Calendar greys out the buttons with the reason. Test: T2-SLOT-02.
