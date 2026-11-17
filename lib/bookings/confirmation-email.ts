@@ -34,6 +34,17 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
     } else if (account) {
       link = `/${slug}/account`;
       linkLabel = "View my booking";
+      // A QR deposit still to pay: go straight to the slip upload (sign-in comes first if needed).
+      const deposit = booking.depositPaid
+        ? null
+        : await db.milestoneInvoice.findFirst({
+            where: { bookingId: booking.id, milestoneType: "BOOKING_DEPOSIT", status: "PENDING_VERIFICATION", paymentProofUrl: null },
+            select: { id: true, paymentMethod: true },
+          });
+      if (deposit?.paymentMethod === "QR_CODE") {
+        link = `/${slug}/checkout?invoiceId=${deposit.id}`;
+        linkLabel = "Upload payment slip";
+      }
     } else {
       link = `/${slug}/my-booking?code=${encodeURIComponent(booking.trackingCode)}`;
       linkLabel = "View my booking";
@@ -54,6 +65,7 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
       endTime: booking.slot?.endTime ?? "",
       depositAmount: booking.depositAmount,
       depositPaid: booking.depositPaid,
+      depositMethod: booking.paymentMethod,
       currency: booking.tenant.currency,
       trackingCode: booking.trackingCode,
       bookingUrl: `${appUrl}${link}`,

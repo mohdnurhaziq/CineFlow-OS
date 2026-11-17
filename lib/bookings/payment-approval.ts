@@ -4,6 +4,7 @@ import { InvoiceNotPayableError, onInvoicePaid, updatePayableInvoice } from "@/l
 import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { revalidatePath } from "next/cache";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
+import { formatSlotDate } from "@/lib/slot-time";
 
 /**
  * Marks an invoice paid and applies what follows from it (booking confirmed, balance issued,
@@ -175,7 +176,7 @@ export async function applyInvoicePayment(
         if (linked) {
           const slot = linked.slotId ? await db.bookingSlot.findUnique({ where: { id: linked.slotId } }) : null;
           const slotDate = slot?.date
-            ? new Date(slot.date).toLocaleDateString("en-US", { dateStyle: "medium" })
+            ? formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })
             : (linked.targetDate ?? "Scheduled Date");
           const bookingUrl = `${appUrl}/${tenantSlug}/account`;
 
@@ -186,7 +187,7 @@ export async function applyInvoicePayment(
             clientName: invoice.client.name,
             clientEmail: invoice.client.email,
             clientPhone: invoice.client.phone || undefined,
-            packageName: linked.packageName || "Studio Production Session",
+            packageName: linked.packageName || "Studio session",
             slotDate,
             startTime: slot?.startTime ?? "",
             endTime: slot?.endTime ?? "",

@@ -326,7 +326,8 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       expectSuccess(res, "res");
       const mail = sent.find((m) => m.to?.includes(e));
       harness.assert(!!mail, "A confirmation email is sent to the customer");
-      harness.assert(!!mail?.subject?.includes("Confirmed"), "Subject says the booking is confirmed");
+      // The deposit isn't paid yet, so it's "received", not "confirmed" (it's confirmed once paid).
+      harness.assert(!!mail?.subject?.startsWith("Booking received"), "Subject says the booking is received, deposit still due");
       harness.assert(!!mail?.html?.includes(res.trackingCode), "Email carries the booking reference");
       harness.assert(!!mail?.text?.includes("Deposit due"), "An unpaid deposit is shown as due, not paid");
       harness.assert(!mail?.text?.includes("Deposit paid"), "It does not claim the deposit was paid");

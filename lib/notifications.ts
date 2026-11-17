@@ -39,6 +39,8 @@ export interface BookingConfirmedPayload {
   depositPaid?: boolean;
   /** Button text for bookingUrl, e.g. "Set your password & view booking" for a new account. */
   bookingLinkLabel?: string;
+  /** How the unpaid deposit is to be paid (QR_CODE, CASH): the email says what to do next. */
+  depositMethod?: string | null;
 }
 
 export interface PaymentApprovedPayload {
@@ -388,12 +390,23 @@ export async function sendNotification(
 
   switch (payload.event) {
     case "BOOKING_CONFIRMED": {
-      const depositLabel = payload.depositPaid === false ? "Deposit due" : "Deposit paid";
-      const depositColor = payload.depositPaid === false ? "#f59e0b" : "#10b981";
-      emailSubject = `Confirmed: Production Session with ${payload.studioName}`;
+      // Not confirmed until the deposit is paid: say "received", and what to do next.
+      const unpaid = payload.depositPaid === false;
+      const depositLabel = unpaid ? "Deposit due" : "Deposit paid";
+      const depositColor = unpaid ? "#f59e0b" : "#10b981";
+      const nextStep = !unpaid
+        ? ""
+        : payload.depositMethod === "QR_CODE"
+        ? "Transfer the deposit and upload your payment slip within 24 hours, or the slot is released."
+        : payload.depositMethod === "CASH"
+        ? "Pay the deposit at the studio within 24 hours, or the slot is released."
+        : "Pay the deposit to confirm your booking.";
+      emailSubject = unpaid
+        ? `Booking received: please pay your deposit (${payload.studioName})`
+        : `Booking confirmed with ${payload.studioName}`;
       bodyHtml = `
         <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
-        <p>Your studio production booking has been locked into our schedule.</p>
+        <p>${unpaid ? `We&apos;ve received your booking. It&apos;s confirmed once your deposit is paid. ${esc(nextStep)}` : "Your booking is confirmed."}</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
             ${payload.trackingCode ? `<tr><td style="color: #71717a; padding: 4px 0;">Booking Ref:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.trackingCode)}</td></tr>` : ""}
@@ -412,10 +425,10 @@ export async function sendNotification(
         </div>`
             : ""
         }
-        <p>Our production team will contact you with call times, wardrobe guidelines, and location ephemeris.</p>
+        <p>The studio will be in touch with the details for your session.</p>
       `;
-      emailText = `Booking Confirmed with ${payload.studioName}!\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\n${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\n${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
-      whatsappText = `*${payload.studioName} — Booking Confirmed!*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is confirmed.${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} ${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 ${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
+      emailText = `${unpaid ? `Booking received by ${payload.studioName}. It's confirmed once your deposit is paid. ${nextStep}` : `Booking confirmed with ${payload.studioName}!`}\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\n${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\n${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — ${unpaid ? "Booking received" : "Booking confirmed!"}*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is ${unpaid ? `booked. ${nextStep}` : "confirmed."}${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} ${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 ${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
       break;
     }
 
