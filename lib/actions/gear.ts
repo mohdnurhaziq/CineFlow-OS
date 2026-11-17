@@ -23,6 +23,7 @@ import {
 } from "@/lib/validations/gear";
 import { checkoutWindow } from "@/lib/gear/checkout-window";
 import { errorMessageOf } from "@/lib/action-error";
+import { seesGearRates, withRate } from "@/lib/gear/rates";
 
 function safeRevalidate(path: string) {
   try {
@@ -39,8 +40,9 @@ function safeRevalidate(path: string) {
 export async function createGearItem(input: CreateGearItemInput) {
   try {
     const validated = CreateGearItemSchema.parse(input);
-    await requireAccess(validated.tenantId, "production", "MANAGE");
-    const { tenantId, tenantSlug, sku, ...data } = validated;
+    const user = await requireAccess(validated.tenantId, "production", "MANAGE");
+    const sees = seesGearRates(user.access);
+    const { tenantId, tenantSlug, sku, dailyRate, ...data } = validated;
 
     // Check SKU uniqueness
     const existingSku = await db.inventoryItem.findUnique({
@@ -59,6 +61,8 @@ export async function createGearItem(input: CreateGearItemInput) {
         tenantId,
         sku,
         ...data,
+        // Rates are money: set only by someone who can see them.
+        ...(sees ? { dailyRate } : {}),
       },
     });
 
@@ -66,7 +70,7 @@ export async function createGearItem(input: CreateGearItemInput) {
 
     return {
       success: true,
-      item,
+      item: withRate(item, sees),
     };
   } catch (err) {
     console.error("createGearItem error:", err);
@@ -81,8 +85,9 @@ export async function createGearItem(input: CreateGearItemInput) {
 export async function updateGearItem(input: UpdateGearItemInput) {
   try {
     const validated = UpdateGearItemSchema.parse(input);
-    await requireAccess(validated.tenantId, "production", "MANAGE");
-    const { id, tenantId, tenantSlug, sku, ...data } = validated;
+    const user = await requireAccess(validated.tenantId, "production", "MANAGE");
+    const sees = seesGearRates(user.access);
+    const { id, tenantId, tenantSlug, sku, dailyRate, ...data } = validated;
 
     const existing = await db.inventoryItem.findFirst({
       where: { id, tenantId },
@@ -114,6 +119,8 @@ export async function updateGearItem(input: UpdateGearItemInput) {
       data: {
         ...(sku ? { sku } : {}),
         ...data,
+        // Without money access the rate is left as it is, never cleared by a form that hides it.
+        ...(sees && dailyRate !== undefined ? { dailyRate } : {}),
       },
     });
 
@@ -121,7 +128,7 @@ export async function updateGearItem(input: UpdateGearItemInput) {
 
     return {
       success: true,
-      item: updated,
+      item: withRate(updated, sees),
     };
   } catch (err) {
     console.error("updateGearItem error:", err);
@@ -196,7 +203,7 @@ export async function updateGearConditionStatus(input: {
 }) {
   try {
     const { id, tenantId, tenantSlug, condition, status, location } = input;
-    await requireAccess(tenantId, "production", "MANAGE");
+    const user = await requireAccess(tenantId, "production", "MANAGE");
 
     const existing = await db.inventoryItem.findFirst({
       where: { id, tenantId },
@@ -215,7 +222,7 @@ export async function updateGearConditionStatus(input: {
     });
 
     safeRevalidate(`/${tenantSlug}/admin/inventory`);
-    return { success: true, item: updated };
+    return { success: true, item: withRate(updated, seesGearRates(user.access)) };
   } catch (err) {
     return { success: false, error: errorMessageOf(err) };
   }
@@ -234,7 +241,7 @@ export async function quarantineGearItem(input: {
   try {
     // Flagging an item for service or damage is an on-set action: Production VIEW. Clearing it
     // (releaseGearFromMaintenance) stays Production MANAGE.
-    await requireAccess(input.tenantId, "production", "VIEW");
+    const user = await requireAccess(input.tenantId, "production", "VIEW");
     const existing = await db.inventoryItem.findFirst({
       where: { id: input.itemId, tenantId: input.tenantId },
     });
@@ -253,7 +260,7 @@ export async function quarantineGearItem(input: {
     safeRevalidate(`/${input.tenantSlug}/admin/inventory`);
     return {
       success: true,
-      item: updated,
+      item: withRate(updated, seesGearRates(user.access)),
       message: `${existing.name} (${existing.sku}) quarantined for maintenance.`,
     };
   } catch (err) {
@@ -276,7 +283,7 @@ export async function releaseGearFromMaintenance(input: {
   condition?: "EXCELLENT" | "GOOD" | "FAIR";
 }) {
   try {
-    await requireAccess(input.tenantId, "production", "MANAGE");
+    const user = await requireAccess(input.tenantId, "production", "MANAGE");
     const existing = await db.inventoryItem.findFirst({
       where: { id: input.itemId, tenantId: input.tenantId },
     });
@@ -295,7 +302,7 @@ export async function releaseGearFromMaintenance(input: {
     safeRevalidate(`/${input.tenantSlug}/admin/inventory`);
     return {
       success: true,
-      item: updated,
+      item: withRate(updated, seesGearRates(user.access)),
       message: `${existing.name} (${existing.sku}) returned to active fleet.`,
     };
   } catch (err) {
@@ -315,7 +322,8 @@ export async function releaseGearFromMaintenance(input: {
 export async function createKitBundle(input: CreateKitBundleInput) {
   try {
     const validated = CreateKitBundleSchema.parse(input);
-    await requireAccess(validated.tenantId, "production", "MANAGE");
+    const user = await requireAccess(validated.tenantId, "production", "MANAGE");
+    const sees = seesGearRates(user.access);
     const { tenantId, tenantSlug, name, description, discipline, dailyRate, items } =
       validated;
 
@@ -344,7 +352,7 @@ export async function createKitBundle(input: CreateKitBundleInput) {
           name,
           description,
           discipline,
-          dailyRate: dailyRate || null,
+          dailyRate: sees ? dailyRate || null : null,
         },
       });
 
@@ -365,7 +373,7 @@ export async function createKitBundle(input: CreateKitBundleInput) {
 
     return {
       success: true,
-      bundle,
+      bundle: withRate(bundle, sees),
     };
   } catch (err) {
     console.error("createKitBundle error:", err);
@@ -380,7 +388,8 @@ export async function createKitBundle(input: CreateKitBundleInput) {
 export async function updateKitBundle(input: UpdateKitBundleInput) {
   try {
     const validated = UpdateKitBundleSchema.parse(input);
-    await requireAccess(validated.tenantId, "production", "MANAGE");
+    const user = await requireAccess(validated.tenantId, "production", "MANAGE");
+    const sees = seesGearRates(user.access);
     const { id, tenantId, tenantSlug, name, description, discipline, dailyRate, items } =
       validated;
 
@@ -422,7 +431,7 @@ export async function updateKitBundle(input: UpdateKitBundleInput) {
           ...(name ? { name } : {}),
           ...(description ? { description } : {}),
           ...(discipline ? { discipline } : {}),
-          ...(dailyRate !== undefined ? { dailyRate } : {}),
+          ...(sees && dailyRate !== undefined ? { dailyRate } : {}),
         },
       });
 
@@ -488,7 +497,7 @@ export async function deleteKitBundle(input: {
  */
 export async function checkBundleAvailability(bundleId: string, tenantId: string) {
   try {
-    await requireAccess(tenantId, "production", "VIEW");
+    const user = await requireAccess(tenantId, "production", "VIEW");
     const bundle = await db.kitBundle.findFirst({
       where: { id: bundleId, tenantId },
       include: {
@@ -552,7 +561,7 @@ export async function checkBundleAvailability(bundleId: string, tenantId: string
       totalItems,
       availableItems: availableCount,
       conflictingItems,
-      aggregateDailyRate: bundle.dailyRate || aggregateDailyRate,
+      aggregateDailyRate: seesGearRates(user.access) ? bundle.dailyRate || aggregateDailyRate : null,
     };
   } catch (err) {
     console.error("checkBundleAvailability error:", err);

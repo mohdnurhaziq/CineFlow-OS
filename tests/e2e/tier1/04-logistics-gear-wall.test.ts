@@ -657,7 +657,7 @@ export async function runLogisticsGearWallTests(harness: TestHarness) {
 
     const avail = await checkBundleAvailability(bundle!.id, luminaTenant!.id);
     harness.assert(typeof avail.aggregateDailyRate === "number", "aggregateDailyRate is a number");
-    harness.assert(avail.aggregateDailyRate >= 0, "aggregateDailyRate is non-negative");
+    harness.assert((avail.aggregateDailyRate ?? -1) >= 0, "aggregateDailyRate is non-negative");
   });
 
   // ============================================================================

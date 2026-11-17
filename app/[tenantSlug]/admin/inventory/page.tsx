@@ -11,6 +11,7 @@ import type { ReservationWithDetails } from "@/components/gear/inspection-dialog
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { bundleWithRates, seesGearRates, withRate } from "@/lib/gear/rates";
 
 interface InventoryPageProps {
   params: Promise<{
@@ -77,6 +78,8 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
 
 
   const user = await getCurrentUser();
+  // Day rates are money: without Invoices View they aren't sent at all.
+  const showRates = seesGearRates(viewer.access);
 
   return (
     <PageShell>
@@ -84,11 +87,12 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         currency={currencySymbol(tenant.currency)}
-        initialItems={items as InventoryItemRow[]}
-        initialBundles={bundles as unknown as KitBundleRow[]}
-        initialReservations={reservations as unknown as ReservationWithDetails[]}
+        initialItems={items.map((i) => withRate(i, showRates)) as InventoryItemRow[]}
+        initialBundles={bundles.map((b) => bundleWithRates(b, showRates)) as unknown as KitBundleRow[]}
+        initialReservations={reservations.map((r) => ({ ...r, item: withRate(r.item, showRates) })) as unknown as ReservationWithDetails[]}
         inspectorName={user?.name ?? "Studio staff"}
         canManage={levelAtLeast(viewer.access.areas.production, "MANAGE")}
+        showRates={showRates}
       />
     </PageShell>
   );

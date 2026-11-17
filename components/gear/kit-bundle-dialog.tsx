@@ -32,6 +32,8 @@ interface KitBundleDialogProps {
   tenantSlug: string;
   availableItems: InventoryItemRow[];
   bundleToEdit?: KitBundleRow | null;
+  /** Invoices VIEW: without it the rate field is left out (the server keeps the rate as it is). */
+  showRates: boolean;
   onSuccess?: () => void;
 }
 
@@ -42,6 +44,7 @@ export function KitBundleDialog({
   tenantSlug,
   availableItems,
   bundleToEdit,
+  showRates,
   onSuccess,
 }: KitBundleDialogProps) {
   const isEditing = !!bundleToEdit;
@@ -225,6 +228,7 @@ export function KitBundleDialog({
                 <option value="HYBRID">Photo &amp; video</option>
               </select>
             </div>
+            {showRates && (
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
                 Daily Package Rate ($/RM)
@@ -239,6 +243,7 @@ export function KitBundleDialog({
                 className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
               />
             </div>
+            )}
           </div>
 
           {/* Constituent BOM Items List */}

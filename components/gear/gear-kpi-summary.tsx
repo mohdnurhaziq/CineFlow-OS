@@ -4,7 +4,8 @@ import { Layers, DollarSign, Camera, Wrench } from "lucide-react";
 
 interface GearKpiSummaryProps {
   totalItems: number;
-  totalDailyValue: number;
+  /** All items at their day rate; null when this person can't see money (the card is left out). */
+  totalDailyValue: number | null;
   onShootCount: number;
   maintenanceCount: number;
   currency: string;
@@ -18,7 +19,7 @@ export function GearKpiSummary({
   currency,
 }: GearKpiSummaryProps) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${totalDailyValue === null ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
       {/* Total Fleet Assets */}
       <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-4 sm:p-5 shadow-xl">
         <div className="flex items-center justify-between text-zinc-400 text-xs font-mono mb-2">
@@ -32,6 +33,7 @@ export function GearKpiSummary({
       </div>
 
       {/* Daily Fleet Valuation */}
+      {totalDailyValue !== null && (
       <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-4 sm:p-5 shadow-xl">
         <div className="flex items-center justify-between text-zinc-400 text-xs font-mono mb-2">
           <span>Daily rental value</span>
@@ -42,6 +44,7 @@ export function GearKpiSummary({
         </div>
         <div className="text-[11px] text-zinc-500 mt-1">All items at their day rate</div>
       </div>
+      )}
 
       {/* On Shoot Active */}
       <div className="rounded-2xl border border-indigo-500/20 bg-indigo-950/10 p-4 sm:p-5 shadow-xl">
@@ -56,7 +59,7 @@ export function GearKpiSummary({
       </div>
 
       {/* Maintenance Needed */}
-      <div className={`rounded-2xl border p-4 sm:p-5 shadow-xl ${
+      <div className={`rounded-2xl border p-4 sm:p-5 shadow-xl ${totalDailyValue === null ? "col-span-2 lg:col-span-1" : ""} ${
         maintenanceCount > 0
           ? "border-amber-500/30 bg-amber-950/10"
           : "border-zinc-800 bg-[#0d0d10]"

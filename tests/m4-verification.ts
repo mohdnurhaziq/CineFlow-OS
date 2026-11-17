@@ -202,7 +202,7 @@ async function runM4Verification() {
   assert(bomCheck.success === true, "checkBundleAvailability evaluated kit_lum_acam");
   assert(bomCheck.totalItems >= 3, `Constituent BOM items count verified: ${bomCheck.totalItems}`);
   assert(typeof bomCheck.isFullyAvailable === "boolean", `Readiness status evaluated: ${bomCheck.isFullyAvailable}`);
-  assert(bomCheck.aggregateDailyRate > 0, `Aggregate daily rate valuation computed: $${bomCheck.aggregateDailyRate}`);
+  assert((bomCheck.aggregateDailyRate ?? 0) > 0, `Aggregate daily rate valuation computed: $${bomCheck.aggregateDailyRate}`);
 
   // Cross-tenant integrity check: Attempt to create kit bundle with gear from another tenant
   const crossTenantBundle = await createKitBundle({

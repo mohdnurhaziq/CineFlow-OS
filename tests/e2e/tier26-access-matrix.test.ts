@@ -829,6 +829,51 @@ async function runTable(harness: TestHarness, f: { lumina: { id: string; slug: s
     harness.assertEqual(findProp(settingsShown, "zones"), undefined, "Settings → Photo delivery has no shipping zones");
   });
 
+  await harness.test("T26-GEAR-01: gear day rates show only with Invoices View, and aren't wiped by someone who can't see them", async () => {
+    const item = await db.inventoryItem.findFirst({ where: { tenantId: lumina.id, dailyRate: { gt: 0 } } });
+    const bundle = await db.kitBundle.findFirst({ where: { tenantId: lumina.id } });
+    harness.assert(!!item && !!bundle, "The demo studio has gear with a rate, and a kit");
+    if (!item || !bundle) return;
+    const rate = item.dailyRate!;
+    const crew = access({ production: "MANAGE" });
+    const money = access({ production: "MANAGE", invoices: "VIEW" });
+    type Rated = { dailyRate: number | null };
+    const page = (who: Who) => as(who, () => InventoryPage({ params: sp({ tenantSlug: lumina.slug }) }));
+
+    const hidden = await page(crew);
+    harness.assertEqual(findProp(hidden, "showRates"), false, "Without Invoices View the page hides rates");
+    const items = findProp<Rated[]>(hidden, "initialItems") ?? [];
+    harness.assert(items.length > 0 && items.every((i) => i.dailyRate === null), "No item's rate is sent");
+    const bundles = findProp<Array<Rated & { items: Array<{ item: Rated }> }>>(hidden, "initialBundles") ?? [];
+    harness.assert(
+      bundles.length > 0 && bundles.every((b) => b.dailyRate === null && b.items.every((bi) => bi.item.dailyRate === null)),
+      "No kit's rate, or its items' rates, is sent"
+    );
+    const reservations = findProp<Array<{ item: Rated }>>(hidden, "initialReservations") ?? [];
+    harness.assert(reservations.every((r) => r.item.dailyRate === null), "Reserved gear carries no rate");
+
+    const shown = await page(money);
+    harness.assertEqual(findProp(shown, "showRates"), true, "With Invoices View the page shows rates");
+    const shownItems = findProp<Array<Rated & { id: string }>>(shown, "initialItems") ?? [];
+    harness.assertEqual(shownItems.find((i) => i.id === item.id)?.dailyRate, rate, "The item's rate is sent");
+
+    const base = { id: item.id, tenantId: lumina.id, tenantSlug: lumina.slug, name: item.name };
+    const saved = await as(crew, () => gear.updateGearItem({ ...base, dailyRate: null }));
+    harness.assert(saved.success === true, "Someone without money access can still edit the item");
+    harness.assertEqual(saved.item?.dailyRate ?? null, null, "The saved item comes back without its rate");
+    harness.assertEqual((await db.inventoryItem.findUnique({ where: { id: item.id } }))?.dailyRate, rate, "A form without the rate field keeps the rate");
+    await as(crew, () => gear.updateGearItem({ ...base, dailyRate: 1 }));
+    harness.assertEqual((await db.inventoryItem.findUnique({ where: { id: item.id } }))?.dailyRate, rate, "A rate sent anyway is ignored");
+    await as(money, () => gear.updateGearItem({ ...base, dailyRate: rate + 1 }));
+    harness.assertEqual((await db.inventoryItem.findUnique({ where: { id: item.id } }))?.dailyRate, rate + 1, "With Invoices View the rate can change");
+    await db.inventoryItem.update({ where: { id: item.id }, data: { dailyRate: rate } });
+
+    const crewCheck = await as(crew, () => gear.checkBundleAvailability(bundle.id, lumina.id));
+    harness.assertEqual(crewCheck.aggregateDailyRate, null, "A kit's availability check carries no rate without Invoices View");
+    const moneyCheck = await as(money, () => gear.checkBundleAvailability(bundle.id, lumina.id));
+    harness.assert(typeof moneyCheck.aggregateDailyRate === "number", "…and its rate with it");
+  });
+
   await harness.test("T26-UPLOAD-01: upload folders follow their area", async () => {
     const upload = async (folder: string, who: AccessMap) => {
       const form = new FormData();

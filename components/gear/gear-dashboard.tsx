@@ -58,6 +58,8 @@ interface GearDashboardProps {
    * inspections, and the scan console's check-out, return and flags.
    */
   canManage: boolean;
+  /** Invoices VIEW: day rates are money, so without it they are left out everywhere (and not sent). */
+  showRates: boolean;
 }
 
 export function GearDashboard({
@@ -69,6 +71,7 @@ export function GearDashboard({
   initialReservations,
   inspectorName,
   canManage,
+  showRates,
 }: GearDashboardProps) {
   const { confirm, confirmDialog } = useConfirm();
   const [activeTab, setActiveTab] = useState<"ITEMS" | "BUNDLES" | "RESERVATIONS">("ITEMS");
@@ -248,7 +251,7 @@ export function GearDashboard({
       {/* KPI Overview Metrics */}
       <GearKpiSummary
         totalItems={totalItemsCount}
-        totalDailyValue={totalDailyValue}
+        totalDailyValue={showRates ? totalDailyValue : null}
         onShootCount={onShootCount}
         maintenanceCount={maintenanceCount}
         currency={currency}
@@ -341,7 +344,7 @@ export function GearDashboard({
                     <th className="py-3 px-3">Category</th>
                     <th className="py-3 px-3">Condition</th>
                     <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3">Daily Rate</th>
+                    {showRates && <th className="py-3 px-3">Daily Rate</th>}
                     <th className="py-3 px-3">Vault Location</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
@@ -431,9 +434,11 @@ export function GearDashboard({
                               )}
                             </span>
                           </td>
-                          <td className="py-3.5 px-3 font-mono font-bold text-emerald-400">
-                            {currency} {item.dailyRate || 0}
-                          </td>
+                          {showRates && (
+                            <td className="py-3.5 px-3 font-mono font-bold text-emerald-400">
+                              {currency} {item.dailyRate || 0}
+                            </td>
+                          )}
                           <td className="py-3.5 px-3 font-mono text-zinc-400 text-[11px]">
                             {item.location || "Vault A"}
                           </td>
@@ -550,9 +555,11 @@ export function GearDashboard({
                         <span className="text-zinc-500">
                           {totalItems} Constituent BOM Items
                         </span>
-                        <span className="font-bold text-emerald-400">
-                          {currency} {valuation} / day
-                        </span>
+                        {showRates && (
+                          <span className="font-bold text-emerald-400">
+                            {currency} {valuation} / day
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -758,6 +765,7 @@ export function GearDashboard({
         tenantId={tenantId}
         tenantSlug={tenantSlug}
         itemToEdit={itemToEdit}
+        showRates={showRates}
         onSuccess={() => router.refresh()}
       />
       )}
@@ -770,6 +778,7 @@ export function GearDashboard({
         tenantSlug={tenantSlug}
         availableItems={items}
         bundleToEdit={bundleToEdit}
+        showRates={showRates}
         onSuccess={() => router.refresh()}
       />
       )}
@@ -777,6 +786,7 @@ export function GearDashboard({
       <KitBundleBomViewer
         bundle={inspectingBundle}
         currency={currency}
+        showRates={showRates}
         onClose={() => setInspectingBundle(null)}
       />
 

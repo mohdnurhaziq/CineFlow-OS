@@ -159,7 +159,7 @@ export default async function TeamManualPage({ params }: TeamManualPageProps) {
           ]}
         />
         <ManualCallout title="Each part of a page follows its own area">
-          Money (prices, deposits, invoices and balances) shows only to people with <Ui>{AREA_LABELS.invoices}</Ui>: View or more.
+          Money (prices, deposits, invoices, balances and gear day rates) shows only to people with <Ui>{AREA_LABELS.invoices}</Ui>: View or more.
           Proposals on a client&apos;s page show only with <Ui>{AREA_LABELS.proposals}</Ui>: View or more. A page that someone can
           only view hides its edit buttons.
         </ManualCallout>

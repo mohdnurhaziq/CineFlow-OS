@@ -221,7 +221,7 @@ export default async function ProductionManualPage({ params }: ProductionManualP
           rows={[
             [
               <Ui key="a">Add Equipment</Ui>,
-              "Adds an item: its name, a SKU you choose, serial number, category, condition, daily rate and where it is stored. Each SKU must be unique.",
+              "Adds an item: its name, a SKU you choose, serial number, category, condition, daily rate and where it is stored. Each SKU must be unique. Day rates (here, on kits and in the daily rental value) show only to people who can see money.",
             ],
             [
               <Ui key="k">Create Kit Bundle</Ui>,

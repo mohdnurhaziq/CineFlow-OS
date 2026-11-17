@@ -29,6 +29,8 @@ interface GearItemDialogProps {
   tenantId: string;
   tenantSlug: string;
   itemToEdit?: InventoryItemRow | null;
+  /** Invoices VIEW: without it the rate field is left out (the server keeps the rate as it is). */
+  showRates: boolean;
   onSuccess?: () => void;
 }
 
@@ -53,6 +55,7 @@ export function GearItemDialog({
   tenantId,
   tenantSlug,
   itemToEdit,
+  showRates,
   onSuccess,
 }: GearItemDialogProps) {
   const isEditing = !!itemToEdit;
@@ -278,6 +281,7 @@ export function GearItemDialog({
                 ))}
               </select>
             </div>
+            {showRates && (
             <div>
               <label className="text-xs font-mono text-zinc-400 block mb-1">
                 Daily Rate ($/RM)
@@ -292,6 +296,7 @@ export function GearItemDialog({
                 className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white font-mono focus:outline-none focus:border-amber-500"
               />
             </div>
+            )}
           </div>
 
           <div>

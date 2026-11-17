@@ -9,12 +9,15 @@ import { disciplineLabel } from "@/lib/labels";
 interface KitBundleBomViewerProps {
   bundle: KitBundleRow | null;
   currency: string;
+  /** Invoices VIEW: without it no rates are shown. */
+  showRates: boolean;
   onClose: () => void;
 }
 
 export function KitBundleBomViewer({
   bundle,
   currency,
+  showRates,
   onClose,
 }: KitBundleBomViewerProps) {
   const dialog = useDialog(!!bundle, onClose);
@@ -69,13 +72,15 @@ export function KitBundleBomViewer({
         </div>
 
         {/* Pricing Summary */}
-        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono">
+        <div className={`grid ${showRates ? "grid-cols-2" : "grid-cols-1"} gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono`}>
+          {showRates && (
           <div>
             <span className="text-zinc-500 block">Package Daily Rate:</span>
             <span className="text-sm font-bold text-emerald-400">
               {currency} {bundle.dailyRate || aggregateValuation} / day
             </span>
           </div>
+          )}
           <div>
             <span className="text-zinc-500 block">Readiness Ratio:</span>
             <span className="text-sm font-bold text-white">
@@ -132,9 +137,11 @@ export function KitBundleBomViewer({
                         </>
                       )}
                     </span>
-                    <div className="text-[10px] font-mono text-zinc-500 mt-0.5">
-                      {currency} {(item.dailyRate || 0) * bItem.quantity} / day
-                    </div>
+                    {showRates && (
+                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5">
+                        {currency} {(item.dailyRate || 0) * bItem.quantity} / day
+                      </div>
+                    )}
                   </div>
                 </div>
               );
