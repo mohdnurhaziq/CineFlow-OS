@@ -143,7 +143,7 @@ function formatDateTime(iso: string): string {
 // Dialog
 // ---------------------------------------------------------------------------
 
-const NO_ACTION_POWERS: BookingActionPowers = { canRecordOutcome: false, canCreateGallery: false };
+const NO_ACTION_POWERS: BookingActionPowers = { canRecordOutcome: false, canCreateGallery: false, galleries: "NONE", viewerId: "" };
 
 interface BookingDetailsDialogProps {
   isOpen: boolean;

@@ -18,6 +18,7 @@ import {
   type RescheduleOption,
 } from "@/lib/actions/admin-booking-lifecycle";
 import { formatSlotDate, isSlotInPast } from "@/lib/slot-time";
+import { bookingGalleryLink } from "@/lib/bookings/gallery-link";
 
 interface BookingActionsProps {
   booking: BookingDetails;
@@ -61,6 +62,12 @@ export function BookingActions({
   const started =
     !!booking.sessionDate && !!booking.slot && isSlotInPast({ date: booking.sessionDate, startTime: booking.slot.startTime });
   const canCancel = upcoming && canManage && (!booking.depositPaid || canRecordPayments);
+  // Only a link they can follow: the gallery page would otherwise show No access.
+  const galleryLink = bookingGalleryLink(
+    actionPowers.galleries,
+    actionPowers.viewerId,
+    booking.assignees.map((a) => a.id)
+  );
 
   const run = (fn: () => Promise<{ success: boolean; message?: string }>, done: string) =>
     start(async () => {
@@ -134,13 +141,15 @@ export function BookingActions({
             </>
           )}
           {booking.project ? (
-            <Link
-              href={`/${tenantSlug}/admin/projects/${booking.project.id}#files`}
-              className={buttonVariants()}
-            >
-              <ImageUp className="size-3.5" /> Upload photos
-              <ArrowUpRight className="size-3 ml-0.5" />
-            </Link>
+            galleryLink && (
+              <Link
+                href={`/${tenantSlug}/admin/projects/${booking.project.id}${galleryLink === "upload" ? "#files" : ""}`}
+                className={galleryLink === "upload" ? buttonVariants() : quiet}
+              >
+                <ImageUp className="size-3.5" /> {galleryLink === "upload" ? "Upload photos" : "Open gallery"}
+                <ArrowUpRight className="size-3 ml-0.5" />
+              </Link>
+            )
           ) : (
             booking.status !== "PENDING" &&
             actionPowers.canCreateGallery && (

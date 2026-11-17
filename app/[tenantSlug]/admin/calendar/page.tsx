@@ -132,7 +132,7 @@ export default async function AdminCalendarPage({ params }: CalendarPageProps) {
         assignable={assignable}
         canSetPrices={viewer.access.ticks.setPrices}
         canRecordPayments={viewer.access.ticks.recordPayments}
-        actionPowers={bookingActionPowers(viewer.access)}
+        actionPowers={bookingActionPowers(viewer.access, viewer.user.id)}
       />
     </PageShell>
   );

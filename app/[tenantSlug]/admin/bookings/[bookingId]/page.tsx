@@ -73,7 +73,7 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
         canManage={canManage}
         assignable={assignable}
         canRecordPayments={viewer.access.ticks.recordPayments}
-        actionPowers={bookingActionPowers(viewer.access)}
+        actionPowers={bookingActionPowers(viewer.access, viewer.user.id)}
       />
       <IncludedPrintsCard
         tenantId={tenant.id}

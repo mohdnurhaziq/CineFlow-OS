@@ -73,7 +73,7 @@ export default async function AdminBookingsPage({ params, searchParams }: Bookin
         tenantId={tenant.id}
         canManage={canManage}
         canRecordPayments={viewer.access.ticks.recordPayments}
-        actionPowers={bookingActionPowers(viewer.access)}
+        actionPowers={bookingActionPowers(viewer.access, viewer.user.id)}
         currency={tenant.currency}
         bookings={bookings}
         today={studioNow().dateKey}

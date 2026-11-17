@@ -43,6 +43,7 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
         status={doc.status}
         milestoneType={doc.milestoneType}
         canRecordPayments={viewer.access.ticks.recordPayments}
+        canApprovePayments={viewer.access.ticks.approvePayments}
         canManage={levelAtLeast(viewer.access.areas.invoices, "MANAGE")}
       />
       <InvoiceDocumentView

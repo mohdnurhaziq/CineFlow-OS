@@ -1,4 +1,4 @@
-import { levelAtLeast, type AccessMap } from "@/lib/auth/access";
+import { levelAtLeast, type AccessLevel, type AccessMap } from "@/lib/auth/access";
 
 /**
  * What a page lets someone do, derived on the server from their access map and passed to its
@@ -14,16 +14,21 @@ export interface BookingActionPowers {
   canRecordOutcome: boolean;
   /** Create a booking's missing gallery: Galleries MANAGE. */
   canCreateGallery: boolean;
+  /** Their Galleries level and who they are, for the gallery link (see bookingGalleryLink). */
+  galleries: AccessLevel;
+  viewerId: string;
 }
 
 /**
  * A booking's actions. The page or pop-up has already checked Bookings access to the booking (at
  * OWN, only one they are assigned to), so OWN closes out its own booking like MANAGE.
  */
-export function bookingActionPowers(access: AccessMap): BookingActionPowers {
+export function bookingActionPowers(access: AccessMap, viewerId: string): BookingActionPowers {
   return {
     canRecordOutcome: access.areas.bookings === "OWN" || access.areas.bookings === "MANAGE",
     canCreateGallery: levelAtLeast(access.areas.galleries, "MANAGE"),
+    galleries: access.areas.galleries,
+    viewerId,
   };
 }
 

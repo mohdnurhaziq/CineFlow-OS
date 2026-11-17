@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Ban, Banknote, Bell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { recordInvoicePayment, sendInvoiceReminder, voidInvoice } from "@/lib/actions/admin-invoices";
+import { canRecordPaymentOn } from "@/lib/invoices/record-rule";
 
 interface InvoiceAdminActionsProps {
   tenantId: string;
@@ -14,6 +15,8 @@ interface InvoiceAdminActionsProps {
   milestoneType: string;
   /** The recordPayments permission: may record a payment or cancel the invoice. */
   canRecordPayments: boolean;
+  /** The approvePayments permission: recording over a slip waiting for review also needs it (it approves the slip). */
+  canApprovePayments: boolean;
   /** Invoices MANAGE: may send the client a reminder. */
   canManage: boolean;
 }
@@ -33,6 +36,7 @@ export function InvoiceAdminActions({
   status,
   milestoneType,
   canRecordPayments,
+  canApprovePayments,
   canManage,
 }: InvoiceAdminActionsProps) {
   const router = useRouter();
@@ -46,6 +50,8 @@ export function InvoiceAdminActions({
   const unpaid = ["PENDING", "OVERDUE", "PENDING_VERIFICATION", "REJECTED"].includes(status);
   const remindable = ["PENDING", "OVERDUE", "REJECTED"].includes(status);
   if (!unpaid || (!canRecordPayments && !canManage)) return null;
+  // A slip waiting for review: recording a payment would approve it, so it needs approvePayments as well.
+  const canRecordHere = canRecordPaymentOn(status, { recordPayments: canRecordPayments, approvePayments: canApprovePayments });
 
   const ids = { tenantId, tenantSlug, invoiceId };
   const run = (fn: () => Promise<{ success: boolean; message?: string }>, done: string) =>
@@ -65,10 +71,13 @@ export function InvoiceAdminActions({
     <div className="w-full rounded-xl border border-zinc-800 bg-[#0d0d10] p-4 space-y-3 print:hidden">
       {mode === null && (
         <div className="flex flex-wrap items-center gap-2">
-          {canRecordPayments && (
+          {canRecordHere && (
             <button type="button" className={`${btn} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`} onClick={() => setMode("pay")}>
               <Banknote className="size-3.5" /> Record payment
             </button>
+          )}
+          {canRecordPayments && !canRecordHere && (
+            <span className="text-[11px] text-zinc-500">A payment slip is waiting for review in Verification.</span>
           )}
           {remindable && canManage && (
             <button

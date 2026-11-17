@@ -1,6 +1,7 @@
 "use server";
 
 import { requireAccess } from "@/lib/auth/access-guard";
+import { AuthorizationError } from "@/lib/auth/guard";
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -557,7 +558,8 @@ export async function checkBundleAvailability(bundleId: string, tenantId: string
     console.error("checkBundleAvailability error:", err);
     return {
       success: false,
-      error: "CHECK_FAILED",
+      // Say it was a refusal, so the screen shows "no access" rather than a failed check.
+      error: err instanceof AuthorizationError ? "FORBIDDEN" : "CHECK_FAILED",
       isFullyAvailable: false,
       totalItems: 0,
       availableItems: 0,
