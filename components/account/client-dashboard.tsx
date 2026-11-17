@@ -35,6 +35,7 @@ import { currencySymbol, formatMoney } from "@/lib/money";
 import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
 import type { FramedPrintsData } from "@/lib/prints/gallery";
 import { milestoneLabel } from "@/lib/labels";
+import { BOOKING_MILESTONES, PROPOSAL_MILESTONES, billSums, invoiceBookingId } from "@/lib/invoices/bill-groups";
 import { cn } from "@/lib/utils";
 
 type BookingRow = ClientBooking & {
@@ -281,12 +282,15 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
     const bookingMap = new Map<string, InvoiceRow[]>();
     const proposalMap = new Map<string, InvoiceRow[]>();
     const standalone: InvoiceRow[] = [];
+    // A print order is billed against the booking's gallery, so it joins that booking's card.
+    const bookingByProject = new Map(bookings.flatMap((b) => (b.project ? [[b.project.id, b.id] as const] : [])));
 
     for (const inv of activeList) {
-      if (inv.bookingId) {
-        const arr = bookingMap.get(inv.bookingId) || [];
+      const bookingId = invoiceBookingId(inv, bookingByProject);
+      if (bookingId) {
+        const arr = bookingMap.get(bookingId) || [];
         arr.push(inv);
-        bookingMap.set(inv.bookingId, arr);
+        bookingMap.set(bookingId, arr);
       } else if (inv.proposalId) {
         const arr = proposalMap.get(inv.proposalId) || [];
         arr.push(inv);
@@ -296,16 +300,18 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
       }
     }
 
+    // The plan's own invoices first (deposit or retainer leading), then extras such as prints, by date.
+    const byPlan = (lead: string, plan: ReadonlySet<string>) => (a: InvoiceRow, b: InvoiceRow) => {
+      const rank = (i: InvoiceRow) => (i.milestoneType === lead ? 0 : plan.has(i.milestoneType) ? 1 : 2);
+      return rank(a) - rank(b) || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    };
+    const keep = (sums: { balanceDue: number; paidAmount: number; hasReview: boolean }) =>
+      !(invoiceFilter === "unpaid" && sums.balanceDue <= 0 && !sums.hasReview) && !(invoiceFilter === "paid" && sums.paidAmount <= 0);
+
     const groups: InvoiceGroup[] = [];
 
     for (const [bookingId, groupInvoices] of bookingMap.entries()) {
-      if (!groupInvoices || groupInvoices.length === 0) continue;
-      groupInvoices.sort((a, b) => {
-        if (a.milestoneType === "BOOKING_DEPOSIT") return -1;
-        if (b.milestoneType === "BOOKING_DEPOSIT") return 1;
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      });
-
+      groupInvoices.sort(byPlan("BOOKING_DEPOSIT", BOOKING_MILESTONES));
       const first = groupInvoices[0];
       const matchedBooking = bookings.find((b) => b.id === bookingId) || first?.booking;
       const title =
@@ -313,86 +319,19 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
         (matchedBooking?.category ? humanize(matchedBooking.category) : null) ||
         "Studio Photoshoot Session";
       const trackingCode = matchedBooking?.trackingCode || first?.booking?.trackingCode;
-
-      const totalAmount =
-        matchedBooking?.sessionPrice && matchedBooking.sessionPrice > 0
-          ? matchedBooking.sessionPrice
-          : groupInvoices.reduce((s, i) => s + (i.status !== "VOID" ? i.amount : 0), 0);
-
-      const paidAmount = groupInvoices
-        .filter((i) => i.status === "PAID")
-        .reduce((s, i) => s + i.amount, 0);
-
-      const balanceDue = groupInvoices
-        .filter((i) => i.status === "PENDING" || i.status === "OVERDUE")
-        .reduce((s, i) => s + i.amount, 0);
-
-      const hasReview = groupInvoices.some((i) => i.status === "PENDING_VERIFICATION");
-      const isFullyPaid = balanceDue <= 0 && paidAmount > 0;
-      const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : isFullyPaid ? 100 : 0;
-
-      if (invoiceFilter === "unpaid" && balanceDue <= 0 && !hasReview) continue;
-      if (invoiceFilter === "paid" && paidAmount <= 0) continue;
-
-      groups.push({
-        id: bookingId,
-        type: "booking",
-        title,
-        trackingCode,
-        totalAmount,
-        paidAmount,
-        balanceDue,
-        percentage,
-        isFullyPaid,
-        hasReview,
-        invoices: groupInvoices,
-      });
+      const sums = billSums(matchedBooking?.sessionPrice, groupInvoices, BOOKING_MILESTONES);
+      if (!keep(sums)) continue;
+      groups.push({ id: bookingId, type: "booking", title, trackingCode, ...sums, invoices: groupInvoices });
     }
 
     for (const [proposalId, groupInvoices] of proposalMap.entries()) {
-      groupInvoices.sort((a, b) => {
-        if (a.milestoneType === "RETAINER_50") return -1;
-        if (b.milestoneType === "RETAINER_50") return 1;
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      });
-
+      groupInvoices.sort(byPlan("RETAINER_50", PROPOSAL_MILESTONES));
       const matchedProposal = proposals.find((p) => p.id === proposalId);
       const title = matchedProposal?.title || "Production Contract";
       const trackingCode = matchedProposal?.proposalNumber;
-
-      const totalAmount =
-        matchedProposal?.totalPrice && matchedProposal.totalPrice > 0
-          ? matchedProposal.totalPrice
-          : groupInvoices.reduce((s, i) => s + (i.status !== "VOID" ? i.amount : 0), 0);
-
-      const paidAmount = groupInvoices
-        .filter((i) => i.status === "PAID")
-        .reduce((s, i) => s + i.amount, 0);
-
-      const balanceDue = groupInvoices
-        .filter((i) => i.status === "PENDING" || i.status === "OVERDUE")
-        .reduce((s, i) => s + i.amount, 0);
-
-      const hasReview = groupInvoices.some((i) => i.status === "PENDING_VERIFICATION");
-      const isFullyPaid = balanceDue <= 0 && paidAmount > 0;
-      const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : isFullyPaid ? 100 : 0;
-
-      if (invoiceFilter === "unpaid" && balanceDue <= 0 && !hasReview) continue;
-      if (invoiceFilter === "paid" && paidAmount <= 0) continue;
-
-      groups.push({
-        id: proposalId,
-        type: "proposal",
-        title,
-        trackingCode,
-        totalAmount,
-        paidAmount,
-        balanceDue,
-        percentage,
-        isFullyPaid,
-        hasReview,
-        invoices: groupInvoices,
-      });
+      const sums = billSums(matchedProposal?.totalPrice, groupInvoices, PROPOSAL_MILESTONES);
+      if (!keep(sums)) continue;
+      groups.push({ id: proposalId, type: "proposal", title, trackingCode, ...sums, invoices: groupInvoices });
     }
 
     const filteredStandalone = standalone.filter((inv) => {

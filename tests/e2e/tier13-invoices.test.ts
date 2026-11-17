@@ -15,6 +15,7 @@ import ClientInvoicePage from "@/app/[tenantSlug]/account/invoices/[invoiceId]/p
 import AdminInvoicePage from "@/app/[tenantSlug]/admin/invoices/[invoiceId]/page";
 import { expectSuccess } from "./result-helpers";
 import { findProp, provideReactGlobal } from "./react-tree";
+import { BOOKING_MILESTONES, billSums, invoiceBookingId } from "@/lib/invoices/bill-groups";
 
 const DAY_MS = 86_400_000;
 
@@ -162,5 +163,34 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
       outcome(() => AdminInvoicePage({ params: Promise.resolve({ tenantSlug: "lumina-cine", invoiceId: balance!.id }) }))
     );
     harness.assertEqual(admin.kind, "ok", "Admin view renders for the studio");
+  });
+
+  await harness.test("T13-GROUP-01: a print order for a booking's gallery goes on that booking's bill", async () => {
+    const byProject = new Map([["proj-1", "booking-1"]]);
+    harness.assertEqual(invoiceBookingId({ bookingId: "booking-1", proposalId: null, projectId: "proj-1" }, byProject), "booking-1", "Deposit: its own booking");
+    harness.assertEqual(invoiceBookingId({ bookingId: null, proposalId: null, projectId: "proj-1" }, byProject), "booking-1", "Print order: the booking whose gallery it's from");
+    harness.assertEqual(invoiceBookingId({ bookingId: null, proposalId: null, projectId: "proj-other" }, byProject), null, "A gallery with no booking: on its own");
+    harness.assertEqual(invoiceBookingId({ bookingId: null, proposalId: "prop-1", projectId: "proj-1" }, byProject), null, "A proposal invoice stays with its proposal");
+    harness.assertEqual(invoiceBookingId({ bookingId: null, proposalId: null, projectId: null }, byProject), null, "A custom invoice: on its own");
+  });
+
+  await harness.test("T13-GROUP-02: the booking's bill totals the session and its extras", async () => {
+    const deposit = { milestoneType: "BOOKING_DEPOSIT", status: "PAID", amount: 100 };
+    const balance = { milestoneType: "BOOKING_BALANCE", status: "PAID", amount: 150 };
+    const prints = { milestoneType: "PRINT_FRAME_ORDER", status: "PENDING_VERIFICATION", amount: 350 };
+    const review = billSums(250, [deposit, balance, prints], BOOKING_MILESTONES);
+    harness.assertEqual(review.totalAmount, 600, "Session 250 + prints 350");
+    harness.assertEqual(review.paidAmount, 250, "Paid so far");
+    harness.assertEqual(review.isFullyPaid, false, "A slip under review isn't settled");
+    harness.assertEqual(review.hasReview, true, "Shown as under review");
+    harness.assertEqual(review.percentage, 42, "Paid share of the whole bill");
+    const settled = billSums(250, [deposit, balance, { ...prints, status: "PAID" }], BOOKING_MILESTONES);
+    harness.assertEqual(settled.isFullyPaid, true, "Settled once the prints are paid");
+    harness.assertEqual(settled.percentage, 100, "Full bar");
+    const voided = billSums(250, [deposit, balance, { ...prints, status: "VOID" }], BOOKING_MILESTONES);
+    harness.assertEqual(voided.totalAmount, 250, "A voided print order doesn't count");
+    const noPrice = billSums(0, [deposit, { ...balance, status: "PENDING" }], BOOKING_MILESTONES);
+    harness.assertEqual(noPrice.totalAmount, 250, "No session price: the plan's invoices make the total");
+    harness.assertEqual(noPrice.balanceDue, 150, "Balance due");
   });
 }
