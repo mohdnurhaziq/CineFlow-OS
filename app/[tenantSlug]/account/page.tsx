@@ -133,6 +133,9 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
     }),
   ]);
 
+  // To show a booking's category by the studio's name for it, not its code.
+  const categories = await db.campaignCategory.findMany({ where: { tenantId: tenant.id }, select: { slug: true, name: true } });
+
   // Each gallery's framed prints (included prints, past orders), for its Galleries card.
   const projectsWithPrints = await Promise.all(projects.map(async (p) => ({ ...p, framedPrints: await loadFramedPrints(p.id) })));
 
@@ -148,6 +151,7 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
       invoices={invoices}
       proposals={proposals}
       projects={projectsWithPrints}
+      categories={categories}
       banner={
         confirmation ? (
           <PaymentConfirmationBanner

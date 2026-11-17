@@ -34,7 +34,9 @@ import type { ClientBooking, BookingSlot, MilestoneInvoice, Proposal } from "@pr
 import { currencySymbol, formatMoney } from "@/lib/money";
 import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
 import type { FramedPrintsData } from "@/lib/prints/gallery";
-import { milestoneLabel } from "@/lib/labels";
+import { milestoneLabel, paymentMethodLabel } from "@/lib/labels";
+import { clientPayAction, clientPayLabel, clientPayState, isOwed } from "@/lib/invoices/client-status";
+import { categoryName } from "@/lib/bookings/category-name";
 import { BOOKING_MILESTONES, PROPOSAL_MILESTONES, billSums, invoiceBookingId, invoiceProposalId } from "@/lib/invoices/bill-groups";
 import { cn } from "@/lib/utils";
 import { STUDIO_TIME_ZONE, formatSlotDate } from "@/lib/slot-time";
@@ -102,6 +104,8 @@ interface ClientDashboardProps {
   invoices: InvoiceRow[];
   proposals: Proposal[];
   projects: ProjectRow[];
+  /** The studio's categories, to show a booking's category by name. */
+  categories: Array<{ slug: string; name: string }>;
   /** Shown above everything, e.g. the confirmation right after checkout. */
   banner?: React.ReactNode;
 }
@@ -127,7 +131,7 @@ function humanize(value: string) {
   return value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects, banner }: ClientDashboardProps) {
+export function ClientDashboard({ tenant, client, bookings, invoices, proposals, projects, categories, banner }: ClientDashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryTab = searchParams.get("tab");
@@ -157,6 +161,20 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   const [showVoidInvoices, setShowVoidInvoices] = useState(false);
 
   const money = (amount: number) => formatMoney(tenant.currency, amount);
+
+  /**
+   * A booking's badge. Until the studio confirms it, it says where the deposit stands: still to pay
+   * (no slip yet, or cash to bring) or a slip under review. Never "Confirmed" before it is.
+   */
+  const bookingBadge = (b: BookingRow): { label: string; className: string } => {
+    if (b.status === "PENDING") {
+      const deposit = invoices.find((i) => i.bookingId === b.id && i.milestoneType === "BOOKING_DEPOSIT");
+      const state = deposit ? clientPayState(deposit) : null;
+      if (state === "IN_REVIEW") return { label: "Payment under review", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
+      return { label: "Awaiting deposit", className: "bg-amber-500/10 text-amber-400 border-amber-500/30" };
+    }
+    return BOOKING_STATUS_TEXT[b.status] ?? { label: humanize(b.status), className: "bg-zinc-800 text-zinc-400 border-zinc-700" };
+  };
   // Dates read the same on the server and in the browser, whatever the viewer's time zone:
   // otherwise the page renders one day on the server, another in the browser.
   const LONG_DAY: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric", year: "numeric" };
@@ -172,16 +190,44 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   });
 
   // Financial calculations
-  const unpaidInvoices = useMemo(
-    () => invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE"),
-    [invoices]
-  );
+  // Owed: unpaid, a QR deposit with no slip yet, cash still to bring, or a slip that wasn't accepted.
+  const unpaidInvoices = useMemo(() => invoices.filter(isOwed), [invoices]);
   const paidInvoices = useMemo(() => invoices.filter((i) => i.status === "PAID"), [invoices]);
   const voidInvoices = useMemo(
-    () => invoices.filter((i) => i.status === "VOID" || i.status === "CANCELLED" || i.status === "REJECTED"),
+    () => invoices.filter((i) => i.status === "VOID" || i.status === "CANCELLED"),
     [invoices]
   );
   const outstanding = useMemo(() => unpaidInvoices.reduce((sum, i) => sum + i.amount, 0), [unpaidInvoices]);
+
+  /**
+   * The payment to bring up first: the one due soonest. "Action required" only when it needs doing
+   * now: overdue or due within 3 days, a deposit still to pay (the slot is held only for 24 hours),
+   * or a slip the studio didn't accept. A balance due next week just shows its date.
+   */
+  const nextPayment = useMemo(() => {
+    const first = [...unpaidInvoices].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+    if (!first) return null;
+    const state = clientPayState(first);
+    const what = `${milestoneLabel(first.milestoneType).toLowerCase()}${first.project?.title ? ` for ${first.project.title}` : ""}`;
+    const soon = new Date(first.dueDate).getTime() - Date.now() < 3 * 86_400_000;
+    const urgent = state !== "DUE" || first.status === "OVERDUE" || soon;
+    const others = unpaidInvoices.length > 1 ? ` You have ${unpaidInvoices.length} invoices to pay in all.` : "";
+    let headline = `${money(first.amount)} to pay`;
+    let message = `Your ${what} is due ${formatDate(first.dueDate)}.${others}`;
+    if (state === "AWAITING_PAYMENT" && first.paymentMethod === "CASH") {
+      headline = `Pay ${money(first.amount)} at the studio`;
+      message = `Bring your ${what} to the studio by ${formatDate(first.dueDate)} to keep your booking.${others}`;
+    } else if (state === "AWAITING_PAYMENT") {
+      headline = `Upload your payment slip`;
+      message = `Transfer ${money(first.amount)} for your ${what}, then upload the slip by ${formatDate(first.dueDate)} to keep your booking.${others}`;
+    } else if (state === "REJECTED") {
+      headline = `Your payment slip wasn't accepted`;
+      message = `${first.rejectionReason ? `The studio said: ${first.rejectionReason}. ` : ""}Please upload a new slip for your ${what}.${others}`;
+    } else if (first.milestoneType === "FINAL_BALANCE_50" || first.milestoneType === "BOOKING_BALANCE") {
+      message += " Paying it unlocks full-resolution downloads once your photos are ready.";
+    }
+    return { invoice: first, urgent, headline, message, action: clientPayAction(first)?.label ?? null };
+  }, [unpaidInvoices]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bookings filtering
   const nowTime = Date.now() - 86400000;
@@ -315,7 +361,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
       const matchedBooking = bookings.find((b) => b.id === bookingId) || first?.booking;
       const title =
         matchedBooking?.packageName ||
-        (matchedBooking?.category ? humanize(matchedBooking.category) : null) ||
+        (matchedBooking?.category ? categoryName(categories, matchedBooking.category) : null) ||
         "Studio Photoshoot Session";
       const trackingCode = matchedBooking?.trackingCode || first?.booking?.trackingCode;
       const sums = billSums(matchedBooking?.sessionPrice, groupInvoices, BOOKING_MILESTONES);
@@ -340,7 +386,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
     return {
       invoiceGroups: allGroups.filter(keep),
       standaloneInvoices: allStandalone.filter((inv) => {
-        if (invoiceFilter === "unpaid") return inv.status === "PENDING" || inv.status === "OVERDUE" || inv.status === "PENDING_VERIFICATION";
+        if (invoiceFilter === "unpaid") return isOwed(inv) || clientPayState(inv) === "IN_REVIEW";
         if (invoiceFilter === "paid") return inv.status === "PAID";
         return true;
       }),
@@ -380,7 +426,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           </div>
         </div>
         {/* Priority 1: High-Visibility Action Notification Banner */}
-        {outstanding > 0 && unpaidInvoices[0] ? (
+        {nextPayment ? (
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-amber-500/5 animate-in fade-in-0 duration-300">
             <div className="flex items-start gap-3.5">
               <div className="size-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0 mt-0.5">
@@ -389,26 +435,38 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-white text-sm">
-                    Outstanding Balance: {money(outstanding)}
+                    {nextPayment.headline}
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold uppercase">
-                    Action Required
-                  </span>
+                  {nextPayment.urgent ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold uppercase">
+                      Action Required
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700 font-semibold">
+                      Due {formatDate(nextPayment.invoice.dueDate)}
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs text-zinc-300 max-w-xl">
-                  {unpaidInvoices[0].project?.title
-                    ? `Balance for ${unpaidInvoices[0].project.title} (${milestoneLabel(unpaidInvoices[0].milestoneType)}). Clearing this unlocks full-resolution downloads when your deliverables are ready.`
-                    : `You have ${unpaidInvoices.length} pending ${unpaidInvoices.length === 1 ? "invoice" : "invoices"} due. Settle now via online gateway or QR transfer.`}
-                </p>
+                <p className="text-xs text-zinc-300 max-w-xl">{nextPayment.message}</p>
               </div>
             </div>
-            <Link
-              href={`/${tenant.slug}/checkout?invoiceId=${unpaidInvoices[0].id}`}
-              className={cn(buttonVariants({ size: "lg" }), "self-start")}
-            >
-              <span>Pay Now ({money(outstanding)})</span>
-              <ChevronRight className="size-4" />
-            </Link>
+            {nextPayment.action ? (
+              <Link
+                href={`/${tenant.slug}/checkout?invoiceId=${nextPayment.invoice.id}`}
+                className={cn(buttonVariants({ size: "lg" }), "self-start")}
+              >
+                <span>{nextPayment.action}</span>
+                <ChevronRight className="size-4" />
+              </Link>
+            ) : (
+              <Link
+                href={`/${tenant.slug}/account/invoices/${nextPayment.invoice.id}`}
+                className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "self-start")}
+              >
+                <span>View invoice</span>
+                <ChevronRight className="size-4" />
+              </Link>
+            )}
           </div>
         ) : nextShoot ? (
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in-0 duration-300">
@@ -498,7 +556,11 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               {money(outstanding)}
             </div>
             <p className="text-[11px] text-zinc-400 mt-1">
-              {outstanding > 0 ? `${unpaidInvoices.length} invoice awaiting payment` : "All invoices settled & clear"}
+              {outstanding > 0
+                ? `${unpaidInvoices.length} ${unpaidInvoices.length === 1 ? "invoice" : "invoices"} to pay`
+                : invoices.some((i) => clientPayState(i) === "IN_REVIEW")
+                ? "Nothing to pay: a slip is under review"
+                : "All invoices settled & clear"}
             </p>
           </button>
 
@@ -611,7 +673,8 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               : "text-zinc-600"
                           )}
                         >
-                          {s.label}
+                          {/* The current stage is named above; on a phone the strip shows bars only. */}
+                          <span className="sr-only sm:not-sr-only">{s.label}</span>
                         </div>
                       </li>
                     ))}
@@ -673,15 +736,15 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               )}
                               <div className="space-y-0.5">
                                 <div className="font-semibold text-white">
-                                  {humanize(b.category)}
+                                  {categoryName(categories, b.category)}
                                 </div>
                                 <div className="text-[11px] text-zinc-400">
                                   {b.slot ? `${b.slot.startTime} – ${b.slot.endTime}` : "Time confirmed"}
                                 </div>
                               </div>
                             </div>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              Confirmed
+                            <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap", bookingBadge(b).className)}>
+                              {bookingBadge(b).label}
                             </span>
                           </div>
                         );
@@ -724,7 +787,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   ) : (
                     <div className="space-y-2">
                       {overviewBills.slice(0, 3).map((bill) => {
-                        const payable = bill.invoices.find((i) => i.status === "PENDING" || i.status === "OVERDUE");
+                        const payable = bill.invoices.find((i) => clientPayAction(i));
                         const lone = bill.invoices.length === 1 ? bill.invoices[0] : null;
                         return (
                           <div
@@ -771,7 +834,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                   href={`/${tenant.slug}/checkout?invoiceId=${payable.id}`}
                                   className="shrink-0 whitespace-nowrap font-bold text-amber-300 hover:underline uppercase"
                                 >
-                                  Pay now →
+                                  {clientPayAction(payable)?.label} →
                                 </Link>
                               ) : lone?.status === "PAID" ? (
                                 <Link href={`/${tenant.slug}/account/invoices/${lone.id}`} className="shrink-0 whitespace-nowrap text-zinc-300 hover:text-white hover:underline">
@@ -861,7 +924,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                           </div>
                           {p.booking && (
                             <p className="text-xs text-zinc-400 font-mono mt-0.5">
-                              Booking {p.booking.trackingCode} · {humanize(p.booking.category)}
+                              Booking {p.booking.trackingCode} · {categoryName(categories, p.booking.category)}
                             </p>
                           )}
                         </div>
@@ -924,7 +987,8 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                   ) : (
                                     <StageIcon className="size-2.5 flex-shrink-0" />
                                   )}
-                                  <span className="truncate">{s.label}</span>
+                                  {/* The current stage is named above; on a phone only the icons show. */}
+                                  <span className="truncate sr-only sm:not-sr-only">{s.label}</span>
                                 </div>
                               </li>
                             );
@@ -1098,10 +1162,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             ) : (
               <div className="divide-y divide-zinc-800/60">
                 {visibleBookings.map((b) => {
-                  const statusInfo = BOOKING_STATUS_TEXT[b.status] || {
-                    label: b.status,
-                    className: "bg-zinc-800 text-zinc-400 border-zinc-700",
-                  };
+                  const statusInfo = bookingBadge(b);
                   const dateInfo = b.slot ? formatShortDate(b.slot.date) : null;
 
                   return (
@@ -1129,7 +1190,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-white text-sm">
-                              {humanize(b.category)} Session
+                              {categoryName(categories, b.category)}
                             </span>
                             <span className="text-[11px] font-mono text-zinc-400">
                               {b.trackingCode}
@@ -1305,9 +1366,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     {/* Milestone Invoices Inside Card */}
                     <div className="divide-y divide-zinc-800/60 p-2 sm:p-3">
                       {group.invoices.map((inv) => {
-                        const isUnpaid = inv.status === "PENDING" || inv.status === "OVERDUE";
+                        const isUnpaid = isOwed(inv);
                         const isPaid = inv.status === "PAID";
-                        const isReview = inv.status === "PENDING_VERIFICATION";
+                        const isReview = clientPayState(inv) === "IN_REVIEW";
+                        const payAction = clientPayAction(inv);
 
                         return (
                           <div
@@ -1357,7 +1419,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                       : `Due ${formatDate(inv.dueDate)}`}
                                   </span>
                                   {inv.paymentMethod && isPaid && (
-                                    <span className="text-zinc-500">· {humanize(inv.paymentMethod)}</span>
+                                    <span className="text-zinc-500">· {paymentMethodLabel(inv.paymentMethod)}</span>
                                   )}
                                 </div>
 
@@ -1376,15 +1438,17 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               <span
                                 className={cn(
-                                  "px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border",
+                                  "px-2 py-0.5 rounded text-[10px] font-mono font-bold border whitespace-nowrap",
                                   isPaid
                                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                                     : isUnpaid
                                     ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                    : isReview
+                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
                                     : "bg-zinc-800 text-zinc-400 border-zinc-700"
                                 )}
                               >
-                                {inv.status}
+                                {clientPayLabel(inv)}
                               </span>
 
                               {isPaid && (
@@ -1396,12 +1460,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 </Link>
                               )}
 
-                              {isUnpaid && (
+                              {payAction && (
                                 <Link
                                   href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
                                   className={buttonVariants({ size: "sm" })}
                                 >
-                                  Pay Now
+                                  {payAction.label}
                                 </Link>
                               )}
                             </div>
@@ -1422,8 +1486,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     )}
                     <div className="divide-y divide-zinc-800/60 rounded-2xl border border-zinc-800 bg-[#0d0d10] p-2 sm:p-3">
                       {standaloneInvoices.map((inv) => {
-                        const isUnpaid = inv.status === "PENDING" || inv.status === "OVERDUE";
+                        const isUnpaid = isOwed(inv);
                         const isPaid = inv.status === "PAID";
+                        const isReview = clientPayState(inv) === "IN_REVIEW";
+                        const payAction = clientPayAction(inv);
 
                         return (
                           <div
@@ -1472,15 +1538,17 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               <span
                                 className={cn(
-                                  "px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border",
+                                  "px-2 py-0.5 rounded text-[10px] font-mono font-bold border whitespace-nowrap",
                                   isPaid
                                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                                     : isUnpaid
                                     ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                    : isReview
+                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
                                     : "bg-zinc-800 text-zinc-400 border-zinc-700"
                                 )}
                               >
-                                {inv.status}
+                                {clientPayLabel(inv)}
                               </span>
 
                               {isPaid && (
@@ -1492,12 +1560,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 </Link>
                               )}
 
-                              {isUnpaid && (
+                              {payAction && (
                                 <Link
                                   href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
                                   className={buttonVariants({ size: "sm" })}
                                 >
-                                  Pay Now
+                                  {payAction.label}
                                 </Link>
                               )}
                             </div>

@@ -4,6 +4,8 @@
  * itself, so it is matched through that gallery.
  */
 
+import { clientPayState, isOwed } from "./client-status";
+
 export const BOOKING_MILESTONES: ReadonlySet<string> = new Set(["BOOKING_DEPOSIT", "BOOKING_BALANCE"]);
 export const PROPOSAL_MILESTONES: ReadonlySet<string> = new Set(["RETAINER_50", "FINAL_BALANCE_50"]);
 
@@ -47,7 +49,7 @@ export interface BillSums {
  */
 export function billSums(
   basePrice: number | null | undefined,
-  invoices: ReadonlyArray<{ milestoneType: string; status: string; amount: number }>,
+  invoices: ReadonlyArray<{ milestoneType: string; status: string; amount: number; paymentMethod?: string | null; paymentProofUrl?: string | null }>,
   planMilestones: ReadonlySet<string>
 ): BillSums {
   const live = invoices.filter((i) => !DROPPED.has(i.status));
@@ -55,8 +57,9 @@ export function billSums(
   const base = basePrice && basePrice > 0 ? basePrice : sum(live.filter((i) => planMilestones.has(i.milestoneType)));
   const totalAmount = base + sum(live.filter((i) => !planMilestones.has(i.milestoneType)));
   const paidAmount = sum(live.filter((i) => i.status === "PAID"));
-  const balanceDue = sum(live.filter((i) => i.status === "PENDING" || i.status === "OVERDUE"));
-  const hasReview = live.some((i) => i.status === "PENDING_VERIFICATION");
+  // Owed includes a QR deposit with no slip yet: the studio has nothing to check until it's sent.
+  const balanceDue = sum(live.filter(isOwed));
+  const hasReview = live.some((i) => clientPayState(i) === "IN_REVIEW");
   // A slip still waiting for the studio's review isn't settled yet.
   const isFullyPaid = balanceDue <= 0 && !hasReview && paidAmount > 0;
   const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : isFullyPaid ? 100 : 0;

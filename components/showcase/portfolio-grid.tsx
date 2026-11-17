@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Play, Eye, Camera, Film } from "lucide-react";
 import type { LightboxItem } from "./media-lightbox-modal";
 import type { VideoItem } from "./video-reel-modal";
+import { categoryName } from "@/lib/bookings/category-name";
 
 export interface ShowcasePortfolioItem {
   id: string;
@@ -26,6 +27,8 @@ interface PortfolioGridProps {
   onOpenLightbox: (item: LightboxItem) => void;
   onOpenVideo: (item: VideoItem) => void;
   brandColor?: string | null;
+  /** The studio's categories, to label each card by name rather than its code. */
+  categories?: ReadonlyArray<{ slug: string; name: string }>;
 }
 
 /**
@@ -79,6 +82,7 @@ export function PortfolioGrid({
   onOpenLightbox,
   onOpenVideo,
   brandColor,
+  categories = [],
 }: PortfolioGridProps) {
   if (items.length === 0) {
     return (
@@ -125,7 +129,7 @@ export function PortfolioGrid({
               <div className="absolute top-3 left-3">
                 <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-white">
                   {isVideo ? <Film className="size-3 text-cyan-400" /> : <Camera className="size-3 text-amber-400" />}
-                  <span>{item.category}</span>
+                  <span>{categoryName(categories, item.category)}</span>
                 </span>
               </div>
 

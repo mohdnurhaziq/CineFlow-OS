@@ -102,6 +102,7 @@ export function ShowcaseShell({
           onOpenLightbox={setActiveLightboxItem}
           onOpenVideo={setActiveVideoItem}
           brandColor={tenant.brandColor}
+          categories={categories}
         />
       )}
 

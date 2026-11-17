@@ -16,6 +16,10 @@ import AdminInvoicePage from "@/app/[tenantSlug]/admin/invoices/[invoiceId]/page
 import { expectSuccess } from "./result-helpers";
 import { findProp, provideReactGlobal } from "./react-tree";
 import { BOOKING_MILESTONES, billSums, invoiceBookingId, invoiceProposalId } from "@/lib/invoices/bill-groups";
+import { clientPayAction, clientPayLabel, clientPayState, isOwed } from "@/lib/invoices/client-status";
+import { processInvoicePayment } from "@/lib/actions/checkout";
+import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
+import { categoryName } from "@/lib/bookings/category-name";
 
 const DAY_MS = 86_400_000;
 
@@ -181,7 +185,7 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
   await harness.test("T13-GROUP-02: the booking's bill totals the session and its extras", async () => {
     const deposit = { milestoneType: "BOOKING_DEPOSIT", status: "PAID", amount: 100 };
     const balance = { milestoneType: "BOOKING_BALANCE", status: "PAID", amount: 150 };
-    const prints = { milestoneType: "PRINT_FRAME_ORDER", status: "PENDING_VERIFICATION", amount: 350 };
+    const prints = { milestoneType: "PRINT_FRAME_ORDER", status: "PENDING_VERIFICATION", amount: 350, paymentProofUrl: "/uploads/receipts/t13-prints.jpg" };
     const review = billSums(250, [deposit, balance, prints], BOOKING_MILESTONES);
     harness.assertEqual(review.totalAmount, 600, "Session 250 + prints 350");
     harness.assertEqual(review.paidAmount, 250, "Paid so far");
@@ -196,5 +200,69 @@ export async function runTier13InvoiceTests(harness: TestHarness) {
     const noPrice = billSums(0, [deposit, { ...balance, status: "PENDING" }], BOOKING_MILESTONES);
     harness.assertEqual(noPrice.totalAmount, 250, "No session price: the plan's invoices make the total");
     harness.assertEqual(noPrice.balanceDue, 150, "Balance due");
+  });
+
+  await harness.test("T13-PAY-01: the client sees where each invoice stands and what to do next", async () => {
+    const qrNoSlip = { status: "PENDING_VERIFICATION", paymentMethod: "QR_CODE", paymentProofUrl: null };
+    const qrSlip = { ...qrNoSlip, paymentProofUrl: "/uploads/receipts/x.jpg" };
+    const cash = { status: "PENDING_VERIFICATION", paymentMethod: "CASH", paymentProofUrl: null };
+    harness.assertEqual(clientPayState(qrNoSlip), "AWAITING_PAYMENT", "QR with no slip: still to pay, not under review");
+    harness.assert(isOwed(qrNoSlip), "…and counted as owed");
+    harness.assertEqual(clientPayLabel(qrNoSlip), "Upload your slip", "Labelled with the next step");
+    harness.assertEqual(clientPayAction(qrNoSlip)?.label, "Upload slip", "Offers the slip upload");
+    harness.assertEqual(clientPayState(qrSlip), "IN_REVIEW", "Slip sent: under review");
+    harness.assert(!isOwed(qrSlip) && clientPayAction(qrSlip) === null, "Nothing more to do while it's checked");
+    harness.assertEqual(clientPayLabel(cash), "Pay at the studio", "Cash: pay at the studio");
+    harness.assert(isOwed(cash) && clientPayAction(cash) === null, "Owed, with no online action");
+    harness.assertEqual(clientPayLabel({ status: "REJECTED", paymentMethod: "QR_CODE" }), "Slip not accepted", "Rejected slip named plainly");
+    harness.assertEqual(clientPayAction({ status: "REJECTED", paymentMethod: "QR_CODE" })?.label, "Upload slip", "…and a new slip can be sent");
+    harness.assertEqual(clientPayLabel({ status: "PENDING" }), "Unpaid", "Unpaid");
+    harness.assertEqual(clientPayAction({ status: "OVERDUE" })?.label, "Pay now", "Overdue: pay now");
+    harness.assertEqual(clientPayLabel({ status: "PAID" }), "Paid", "Paid");
+    harness.assert(!isOwed({ status: "VOID" }), "Cancelled isn't owed");
+    const owing = billSums(600, [{ milestoneType: "BOOKING_DEPOSIT", amount: 300, ...qrNoSlip }], BOOKING_MILESTONES);
+    harness.assertEqual(owing.balanceDue, 300, "A deposit with no slip counts toward the balance due");
+    harness.assertEqual(owing.hasReview, false, "…and the bill isn't 'under review'");
+    const cats = [{ slug: "studio-portrait", name: "Studio Portraits" }];
+    harness.assertEqual(categoryName(cats, "studio-portrait"), "Studio Portraits", "A category shows by its name");
+    harness.assertEqual(categoryName(cats, "STUDIO_PORTRAIT"), "Studio Portraits", "…whatever case its code is in");
+    harness.assertEqual(categoryName(cats, "old-category"), "Old category", "A deleted category reads as words, not a code");
+  });
+
+  await harness.test("T13-PAY-02: a QR booking with no slip is 'received', links to the slip upload, then goes under review", async () => {
+    const qrSlot = await db.bookingSlot.create({
+      data: { tenantId: lumina.id, category: "commercial", date: new Date(Date.now() + 15 * DAY_MS), startTime: "02:00 PM", endTime: "03:00 PM", status: "AVAILABLE", price: 0, depositRequired: 100 },
+    });
+    slotIds.push(qrSlot.id);
+    const email = `t13-qr-${run}@example.test`;
+    const qr = await withSession(null, () =>
+      processBookingCheckout({
+        tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: qrSlot.id, sessionId: `t13-qr-${run}`,
+        clientName: "QR Client", clientEmail: email, clientPhone: "0123456789", paymentMethod: "QR_CODE", packageId: pkg.id,
+      })
+    );
+    harness.assert(qr.success, "Booked with QR and no slip");
+    if (!qr.success || !qr.bookingId || !qr.invoiceId) return;
+    const qrBookingId = qr.bookingId;
+    const qrInvoiceId = qr.invoiceId;
+    const deposit = await db.milestoneInvoice.findUnique({ where: { id: qrInvoiceId } });
+    harness.assertEqual(deposit ? clientPayState(deposit) : null, "AWAITING_PAYMENT", "The deposit waits for the client's payment");
+
+    // A client with a password gets a link straight to the slip upload.
+    const qrClient = await db.user.findFirst({ where: { tenantId: lumina.id, email } });
+    await db.user.update({ where: { id: qrClient!.id }, data: { passwordHash: "x" } });
+    const mail = await sendBookingConfirmation(qrBookingId);
+    harness.assert(!!mail && mail.emailSubject.startsWith("Booking received"), "The email says the booking is received, not confirmed");
+    harness.assert(!!mail && mail.emailText.includes("upload your payment slip within 24 hours"), "…and says what to do next");
+    harness.assert(!!mail && mail.emailHtml.includes(`/lumina-cine/checkout?invoiceId=${qrInvoiceId}`), "…with a link to the slip upload");
+
+    const sent = await withSession(as(qrClient!, "lumina-cine"), () =>
+      processInvoicePayment({ tenantId: lumina.id, tenantSlug: "lumina-cine", invoiceId: qrInvoiceId, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t13-qr.jpg" })
+    );
+    harness.assert(sent.success === true, "The client sends their slip");
+    const after = await db.milestoneInvoice.findUnique({ where: { id: qrInvoiceId } });
+    harness.assertEqual(after ? clientPayState(after) : null, "IN_REVIEW", "Now it's under review");
+    const mailAfter = await sendBookingConfirmation(booked.bookingId);
+    harness.assert(!!mailAfter && mailAfter.emailSubject.startsWith("Booking confirmed with"), "A paid booking's email says confirmed");
   });
 }

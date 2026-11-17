@@ -11,6 +11,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { toast } from "sonner";
+import { formatSlotDate } from "@/lib/slot-time";
 
 export interface BookingSlotRow {
   id: string;
@@ -182,6 +184,7 @@ export function SingleSlotDialog({
         }
       }
 
+      toast.success(isEditing ? "Slot updated." : `Slot added: ${formatSlotDate(`${date}T00:00:00Z`, { weekday: "short", day: "numeric", month: "short" })}, ${startTime} – ${endTime}.`);
       onSuccess?.();
       onClose();
     } catch (err) {
