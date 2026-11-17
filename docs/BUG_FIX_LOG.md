@@ -17,6 +17,39 @@ Entries from before 5 Nov 2026 were rebuilt from commit messages, so they are sh
 
 ---
 
+## 2026-11-17: Full access check of every role and permission
+
+A test now lists every admin action (99), upload folder and admin page (22) with exactly the access it needs (Tier 26). For each one it checks that one step below is refused and exactly the need is allowed, so a check that asks for the wrong area or level fails the suite, not only a missing one. Proved by loosening one action and one page on purpose: 9 failures, then restored. A browser walkthrough on the Docker build signed in as each starter role (Photographer, Videographer, Crew, Front desk), each money permission, and a role with no access. Full E2E suite: 4795 assertions, 0 failures.
+
+### BUG-20261117-01: Booking showed "Upload photos" to people who can't open the gallery
+
+- **Area:** Booking details (page, Bookings pop-up, Calendar pop-up)
+- **Problem:** Crew (no Galleries access) saw "Upload photos" on their booking and landed on "You don't have access to this". Front desk (Galleries View) saw "Upload photos" on a gallery they can only look at.
+- **Cause:** The link showed whenever the booking had a gallery, whatever the viewer's Galleries access.
+- **Fix:** The link follows the gallery page's own rule: "Upload photos" for Galleries Manage, or Only their own on a booking assigned to them; "Open gallery" for Galleries View; no link otherwise.
+- **Files:** `lib/bookings/gallery-link.ts`, `lib/auth/page-powers.ts`, `components/admin/bookings/booking-actions.tsx`
+- **Tests:** T26-LINK-01 (link and gallery page agree at every level)
+- **Commit:** `82c2a1b`
+
+### BUG-20261117-02: "Record payment" offered on a slip the person can't approve
+
+- **Area:** Invoice page
+- **Problem:** With "Record or cancel payments" but not "Approve or reject payments", an invoice whose payment slip was waiting for review showed "Record payment". The server refused it on save, because recording over a slip approves it.
+- **Cause:** The button only checked the record-payments permission.
+- **Fix:** One shared rule decides both: on a waiting slip, recording also needs approve-payments. Without it the page says "A payment slip is waiting for review in Verification."
+- **Files:** `lib/invoices/record-rule.ts`, `components/admin/invoices/invoice-admin-actions.tsx`, `app/[tenantSlug]/admin/invoices/[invoiceId]/page.tsx`
+- **Tests:** T26-LINK-02 (button and server agree in all 8 combinations)
+- **Commit:** `82c2a1b`
+
+### BUG-20261117-03: Gear kit availability said "check failed" when access was refused
+
+- **Area:** Gear & Fleet, kit bundles (`checkBundleAvailability`)
+- **Problem:** Someone without Shoot days & gear access got a generic failure instead of a refusal.
+- **Fix:** The action reports `FORBIDDEN` when the access check refuses.
+- **Files:** `lib/actions/gear.ts`
+- **Tests:** T26-TABLE-02, T26-TABLE-03
+- **Commit:** `82c2a1b`
+
 ## 2026-11-06: Page audit, client records need a signed-in owner
 
 From a full audit of every page. Decision taken with the owner: vault, proposals, releases and set-hud need the customer (or studio staff) to sign in, so every view and signature has a name on it. The full E2E suite passes: 2349 assertions, 0 failures. New tests are T10-REC-01 to 08.
@@ -504,4 +537,6 @@ The manual describes the app as it is today; each item below is written there as
 - [ ] **Proposals have no draft or decline.** A proposal is sent the moment it is created; the "Draft" and "Declined" labels exist in the proposals list but nothing ever sets them. Either add Save as draft and a client Decline button, or remove the labels. (Clients and proposals)
 - [ ] **A package can't be hidden.** It can only be deleted or moved to a switched-off category. Add an Active switch to packages, as categories, sizes and frames already have. (Services and your website)
 - [ ] **A page-load error in the browser console.** React error #418 (server and browser rendered different text) appears on the client account, checkout and call sheet pages in the Docker build. Nothing visible breaks; likely a date or time formatted in a different time zone on the server and in the browser.
+- [ ] **Gear day rates show to everyone with Shoot days & gear access.** Found in the access walkthrough (2026-11-17): Photographer and Crew see each item's day rate and the kit's total ($2,620 in the demo). Other money is hidden without Invoices access; the design doesn't say whether gear rates count. Decide, then hide them the same way or leave as is. (Team, roles and assigning shoots)
+- [ ] **Shipping zones: the server allows Catalog Manage, but the only screen is in owner-only Settings.** The design lists shipping zones under Catalog & website, yet they are edited in Settings → Photo delivery, which only the owner opens. Either move the shipping zones onto the Frames & Prints page, or make the action owner-only. (Settings and your team)
 - [x] **A held slot can still be edited or deleted in the Calendar.** Fixed 2026-11-16: edit, delete and batch delete refuse a slot whose hold is still running (`SLOT_HELD`) or that has a client booking (`SLOT_HAS_BOOKING`, use Move to another slot), checked again inside the write so a client who selects it at the same instant wins. A hold that has run out doesn't block, and editing such a slot opens it up. The Calendar greys out the buttons with the reason. Test: T2-SLOT-02.
