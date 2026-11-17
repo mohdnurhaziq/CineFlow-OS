@@ -21,6 +21,16 @@ Entries from before 5 Nov 2026 were rebuilt from commit messages, so they are sh
 
 A test now lists every admin action (99), upload folder and admin page (22) with exactly the access it needs (Tier 26). For each one it checks that one step below is refused and exactly the need is allowed, so a check that asks for the wrong area or level fails the suite, not only a missing one. Proved by loosening one action and one page on purpose: 9 failures, then restored. A browser walkthrough on the Docker build signed in as each starter role (Photographer, Videographer, Crew, Front desk), each money permission, and a role with no access. Full E2E suite: 4795 assertions, 0 failures.
 
+### BUG-20261118-03: Dates changed day between the server and the browser
+
+- **Area:** Client account, checkout, call sheet, model release, signed proposal, gear bookings
+- **Problem:** The client account logged a React hydration error, and dates could show a different day than the studio sees: a shoot on Fri 20 Nov showed as Sat 21 Nov for a client in Malaysia.
+- **Cause:** These screens formatted dates in the viewer's time zone. The server renders them in UTC, then the browser renders them again in its own zone, and the two disagree.
+- **Fix:** Calendar days (shoot, session and gear booking days) use `formatSlotDate` (UTC, as they are stored). Moments (paid, due, signed, submitted) use the studio's time zone, as the invoice document already did.
+- **Files:** `components/account/client-dashboard.tsx`, `components/checkout/order-summary-card.tsx`, `components/checkout/receipt-lightbox-modal.tsx`, `components/gear/gear-dashboard.tsx`, `components/logistics/call-sheet-shell.tsx`, `components/logistics/release-form-shell.tsx`, `components/proposals/signed-acceptance-view.tsx`
+- **Tests:** T27-DATES-01 (no browser-rendered screen formats a date without a fixed time zone), T27-DATES-02
+- **Commit:** bb4b6ff
+
 ### BUG-20261118-02: Overview "Billing & Receipts" listed invoices one by one
 
 - **Area:** Client account → Overview → Billing & Receipts
