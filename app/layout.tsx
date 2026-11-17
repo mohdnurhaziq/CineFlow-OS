@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
 import { SignedOutNotice } from "@/components/auth/signed-out-notice";
+import { StaleVersionReload } from "@/components/stale-version-reload";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,6 +54,8 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <SignedOutNotice />
         </Suspense>
+        {/* A page left open across an update reloads itself when its buttons stop working. */}
+        <StaleVersionReload />
         {/*
           Pop-up messages. Top centre, so a message never sits on the buttons pages keep at the
           bottom of the screen, and just below the area's sticky header when there is one: each

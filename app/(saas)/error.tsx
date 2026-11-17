@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { useEffect } from "react";
+import { reloadIfStaleVersion } from "@/lib/stale-version";
 import Link from "next/link";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 
@@ -14,6 +15,8 @@ export default function SaasError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A page left open across an update: reload it rather than show an error.
+    if (reloadIfStaleVersion(error)) return;
     console.error("SaaS Platform Error:", error);
   }, [error]);
 

@@ -1,3 +1,5 @@
+import { STALE_VERSION_MESSAGE, reloadIfStaleVersion } from "@/lib/stale-version";
+
 /**
  * The message a server action returns to the browser when it fails. A Zod validation
  * error's own `message` is a JSON dump of every issue, so show the first issue's
@@ -11,8 +13,12 @@ export function actionErrorMessage(error: unknown, fallback: string): string {
 /**
  * The `message` of a caught value, or undefined if it has none (something other than an
  * Error was thrown). For `catch (err)` blocks, where `err` is `unknown`. Safe in client code.
+ *
+ * In the browser, a button on a page left open across an update fails with "Server Action …
+ * not found": the page is reloaded (see lib/stale-version) and a short note returned instead.
  */
 export function errorMessageOf(error: unknown): string | undefined {
+  if (reloadIfStaleVersion(error)) return STALE_VERSION_MESSAGE;
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
     return error.message;
   }

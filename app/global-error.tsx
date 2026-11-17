@@ -2,6 +2,7 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useEffect } from "react";
+import { reloadIfStaleVersion } from "@/lib/stale-version";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function GlobalError({
@@ -12,6 +13,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A page left open across an update: reload it rather than show an error.
+    if (reloadIfStaleVersion(error)) return;
     console.error("Critical Global Error:", error);
   }, [error]);
 
