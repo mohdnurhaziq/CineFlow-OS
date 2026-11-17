@@ -83,12 +83,15 @@ export async function decodeSessionToken(token: string): Promise<{ user: Session
 // One lookup per request, however many times the session is read while rendering it.
 const sessionStateFor = cache(async (userId: string): Promise<{ validAfter: number | null; removed: boolean }> => {
   const row = await db.user.findUnique({ where: { id: userId }, select: { sessionsValidAfter: true, deactivatedAt: true } });
-  return { validAfter: row?.sessionsValidAfter?.getTime() ?? null, removed: !!row?.deactivatedAt };
+  // An account that no longer exists has no session: its cookie still carries a role, which
+  // owner-only checks would otherwise trust.
+  if (!row) return { validAfter: null, removed: true };
+  return { validAfter: row.sessionsValidAfter?.getTime() ?? null, removed: !!row.deactivatedAt };
 });
 
 /**
  * True when the account was signed out everywhere (password reset, or removed from the team)
- * after this token was issued, or is removed from the team right now.
+ * after this token was issued, is removed from the team right now, or no longer exists.
  * Tokens from before `iat` existed count as issued at 0, so they end only on such a reset.
  */
 export async function isSessionRevoked(userId: string, issuedAt: number): Promise<boolean> {

@@ -32,7 +32,8 @@ import {
   type AccessMap,
   type AccessTick,
 } from "@/lib/auth/access";
-import { AuthorizationError } from "@/lib/auth/guard";
+import { AuthorizationError, requireOwner } from "@/lib/auth/guard";
+import { getCurrentUser } from "@/lib/auth/session";
 import { NoAccess } from "@/components/admin/no-access";
 import { POST as uploadFile } from "@/app/api/upload/route";
 
@@ -797,6 +798,35 @@ async function runTable(harness: TestHarness, f: { lumina: { id: string; slug: s
       "true/false",
       "the invoice page passes recordPayments and approvePayments"
     );
+  });
+
+  await harness.test("T26-SESSION-01: a deleted account's cookie signs nobody in, not even as owner", async () => {
+    const gone = await db.user.create({
+      data: { tenantId: lumina.id, email: `t26-gone-${run}@example.test`, name: "T26 Gone", role: "STUDIO_OWNER" },
+    });
+    const s = sessionOf(gone);
+    const before = await withSession(s, async () => ({ user: await getCurrentUser(), owner: await requireOwner(lumina.id).then(() => true, () => false) }));
+    harness.assert(before.user?.id === gone.id && before.owner, "while the account exists, the cookie works");
+    await db.user.delete({ where: { id: gone.id } });
+    const after = await withSession(s, async () => ({ user: await getCurrentUser(), owner: await requireOwner(lumina.id).then(() => true, () => false) }));
+    harness.assertEqual(after.user, null, "after it is deleted, the cookie is no session");
+    harness.assertEqual(after.owner, false, "and owner-only checks refuse it");
+  });
+
+  await harness.test("T26-SHIP-01: shipping zones live on Frames & Prints, editable with Catalog Manage", async () => {
+    const zoneCount = await db.shippingZone.count({ where: { tenantId: lumina.id } });
+    const framesPage = (who: Who, tab?: string) =>
+      as(who, () => FramesPage({ params: sp({ tenantSlug: lumina.slug }), searchParams: sp(tab ? { tab } : {}) }));
+    const view = await framesPage(access({ catalog: "VIEW" }), "shipping");
+    harness.assertEqual(findProp<unknown[]>(view, "zones")?.length, zoneCount, "Catalog View sees the studio's zones");
+    harness.assertEqual(findProp(view, "canManage"), false, "read-only at View");
+    harness.assertEqual(findProp(view, "initialTab"), "shipping", "?tab=shipping opens the Shipping Zones tab");
+    const manage = await framesPage(access({ catalog: "MANAGE" }));
+    harness.assertEqual(findProp(manage, "canManage"), true, "editable at Manage");
+    harness.assertEqual(findProp(manage, "initialTab"), "frames", "without ?tab it opens on frames");
+    // Settings no longer carries them.
+    const settingsShown = await as("owner", () => SettingsPage({ params: sp({ tenantSlug: lumina.slug }), searchParams: sp({ tab: "delivery" }) }));
+    harness.assertEqual(findProp(settingsShown, "zones"), undefined, "Settings → Photo delivery has no shipping zones");
   });
 
   await harness.test("T26-UPLOAD-01: upload folders follow their area", async () => {
