@@ -1,0 +1,2 @@
+# Prisma checks migration files by checksum: keep the same line endings on every machine.
+prisma/migrations/** text eol=lf
