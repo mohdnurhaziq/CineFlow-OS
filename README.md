@@ -185,7 +185,10 @@ exact version staging ran.
    cd production
    node scripts/ops.mjs create-super-admin you@example.com
    ```
-   It prints a random password once. Studios then join through the studio sign-up page.
+   It prints a random password once. Studios then join through the studio sign-up page
+   (`/create-studio`). The super-admin signs in on any studio's sign-in page
+   (`/<studio>/login`) and then opens `/super-admin`, so that works once the first studio
+   has joined.
 
 ### Releasing a change
 
