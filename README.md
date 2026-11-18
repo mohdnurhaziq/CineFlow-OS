@@ -103,3 +103,23 @@ database and seeds demo data (set `SEED_ON_FIRST_RUN=false` in `.env` to skip).
 The database, uploads and private deliverables live in Docker volumes
 (`cineflow-data`, `cineflow-uploads`, `cineflow-storage`), so they survive
 restarts and rebuilds.
+
+### Sharing it for testing (Cloudflare Tunnel)
+
+A free Cloudflare quick tunnel gives the app running on this computer a public https
+address, with no Cloudflare account. It is off unless you start it.
+
+| Task | Command |
+| --- | --- |
+| Start the tunnel | `docker compose up -d tunnel` |
+| Show its address | `docker compose logs tunnel \| grep trycloudflare.com` |
+| Stop the tunnel | `docker compose stop tunnel` |
+
+- The address (`https://<random words>.trycloudflare.com`) changes whenever the tunnel
+  restarts, including after this computer restarts. The site is up only while this computer
+  and Docker are running.
+- Anyone with the address can open the app. Change the demo passwords (`password123`,
+  including `superadmin@cineflow.app`) before you share it.
+- Links in emails and the Toyyibpay return address use `NEXT_PUBLIC_APP_URL`, which is
+  fixed when the app is built, so they still point at localhost. For a fixed address, use
+  a named tunnel on your own domain, set `NEXT_PUBLIC_APP_URL` to it and rebuild.

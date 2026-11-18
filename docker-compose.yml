@@ -37,6 +37,19 @@ services:
     environment:
       MP_MAX_MESSAGES: 1000
 
+  # Public https address for testing, through a free Cloudflare quick tunnel (no account).
+  # Off by default; start it with:  docker compose --profile tunnel up -d
+  # The address (https://<random>.trycloudflare.com) is in:  docker compose logs tunnel
+  # It changes each time the tunnel restarts. Anyone with it can open the app.
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.7
+    container_name: cineflow-tunnel
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://app:3000
+    depends_on:
+      - app
+
 volumes:
   cineflow-data:
   cineflow-uploads:
