@@ -23,6 +23,7 @@ import {
   deployTargetProblem,
   parseEnvFile,
   planProductionDeploy,
+  runProductionDeploy,
   waitForHealth,
 } from "../../scripts/ops/lib.mjs";
 import { createOrResetSuperAdmin } from "../../scripts/create-super-admin";
@@ -271,6 +272,79 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
       throw new Error("ECONNREFUSED");
     }) as unknown as typeof fetch;
     harness.assertEqual(await waitForHealth("http://x/api/health", { timeoutMs: 30, intervalMs: 5, fetchImpl: offline }), false, "Not even listening: false");
+  });
+
+  /** A pretend 24/7 PC: records every step a production deploy takes, and can fail any of them. */
+  function fakeProduction(opts: { failAt?: string; healthy?: boolean; deployed?: string | null } = {}) {
+    const steps: string[] = [];
+    let record: string | null = opts.deployed === undefined ? "old1234" : opts.deployed;
+    const step = (name: string) => {
+      steps.push(name);
+      if (opts.failAt === name) throw new Error(`${name} failed`);
+    };
+    const deps = {
+      log: () => {},
+      head: () => "old1234",
+      stagingRecord: () => ({ commit: "new5678", at: "2026-11-18T00:00:00Z" }),
+      deployedCommit: () => record,
+      fetch: () => step("fetch"),
+      commitExists: () => true,
+      listNew: (from: string | null, to: string) => {
+        steps.push(`list ${from ?? "first"}..${to}`);
+        return "";
+      },
+      checkout: (sha: string) => step(`checkout ${sha}`),
+      build: () => step("build"),
+      backupNow: () => {
+        step("backup");
+        return "2026-11-18_030000";
+      },
+      start: () => step("start"),
+      waitHealthy: async () => {
+        steps.push("health");
+        return opts.healthy ?? true;
+      },
+      writeRecord: (sha: string) => {
+        steps.push(`record ${sha}`);
+        record = sha;
+      },
+    };
+    return { steps, deps, record: () => record };
+  }
+
+  await harness.test("T30-OPS-06: production is built before the backup, so the backup misses only seconds of work", async () => {
+    const ok = fakeProduction();
+    await runProductionDeploy(ok.deps);
+    harness.assertDeepEqual(
+      ok.steps,
+      ["fetch", "list old1234..new5678", "checkout new5678", "build", "backup", "start", "health", "record new5678"],
+      "Build while the old version serves, then back up, then swap"
+    );
+
+    const first = fakeProduction({ deployed: null });
+    await runProductionDeploy(first.deps);
+    harness.assert(first.steps.includes("list first..new5678"), "A first deploy lists from nothing, not from the folder's code");
+
+    const badBuild = fakeProduction({ failAt: "build" });
+    await harness.assertRejects(() => runProductionDeploy(badBuild.deps), "keeps running", "A failed build says the old version is still live");
+    harness.assert(!badBuild.steps.includes("backup") && !badBuild.steps.includes("start"), "…no backup taken, nothing swapped");
+    harness.assertEqual(badBuild.steps[badBuild.steps.length - 1], "checkout old1234", "…and the folder goes back to the running version");
+    harness.assertEqual(badBuild.record(), "old1234", "…and the record still names it");
+
+    for (const [label, fx] of [
+      ["unhealthy", fakeProduction({ healthy: false })],
+      ["start fails", fakeProduction({ failAt: "start" })],
+    ] as const) {
+      let message = "";
+      try {
+        await runProductionDeploy(fx.deps);
+      } catch (e) {
+        message = e instanceof Error ? e.message : String(e);
+      }
+      harness.assert(message.includes("restore 2026-11-18_030000"), `${label}: names the backup to restore`, message);
+      harness.assert(message.includes("docker compose logs app"), `${label}: says where to see why`, message);
+      harness.assertEqual(fx.record(), "old1234", `${label}: the record isn't moved on`);
+    }
   });
 
   await harness.test("T30-ADMIN-01: the super-admin is created with a one-time random password, and can be reset", async () => {

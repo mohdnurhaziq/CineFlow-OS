@@ -19,7 +19,7 @@ import {
   changedFiles,
   deployTargetProblem,
   parseEnvFile,
-  planProductionDeploy,
+  runProductionDeploy,
   waitForHealth,
 } from "./ops/lib.mjs";
 
@@ -141,28 +141,29 @@ function backupNow() {
 async function deployProduction(env) {
   requireCleanFolder();
   const stagingDir = path.resolve(CWD, env.STAGING_DIR || "../staging");
-  const head = read("git", ["rev-parse", "HEAD"]);
-  const plan = planProductionDeploy({ stagingRecord: readRecord(stagingDir), productionDeployed: readRecord(CWD)?.commit ?? null });
-  if (plan.action === "error") fail(plan.message);
-  if (plan.action === "nothing") {
-    console.log(plan.message);
-    return;
+  try {
+    const result = await runProductionDeploy({
+      log: (m) => console.log(`\n${m}`),
+      head: () => read("git", ["rev-parse", "HEAD"]),
+      stagingRecord: () => readRecord(stagingDir),
+      deployedCommit: () => readRecord(CWD)?.commit ?? null,
+      fetch: () => run("git", ["fetch", "origin"]),
+      commitExists,
+      listNew: (from, to) => (from ? read("git", ["log", "--oneline", `${from}..${to}`]) : ""),
+      checkout: (sha) => run("git", ["checkout", "--detach", sha]),
+      build: () => run("docker", ["compose", "build", "app"]),
+      backupNow,
+      start: () => run("docker", ["compose", "up", "-d"]),
+      waitHealthy: () => {
+        console.log(`\nWaiting for ${healthUrl(env)} …`);
+        return waitForHealth(healthUrl(env));
+      },
+      writeRecord,
+    });
+    if (result.action === "deployed") console.log(`\nProduction is running ${describe(result.commit)}.`);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : String(err));
   }
-  run("git", ["fetch", "origin"]);
-  if (!commitExists(plan.commit)) fail(`Staging's version ${plan.commit.slice(0, 7)} isn't on GitHub (origin). Push it, then try again.`);
-  console.log(`\nGoing live (staging's version ${describe(plan.commit)}). New since production's version:`);
-  console.log(read("git", ["log", "--oneline", `${head}..${plan.commit}`]) || "(none: an older version)");
-
-  const backup = backupNow();
-  console.log(backup ? `\nBackup taken: ${backup}` : "\nNo database yet, so nothing to back up.");
-
-  run("git", ["checkout", "--detach", plan.commit]);
-  if (!(await buildAndStart(env))) {
-    const back = backup ? `To go back: node scripts/ops.mjs restore ${backup}` : "Look at: docker compose logs app";
-    fail(`Production didn't come back healthy. ${back}`);
-  }
-  writeRecord(plan.commit);
-  console.log(`\nProduction is running ${describe(plan.commit)}.`);
 }
 
 async function restore(env, name) {

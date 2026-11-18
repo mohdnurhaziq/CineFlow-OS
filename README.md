@@ -201,9 +201,10 @@ Push the change to `main` and wait for GitHub's checks to pass. Then, on the 24/
 | Put staging's version live | `production/` | `node scripts/ops.mjs deploy production` |
 | See what's running | either | `node scripts/ops.mjs status` |
 
-`deploy production` lists what's new, takes a backup, builds the new version while the old
-one keeps running, swaps them, and waits until the site answers. If it doesn't, it prints the
-command that puts the backup back. Both commands refuse to run in the wrong folder, or in a
+`deploy production` lists what's new, builds the new version while the old one keeps
+running, takes a backup just before swapping them, and waits until the site answers. If the
+build fails, the old version simply stays live. If the new version doesn't come up, it prints
+the command that puts the backup back. Both commands refuse to run in the wrong folder, or in a
 folder with changed files.
 
 ### Backups

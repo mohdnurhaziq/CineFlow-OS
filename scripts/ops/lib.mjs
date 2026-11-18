@@ -103,3 +103,69 @@ export async function waitForHealth(url, opts = {}) {
     await new Promise((r) => setTimeout(r, intervalMs));
   }
 }
+
+/**
+ * @typedef {object} ProductionDeployDeps
+ * @property {(m: string) => void} log
+ * @property {() => string} head                      the commit checked out in the production folder
+ * @property {() => { commit: string; at: string } | null} stagingRecord
+ * @property {() => string | null} deployedCommit     what production last deployed (its record)
+ * @property {() => void} fetch
+ * @property {(sha: string) => boolean} commitExists
+ * @property {(from: string | null, to: string) => string} listNew   one line per commit going live
+ * @property {(sha: string) => void} checkout
+ * @property {() => void} build                       builds the new image; the old one keeps serving
+ * @property {() => string | null} backupNow          the backup's name, or null when there's no database yet
+ * @property {() => void} start                       swaps to the new image (docker compose up -d)
+ * @property {() => Promise<boolean>} waitHealthy
+ * @property {(sha: string) => void} writeRecord
+ */
+
+/**
+ * `deploy production`: staging's version goes live. The new version is built while the old one
+ * keeps serving, and the backup is taken only after that, just before the swap, so it misses
+ * seconds of work rather than the minutes a build takes.
+ * @param {ProductionDeployDeps} d
+ * @returns {Promise<{ action: "nothing" } | { action: "deployed"; commit: string; backup: string | null }>}
+ */
+export async function runProductionDeploy(d) {
+  const deployed = d.deployedCommit();
+  const plan = planProductionDeploy({ stagingRecord: d.stagingRecord(), productionDeployed: deployed });
+  if (plan.action === "error") throw new Error(plan.message);
+  if (plan.action === "nothing") {
+    d.log(plan.message);
+    return { action: "nothing" };
+  }
+  const { commit } = plan;
+
+  d.fetch();
+  if (!d.commitExists(commit)) throw new Error(`Staging's version ${commit.slice(0, 7)} isn't on GitHub (origin). Push it, then try again.`);
+  const list = d.listNew(deployed, commit);
+  d.log(deployed ? `Going live (staging's version). New since production's version:\n${list || "(none: an older version)"}` : "First production deploy.");
+
+  const running = d.head();
+  d.checkout(commit);
+  try {
+    d.build();
+  } catch (err) {
+    d.checkout(running);
+    throw new Error(`Building the new version failed, so production keeps running the old one. ${err instanceof Error ? err.message : err}`);
+  }
+
+  const backup = d.backupNow();
+  d.log(backup ? `Backup taken: ${backup}` : "No database yet, so nothing to back up.");
+
+  const why = "See why: docker compose logs app.";
+  const back = backup ? ` To go back to how it was: node scripts/ops.mjs restore ${backup}` : "";
+  let healthy = false;
+  try {
+    d.start();
+    healthy = await d.waitHealthy();
+  } catch (err) {
+    throw new Error(`Starting the new version failed (${err instanceof Error ? err.message : err}). ${why}${back}`);
+  }
+  if (!healthy) throw new Error(`Production didn't come back healthy. ${why}${back}`);
+
+  d.writeRecord(commit);
+  return { action: "deployed", commit, backup };
+}

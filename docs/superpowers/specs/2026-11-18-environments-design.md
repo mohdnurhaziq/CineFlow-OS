@@ -39,7 +39,7 @@ that staging ran.
    shared between them. Dev keeps working as it does today, with its data kept.
 2. **Two commands to release.** On the 24/7 PC:
    - `deploy staging` puts the latest `main` on staging.
-   - `deploy production` takes a backup, then puts the commit staging is running on
+   - `deploy production` builds, takes a backup, then puts the commit staging is running on
      production.
    Each prints the commit it deployed and fails loudly if the app doesn't come back healthy.
 3. **Safe database changes.** Staging and production apply recorded database changes
@@ -172,8 +172,9 @@ One `docker-compose.yml`, configured by each folder's `.env`:
 - **`deploy production`** (run in `production/`):
   1. Read the commit staging is running from `../staging`.
   2. List the commits that will go live.
-  3. Take a backup.
-  4. Check out that commit and build.
+  3. Check out that commit and build it while the old version keeps serving (if the build
+     fails, go back to the running version and stop).
+  4. Take a backup, just before the swap, so it misses seconds of work rather than minutes.
   5. Restart and wait for the health check.
   If the health check fails, it prints the restore command for the backup it just took.
   It doesn't restore automatically, because the person should see what went wrong first.
