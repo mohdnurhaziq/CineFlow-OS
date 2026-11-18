@@ -9,6 +9,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "../test-harness";
+import { sqlitePathFromUrl } from "../../../scripts/start";
 import { withSession } from "../mocks/session";
 import { errorMessageOf } from "@/lib/action-error";
 
@@ -277,11 +278,13 @@ export async function runFrameworkStorageTests(harness: TestHarness) {
   // ============================================================================
   // Feature 3: SQLite Migration & Database Engine (5 Tests)
   // ============================================================================
-  await harness.test("T1-F03-01: SQLite dev.db database file exists and has non-zero size", async () => {
-    const dbPath = path.join(rootDir, "prisma", "dev.db");
+  await harness.test("T1-F03-01: the SQLite database file exists and has non-zero size", async () => {
+    // The database this run uses (DATABASE_URL), not a developer's own prisma/dev.db: a fresh
+    // clone, like the GitHub check's, has no dev.db.
+    const dbPath = sqlitePathFromUrl(process.env.DATABASE_URL ?? "file:./dev.db", path.join(rootDir, "prisma"));
     const stat = await fs.stat(dbPath).catch(() => null);
-    harness.assert(stat !== null, "prisma/dev.db file exists");
-    harness.assert(stat !== null && stat.size > 1024, "dev.db file size is > 1KB", `Actual size: ${stat?.size} bytes`);
+    harness.assert(stat !== null, `The database file exists (${path.basename(dbPath)})`);
+    harness.assert(stat !== null && stat.size > 1024, "The database file is > 1KB", `Actual size: ${stat?.size} bytes`);
   });
 
   await harness.test("T1-F03-02: SQLite pragma foreign_keys is enabled (ON)", async () => {
