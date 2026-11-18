@@ -91,7 +91,8 @@ docker compose up -d --build
 ```
 
 Open http://localhost:3000. On the first start the container creates the SQLite
-database and seeds demo data (set `SEED_ON_FIRST_RUN=false` in `.env` to skip).
+database and seeds demo data (set `SEED_ON_FIRST_RUN=false` in `.env` to skip). Every start
+applies any new recorded database changes in `prisma/migrations` first.
 
 | Task | Command |
 | --- | --- |
@@ -103,6 +104,20 @@ database and seeds demo data (set `SEED_ON_FIRST_RUN=false` in `.env` to skip).
 The database, uploads and private deliverables live in Docker volumes
 (`cineflow-data`, `cineflow-uploads`, `cineflow-storage`), so they survive
 restarts and rebuilds.
+
+### Changing the database
+
+Every database change is recorded as a migration in `prisma/migrations`, and each copy
+applies new ones when it starts. Never use `prisma db push` on a real database.
+
+1. Edit `prisma/schema.prisma`.
+2. `npm run db:migration -- <short_name>` writes the change as SQL (for example
+   `npm run db:migration -- add_gift_cards`). Read it: a dropped column loses its data.
+3. `npx prisma migrate deploy` applies it to `prisma/dev.db`; rebuilding Docker applies it there.
+4. Commit the new folder in `prisma/migrations` together with the schema change.
+
+`npm run db:check-migrations` fails when the schema has a change no migration records. GitHub
+runs it, the type check and the tests on every push (`.github/workflows/ci.yml`).
 
 ### Sharing it for testing (Cloudflare Tunnel)
 
@@ -122,37 +137,103 @@ address, with no Cloudflare account. It is off unless you start it.
   including `superadmin@cineflow.app`) before you share it.
 - Links in emails and the Toyyibpay return address use `NEXT_PUBLIC_APP_URL`, which is
   fixed when the app is built, so they still point at localhost. For a fixed address, use
-  your own domain (below).
+  your own domain ("Staging and production" below).
 
-### Putting it on your own domain (Cloudflare Tunnel)
+## Staging and production
 
-A named tunnel serves the app at an address on your domain, such as
-`https://app.example.com`, that stays the same across restarts. It needs a free Cloudflare
-account with your domain's DNS on Cloudflare (add the domain in Cloudflare and change the
-nameservers at your registrar to the two Cloudflare gives you).
+CineFlow OS runs as three separate copies. Each has its own folder, settings (`.env`),
+database, uploads, address and Cloudflare tunnel; nothing is shared between them.
 
-1. In the Cloudflare dashboard, open **Zero Trust → Networks → Tunnels** and create a
-   tunnel of type **Cloudflared**. Copy the token from the install command it shows
-   (the long text after `--token`).
-2. In the tunnel's **Public hostname** tab, add your hostname (for example subdomain `app`,
-   domain `example.com`) with service type **HTTP** and URL **`app:3000`**.
-3. In `.env`, set:
+| | Where | Used for | Data | Address |
+| --- | --- | --- | --- | --- |
+| **Dev** | this PC | building and testing changes | demo data | http://localhost:3000 |
+| **Staging** | the 24/7 PC | checking a change before it goes live | demo data | `https://staging.<domain>`, only you can open it |
+| **Production** | the 24/7 PC | real studios and their clients | real data | `https://app.<domain>` |
+
+A change goes dev → `main` on GitHub → staging → production. Production only ever gets the
+exact version staging ran.
+
+### One-time setup of the 24/7 PC
+
+1. Install [git](https://git-scm.com/), [Node.js 20 or later](https://nodejs.org/) and
+   [Docker Desktop](https://www.docker.com/products/docker-desktop/). In Docker Desktop, turn
+   on **Start Docker Desktop when you sign in**. In Windows, set the PC to sign in
+   automatically and never sleep, so the site comes back on its own after a restart.
+2. Make the folders and get the code (once each):
    ```
-   TUNNEL_TOKEN="<the token>"
-   NEXT_PUBLIC_APP_URL="https://app.example.com"
-   NEXT_PUBLIC_APP_DOMAIN="app.example.com"
+   CineFlow/
+     staging/       git clone https://github.com/<you>/CineFlow-OS.git staging
+     production/    git clone https://github.com/<you>/CineFlow-OS.git production
+     backups/       (or a folder inside Google Drive / OneDrive, see BACKUP_DIR)
    ```
-4. Rebuild the app so links in emails and payment return addresses use the new address,
-   then start the tunnel:
+3. Copy `.env.staging.example` to `staging/.env` and `.env.production.example` to
+   `production/.env`, and fill in the blanks. Each file explains every setting. Use a
+   different `AUTH_SECRET` in each.
+4. Your domain must be on Cloudflare (a free account; change the nameservers at your
+   registrar to the two Cloudflare gives you). In **Zero Trust → Networks → Tunnels**, create
+   two tunnels of type **Cloudflared**, and copy each one's token (the long text after
+   `--token`) into that copy's `TUNNEL_TOKEN`:
+   - staging's tunnel: public hostname `staging.<domain>` → service **HTTP**, URL **`app:3000`**;
+   - production's tunnel: public hostname `app.<domain>` → service **HTTP**, URL **`app:3000`**.
+5. Lock staging so only you can open it: in **Zero Trust → Access → Applications**, add a
+   self-hosted application for `staging.<domain>` with a policy that allows only your email.
+6. Set up real email for production: SMTP (for example Gmail with an app password) or
+   Resend. Staging's emails go to its own test inbox at http://localhost:8125 on the 24/7 PC.
+7. Deploy staging, then production (below). On the first production deploy, create your
+   super-admin:
    ```
-   docker compose up -d --build app
-   docker compose up -d domain-tunnel
+   cd production
+   node scripts/ops.mjs create-super-admin you@example.com
    ```
+   It prints a random password once. Studios then join through the studio sign-up page.
 
-| Task | Command |
-| --- | --- |
-| Check it connected | `docker compose logs domain-tunnel \| grep -i registered` |
-| Stop it | `docker compose stop domain-tunnel` |
+### Releasing a change
 
-The site is up only while this computer and Docker are running. The token lets anyone run
-your tunnel, so keep it out of git (`.env` is ignored).
+Push the change to `main` and wait for GitHub's checks to pass. Then, on the 24/7 PC:
+
+| Step | Run in | Command |
+| --- | --- | --- |
+| Put the latest `main` on staging | `staging/` | `node scripts/ops.mjs deploy staging` |
+| Check it on `https://staging.<domain>` | | |
+| Put staging's version live | `production/` | `node scripts/ops.mjs deploy production` |
+| See what's running | either | `node scripts/ops.mjs status` |
+
+`deploy production` lists what's new, takes a backup, builds the new version while the old
+one keeps running, swaps them, and waits until the site answers. If it doesn't, it prints the
+command that puts the backup back. Both commands refuse to run in the wrong folder, or in a
+folder with changed files.
+
+### Backups
+
+Production backs itself up every night at `BACKUP_TIME` (default 03:00), and before every
+`deploy production`, into `BACKUP_DIR`:
+
+- `db/<date_time>/` holds a copy of the database and the version it ran. These are kept for
+  `BACKUP_KEEP_DAYS` (default 14).
+- `files/` mirrors uploads and finished deliverables. It only adds and updates, so a file
+  deleted in the app is still there.
+
+Point `BACKUP_DIR` inside a Google Drive or OneDrive folder so a copy leaves the PC; make sure
+it has room, because deliverables can be large.
+
+| Task | Run in | Command |
+| --- | --- | --- |
+| Back up now | `production/` | `node scripts/ops.mjs backup now` |
+| Put a backup back | `production/` | `node scripts/ops.mjs restore <date_time>` |
+
+`restore` stops the app, puts the database and files back, switches to the version the
+backup was taken on, and starts it again. Anything saved after that backup is lost.
+
+### What production refuses to start with
+
+Production checks its settings when it starts and stops, listing each problem, if:
+
+- `AUTH_SECRET` is missing, shorter than 32 characters, or the built-in development one;
+- `ALLOW_SIMULATED_CARD_PAYMENTS` is on;
+- `NEXT_PUBLIC_APP_URL` isn't `https://`, or points at this computer;
+- no real email is set up (no SMTP or Resend, or SMTP pointing at the Mailpit test inbox);
+- `TOYYIBPAY_BASE_URL` is the Toyyibpay sandbox.
+
+See the problems with `docker compose logs app` in `production/`, fix `.env`, and run
+`docker compose up -d --force-recreate app` (or deploy again if you changed `NEXT_PUBLIC_APP_URL`,
+which is fixed into the build).
