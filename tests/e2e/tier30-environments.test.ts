@@ -246,12 +246,14 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
   });
 
   await harness.test("T30-OPS-04: production takes exactly what staging runs", async () => {
-    const none = planProductionDeploy({ stagingRecord: null, productionHead: "aaa" });
+    const none = planProductionDeploy({ stagingRecord: null, productionDeployed: "aaa" });
     harness.assertEqual(none.action, "error", "Staging never deployed: stop");
     harness.assert("message" in none && none.message.includes("deploy staging"), "…and say to deploy staging first");
-    const same = planProductionDeploy({ stagingRecord: { commit: "aaa", at: "2026-11-18T00:00:00Z" }, productionHead: "aaa" });
+    const first = planProductionDeploy({ stagingRecord: { commit: "aaa", at: "2026-11-18T00:00:00Z" }, productionDeployed: null });
+    harness.assertDeepEqual(first, { action: "deploy", commit: "aaa" }, "Production never deployed: deploy, even if its folder already has that code");
+    const same = planProductionDeploy({ stagingRecord: { commit: "aaa", at: "2026-11-18T00:00:00Z" }, productionDeployed: "aaa" });
     harness.assertEqual(same.action, "nothing", "Same version: nothing to do");
-    const next = planProductionDeploy({ stagingRecord: { commit: "bbb", at: "2026-11-18T00:00:00Z" }, productionHead: "aaa" });
+    const next = planProductionDeploy({ stagingRecord: { commit: "bbb", at: "2026-11-18T00:00:00Z" }, productionDeployed: "aaa" });
     harness.assertDeepEqual(next, { action: "deploy", commit: "bbb" }, "A newer staging version: deploy it");
   });
 

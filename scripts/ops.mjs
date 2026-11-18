@@ -142,7 +142,7 @@ async function deployProduction(env) {
   requireCleanFolder();
   const stagingDir = path.resolve(CWD, env.STAGING_DIR || "../staging");
   const head = read("git", ["rev-parse", "HEAD"]);
-  const plan = planProductionDeploy({ stagingRecord: readRecord(stagingDir), productionHead: head });
+  const plan = planProductionDeploy({ stagingRecord: readRecord(stagingDir), productionDeployed: readRecord(CWD)?.commit ?? null });
   if (plan.action === "error") fail(plan.message);
   if (plan.action === "nothing") {
     console.log(plan.message);

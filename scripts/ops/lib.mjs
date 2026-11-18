@@ -58,15 +58,16 @@ export function changedFiles(porcelain) {
 }
 
 /**
- * What `deploy production` should do, given what staging runs and what production has.
- * @param {{ stagingRecord: { commit: string; at: string } | null; productionHead: string }} input
+ * What `deploy production` should do, given what staging runs and what production last
+ * deployed (its own record, not the code in its folder: a fresh clone already has the latest).
+ * @param {{ stagingRecord: { commit: string; at: string } | null; productionDeployed: string | null }} input
  * @returns {{ action: "deploy"; commit: string } | { action: "nothing"; message: string } | { action: "error"; message: string }}
  */
-export function planProductionDeploy({ stagingRecord, productionHead }) {
+export function planProductionDeploy({ stagingRecord, productionDeployed }) {
   if (!stagingRecord?.commit) {
     return { action: "error", message: "Staging hasn't been deployed yet. Run `node scripts/ops.mjs deploy staging` in the staging folder first." };
   }
-  if (stagingRecord.commit === productionHead) {
+  if (stagingRecord.commit === productionDeployed) {
     return { action: "nothing", message: `Production already runs ${stagingRecord.commit.slice(0, 7)}, the same version as staging.` };
   }
   return { action: "deploy", commit: stagingRecord.commit };
