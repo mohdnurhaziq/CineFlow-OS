@@ -1,63 +1,65 @@
+# CineFlow OS runs as three copies, each from its own folder with its own .env:
+#   dev         this PC          http://localhost:3000   demo data
+#   staging     the 24/7 PC      staging.<domain>        demo data, test inbox, test payments
+#   production  the 24/7 PC      app.<domain>            real data, nightly backups
+# The .env in the folder you run `docker compose` from picks the copy: COMPOSE_PROJECT_NAME keeps
+# each copy's containers and data apart, APP_PORT/APP_BIND set where it listens, and
+# COMPOSE_PROFILES switches on the extras (mail, tunnel, domain, backup). Dev leaves
+# COMPOSE_PROJECT_NAME unset. See README → "Staging and production".
 services:
   app:
     build:
       context: .
       args:
-        # Read from your .env (falls back to localhost)
+        # Read from your .env (fall back to dev values). Fixed into the build, so a change needs a rebuild.
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
         NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-localhost:3000}
-    image: cineflow-os:latest
-    container_name: cineflow-os
+        APP_ENV: ${APP_ENV:-development}
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
       # Overrides .env so the database lives on the persistent volume
       DATABASE_URL: file:/app/data/dev.db
       NODE_ENV: production
+      APP_ENV: ${APP_ENV:-development}
     volumes:
       - cineflow-data:/app/data              # SQLite database
       - cineflow-uploads:/app/public/uploads # user uploads (logos, previews…)
       - cineflow-storage:/app/storage        # private deliverable masters
-    depends_on:
-      - mailpit
 
-  # Development mail catcher: accepts every email the app sends and shows it in a web inbox
-  # at http://localhost:8025. It never delivers to real inboxes. Use it with
-  # SMTP_HOST="mailpit" SMTP_PORT="1025" in .env; switch to a real provider for production.
+  # Test mail catcher (profile "mail": dev and staging): accepts every email the app sends and
+  # shows it in a web inbox at http://localhost:${MAILPIT_PORT}. It never delivers to real
+  # inboxes. Use it with SMTP_HOST="mailpit" SMTP_PORT="1025" in .env.
   mailpit:
     image: axllent/mailpit:v1.21.0
-    container_name: cineflow-mailpit
+    profiles: ["mail"]
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8025:8025" # web inbox (this computer only)
-      - "127.0.0.1:1025:1025" # SMTP, for `pnpm dev` running outside Docker
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"      # web inbox (this computer only)
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025" # SMTP, for `pnpm dev` running outside Docker
     environment:
       MP_MAX_MESSAGES: 1000
 
   # Public https address for testing, through a free Cloudflare quick tunnel (no account).
-  # Off by default; start it with:  docker compose --profile tunnel up -d
+  # Off by default; start it with:  docker compose up -d tunnel
   # The address (https://<random>.trycloudflare.com) is in:  docker compose logs tunnel
   # It changes each time the tunnel restarts. Anyone with it can open the app.
   tunnel:
     image: cloudflare/cloudflared:2026.10.7
-    container_name: cineflow-tunnel
     profiles: ["tunnel"]
     restart: unless-stopped
     command: tunnel --no-autoupdate --url http://app:3000
     depends_on:
       - app
 
-  # Your own domain, through a named Cloudflare tunnel (free Cloudflare account; the domain's
-  # DNS must be on Cloudflare). Create the tunnel in the Cloudflare dashboard, point its public
-  # hostname at http://app:3000, and put its token in .env as TUNNEL_TOKEN. Start it with:
-  #   docker compose up -d domain-tunnel
-  # The address stays the same across restarts. See "Putting it on your own domain" in README.
+  # Your own domain, through a named Cloudflare tunnel (profile "domain": staging and
+  # production). Create the tunnel in the Cloudflare dashboard, point its public hostname at
+  # http://app:3000, and put its token in .env as TUNNEL_TOKEN. Each copy has its own tunnel.
   domain-tunnel:
     image: cloudflare/cloudflared:2026.10.7
-    container_name: cineflow-domain-tunnel
     profiles: ["domain"]
     restart: unless-stopped
     command: tunnel --no-autoupdate run
