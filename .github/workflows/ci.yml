@@ -1,0 +1,27 @@
+# Checks every push to main and every pull request: types, recorded database changes, and the
+# full test suite. `node scripts/ops.mjs deploy staging` warns when a version isn't green here.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma generate
+      - run: pnpm typecheck
+      - run: pnpm db:check-migrations
+      - run: pnpm test:e2e

@@ -25,6 +25,9 @@ import {
   planProductionDeploy,
   waitForHealth,
 } from "../../scripts/ops/lib.mjs";
+import { createOrResetSuperAdmin } from "../../scripts/create-super-admin";
+import { db } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 const ROOT = process.cwd();
 
@@ -266,5 +269,31 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
       throw new Error("ECONNREFUSED");
     }) as unknown as typeof fetch;
     harness.assertEqual(await waitForHealth("http://x/api/health", { timeoutMs: 30, intervalMs: 5, fetchImpl: offline }), false, "Not even listening: false");
+  });
+
+  await harness.test("T30-ADMIN-01: the super-admin is created with a one-time random password, and can be reset", async () => {
+    harness.registerTeardown(async () => {
+      await db.user.deleteMany({ where: { email: "t30-root@example.test" } });
+    });
+    const first = await createOrResetSuperAdmin("  T30-Root@Example.test ");
+    harness.assertEqual(first.created, true, "Created");
+    harness.assert(/^[A-Za-z0-9]{20}$/.test(first.password), "20 letters and digits", first.password);
+    const user = await db.user.findFirst({ where: { email: "t30-root@example.test", tenantId: null } });
+    harness.assertEqual(user?.role, "SUPER_ADMIN", "A super-admin, with the email in lower case");
+    harness.assert(bcrypt.compareSync(first.password, user?.passwordHash ?? ""), "The password signs in");
+
+    const second = await createOrResetSuperAdmin("t30-root@example.test");
+    harness.assertEqual(second.created, false, "Run again: reset, not a second account");
+    harness.assertNotEqual(second.password, first.password, "A new password");
+    const after = await db.user.findFirst({ where: { email: "t30-root@example.test", tenantId: null } });
+    harness.assert(!bcrypt.compareSync(first.password, after?.passwordHash ?? ""), "The old password no longer works");
+    harness.assertEqual(await db.user.count({ where: { email: "t30-root@example.test" } }), 1, "Still one account");
+
+    await harness.assertRejects(
+      () => createOrResetSuperAdmin("alex@luminacine.com"),
+      "already a studio account",
+      "A studio team member's email is refused"
+    );
+    await harness.assertRejects(() => createOrResetSuperAdmin("not-an-email"), "isn't an email address", "A non-email is refused");
   });
 }

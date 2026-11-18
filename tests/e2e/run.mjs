@@ -22,6 +22,7 @@ for (const suffix of ["", "-journal", "-wal", "-shm"]) {
   rmSync(path.join(root, "prisma", `test.db${suffix}`), { force: true });
 }
 
-run(["prisma", "db", "push", "--skip-generate"]);
+// Built from the recorded database changes, so every run also checks prisma/migrations.
+run(["prisma", "migrate", "deploy"]);
 run(["tsx", "prisma/seed.ts"]);
 run(["tsx", "--import", "./tests/e2e/mocks/register.mjs", "tests/e2e/runner.ts"]);

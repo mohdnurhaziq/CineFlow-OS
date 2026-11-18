@@ -20,7 +20,9 @@
     "db:backfill-booking-projects": "tsx prisma/backfill-booking-projects.ts",
     "db:backfill-included-prints": "tsx prisma/backfill-included-prints.ts",
     "db:studio": "prisma studio",
-    "ops": "node scripts/ops.mjs"
+    "ops": "node scripts/ops.mjs",
+    "db:migration": "node scripts/new-migration.mjs",
+    "db:check-migrations": "node scripts/check-migrations.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
