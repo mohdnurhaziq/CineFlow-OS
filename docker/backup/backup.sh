@@ -21,7 +21,15 @@ backup() {
   fi
   dest="$ROOT/db/$name"
   mkdir -p "$dest"
-  sqlite3 "$DB" ".backup '$dest/dev.db'"
+  # SQLite's online backup, waiting up to 15 s for a write in progress to finish; then make sure
+  # the copy is a sound database. A failed copy is removed, never kept as if it were a backup.
+  # Failures are handled explicitly: `set -e` doesn't apply inside a function called with `||`.
+  if ! sqlite3 -cmd ".timeout 15000" "$DB" ".backup '$dest/dev.db'" \
+    || [ "$(sqlite3 "$dest/dev.db" 'PRAGMA quick_check;' 2>&1)" != "ok" ]; then
+    rm -rf "$dest"
+    echo "Backup $name failed: the database couldn't be copied, or the copy didn't pass SQLite's check."
+    return 1
+  fi
 
   commit=unknown
   if [ -f /project/.cineflow-deployed.json ]; then
@@ -31,9 +39,12 @@ backup() {
   printf 'commit=%s\ntaken=%s\n' "$commit" "$(date -Iseconds)" > "$dest/info.txt"
 
   mkdir -p "$ROOT/files/uploads" "$ROOT/files/storage"
-  rsync -a /uploads/ "$ROOT/files/uploads/"
-  rsync -a /storage/ "$ROOT/files/storage/"
+  if ! rsync -a /uploads/ "$ROOT/files/uploads/" || ! rsync -a /storage/ "$ROOT/files/storage/"; then
+    echo "Backup $name failed: the database was copied, but copying uploads or private files didn't finish."
+    return 1
+  fi
 
+  # Old snapshots are removed only after a backup that fully worked.
   find "$ROOT/db" -mindepth 1 -maxdepth 1 -type d -mtime +"${BACKUP_KEEP_DAYS:-14}" -exec rm -rf {} +
   echo "Backup $name done"
 }
@@ -61,7 +72,8 @@ daemon() {
     next=$(date -d "$(date +%Y-%m-%d) $at" +%s)
     [ "$next" -le "$now" ] && next=$((next + 86400))
     sleep $((next - now))
-    backup "$(date +%Y-%m-%d_%H%M%S)" || echo "Backup failed; trying again tomorrow."
+    # Its own process, so any unexpected error stops that backup (set -e) instead of being ignored.
+    /backup.sh backup "$(date +%Y-%m-%d_%H%M%S)" || echo "NIGHTLY BACKUP FAILED; trying again tomorrow."
   done
 }
 
