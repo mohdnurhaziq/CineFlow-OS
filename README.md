@@ -230,6 +230,54 @@ backup was taken on, and starts it again. Anything saved after that backup is lo
 records which copy it came from, and `restore` refuses one from another copy, so production's
 client data can't end up in staging even if both point at the same backup folder.
 
+### Moving to a new PC
+
+Everything production needs is the code (from GitHub), its `.env`, and its latest backup.
+Staging holds only demo data, so it simply starts fresh on the new PC. Expect the site to be
+down for about 10–15 minutes, mostly the new PC building the app.
+
+**Never run production on both PCs at once.** Both would use the same tunnel token, so
+Cloudflare would send some visitors to each, and anything saved on the old PC after its final
+backup would be lost.
+
+1. **Prepare the new PC** with steps 1 and 2 of the one-time setup above (installs, folders,
+   `git clone`). Don't deploy anything yet.
+2. **Copy both `.env` files** from the old PC into the same folders on the new one, unchanged:
+   the same `AUTH_SECRET` keeps everyone signed in, and the same `TUNNEL_TOKEN`s move both
+   addresses over by themselves. Change only `BACKUP_DIR` if the backup folder is at a
+   different place on the new PC. Copy them over a USB stick or your own cloud drive, never
+   through email or chat: they hold your passwords.
+3. **On the old PC, stop it and take a final backup:**
+
+   | Run in | Command | What it does |
+   | --- | --- | --- |
+   | `production/` | `docker compose stop app` | the site goes down, so nothing new is saved |
+   | `production/` | `node scripts/ops.mjs backup now` | prints the backup's name, e.g. `2026-11-19_052005` |
+   | `production/` | `docker compose down` | stops the tunnel and the nightly backups |
+   | `staging/` | `docker compose down` | stops staging's tunnel |
+
+   Use `down` exactly like that, never with `-v`, which deletes the data. Leave the old PC's
+   folders alone until the new one has run for a week or so; that's your way back.
+4. **Get the backup onto the new PC.** If `BACKUP_DIR` is in Google Drive or OneDrive, wait
+   until it has finished syncing on the new PC (the folder `db/<that name>/` with its
+   `info.txt`, and `files/` at the same size as on the old PC). Otherwise copy the whole
+   backup folder across.
+5. **On the new PC, start staging, then put production back:**
+
+   | Run in | Command |
+   | --- | --- |
+   | `staging/` | `node scripts/ops.mjs deploy staging` |
+   | `production/` | `node scripts/ops.mjs restore <that name>` |
+
+   `restore` builds the version the backup was taken on, puts the database and files back,
+   and starts the site with its tunnel and nightly backups. Don't run `create-super-admin`;
+   your accounts came over with the database.
+6. **Check:** `https://app.<domain>` opens and you're still signed in,
+   `node scripts/ops.mjs status` in `production/` shows the expected version, and
+   `node scripts/ops.mjs backup now` works. From here on, release changes as usual.
+
+To move back, do the same in the other direction.
+
 ### What production refuses to start with
 
 Production checks its settings when it starts and stops, listing each problem, if:
