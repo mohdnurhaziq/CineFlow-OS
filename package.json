@@ -19,7 +19,8 @@
     "db:backfill-invoice-bookings": "tsx prisma/backfill-invoice-bookings.ts",
     "db:backfill-booking-projects": "tsx prisma/backfill-booking-projects.ts",
     "db:backfill-included-prints": "tsx prisma/backfill-included-prints.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "ops": "node scripts/ops.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

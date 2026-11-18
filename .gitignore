@@ -72,3 +72,7 @@ graphify-out/.graphify_labels.json.sig
 
 # Private client deliverables (masters), served only through /api/download
 /storage/
+
+# Ops: deploy record and local backups (scripts/ops.mjs)
+.cineflow-deployed.json
+/backups

@@ -17,6 +17,14 @@ import { productionSettingProblems } from "@/lib/production-settings";
 import { DEV_FALLBACK_AUTH_SECRET } from "@/lib/auth/dev-secret";
 import robots from "@/app/robots";
 import { GET as healthGET } from "@/app/api/health/route";
+import {
+  backupName,
+  changedFiles,
+  deployTargetProblem,
+  parseEnvFile,
+  planProductionDeploy,
+  waitForHealth,
+} from "../../scripts/ops/lib.mjs";
 
 const ROOT = process.cwd();
 
@@ -194,5 +202,69 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
     const body = (await res.json()) as Record<string, unknown>;
     harness.assertDeepEqual(Object.keys(body).sort(), ["db", "status", "timestamp"], "Only status, db and timestamp");
     harness.assertEqual(res.status, 200, "Healthy");
+  });
+
+  await harness.test("T30-OPS-01: a copy's .env is read like Docker Compose reads it", async () => {
+    const vars = parseEnvFile(
+      [
+        "# a comment",
+        "",
+        "APP_ENV=staging",
+        'NEXT_PUBLIC_APP_URL="https://staging.example.com"',
+        "TZ='Asia/Kuala_Lumpur'",
+        "  APP_PORT = 3100  ",
+        "EMPTY=",
+      ].join("\r\n")
+    );
+    harness.assertDeepEqual(
+      vars,
+      {
+        APP_ENV: "staging",
+        NEXT_PUBLIC_APP_URL: "https://staging.example.com",
+        TZ: "Asia/Kuala_Lumpur",
+        APP_PORT: "3100",
+        EMPTY: "",
+      },
+      "Values, quoted or not; comments and blank lines skipped"
+    );
+  });
+
+  await harness.test("T30-OPS-02: a deploy only runs in the folder of the copy it names", async () => {
+    const wrong = deployTargetProblem("staging", { APP_ENV: "production" });
+    harness.assert(Boolean(wrong) && wrong!.includes("staging") && wrong!.includes("production"), "Staging command in production's folder: refused", wrong ?? "");
+    harness.assert(Boolean(deployTargetProblem("production", {})), "A folder with no APP_ENV: refused");
+    harness.assert(Boolean(deployTargetProblem("prod", { APP_ENV: "prod" })), "An unknown copy: refused");
+    harness.assertEqual(deployTargetProblem("production", { APP_ENV: "production" }), null, "The right folder: allowed");
+  });
+
+  await harness.test("T30-OPS-03: changed files in a deploy folder are listed", async () => {
+    harness.assertDeepEqual(changedFiles(" M lib/a.ts\n?? new.txt\n"), ["lib/a.ts", "new.txt"], "Both listed");
+    harness.assertDeepEqual(changedFiles(""), [], "A clean folder: none");
+  });
+
+  await harness.test("T30-OPS-04: production takes exactly what staging runs", async () => {
+    const none = planProductionDeploy({ stagingRecord: null, productionHead: "aaa" });
+    harness.assertEqual(none.action, "error", "Staging never deployed: stop");
+    harness.assert("message" in none && none.message.includes("deploy staging"), "…and say to deploy staging first");
+    const same = planProductionDeploy({ stagingRecord: { commit: "aaa", at: "2026-11-18T00:00:00Z" }, productionHead: "aaa" });
+    harness.assertEqual(same.action, "nothing", "Same version: nothing to do");
+    const next = planProductionDeploy({ stagingRecord: { commit: "bbb", at: "2026-11-18T00:00:00Z" }, productionHead: "aaa" });
+    harness.assertDeepEqual(next, { action: "deploy", commit: "bbb" }, "A newer staging version: deploy it");
+  });
+
+  await harness.test("T30-OPS-05: backups are named by time; the health wait retries, then gives up", async () => {
+    harness.assertEqual(backupName(new Date(2026, 10, 18, 3, 0, 5)), "2026-11-18_030005", "Local date and time");
+    let calls = 0;
+    const flaky = (async () => {
+      calls += 1;
+      return new Response("", { status: calls < 3 ? 503 : 200 });
+    }) as unknown as typeof fetch;
+    harness.assertEqual(await waitForHealth("http://x/api/health", { intervalMs: 1, fetchImpl: flaky }), true, "Healthy on the third try");
+    const down = (async () => new Response("", { status: 503 })) as unknown as typeof fetch;
+    harness.assertEqual(await waitForHealth("http://x/api/health", { timeoutMs: 50, intervalMs: 5, fetchImpl: down }), false, "Never healthy: false");
+    const offline = (async () => {
+      throw new Error("ECONNREFUSED");
+    }) as unknown as typeof fetch;
+    harness.assertEqual(await waitForHealth("http://x/api/health", { timeoutMs: 30, intervalMs: 5, fetchImpl: offline }), false, "Not even listening: false");
   });
 }
