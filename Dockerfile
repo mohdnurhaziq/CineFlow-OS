@@ -39,6 +39,6 @@ RUN mkdir -p /app/data /app/storage /app/public/uploads
 
 EXPOSE 3000
 
-# On start: sync the schema into the SQLite file on the data volume,
-# seed demo data the very first time (empty database), then launch Next.js.
-CMD ["sh", "-c", "FIRST_RUN=0; [ -f /app/data/dev.db ] || FIRST_RUN=1; pnpm prisma db push --skip-generate && if [ \"$FIRST_RUN\" = 1 ] && [ \"${SEED_ON_FIRST_RUN:-true}\" = true ]; then pnpm db:seed; fi; exec pnpm start"]
+# On start: check settings, apply the recorded database changes (prisma/migrations), fill a
+# brand-new non-production database with demo data, then start Next.js. See scripts/start.ts.
+CMD ["sh", "-c", "pnpm tsx scripts/start.ts && exec pnpm start"]
