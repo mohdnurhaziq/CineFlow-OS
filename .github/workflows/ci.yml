@@ -24,7 +24,22 @@ jobs:
       - run: pnpm prisma generate
       - run: pnpm typecheck
       - run: pnpm db:check-migrations
+      # The production build, with the same settings as the Docker build: catches code the tests
+      # can't, such as server-only code reaching a page's browser bundle.
+      - name: pnpm build
+        id: build
+        shell: bash
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_DOMAIN: localhost:3000
+          APP_ENV: development
+          NEXT_TELEMETRY_DISABLED: "1"
+          DATABASE_URL: file:/tmp/build.db
+        run: |
+          set -o pipefail
+          pnpm build 2>&1 | tee build.log
       - name: pnpm test:e2e
+        id: tests
         shell: bash
         run: |
           set -o pipefail
@@ -34,11 +49,18 @@ jobs:
       - name: Summarise failures
         if: failure()
         shell: bash
+        env:
+          BUILD: ${{ steps.build.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
         run: |
-          [ -f e2e.log ] || exit 0
           clean() { sed -E 's/\x1b\[[0-9;]*m//g' | tr -d '\r'; }
-          grep -a "FAILED \[" e2e.log | clean | sort -u | head -n 8 | while IFS= read -r line; do
-            echo "::error title=Test failed::${line}"
-          done
-          tail -n 40 e2e.log | clean | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=End of the test output::/'
-          echo
+          tail_note() { tail -n 40 "$1" | clean | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed "s/^/::error title=$2::/"; echo; }
+          if [ "$BUILD" = failure ] && [ -f build.log ]; then
+            tail_note build.log "End of the build output"
+          fi
+          if [ "$TESTS" = failure ] && [ -f e2e.log ]; then
+            grep -a "FAILED \[" e2e.log | clean | sort -u | head -n 8 | while IFS= read -r line; do
+              echo "::error title=Test failed::${line}"
+            done
+            tail_note e2e.log "End of the test output"
+          fi
