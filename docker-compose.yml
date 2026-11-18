@@ -50,6 +50,22 @@ services:
     depends_on:
       - app
 
+  # Your own domain, through a named Cloudflare tunnel (free Cloudflare account; the domain's
+  # DNS must be on Cloudflare). Create the tunnel in the Cloudflare dashboard, point its public
+  # hostname at http://app:3000, and put its token in .env as TUNNEL_TOKEN. Start it with:
+  #   docker compose up -d domain-tunnel
+  # The address stays the same across restarts. See "Putting it on your own domain" in README.
+  domain-tunnel:
+    image: cloudflare/cloudflared:2026.10.7
+    container_name: cineflow-domain-tunnel
+    profiles: ["domain"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      - app
+
 volumes:
   cineflow-data:
   cineflow-uploads:

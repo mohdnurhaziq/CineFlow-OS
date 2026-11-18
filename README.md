@@ -122,4 +122,37 @@ address, with no Cloudflare account. It is off unless you start it.
   including `superadmin@cineflow.app`) before you share it.
 - Links in emails and the Toyyibpay return address use `NEXT_PUBLIC_APP_URL`, which is
   fixed when the app is built, so they still point at localhost. For a fixed address, use
-  a named tunnel on your own domain, set `NEXT_PUBLIC_APP_URL` to it and rebuild.
+  your own domain (below).
+
+### Putting it on your own domain (Cloudflare Tunnel)
+
+A named tunnel serves the app at an address on your domain, such as
+`https://app.example.com`, that stays the same across restarts. It needs a free Cloudflare
+account with your domain's DNS on Cloudflare (add the domain in Cloudflare and change the
+nameservers at your registrar to the two Cloudflare gives you).
+
+1. In the Cloudflare dashboard, open **Zero Trust → Networks → Tunnels** and create a
+   tunnel of type **Cloudflared**. Copy the token from the install command it shows
+   (the long text after `--token`).
+2. In the tunnel's **Public hostname** tab, add your hostname (for example subdomain `app`,
+   domain `example.com`) with service type **HTTP** and URL **`app:3000`**.
+3. In `.env`, set:
+   ```
+   TUNNEL_TOKEN="<the token>"
+   NEXT_PUBLIC_APP_URL="https://app.example.com"
+   NEXT_PUBLIC_APP_DOMAIN="app.example.com"
+   ```
+4. Rebuild the app so links in emails and payment return addresses use the new address,
+   then start the tunnel:
+   ```
+   docker compose up -d --build app
+   docker compose up -d domain-tunnel
+   ```
+
+| Task | Command |
+| --- | --- |
+| Check it connected | `docker compose logs domain-tunnel \| grep -i registered` |
+| Stop it | `docker compose stop domain-tunnel` |
+
+The site is up only while this computer and Docker are running. The token lets anyone run
+your tunnel, so keep it out of git (`.env` is ignored).
