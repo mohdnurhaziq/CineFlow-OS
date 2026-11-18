@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { Toaster } from "sonner";
 import { SignedOutNotice } from "@/components/auth/signed-out-notice";
 import { StaleVersionReload } from "@/components/stale-version-reload";
+import { StagingBar } from "@/components/staging-bar";
+import { APP_ENV } from "@/lib/app-env";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,6 +30,8 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "CineFlow OS",
   },
+  // The staging copy is for checking changes, never for search results.
+  ...(APP_ENV === "staging" && { robots: { index: false, follow: false } }),
 };
 
 export const viewport: Viewport = {
@@ -49,6 +53,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} font-sans bg-[#09090b] text-[#fafafa] antialiased selection:bg-amber-500/20 selection:text-amber-400 min-h-screen flex flex-col`}
       >
+        {APP_ENV === "staging" && <StagingBar />}
         {children}
         {/* Reads the URL, so it needs its own Suspense boundary to keep pages static where they can be. */}
         <Suspense fallback={null}>

@@ -1,5 +1,6 @@
 /**
  * Runs before `next start` in the container (see the Dockerfile's CMD):
+ *   0. in production, refuses to start with unsafe settings (lib/production-settings.ts);
  *   1. brings the database up to date with the recorded changes in prisma/migrations;
  *   2. fills a brand-new database with demo data, except in production.
  *
@@ -12,6 +13,8 @@ import { existsSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { appEnvFrom } from "@/lib/app-env";
+import { productionSettingProblems } from "@/lib/production-settings";
 
 const SCHEMA = "prisma/schema.prisma";
 const BASELINE = "0_init";
@@ -121,7 +124,15 @@ export async function prepareDatabase(opts: {
 async function main() {
   const cwd = process.cwd();
   const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
-  const appEnv = process.env.APP_ENV?.trim() || "development";
+  const appEnv = appEnvFrom();
+
+  if (appEnv === "production") {
+    const problems = productionSettingProblems();
+    if (problems.length > 0) {
+      console.error(["Production can't start:", ...problems.map((p) => `- ${p}`)].join("\n"));
+      process.exit(1);
+    }
+  }
 
   const result = await prepareDatabase({ databaseUrl, cwd });
 

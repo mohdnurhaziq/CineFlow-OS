@@ -12,6 +12,11 @@ import os from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { prepareDatabase, sqlitePathFromUrl } from "../../scripts/start";
+import { appEnvFrom } from "@/lib/app-env";
+import { productionSettingProblems } from "@/lib/production-settings";
+import { DEV_FALLBACK_AUTH_SECRET } from "@/lib/auth/dev-secret";
+import robots from "@/app/robots";
+import { GET as healthGET } from "@/app/api/health/route";
 
 const ROOT = process.cwd();
 
@@ -113,5 +118,81 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
       "Absolute paths stay"
     );
     harness.assert(existsSync(sqlitePathFromUrl(freshUrl, ROOT)), "A test database path resolves to its file");
+  });
+
+  await harness.test("T30-ENV-01: APP_ENV is development, staging or production", async () => {
+    harness.assertEqual(appEnvFrom({}), "development", "Unset means development");
+    harness.assertEqual(appEnvFrom({ APP_ENV: "staging" }), "staging", "staging");
+    harness.assertEqual(appEnvFrom({ APP_ENV: "production" }), "production", "production");
+    let threw = "";
+    try {
+      appEnvFrom({ APP_ENV: "prod" });
+    } catch (e) {
+      threw = e instanceof Error ? e.message : String(e);
+    }
+    harness.assertEqual(threw, 'Unknown APP_ENV "prod"', "Anything else is refused");
+  });
+
+  const goodProduction: Record<string, string | undefined> = {
+    APP_ENV: "production",
+    AUTH_SECRET: "k".repeat(20) + "Q9".repeat(10),
+    NEXT_PUBLIC_APP_URL: "https://app.example.com",
+    SMTP_HOST: "smtp.gmail.com",
+    SMTP_USER: "a@b.c",
+    SMTP_PASS: "x",
+  };
+  const problemsWith = (change: Record<string, string | undefined>, remove: string[] = []) => {
+    const e: Record<string, string | undefined> = { ...goodProduction, ...change };
+    for (const k of remove) delete e[k];
+    return productionSettingProblems(e);
+  };
+
+  await harness.test("T30-ENV-02: safe production settings pass", async () => {
+    harness.assertDeepEqual(productionSettingProblems(goodProduction), [], "No problems");
+    harness.assertDeepEqual(
+      problemsWith({ RESEND_API_KEY: "re_123" }, ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"]),
+      [],
+      "Resend alone is real email"
+    );
+  });
+
+  await harness.test("T30-ENV-03: each unsafe production setting is named", async () => {
+    const cases: Array<[string, Record<string, string | undefined>, string[], string]> = [
+      ["AUTH_SECRET missing", {}, ["AUTH_SECRET"], "AUTH_SECRET"],
+      ["AUTH_SECRET short", { AUTH_SECRET: "short" }, [], "AUTH_SECRET"],
+      ["AUTH_SECRET is the development one", { AUTH_SECRET: DEV_FALLBACK_AUTH_SECRET }, [], "AUTH_SECRET"],
+      ["Fake card payments on", { ALLOW_SIMULATED_CARD_PAYMENTS: "true" }, [], "ALLOW_SIMULATED_CARD_PAYMENTS"],
+      ["http address", { NEXT_PUBLIC_APP_URL: "http://app.example.com" }, [], "NEXT_PUBLIC_APP_URL"],
+      ["localhost address", { NEXT_PUBLIC_APP_URL: "https://localhost:3000" }, [], "NEXT_PUBLIC_APP_URL"],
+      ["127.0.0.1 address", { NEXT_PUBLIC_APP_URL: "https://127.0.0.1" }, [], "NEXT_PUBLIC_APP_URL"],
+      ["No email", {}, ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"], "email"],
+      ["Mailpit", { SMTP_HOST: "mailpit", SMTP_PORT: "1025" }, ["SMTP_USER", "SMTP_PASS"], "SMTP_HOST"],
+      ["Toyyibpay sandbox", { TOYYIBPAY_BASE_URL: "https://dev.toyyibpay.com" }, [], "TOYYIBPAY_BASE_URL"],
+    ];
+    for (const [label, change, remove, mentions] of cases) {
+      const problems = problemsWith(change, remove);
+      harness.assertEqual(problems.length, 1, `${label}: one problem`);
+      harness.assert((problems[0] ?? "").includes(mentions), `${label}: names ${mentions}`, problems[0]);
+    }
+  });
+
+  await harness.test("T30-ENV-04: staging is hidden from search engines; the health check shows no details", async () => {
+    const saved = process.env.APP_ENV;
+    try {
+      process.env.APP_ENV = "staging";
+      const staging = robots();
+      harness.assertDeepEqual(staging.rules, [{ userAgent: "*", disallow: "/" }], "Staging: everything disallowed");
+      delete process.env.APP_ENV;
+      const dev = robots();
+      const rule = Array.isArray(dev.rules) ? dev.rules[0] : dev.rules;
+      harness.assert(Array.isArray(rule?.allow) && rule.allow.includes("/create-studio"), "Otherwise the usual rules");
+    } finally {
+      if (saved === undefined) delete process.env.APP_ENV;
+      else process.env.APP_ENV = saved;
+    }
+    const res = await healthGET();
+    const body = (await res.json()) as Record<string, unknown>;
+    harness.assertDeepEqual(Object.keys(body).sort(), ["db", "status", "timestamp"], "Only status, db and timestamp");
+    harness.assertEqual(res.status, 200, "Healthy");
   });
 }
