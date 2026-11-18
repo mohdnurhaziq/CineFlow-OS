@@ -8,6 +8,7 @@ import { ClientDashboard } from "@/components/account/client-dashboard";
 import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
 import { loadBookingConfirmation } from "@/lib/payments/confirmation";
 import { loadFramedPrints } from "@/lib/prints/gallery";
+import { clientVisibleProposalWhere } from "@/lib/proposals/status";
 
 interface AccountPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -85,7 +86,7 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
       },
     }),
     db.proposal.findMany({
-      where: { tenantId: tenant.id, clientId: client.id },
+      where: { tenantId: tenant.id, clientId: client.id, ...clientVisibleProposalWhere },
       orderBy: { createdAt: "desc" },
     }),
     // A cancelled or missed booking's gallery isn't shown to the client.

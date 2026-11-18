@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink, CheckCircle, Clock, FileText, XCircle } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ExternalLink, CheckCircle, Clock, FileText, Loader2, Send, Trash2, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { deleteDraftProposal, sendProposal } from "@/lib/actions/admin-projects";
+import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
 
 export interface ProposalRow {
   id: string;
@@ -12,9 +17,12 @@ export interface ProposalRow {
   basePrice: number;
   totalPrice: number;
   depositAmount: number;
+  depositPercentage: number;
   finalBalanceAmount: number;
   status: string;
   signedAt?: Date | string | null;
+  declinedAt?: Date | string | null;
+  declineReason?: string | null;
   createdAt: Date | string;
   client?: {
     id: string;
@@ -32,11 +40,62 @@ export interface ProposalRow {
 
 interface ProposalsListProps {
   proposals: ProposalRow[];
+  tenantId: string;
   tenantSlug: string;
   currency: string;
+  /** May send and delete drafts (the setPrices permission, as for creating one). */
+  canSend: boolean;
 }
 
-export function ProposalsList({ proposals, tenantSlug, currency }: ProposalsListProps) {
+/** Send and Delete for a draft. Delete asks once more inline before it happens. */
+function DraftActions({ tenantId, proposalId }: { tenantId: string; proposalId: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const send = () =>
+    start(async () => {
+      const res = await sendProposal({ tenantId, proposalId });
+      if (res.success) {
+        toast.success("Proposal sent. The client has been emailed a link.");
+        router.refresh();
+      } else toast.error(res.message);
+    });
+  const remove = () =>
+    start(async () => {
+      const res = await deleteDraftProposal({ tenantId, proposalId });
+      if (res.success) {
+        toast.success("Draft deleted.");
+        router.refresh();
+      } else toast.error(res.message);
+    });
+
+  const btn = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono border transition-colors disabled:opacity-50";
+  if (confirmDelete) {
+    return (
+      <>
+        <button type="button" onClick={remove} disabled={pending} className={`${btn} text-red-300 border-red-500/40 bg-red-500/10 hover:bg-red-500/20`}>
+          {pending ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />} Delete draft
+        </button>
+        <button type="button" onClick={() => setConfirmDelete(false)} disabled={pending} className={`${btn} text-zinc-300 border-zinc-700 bg-zinc-900 hover:border-zinc-600`}>
+          Cancel
+        </button>
+      </>
+    );
+  }
+  return (
+    <>
+      <button type="button" onClick={send} disabled={pending} className={`${btn} text-black font-bold border-amber-500 bg-amber-500 hover:bg-amber-400`}>
+        {pending ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />} Send
+      </button>
+      <button type="button" onClick={() => setConfirmDelete(true)} disabled={pending} aria-label="Delete draft" className={`${btn} text-zinc-400 border-zinc-700 bg-zinc-900 hover:text-red-300 hover:border-red-500/40`}>
+        <Trash2 className="size-3" />
+      </button>
+    </>
+  );
+}
+
+export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSend }: ProposalsListProps) {
   const formatPrice = (val: number) => {
     return `${currency === "MYR" ? "RM" : "$"}${val.toLocaleString(undefined, {
       minimumFractionDigits: 0,
@@ -100,7 +159,7 @@ export function ProposalsList({ proposals, tenantSlug, currency }: ProposalsList
                   <td className="px-4 py-3 font-mono">
                     <div className="text-white font-bold">{formatPrice(p.totalPrice)}</div>
                     <div className="text-[10px] text-zinc-500">
-                      50% Retainer: {formatPrice(p.depositAmount)}
+                      {p.depositPercentage}% deposit: {formatPrice(p.depositAmount)}
                     </div>
                   </td>
 
@@ -111,7 +170,7 @@ export function ProposalsList({ proposals, tenantSlug, currency }: ProposalsList
                         <CheckCircle className="size-3" /> Signed & Accepted
                       </span>
                     )}
-                    {p.status === "SENT" && (
+                    {(p.status === "SENT" || p.status === "VIEWED") && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                         <Clock className="size-3" /> Awaiting Signature
                       </span>
@@ -126,18 +185,28 @@ export function ProposalsList({ proposals, tenantSlug, currency }: ProposalsList
                         <XCircle className="size-3" /> Declined
                       </span>
                     )}
+                    {p.status === "DECLINED" && (p.declinedAt || p.declineReason) && (
+                      <div className="mt-1 text-[10px] text-zinc-400 max-w-[14rem] mx-auto">
+                        {p.declinedAt &&
+                          new Date(p.declinedAt).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: STUDIO_TIME_ZONE })}
+                        {p.declineReason && <span className="block italic text-zinc-300 break-words">&ldquo;{p.declineReason}&rdquo;</span>}
+                      </div>
+                    )}
                   </td>
 
                   {/* Link to Proposal View */}
                   <td className="px-4 py-3 text-right">
+                    <div className="inline-flex flex-wrap justify-end gap-1.5">
+                    {p.status === "DRAFT" && canSend && <DraftActions tenantId={tenantId} proposalId={p.id} />}
                     <Link
                       href={`/${tenantSlug}/proposals/${p.id}`}
                       target="_blank"
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono text-zinc-300 hover:text-white bg-zinc-900 border border-zinc-700 hover:border-zinc-600 transition-colors"
                     >
-                      <span>View</span>
+                      <span>{p.status === "DRAFT" ? "Preview" : "View"}</span>
                       <ExternalLink className="size-3 text-amber-400" />
                     </Link>
+                    </div>
                   </td>
                 </tr>
               );

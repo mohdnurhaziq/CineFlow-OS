@@ -31,6 +31,8 @@ interface ProposalAdminDashboardProps {
   newProposal?: React.ReactNode;
   /** Proposals MANAGE: may add, edit, switch and delete add-on templates. Read-only without it. */
   canManage: boolean;
+  /** The setPrices permission: may send and delete draft proposals. */
+  canSend: boolean;
 }
 
 export function ProposalAdminDashboard({
@@ -41,6 +43,7 @@ export function ProposalAdminDashboard({
   initialProposals,
   newProposal,
   canManage,
+  canSend,
 }: ProposalAdminDashboardProps) {
   const router = useRouter();
 
@@ -223,8 +226,10 @@ export function ProposalAdminDashboard({
       {activeTab === "pipeline" && (
         <ProposalsList
           proposals={filteredProposals}
+          tenantId={tenantId}
           tenantSlug={tenantSlug}
           currency={currency}
+          canSend={canSend}
         />
       )}
 

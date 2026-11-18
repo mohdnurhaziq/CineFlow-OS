@@ -103,6 +103,7 @@ export default async function AdminProposalsPage({ params }: ProposalsPageProps)
         initialTemplates={templates as unknown as ProposalAddOnTemplateRow[]}
         initialProposals={proposals as unknown as ProposalRow[]}
         canManage={levelAtLeast(viewer.access.areas.proposals, "MANAGE")}
+        canSend={canSetPrices}
       />
     </PageShell>
   );

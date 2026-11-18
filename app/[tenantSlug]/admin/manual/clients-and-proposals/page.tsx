@@ -167,22 +167,31 @@ export default async function ClientsManualPage({ params }: ClientsManualPagePro
               cancellation and usage; edit them for this client.
             </>,
             <>
-              Tick <Ui>Email the proposal to the client</Ui> and send. You also get a <Ui>Proposal link</Ui> to copy and share
-              yourself.
+              Tick <Ui>Email the proposal to the client when it&apos;s sent</Ui> and press <Ui>Send proposal</Ui>. You also get a{" "}
+              <Ui>Proposal link</Ui> to copy and share yourself.
             </>,
           ]}
         />
+        <ManualP>
+          Not ready to send? Press <Ui>Save as draft</Ui> instead. The client can&apos;t see a draft and isn&apos;t emailed. In the
+          proposals list, <Ui>Preview</Ui> shows it as the client will see it, <Ui>Send</Ui> sends it (and emails the client if you
+          ticked the box), and the bin button deletes it. A draft can&apos;t be edited: delete it and create a new one. Once sent, a
+          proposal can&apos;t be deleted.
+        </ManualP>
         <ManualP>The proposals list shows where each one stands:</ManualP>
         <ManualTable
           head={["Status", "What it means"]}
           rows={[
+            [<Ui key="d">Draft</Ui>, "Saved but not sent. Only your team can see it."],
             [<Ui key="a">Awaiting Signature</Ui>, "Sent. The client has not signed yet."],
             [<Ui key="s">Signed &amp; Accepted</Ui>, "The client signed. The production exists and the retainer invoice is issued."],
+            [<Ui key="x">Declined</Ui>, "The client said no. The date and their reason, if they gave one, show under the status."],
           ]}
         />
         <ManualP>
-          A proposal is sent the moment you create it; there is no draft to come back to. A client who doesn&apos;t want it simply
-          doesn&apos;t sign, and it stays as <Ui>Awaiting Signature</Ui>.
+          A client who doesn&apos;t want a proposal can press <Ui>Decline proposal</Ui> on it and add a reason. A declined proposal
+          can&apos;t be signed. If they change their mind, send them a new one. You aren&apos;t emailed when a client signs or
+          declines: check the proposals list.
         </ManualP>
       </ManualSection>
 

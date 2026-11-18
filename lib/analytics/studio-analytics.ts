@@ -246,7 +246,8 @@ export async function loadStudioAnalytics(tenantSlug: string, sections: Dashboar
     let totalPipelineValue = 0;
 
     for (const prop of proposals) {
-      totalPipelineValue += prop.totalPrice;
+      // A declined proposal is no longer work in the pipeline.
+      if (prop.status !== "DECLINED") totalPipelineValue += prop.totalPrice;
       if (prop.status === "ACCEPTED") acceptedProposals++;
       else if (prop.status === "SENT") sentProposals++;
       else if (prop.status === "DRAFT") draftProposals++;

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { filesReleased } from "@/lib/deliverables/access";
 import { liveProjectWhere } from "@/lib/projects/list";
 import { z } from "zod";
+import { clientVisibleProposalWhere } from "@/lib/proposals/status";
 
 /**
  * Public "My Booking" lookup. Clients have no accounts, so a booking is
@@ -158,7 +159,7 @@ export async function lookupMyBooking(input: {
           orderBy: { createdAt: "desc" },
         }),
         db.proposal.findMany({
-          where: { tenantId: tenant.id, clientId: booking.userId },
+          where: { tenantId: tenant.id, clientId: booking.userId, ...clientVisibleProposalWhere },
           orderBy: { createdAt: "desc" },
         }),
       ]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { buttonVariants } from "@/components/ui/button";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -40,7 +40,9 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
   const [addOns, setAddOns] = useState<string[]>(active.map((t) => t.id));
   const [notify, setNotify] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ number: string; url: string } | null>(null);
+  const [created, setCreated] = useState<{ number: string; url: string; draft: boolean } | null>(null);
+  // Which button submitted the form: send now, or keep as a draft the client can't see.
+  const sendNow = useRef(true);
   const [pending, start] = useTransition();
   const dialog = useDialog(open, () => setOpen(false));
 
@@ -66,12 +68,13 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
         contractTerms: terms,
         addOnTemplateIds: addOns,
         notifyClient: notify,
+        sendNow: sendNow.current,
       });
       if (!res.success) {
         setError(res.message);
         return;
       }
-      setCreated({ number: res.proposalNumber, url: `${window.location.origin}${res.shareUrl}` });
+      setCreated({ number: res.proposalNumber, url: `${window.location.origin}${res.shareUrl}`, draft: res.status === "DRAFT" });
       router.refresh();
     });
   };
@@ -105,14 +108,26 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
           >
             <div className="flex items-center justify-between mb-4">
               <h2 id="new-proposal-title" className="text-base font-bold text-white">
-                {created ? "Proposal sent" : "New proposal"}
+                {created ? (created.draft ? "Draft saved" : "Proposal sent") : "New proposal"}
               </h2>
               <button type="button" onClick={close} aria-label="Close" className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <X className="size-4" />
               </button>
             </div>
 
-            {created ? (
+            {created?.draft ? (
+              <div className="space-y-3 text-sm">
+                <p className="text-zinc-300">
+                  {created.number} is saved as a draft. The client can&apos;t see it yet. Preview it, then press Send on the
+                  Proposals list when it&apos;s ready.
+                </p>
+                <div className="flex justify-end">
+                  <button type="button" onClick={close} className={buttonVariants()}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : created ? (
               <div className="space-y-3 text-sm">
                 <p className="text-zinc-300">
                   {created.number} is ready.{notify ? " The client has been emailed a link." : ""} You can also send them this link:
@@ -232,17 +247,22 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
 
                 <label className="flex items-center gap-2 text-xs text-zinc-300">
                   <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="size-4 rounded border-zinc-600 text-amber-500 focus:ring-0" />
-                  Email the proposal to the client
+                  Email the proposal to the client when it&apos;s sent
                 </label>
 
-                <div className="flex items-center justify-between gap-3 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                   <span className="text-xs text-zinc-400">
                     Starts at <strong className="text-white">{formatMoney(currency, total)}</strong> · deposit{" "}
                     {formatMoney(currency, Math.round(total * Number(deposit || 0)) / 100)}
                   </span>
-                  <button type="submit" disabled={pending} className={buttonVariants()}>
-                    {pending && <Loader2 className="size-3.5 animate-spin" />} Send proposal
-                  </button>
+                  <div className="flex gap-2 justify-end">
+                    <button type="submit" disabled={pending} onClick={() => (sendNow.current = false)} className={buttonVariants({ variant: "secondary" })}>
+                      Save as draft
+                    </button>
+                    <button type="submit" disabled={pending} onClick={() => (sendNow.current = true)} className={buttonVariants()}>
+                      {pending && <Loader2 className="size-3.5 animate-spin" />} Send proposal
+                    </button>
+                  </div>
                 </div>
                 {error && <p className="text-xs text-red-400">{error}</p>}
               </form>

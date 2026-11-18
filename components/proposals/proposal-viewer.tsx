@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileCheck, Loader2 } from "lucide-react";
+import { FileCheck, FileText, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AddonsSelector, type AddOnItem } from "./addons-selector";
 import { PricingBreakdown } from "./pricing-breakdown";
 import { SignaturePad } from "./signature-pad";
 import { SignedAcceptanceView } from "./signed-acceptance-view";
-import { acceptProposal } from "@/lib/actions/proposals";
+import { acceptProposal, declineProposal } from "@/lib/actions/proposals";
 import { disciplineLabel } from "@/lib/labels";
+import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
 
 interface ProposalViewerProps {
   tenant: {
@@ -33,6 +34,8 @@ interface ProposalViewerProps {
     contractTerms: string;
     clientSignature?: string | null;
     signedAt?: Date | string | null;
+    declinedAt?: Date | string | null;
+    declineReason?: string | null;
     client: {
       name: string;
       email: string;
@@ -55,9 +58,11 @@ interface ProposalViewerProps {
       title: string;
     } | null;
   };
+  /** The signed-in viewer is the client it's addressed to (not studio staff): may sign or decline. */
+  viewerIsClient?: boolean;
 }
 
-export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
+export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: ProposalViewerProps) {
   const currencySymbol = tenant.currency === "MYR" ? "RM " : "$";
 
   // Initially selected add-ons
@@ -67,7 +72,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
 
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [signerName, setSignerName] = useState(proposal.client.name || "");
-  const [signerTitle, setSignerTitle] = useState("Authorized Client Lead");
+  const [signerTitle, setSignerTitle] = useState("");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -81,9 +86,32 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
 
   const isAlreadyAccepted = proposal.status === "ACCEPTED" || Boolean(acceptedData);
 
+  // Declining: optional reason, then the proposal closes.
+  const [declineOpen, setDeclineOpen] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declined, setDeclined] = useState<{ at: Date | string; reason: string | null } | null>(
+    proposal.status === "DECLINED" ? { at: proposal.declinedAt ?? proposal.signedAt ?? new Date(), reason: proposal.declineReason ?? null } : null
+  );
+  const isDraft = proposal.status === "DRAFT";
+  const isClosed = Boolean(declined) || isDraft;
+
+  const handleDecline = () => {
+    startTransition(async () => {
+      const reason = declineReason.trim();
+      const res = await declineProposal({ proposalId: proposal.id, tenantSlug: tenant.slug, reason: reason || undefined });
+      if (res.success) {
+        setDeclined({ at: new Date(), reason: reason || null });
+        setDeclineOpen(false);
+        toast.success("Proposal declined. The studio can see your answer.");
+      } else {
+        toast.error(res.message || "Could not decline the proposal.");
+      }
+    });
+  };
+
   // Toggle Add-On
   const handleToggleAddOn = (id: string) => {
-    if (isAlreadyAccepted) return;
+    if (isAlreadyAccepted || isClosed) return;
     setSelectedAddOnIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -195,7 +223,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-              OFFICIAL PRODUCTION PROPOSAL
+              PROPOSAL
             </span>
             <span className="text-xs font-mono text-zinc-500">#{proposal.proposalNumber}</span>
           </div>
@@ -266,9 +294,8 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
       <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] space-y-4 shadow-xl">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
           <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
-            Standard Contract Terms &amp; Scope Addenda
+            Terms
           </span>
-          <span className="text-[10px] font-mono text-zinc-500">Legally Enforceable Digital Accord</span>
         </div>
 
         <div className="space-y-3 text-xs text-zinc-300 leading-relaxed font-sans">
@@ -329,20 +356,45 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
         </div>
       </div>
 
-      {/* 7. Acceptance & Digital Signature Console */}
+      {/* 7. Answer: declined, a draft (studio only), or sign / decline */}
+      {declined ? (
+        <div className="p-6 rounded-2xl border border-red-500/30 bg-red-500/5 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-bold text-red-300">
+            <XCircle className="size-4 shrink-0" />
+            {viewerIsClient ? "You declined this proposal" : "The client declined this proposal"}
+          </div>
+          <p className="text-xs text-zinc-400">
+            {new Date(declined.at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: STUDIO_TIME_ZONE })}
+          </p>
+          {declined.reason && <p className="text-sm text-zinc-300 whitespace-pre-line">&ldquo;{declined.reason}&rdquo;</p>}
+          {viewerIsClient && (
+            <p className="text-xs text-zinc-400">Changed your mind? Contact {tenant.name} and they can send you a new proposal.</p>
+          )}
+        </div>
+      ) : isDraft ? (
+        <div className="p-6 rounded-2xl border border-zinc-700 bg-zinc-900/60 space-y-1">
+          <div className="flex items-center gap-2 text-sm font-bold text-zinc-200">
+            <FileText className="size-4 text-zinc-400" /> Draft
+          </div>
+          <p className="text-xs text-zinc-400">
+            The client can&apos;t see this yet. Send it from Proposals when it&apos;s ready.
+          </p>
+        </div>
+      ) : (
+      <>
       <form onSubmit={handleSubmit} className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] space-y-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
           <div className="space-y-0.5">
             <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
-              Legal Acceptance &amp; Digital Signature
+              Sign to accept
             </span>
             <span className="text-[10px] font-mono text-zinc-500 block">
-              Draw signature below to execute contract
+              Draw your signature below
             </span>
           </div>
 
           <span className="text-xs font-mono text-amber-400 font-bold tabular-nums">
-            Retainer Due: {currencySymbol}
+            Deposit due: {currencySymbol}
             {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -354,7 +406,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-              Signer Legal Name *
+              Your full name *
             </label>
             <input
               type="text"
@@ -368,7 +420,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
 
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-              Signer Title / Role (Optional)
+              Your title or role (optional)
             </label>
             <input
               type="text"
@@ -391,7 +443,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
             required
           />
           <label htmlFor="proposal-consent" className="text-xs text-zinc-300 leading-snug cursor-pointer">
-            I confirm that I am authorized to bind the client organization. I have reviewed and accepted the production scope, itemized add-ons, contract addenda, and the 50% deposit payment plan.
+            I confirm I can accept this on behalf of the client. I have read and accept what&apos;s included, the extras I chose, the terms, and the {proposal.depositPercentage}% deposit payment plan.
           </label>
         </div>
 
@@ -405,18 +457,71 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
             {isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Executing Contract...
+                Signing...
               </>
             ) : (
               <>
                 <FileCheck className="size-4" />
-                Sign &amp; Accept Proposal ({currencySymbol}
-                {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} Retainer)
+                Sign &amp; accept ({currencySymbol}
+                {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} deposit)
               </>
             )}
           </button>
         </div>
       </form>
+
+      {viewerIsClient && (
+        <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-5 space-y-3">
+          {!declineOpen ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-xs text-zinc-400">Not going ahead? You can decline this proposal instead.</p>
+              <button
+                type="button"
+                onClick={() => setDeclineOpen(true)}
+                disabled={isPending}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:text-white hover:border-red-500/50 hover:bg-red-500/10 transition-colors"
+              >
+                Decline proposal
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <label htmlFor="decline-reason" className="block text-xs text-zinc-300">
+                Reason (optional). The studio will see this.
+              </label>
+              <textarea
+                id="decline-reason"
+                rows={3}
+                maxLength={500}
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                placeholder="e.g. We've changed our plans"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500"
+              />
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeclineOpen(false)}
+                  disabled={isPending}
+                  className="px-4 py-2 rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800"
+                >
+                  Keep it open
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDecline}
+                  disabled={isPending}
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-bold text-white disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isPending && <Loader2 className="size-3.5 animate-spin" />} Decline proposal
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      </>
+      )}
     </div>
   );
 }

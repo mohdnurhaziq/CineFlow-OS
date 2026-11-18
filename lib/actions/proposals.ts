@@ -11,8 +11,18 @@ import {
   type SignProposalInput,
   ToggleAddOnSchema,
   type ToggleAddOnInput,
+  DeclineProposalSchema,
+  type DeclineProposalInput,
 } from "@/lib/validations/proposals";
 import { errorMessageOf } from "@/lib/action-error";
+import { isOpenProposal, OPEN_PROPOSAL_STATUSES } from "@/lib/proposals/status";
+
+/** Why a proposal that isn't open can't be signed or declined, in the client's words. */
+function closedProposalMessage(status: string): string {
+  if (status === "ACCEPTED") return "This proposal is already signed.";
+  if (status === "DECLINED") return "You declined this proposal. Contact the studio if you'd like to go ahead.";
+  return "This proposal isn't open for signing.";
+}
 
 function safeRevalidate(path: string) {
   try {
@@ -50,8 +60,9 @@ export async function getProposalBySlugAndId(tenantSlug: string, proposalIdOrNum
     });
     if (!proposal) return null;
 
-    // Only the proposal's client or the studio's staff, signed in.
-    await requireRecordAccess(tenant.id, proposal.clientId, { area: "proposals" });
+    // Only the proposal's client or the studio's staff, signed in. A draft is the studio's only.
+    const session = await requireRecordAccess(tenant.id, proposal.clientId, { area: "proposals" });
+    if (proposal.status === "DRAFT" && session.role === "CLIENT") return null;
     return proposal;
   } catch (error) {
     console.error("Error fetching proposal:", error);
@@ -106,6 +117,13 @@ export async function acceptProposal(input: SignProposalInput) {
       };
     }
 
+    if (proposal.status === "DRAFT") {
+      return { success: false, error: "PROPOSAL_NOT_FOUND", message: "Proposal not found." };
+    }
+    if (!isOpenProposal(proposal.status)) {
+      return { success: false, error: "PROPOSAL_CLOSED", message: closedProposalMessage(proposal.status) };
+    }
+
     // 2. Compute dynamic financial figures based on selected add-on IDs
     const selectedSet = new Set(selectedAddOnIds);
     let addOnsTotal = 0;
@@ -130,9 +148,9 @@ export async function acceptProposal(input: SignProposalInput) {
         });
       }
 
-      // Update Proposal
-      const updatedProposal = await tx.proposal.update({
-        where: { id: proposal.id },
+      // Update Proposal, only while it is still open (a decline at the same moment wins)
+      const claimed = await tx.proposal.updateMany({
+        where: { id: proposal.id, status: { in: OPEN_PROPOSAL_STATUSES } },
         data: {
           status: "ACCEPTED",
           clientSignature: signatureDataUrl,
@@ -142,6 +160,7 @@ export async function acceptProposal(input: SignProposalInput) {
           finalBalanceAmount,
         },
       });
+      if (claimed.count === 0) throw new Error("This proposal can no longer be signed.");
 
       // Create or link Project
       let project = await tx.project.findFirst({
@@ -228,7 +247,7 @@ export async function acceptProposal(input: SignProposalInput) {
         });
       }
 
-      return { proposal: updatedProposal, project, invoice };
+      return { project, invoice };
     });
 
     safeRevalidate(`/${tenantSlug}/proposals/${proposal.id}`);
@@ -253,7 +272,7 @@ export async function acceptProposal(input: SignProposalInput) {
 
     return {
       success: true,
-      proposalId: result.proposal.id,
+      proposalId: proposal.id,
       projectId: result.project.id,
       invoiceId: result.invoice.id,
       invoiceNumber: result.invoice.invoiceNumber,
@@ -283,9 +302,13 @@ export async function toggleProposalAddOn(input: ToggleAddOnInput) {
     });
     if (!proposal) return { success: false, error: "Proposal not found." };
     // The proposal's client, or the team with Proposals MANAGE (VIEW is read-only).
-    await requireRecordAccess(proposal.tenantId, proposal.clientId, { area: "proposals", level: "MANAGE" });
+    const session = await requireRecordAccess(proposal.tenantId, proposal.clientId, { area: "proposals", level: "MANAGE" });
+    if (proposal.status === "DRAFT" && session.role === "CLIENT") return { success: false, error: "Proposal not found." };
     if (proposal.status === "ACCEPTED") {
       return { success: false, error: "This proposal is already signed; its add-ons can no longer change." };
+    }
+    if (proposal.status === "DECLINED") {
+      return { success: false, error: "This proposal was declined; its add-ons can no longer change." };
     }
 
     const addOn = await db.proposalAddOn.update({
@@ -303,5 +326,53 @@ export async function toggleProposalAddOn(input: ToggleAddOnInput) {
   } catch (error) {
     console.error("Error toggling add-on:", error);
     return { success: false, error: errorMessageOf(error) || "Failed to toggle add-on." };
+  }
+}
+
+/**
+ * The client says no to a proposal they were sent, optionally with a reason the studio sees.
+ * Only that client, signed in, and only while it is open. Declining twice is not an error.
+ */
+export async function declineProposal(input: DeclineProposalInput) {
+  try {
+    const { proposalId, tenantSlug, reason } = DeclineProposalSchema.parse(input);
+    const proposal = await db.proposal.findUnique({
+      where: { id: proposalId },
+      select: { id: true, clientId: true, status: true, tenant: { select: { slug: true } } },
+    });
+    if (!proposal || proposal.tenant.slug !== tenantSlug) {
+      return { success: false, error: "PROPOSAL_NOT_FOUND", message: "Proposal not found." };
+    }
+
+    const session = await getCurrentUser();
+    if (!session) {
+      return { success: false, error: "UNAUTHENTICATED", message: "Please sign in to answer this proposal." };
+    }
+    if (session.role !== "CLIENT" || session.id !== proposal.clientId) {
+      return { success: false, error: "FORBIDDEN", message: "Only the client this proposal is addressed to can decline it." };
+    }
+    if (proposal.status === "DRAFT") {
+      return { success: false, error: "PROPOSAL_NOT_FOUND", message: "Proposal not found." };
+    }
+    if (proposal.status === "DECLINED") return { success: true };
+
+    // Only while still open: a signature at the same moment wins.
+    const declined = await db.proposal.updateMany({
+      where: { id: proposal.id, status: { in: OPEN_PROPOSAL_STATUSES } },
+      data: { status: "DECLINED", declinedAt: new Date(), declineReason: reason || null },
+    });
+    if (declined.count === 0) {
+      const now = await db.proposal.findUnique({ where: { id: proposal.id }, select: { status: true } });
+      if (now?.status === "DECLINED") return { success: true };
+      return { success: false, error: "PROPOSAL_CLOSED", message: closedProposalMessage(now?.status ?? "") };
+    }
+
+    safeRevalidate(`/${tenantSlug}/proposals/${proposal.id}`);
+    safeRevalidate(`/${tenantSlug}/admin/proposals`);
+    safeRevalidate(`/${tenantSlug}/account`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error declining proposal:", error);
+    return { success: false, error: "DECLINE_FAILED", message: errorMessageOf(error) || "Could not decline the proposal." };
   }
 }

@@ -23,3 +23,11 @@ export const ToggleAddOnSchema = z.object({
 });
 
 export type ToggleAddOnInput = z.infer<typeof ToggleAddOnSchema>;
+
+export const DeclineProposalSchema = z.object({
+  proposalId: z.string().min(1, "Proposal ID is required"),
+  tenantSlug: z.string().min(1, "Tenant slug is required"),
+  reason: z.string().trim().max(500, "Keep the reason under 500 characters.").optional(),
+});
+
+export type DeclineProposalInput = z.input<typeof DeclineProposalSchema>;

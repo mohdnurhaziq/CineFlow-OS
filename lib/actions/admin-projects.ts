@@ -61,8 +61,34 @@ const CreateProposalSchema = z
     contractTerms: z.string().trim().min(20, "Add the terms the client agrees to.").max(5000),
     addOnTemplateIds: z.array(z.string()).default([]),
     notifyClient: z.boolean().default(true),
+    /** false: save as a draft the client can't see, to send later from the Proposals list. */
+    sendNow: z.boolean().default(true),
   })
   .refine((v) => !!v.clientId || !!v.newClient, { message: "Choose or add a client." });
+
+/** Emails the client a link to review and sign. One without a password sets one first. */
+async function emailProposalToClient(
+  tenant: { name: string; slug: string },
+  client: { id: string; name: string; email: string; phone: string | null; passwordHash: string | null },
+  proposal: { id: string; title: string }
+) {
+  const shareUrl = `/${tenant.slug}/proposals/${proposal.id}`;
+  const link = client.passwordHash
+    ? shareUrl
+    : clientInvitePath(tenant.slug, client.email, await issueClientInvite(client.id), shareUrl);
+  sendNotification({
+    event: "STUDIO_UPDATE",
+    studioName: tenant.name,
+    studioSlug: tenant.slug,
+    clientName: client.name,
+    clientEmail: client.email,
+    clientPhone: client.phone || undefined,
+    headline: `Your proposal: ${proposal.title}`,
+    message: `${tenant.name} has sent you a proposal. Review the details, choose any extras, and sign it online to book.`,
+    linkUrl: `${env.NEXT_PUBLIC_APP_URL}${link}`,
+    linkLabel: client.passwordHash ? "Sign in to review and sign" : "Set your password, then review and sign",
+  }).catch((e) => console.error("Notification dispatch failed:", e));
+}
 
 async function nextProposalNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -77,7 +103,7 @@ async function nextProposalNumber(): Promise<string> {
 
 export async function createProposal(
   input: z.input<typeof CreateProposalSchema>
-): Promise<Result<{ proposalId: string; proposalNumber: string; shareUrl: string }>> {
+): Promise<Result<{ proposalId: string; proposalNumber: string; shareUrl: string; status: "DRAFT" | "SENT" }>> {
   try {
     const data = CreateProposalSchema.parse(input);
     const session = await requireTick(data.tenantId, "setPrices");
@@ -126,7 +152,7 @@ export async function createProposal(
             depositPercentage: data.depositPercentage,
             depositAmount,
             finalBalanceAmount: Math.round((totalPrice - depositAmount) * 100) / 100,
-            status: "SENT",
+            status: data.sendNow ? "SENT" : "DRAFT",
             contractTerms: data.contractTerms,
             addOns: {
               create: templates.map((t) => ({
@@ -148,27 +174,60 @@ export async function createProposal(
 
     const shareUrl = `/${tenant.slug}/proposals/${proposal.id}`;
     revalidate([`/${tenant.slug}/admin/proposals`, `/${tenant.slug}/admin`]);
-    if (data.notifyClient && client.email) {
-      // Signing needs a signed-in client. One without a password gets a link that sets one first.
-      const link = client.passwordHash
-        ? shareUrl
-        : clientInvitePath(tenant.slug, client.email, await issueClientInvite(client.id), shareUrl);
-      sendNotification({
-        event: "STUDIO_UPDATE",
-        studioName: tenant.name,
-        studioSlug: tenant.slug,
-        clientName: client.name,
-        clientEmail: client.email,
-        clientPhone: client.phone || undefined,
-        headline: `Your proposal: ${data.title}`,
-        message: `${tenant.name} has sent you a proposal. Review the details, choose any extras, and sign it online to book.`,
-        linkUrl: `${env.NEXT_PUBLIC_APP_URL}${link}`,
-        linkLabel: client.passwordHash ? "Sign in to review and sign" : "Set your password, then review and sign",
-      }).catch((e) => console.error("Notification dispatch failed:", e));
-    }
-    return { success: true, proposalId: proposal.id, proposalNumber: proposal.proposalNumber, shareUrl };
+    if (data.sendNow && data.notifyClient && client.email) await emailProposalToClient(tenant, client, proposal);
+    return {
+      success: true,
+      proposalId: proposal.id,
+      proposalNumber: proposal.proposalNumber,
+      shareUrl,
+      status: data.sendNow ? "SENT" : "DRAFT",
+    };
   } catch (err) {
     return fail("CREATE_PROPOSAL_FAILED", actionErrorMessage(err, "Could not create the proposal."));
+  }
+}
+
+const ProposalRefSchema = z.object({ tenantId: z.string().min(1), proposalId: z.string().min(1) });
+const SendProposalSchema = ProposalRefSchema.extend({ notifyClient: z.boolean().default(true) });
+
+/** Sends a draft: the client can now see and sign it, and is emailed a link. Same permission as creating one. */
+export async function sendProposal(input: z.input<typeof SendProposalSchema>): Promise<Result<{ shareUrl: string }>> {
+  try {
+    const data = SendProposalSchema.parse(input);
+    await requireTick(data.tenantId, "setPrices");
+    const proposal = await db.proposal.findFirst({
+      where: { id: data.proposalId, tenantId: data.tenantId },
+      include: { tenant: { select: { name: true, slug: true } }, client: true },
+    });
+    if (!proposal) return fail("NOT_FOUND", "Proposal not found.");
+    // Only a draft, and only once if two people press Send together.
+    const sent = await db.proposal.updateMany({ where: { id: proposal.id, status: "DRAFT" }, data: { status: "SENT" } });
+    if (sent.count === 0) return fail("NOT_A_DRAFT", "This proposal has already been sent.");
+
+    if (data.notifyClient && proposal.client.email) await emailProposalToClient(proposal.tenant, proposal.client, proposal);
+    revalidate([`/${proposal.tenant.slug}/admin/proposals`, `/${proposal.tenant.slug}/admin`]);
+    return { success: true, shareUrl: `/${proposal.tenant.slug}/proposals/${proposal.id}` };
+  } catch (err) {
+    return fail("SEND_PROPOSAL_FAILED", actionErrorMessage(err, "Could not send the proposal."));
+  }
+}
+
+/** Deletes a draft. A sent proposal stays: the client has seen it. */
+export async function deleteDraftProposal(input: z.input<typeof ProposalRefSchema>): Promise<Result> {
+  try {
+    const data = ProposalRefSchema.parse(input);
+    await requireTick(data.tenantId, "setPrices");
+    const proposal = await db.proposal.findFirst({
+      where: { id: data.proposalId, tenantId: data.tenantId },
+      select: { id: true, tenant: { select: { slug: true } } },
+    });
+    if (!proposal) return fail("NOT_FOUND", "Proposal not found.");
+    const removed = await db.proposal.deleteMany({ where: { id: proposal.id, status: "DRAFT" } });
+    if (removed.count === 0) return fail("NOT_A_DRAFT", "Only a draft can be deleted. This one has been sent.");
+    revalidate([`/${proposal.tenant.slug}/admin/proposals`, `/${proposal.tenant.slug}/admin`]);
+    return { success: true };
+  } catch (err) {
+    return fail("DELETE_PROPOSAL_FAILED", actionErrorMessage(err, "Could not delete the draft."));
   }
 }
 

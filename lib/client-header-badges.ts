@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { clientVisibleProposalWhere } from "@/lib/proposals/status";
 
 /** The counts on the client portal's top bar tabs. Not a "use server" module. */
 export async function loadClientHeaderBadges(tenantId: string, clientId: string) {
@@ -6,7 +7,7 @@ export async function loadClientHeaderBadges(tenantId: string, clientId: string)
     db.milestoneInvoice.count({ where: { tenantId, clientId, status: { in: ["PENDING", "OVERDUE"] } } }),
     db.clientBooking.count({ where: { tenantId, userId: clientId, status: { in: ["CONFIRMED", "PENDING"] } } }),
     db.project.count({ where: { tenantId, clientId } }),
-    db.proposal.count({ where: { tenantId, clientId } }),
+    db.proposal.count({ where: { tenantId, clientId, ...clientVisibleProposalWhere } }),
   ]);
   return { unpaidInvoices, activeBookings, projects, proposals };
 }

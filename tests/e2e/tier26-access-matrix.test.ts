@@ -307,6 +307,8 @@ const ACTIONS: Record<string, Row> = {
       depositPercentage: 50, contractTerms: "T26 terms, long enough to pass the check.", notifyClient: false,
     }],
   ],
+  "admin-projects.ts#sendProposal": [["tick:setPrices"], (c) => [{ tenantId: c.t.tenantId, proposalId: M, notifyClient: false }]],
+  "admin-projects.ts#deleteDraftProposal": [["tick:setPrices"], (c) => [{ tenantId: c.t.tenantId, proposalId: M }]],
   "admin-projects.ts#updateProjectStatus": [["work:galleries"], (c) => [{ tenantId: c.t.tenantId, projectId: M, status: "PRE_PRODUCTION" }]],
   "admin-projects.ts#updateProjectKind": [["area:galleries:MANAGE"], (c) => [{ tenantId: c.t.tenantId, projectId: M, kind: "SESSION" }]],
   "admin-projects.ts#deleteDeliverableItem": [["work:galleries"], (c) => [{ tenantId: c.t.tenantId, itemId: M }]],

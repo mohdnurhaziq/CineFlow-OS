@@ -87,19 +87,20 @@ export default async function ProposalPage({ params }: ProposalPageProps) {
 
   if (!proposal) notFound();
 
-  // The proposal's client or the studio's staff, signed in.
-  await requirePageAccess({
+  // The proposal's client or the studio's staff, signed in. A draft is the studio's only.
+  const viewer = await requirePageAccess({
     tenantSlug: tenant.slug,
     tenantId: tenant.id,
     clientId: proposal.client.id,
     record: { area: "proposals" },
     returnTo: `/${tenant.slug}/proposals/${proposal.id}`,
   });
+  if (proposal.status === "DRAFT" && viewer.role === "CLIENT") notFound();
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
       <StudioPageHeader tenantSlug={tenant.slug} />
-      <ProposalViewer tenant={tenant} proposal={proposal} />
+      <ProposalViewer tenant={tenant} proposal={proposal} viewerIsClient={viewer.id === proposal.client.id} />
     </div>
   );
 }
