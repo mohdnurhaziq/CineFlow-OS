@@ -19,6 +19,7 @@ import {
   changedFiles,
   deployTargetProblem,
   parseEnvFile,
+  restoreSourceProblem,
   runProductionDeploy,
   waitForHealth,
 } from "./ops/lib.mjs";
@@ -173,6 +174,8 @@ async function restore(env, name) {
   const infoFile = path.join(dir, "db", name, "info.txt");
   if (!existsSync(infoFile)) fail(`There's no backup called ${name} in ${path.join(dir, "db")}.`);
   const info = parseEnvFile(readFileSync(infoFile, "utf8"));
+  const wrongCopy = restoreSourceProblem(info, env.APP_ENV);
+  if (wrongCopy) fail(wrongCopy);
   const commit = info.commit && info.commit !== "unknown" ? info.commit : null;
 
   run("docker", ["compose", "stop", "app"]);

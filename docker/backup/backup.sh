@@ -5,7 +5,7 @@
 #   restore <name>  put /backups/db/<name> back (the app must be stopped)
 #
 # /backups/db/<name>/dev.db     the database, via SQLite's online backup (safe while the app runs)
-# /backups/db/<name>/info.txt   commit=<version it ran>, taken=<time>
+# /backups/db/<name>/info.txt   env=<copy>, commit=<version it ran>, taken=<time>
 # /backups/files/uploads|storage  a mirror of uploads and private files that only adds and
 #                                 updates, so a file deleted in the app is still in the backup
 set -eu
@@ -36,7 +36,7 @@ backup() {
     found=$(sed -n 's/.*"commit": *"\([0-9a-f]*\)".*/\1/p' /project/.cineflow-deployed.json | head -n 1)
     [ -n "$found" ] && commit="$found"
   fi
-  printf 'commit=%s\ntaken=%s\n' "$commit" "$(date -Iseconds)" > "$dest/info.txt"
+  printf 'env=%s\ncommit=%s\ntaken=%s\n' "${APP_ENV:-development}" "$commit" "$(date -Iseconds)" > "$dest/info.txt"
 
   mkdir -p "$ROOT/files/uploads" "$ROOT/files/storage"
   if ! rsync -a /uploads/ "$ROOT/files/uploads/" || ! rsync -a /storage/ "$ROOT/files/storage/"; then

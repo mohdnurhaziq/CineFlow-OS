@@ -7,7 +7,7 @@
 
 import { TestHarness } from "./test-harness";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
@@ -23,6 +23,7 @@ import {
   deployTargetProblem,
   parseEnvFile,
   planProductionDeploy,
+  restoreSourceProblem,
   runProductionDeploy,
   waitForHealth,
 } from "../../scripts/ops/lib.mjs";
@@ -148,7 +149,7 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
   const goodProduction: Record<string, string | undefined> = {
     APP_ENV: "production",
     AUTH_SECRET: "k".repeat(20) + "Q9".repeat(10),
-    NEXT_PUBLIC_APP_URL: "https://app.example.com",
+    NEXT_PUBLIC_APP_URL: "https://app.luminacine.com",
     SMTP_HOST: "smtp.gmail.com",
     SMTP_USER: "a@b.c",
     SMTP_PASS: "x",
@@ -177,6 +178,9 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
       ["http address", { NEXT_PUBLIC_APP_URL: "http://app.example.com" }, [], "NEXT_PUBLIC_APP_URL"],
       ["localhost address", { NEXT_PUBLIC_APP_URL: "https://localhost:3000" }, [], "NEXT_PUBLIC_APP_URL"],
       ["127.0.0.1 address", { NEXT_PUBLIC_APP_URL: "https://127.0.0.1" }, [], "NEXT_PUBLIC_APP_URL"],
+      ["The example address left in", { NEXT_PUBLIC_APP_URL: "https://app.example.com" }, [], "NEXT_PUBLIC_APP_URL"],
+      ["example.com itself", { NEXT_PUBLIC_APP_URL: "https://example.com" }, [], "NEXT_PUBLIC_APP_URL"],
+      ["A .test address", { NEXT_PUBLIC_APP_URL: "https://studio.example.test" }, [], "NEXT_PUBLIC_APP_URL"],
       ["No email", {}, ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"], "email"],
       ["Mailpit", { SMTP_HOST: "mailpit", SMTP_PORT: "1025" }, ["SMTP_USER", "SMTP_PASS"], "SMTP_HOST"],
       ["Toyyibpay sandbox", { TOYYIBPAY_BASE_URL: "https://dev.toyyibpay.com" }, [], "TOYYIBPAY_BASE_URL"],
@@ -244,6 +248,11 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
   await harness.test("T30-OPS-03: changed files in a deploy folder are listed", async () => {
     harness.assertDeepEqual(changedFiles(" M lib/a.ts\n?? new.txt\n"), ["lib/a.ts", "new.txt"], "Both listed");
     harness.assertDeepEqual(changedFiles(""), [], "A clean folder: none");
+    harness.assertDeepEqual(
+      changedFiles("M lib/a.ts\n M lib/b.ts"),
+      ["lib/a.ts", "lib/b.ts"],
+      "Output whose leading space was trimmed keeps every file name whole"
+    );
   });
 
   await harness.test("T30-OPS-04: production takes exactly what staging runs", async () => {
@@ -272,6 +281,28 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
       throw new Error("ECONNREFUSED");
     }) as unknown as typeof fetch;
     harness.assertEqual(await waitForHealth("http://x/api/health", { timeoutMs: 30, intervalMs: 5, fetchImpl: offline }), false, "Not even listening: false");
+  });
+
+  await harness.test("T30-OPS-07: a backup is only restored into the copy it came from", async () => {
+    const wrong = restoreSourceProblem({ env: "production", commit: "abc" }, "staging");
+    harness.assert(Boolean(wrong) && wrong!.includes("production") && wrong!.includes("staging"), "Production's backup into staging: refused", wrong ?? "");
+    harness.assertEqual(restoreSourceProblem({ env: "staging" }, "staging"), null, "Its own copy: allowed");
+    harness.assertEqual(restoreSourceProblem({ env: "production" }, undefined), "This backup came from production, but this folder is development. Restore it from production's folder.", "No APP_ENV counts as development");
+    harness.assertEqual(restoreSourceProblem({ commit: "abc" }, "production"), null, "An older backup that doesn't say: allowed");
+    const compose = readFileSync(path.join(ROOT, "docker-compose.yml"), "utf8");
+    const backupService = compose.slice(compose.indexOf("\n  backup:"), compose.indexOf("\nvolumes:"));
+    harness.assert(/APP_ENV: \$\{APP_ENV/.test(backupService), "The backup service is told which copy it backs up");
+    harness.assert(readFileSync(path.join(ROOT, "docker/backup/backup.sh"), "utf8").includes("env=%s"), "…and writes it into info.txt");
+  });
+
+  await harness.test("T30-OPS-08: backups and deploy records stay out of the image; staging and production share a clock", async () => {
+    const ignored = readFileSync(path.join(ROOT, ".dockerignore"), "utf8").split(/\r?\n/).map((l) => l.trim());
+    harness.assert(ignored.includes("backups"), ".dockerignore leaves out a backups folder");
+    harness.assert(ignored.includes(".cineflow-deployed.json"), ".dockerignore leaves out the deploy record");
+    const staging = parseEnvFile(readFileSync(path.join(ROOT, ".env.staging.example"), "utf8"));
+    const production = parseEnvFile(readFileSync(path.join(ROOT, ".env.production.example"), "utf8"));
+    harness.assert(Boolean(production.TZ), "Production sets TZ");
+    harness.assertEqual(staging.TZ, production.TZ, "Staging uses the same time zone");
   });
 
   /** A pretend 24/7 PC: records every step a production deploy takes, and can fail any of them. */

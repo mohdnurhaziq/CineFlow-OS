@@ -8,6 +8,16 @@ import { smtpConfigFromEnv } from "@/lib/email/smtp";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "mailpit"]);
 
+/** Addresses reserved for examples and tests (RFC 2606), e.g. the one in .env.production.example. */
+function isPlaceholderHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/\.$/, "");
+  return (
+    /(^|\.)example\.(com|net|org)$/.test(h) ||
+    /\.(example|test|invalid|localhost)$/.test(h) ||
+    h === "example"
+  );
+}
+
 export function productionSettingProblems(env: Record<string, string | undefined> = process.env): string[] {
   const problems: string[] = [];
 
@@ -30,6 +40,9 @@ export function productionSettingProblems(env: Record<string, string | undefined
   if (!url) problems.push("NEXT_PUBLIC_APP_URL is missing or not a web address.");
   else if (url.protocol !== "https:") problems.push("NEXT_PUBLIC_APP_URL must start with https://.");
   else if (LOCAL_HOSTS.has(url.hostname)) problems.push("NEXT_PUBLIC_APP_URL points at this computer; use the live address.");
+  else if (isPlaceholderHost(url.hostname)) {
+    problems.push(`NEXT_PUBLIC_APP_URL is still the example address (${url.hostname}); use your own domain.`);
+  }
 
   const smtp = smtpConfigFromEnv(env as NodeJS.ProcessEnv);
   const resend = Boolean(env.RESEND_API_KEY?.trim());

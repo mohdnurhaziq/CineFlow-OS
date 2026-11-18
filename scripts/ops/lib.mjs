@@ -46,7 +46,8 @@ export function deployTargetProblem(target, envVars) {
 }
 
 /**
- * The file paths in `git status --porcelain` output.
+ * The file paths in `git status --porcelain` output: each line is a one- or two-letter status,
+ * then the path. Tolerates output whose first line lost its leading space to a trim.
  * @param {string} porcelain
  * @returns {string[]}
  */
@@ -54,7 +55,7 @@ export function changedFiles(porcelain) {
   return porcelain
     .split(/\r?\n/)
     .filter((l) => l.trim())
-    .map((l) => l.slice(3).trim());
+    .map((l) => l.replace(/^\s*\S{1,2}\s+/, "").trim());
 }
 
 /**
@@ -168,4 +169,19 @@ export async function runProductionDeploy(d) {
 
   d.writeRecord(commit);
   return { action: "deployed", commit, backup };
+}
+
+/**
+ * Why a backup mustn't be restored here, or null. Each backup's info.txt says which copy it
+ * came from (env=…), so production's real data can't be loaded into staging by mistake.
+ * Backups from before that was recorded don't say, and are allowed.
+ * @param {Record<string, string>} info the backup's info.txt
+ * @param {string | undefined} appEnv this folder's APP_ENV
+ * @returns {string | null}
+ */
+export function restoreSourceProblem(info, appEnv) {
+  const from = info.env?.trim();
+  const here = appEnv?.trim() || "development";
+  if (!from || from === here) return null;
+  return `This backup came from ${from}, but this folder is ${here}. Restore it from ${from}'s folder.`;
 }

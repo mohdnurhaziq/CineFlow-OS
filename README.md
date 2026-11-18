@@ -226,7 +226,9 @@ it has room, because deliverables can be large.
 | Put a backup back | `production/` | `node scripts/ops.mjs restore <date_time>` |
 
 `restore` stops the app, puts the database and files back, switches to the version the
-backup was taken on, and starts it again. Anything saved after that backup is lost.
+backup was taken on, and starts it again. Anything saved after that backup is lost. Each backup
+records which copy it came from, and `restore` refuses one from another copy, so production's
+client data can't end up in staging even if both point at the same backup folder.
 
 ### What production refuses to start with
 
@@ -234,7 +236,7 @@ Production checks its settings when it starts and stops, listing each problem, i
 
 - `AUTH_SECRET` is missing, shorter than 32 characters, or the built-in development one;
 - `ALLOW_SIMULATED_CARD_PAYMENTS` is on;
-- `NEXT_PUBLIC_APP_URL` isn't `https://`, or points at this computer;
+- `NEXT_PUBLIC_APP_URL` isn't `https://`, points at this computer, or is still the example address;
 - no real email is set up (no SMTP or Resend, or SMTP pointing at the Mailpit test inbox);
 - `TOYYIBPAY_BASE_URL` is the Toyyibpay sandbox.
 

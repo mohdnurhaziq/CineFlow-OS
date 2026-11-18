@@ -8,6 +8,8 @@ node_modules
 *.db-wal
 *.db-shm
 storage
+backups
+.cineflow-deployed.json
 graphify-out
 .agents
 .claude
