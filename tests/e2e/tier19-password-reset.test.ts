@@ -48,7 +48,9 @@ export async function runTier19PasswordResetTests(harness: TestHarness) {
   const json = nodemailer.createTransport({ jsonTransport: true });
   setSmtpTransportForTests({
     sendMail: async (mail: { to: string; subject: string; html: string }) => {
-      inbox.push(mail);
+      // Only this tier's accounts: an earlier tier's email still being sent in the background
+      // (a booking's deposit request, say) mustn't land in this inbox.
+      if (String(mail.to).startsWith("t19-")) inbox.push(mail);
       return json.sendMail(mail);
     },
   } as unknown as Transporter);

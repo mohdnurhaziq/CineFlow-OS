@@ -133,6 +133,33 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
     harness.assert(existsSync(sqlitePathFromUrl(freshUrl, ROOT)), "A test database path resolves to its file");
   });
 
+  await harness.test("T30-DB-05: a burst of simultaneous write transactions, more than the CPU cores, all finish", async () => {
+    // SQLite has one writer at a time. Waiting transactions used to hold the database engine's
+    // threads (one per core), so with more of them than cores, all stalled for 5 s and failed.
+    const tenant = await db.tenant.create({
+      data: { name: "Burst 0", slug: `t30-burst-${Date.now()}`, discipline: "HYBRID", currency: "MYR" },
+    });
+    try {
+      const n = os.cpus().length + 4;
+      const started = Date.now();
+      const results = await Promise.allSettled(
+        Array.from({ length: n }, () =>
+          db.$transaction(async (tx) => {
+            const row = await tx.tenant.findUniqueOrThrow({ where: { id: tenant.id }, select: { name: true } });
+            await new Promise((r) => setTimeout(r, 5));
+            await tx.tenant.update({ where: { id: tenant.id }, data: { name: `Burst ${Number(row.name.split(" ")[1]) + 1}` } });
+          })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected");
+      harness.assertEqual(failed.length, 0, `All ${n} transactions finish`, failed.map((r) => String((r as PromiseRejectedResult).reason).split("\n").pop()).join(" | "));
+      harness.assertEqual((await db.tenant.findUniqueOrThrow({ where: { id: tenant.id } })).name, `Burst ${n}`, "Each saw the one before it: none lost");
+      harness.assert(Date.now() - started < 4000, "Without stalling", `${Date.now() - started} ms`);
+    } finally {
+      await db.tenant.delete({ where: { id: tenant.id } });
+    }
+  });
+
   await harness.test("T30-ENV-01: APP_ENV is development, staging or production", async () => {
     harness.assertEqual(appEnvFrom({}), "development", "Unset means development");
     harness.assertEqual(appEnvFrom({ APP_ENV: "staging" }), "staging", "staging");
