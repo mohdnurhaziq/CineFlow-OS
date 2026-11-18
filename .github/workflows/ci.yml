@@ -24,4 +24,21 @@ jobs:
       - run: pnpm prisma generate
       - run: pnpm typecheck
       - run: pnpm db:check-migrations
-      - run: pnpm test:e2e
+      - name: pnpm test:e2e
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm test:e2e 2>&1 | tee e2e.log
+      # The full log needs a GitHub sign-in; annotations don't. Put the failures and the end of
+      # the output there, so a red check can be read from anywhere.
+      - name: Summarise failures
+        if: failure()
+        shell: bash
+        run: |
+          [ -f e2e.log ] || exit 0
+          clean() { sed -E 's/\x1b\[[0-9;]*m//g' | tr -d '\r'; }
+          grep -a "FAILED \[" e2e.log | clean | sort -u | head -n 8 | while IFS= read -r line; do
+            echo "::error title=Test failed::${line}"
+          done
+          tail -n 40 e2e.log | clean | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | sed 's/^/::error title=End of the test output::/'
+          echo
