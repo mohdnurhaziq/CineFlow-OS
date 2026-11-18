@@ -871,21 +871,30 @@ export async function runTier15ProjectTests(harness: TestHarness) {
   await harness.test("T15-FILES-05: photos uploaded at the same time into a new album land in one album", async () => {
     const project = await reviewProject((await reviewBooking("CONFIRMED")).id, "PRE_PRODUCTION");
     const png = await sharp({ create: { width: 300, height: 200, channels: 3, background: { r: 20, g: 120, b: 200 } } }).png().toBuffer();
-    const send = (n: number) => {
+    const send = (album: string, n: number) => {
       const form = new FormData();
       form.append("projectId", project.id);
-      form.append("gallery", "Parallel album");
+      form.append("gallery", album);
       form.append("files", new File([new Uint8Array(png)], `p${n}.png`, { type: "image/png" }));
       return withSession(crew, () => uploadDeliverables(new NextRequest("http://localhost:3000/api/deliverables", { method: "POST", body: form })));
     };
-    const results = await Promise.all([send(1), send(2), send(3)]);
-    harness.assert(results.every((r) => r.status === 200), "All three uploaded");
+    // Several rounds, several uploads each: the race only shows up some of the time.
+    const ROUNDS = 5;
+    const PER_ROUND = 6;
+    for (let round = 1; round <= ROUNDS; round++) {
+      const results = await Promise.all(Array.from({ length: PER_ROUND }, (_, i) => send(`Parallel album ${round}`, i)));
+      harness.assert(results.every((r) => r.status === 200), `Round ${round}: all ${PER_ROUND} uploaded`);
+    }
     const albums = await db.clientDeliverable.findMany({ where: { projectId: project.id }, include: { items: true } });
     for (const item of albums.flatMap((a) => a.items)) {
       createdFiles.push(masterFilePath(item.downloadUrl), ...(item.viewUrl ? [masterFilePath(item.viewUrl)] : []), path.join(process.cwd(), "public", item.previewUrl));
     }
-    harness.assertEqual(albums.length, 1, "One album, not one per upload");
-    harness.assertEqual(albums[0]?.items.length, 3, "Holding all three photos");
+    harness.assertEqual(albums.length, ROUNDS, "One album per name, not one per upload");
+    harness.assert(
+      albums.every((a) => a.items.length === PER_ROUND),
+      `Each album holds all ${PER_ROUND} photos`,
+      albums.map((a) => `${a.title}: ${a.items.length}`).join(", ")
+    );
   });
 
   await harness.test("T15-STAGE-01: a job moves forward on its own: shot after the session time, editing on the first upload", async () => {

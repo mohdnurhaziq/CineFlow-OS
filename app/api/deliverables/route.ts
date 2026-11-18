@@ -6,6 +6,7 @@ import { AuthorizationError, STAFF_ROLES } from "@/lib/auth/guard";
 import { assertCanWorkOn, requireOwnOrManage } from "@/lib/auth/access-guard";
 import { storeDeliverablePhoto, storeDeliverableVideoMaster, storeVideoReviewCopy } from "@/lib/deliverables/storage";
 import { errorMessageOf } from "@/lib/action-error";
+import { withKeyedLock } from "@/lib/keyed-lock";
 import { advanceProjectStage } from "@/lib/projects/stage";
 
 /**
@@ -33,18 +34,19 @@ const MAX_REQUEST = 500 * MB;
 
 /**
  * The project's album with this name, created if new. Photos are uploaded several at a time, so
- * two requests can both find no album and both create one: each then settles on the oldest album
- * of that name and removes its own, still empty, duplicate.
+ * the find-or-create runs one request at a time per album name: otherwise two requests can both
+ * find no album and each create its own. (Comparing creation times afterwards isn't enough: the
+ * time and id are stamped before the album is saved, so saves can land in a different order.)
+ * If older duplicates already exist, the oldest one is used.
  */
-async function findOrCreateAlbum(projectId: string, title: string, discipline: string) {
-  const oldest = () =>
-    db.clientDeliverable.findFirst({ where: { projectId, title }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
-  const existing = await oldest();
-  if (existing) return existing;
-  const mine = await db.clientDeliverable.create({ data: { projectId, title, discipline } });
-  const keep = (await oldest()) ?? mine;
-  if (keep.id !== mine.id) await db.clientDeliverable.deleteMany({ where: { id: mine.id, items: { none: {} } } });
-  return keep;
+function findOrCreateAlbum(projectId: string, title: string, discipline: string) {
+  return withKeyedLock(`album:${projectId}:${title}`, async () => {
+    const existing = await db.clientDeliverable.findFirst({
+      where: { projectId, title },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return existing ?? db.clientDeliverable.create({ data: { projectId, title, discipline } });
+  });
 }
 
 const titleFrom = (name: string) => name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 120) || "Untitled";
