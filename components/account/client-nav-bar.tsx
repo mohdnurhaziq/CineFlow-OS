@@ -41,7 +41,7 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
     },
     {
       id: "projects",
-      label: "Galleries & Vault",
+      label: "Galleries",
       href: `/${tenantSlug}/account?tab=projects`,
       icon: FolderLock,
       isActive: isBaseAccount && currentTab === "projects",

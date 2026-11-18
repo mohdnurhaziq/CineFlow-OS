@@ -43,10 +43,10 @@ export function PackageGrid({
       <div className="space-y-2">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900 text-xs font-mono text-zinc-400">
           <Sparkles className="size-3.5 text-amber-400" />
-          <span>SESSION PACKAGES &amp; MILESTONE INVESTMENT</span>
+          <span>PACKAGES &amp; PRICES</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-          Transparent Creative Production Packages
+          Our packages
         </h2>
         <p className="text-xs sm:text-sm text-zinc-400">
           A deposit locks your calendar slot; the balance is due after the shoot, and unlocks your full-resolution files.
@@ -88,7 +88,7 @@ export function PackageGrid({
                 {/* Price and Deposit Callout */}
                 <div className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] space-y-1">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-zinc-400">Total Investment</span>
+                    <span className="text-xs text-zinc-400">Price</span>
                     <span className="font-mono text-2xl font-black text-white tabular-nums">
                       {currencySymbol}
                       {pkg.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -114,13 +114,13 @@ export function PackageGrid({
                 {/* Turnaround Badge */}
                 <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
                   <Clock className="size-3.5 text-zinc-500" />
-                  <span>Turnaround Delivery: {pkg.turnaround}</span>
+                  <span>Ready in: {pkg.turnaround}</span>
                 </div>
 
                 {/* Deliverables Checklist */}
                 <div className="space-y-2 border-t border-zinc-800/80 pt-4">
                   <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
-                    Included Deliverables:
+                    What&apos;s included:
                   </span>
                   <ul className="space-y-2">
                     {deliverablePoints.map((point, idx) => (

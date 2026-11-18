@@ -128,7 +128,7 @@ export function PaymentConfirmationBanner({ tenantSlug, currency, confirmation: 
           className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 min-h-11 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold uppercase tracking-wider transition-colors"
         >
           <Download className="size-4" aria-hidden="true" />
-          Open your delivery vault
+          Open your gallery
         </Link>
       )}
     </section>

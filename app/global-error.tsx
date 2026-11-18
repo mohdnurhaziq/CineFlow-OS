@@ -28,11 +28,11 @@ export default function GlobalError({
 
           <div className="space-y-2">
             <span className="text-[11px] font-mono uppercase tracking-widest text-rose-400/90">
-              System Interrupt // Global Handler
+              Error
             </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Application Exception</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white">Something went wrong</h1>
             <p className="text-sm text-zinc-400">
-              An unrecoverable exception occurred. You can reload the application state below.
+              Sorry, this page couldn&apos;t load. Please try again.
             </p>
           </div>
 

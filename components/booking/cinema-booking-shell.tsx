@@ -233,7 +233,7 @@ export function CinemaBookingShell({
       <div className="border-b border-zinc-800 pb-6">
         <div className="space-y-1 min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            Cinema-Style Soundstage Calendar
+            Book a session
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400">
             Pick an available time to start your booking.
@@ -245,7 +245,7 @@ export function CinemaBookingShell({
       {/* Category Filter Pills */}
       <div className="space-y-2">
         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-          Campaign Category Filter:
+          Category
         </span>
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           <button

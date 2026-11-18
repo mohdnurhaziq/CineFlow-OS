@@ -98,12 +98,12 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
     <div className="w-full max-w-2xl space-y-6">
       <div className="space-y-2 text-center">
         <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
-          Client Booking Lookup
+          Find your booking
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400">
-          Enter the email you booked with and your tracking code to see your booking, invoices,
-          proposals and delivery vault.
+          Enter the email you booked with and your booking reference to see your booking, invoices,
+          proposals and photos.
         </p>
       </div>
 
@@ -142,7 +142,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
           <div className="space-y-1.5">
             <label htmlFor="mb-code" className="text-xs font-mono text-zinc-300 flex items-center gap-1.5">
               <Hash className="size-3.5 text-amber-400" />
-              Tracking Code
+              Booking reference
             </label>
             <input
               id="mb-code"
@@ -289,7 +289,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
           {booking.projects.length > 0 && (
             <section className="p-5 rounded-2xl bg-[#121215] border border-zinc-800 space-y-3">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <FolderLock className="size-4 text-amber-400" /> Galleries &amp; Delivery Vault
+                <FolderLock className="size-4 text-amber-400" /> Galleries
               </h2>
               <ul className="divide-y divide-zinc-800/80">
                 {booking.projects.map((p) => (

@@ -134,7 +134,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
       return;
     }
     if (!consentAccepted) {
-      toast.error("You must accept the production terms and 50% milestone schedule.");
+      toast.error("Please tick the box to accept the terms and payment plan.");
       return;
     }
 
@@ -156,7 +156,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
           depositAmount: res.amount,
           projectId: res.projectId,
         });
-        toast.success("Proposal formally accepted! Retainer milestone generated.");
+        toast.success("Proposal signed. Your deposit invoice is ready.");
       } else {
         toast.error(res.message || "Failed to accept proposal.");
       }
@@ -227,9 +227,9 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
         </div>
 
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#121215] space-y-1">
-          <div className="text-[10px] font-mono uppercase text-zinc-500">Milestone Structure</div>
-          <div className="font-semibold text-amber-400 font-mono">50% Retainer / 50% Vault</div>
-          <div className="text-xs text-zinc-400">Gated master asset delivery</div>
+          <div className="text-[10px] font-mono uppercase text-zinc-500">Payments</div>
+          <div className="font-semibold text-amber-400 font-mono">50% deposit / 50% on delivery</div>
+          <div className="text-xs text-zinc-400">Final files unlock when paid in full</div>
         </div>
       </div>
 
@@ -273,13 +273,13 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
 
         <div className="space-y-3 text-xs text-zinc-300 leading-relaxed font-sans">
           <p>
-            1. <strong>Production Retainer:</strong> A non-refundable 50% milestone deposit is required upon execution of this agreement to secure production crew, studio availability, and dates.
+            1. <strong>Deposit:</strong> A non-refundable 50% deposit is due when you sign this agreement. It secures the crew, the studio and your dates.
           </p>
           <p>
-            2. <strong>Master Deliverables Paywall:</strong> Master 4K ProRes files, uncompressed high-resolution photo archives (ZIP), and RAW negative drives remain locked within the CineFlow vault until the final 50% balance milestone has been verified and settled in full.
+            2. <strong>Final files:</strong> Full-quality video files, full-resolution photo downloads (ZIP) and any RAW files stay locked in your online gallery until the final 50% balance has been paid in full and confirmed by the studio.
           </p>
           <p>
-            3. <strong>Client Proofing:</strong> Watermarked digital proofs and streaming review proxies are provided for revision feedback and retouch selections prior to final settlement.
+            3. <strong>Reviewing your work:</strong> Before the balance is paid, you get watermarked photo previews and preview videos to choose favourites and ask for changes.
           </p>
 
           {/* Dynamically Injected Addenda */}
@@ -319,7 +319,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
           {hasRush && (
             <div className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-950/20 text-purple-200 space-y-1 animate-fadeIn">
               <span className="font-mono text-[10px] uppercase font-bold text-purple-400 block">
-                Addendum D (Expedited Post-Production Timeline)
+                Addendum D (Faster editing turnaround)
               </span>
               <p className="text-xs leading-relaxed">
                 Turnaround clock commences at formal shoot wrap. Requires client round-1 revision feedback within 12 hours of rough cut dispatch to preserve expedited milestone delivery.
@@ -391,7 +391,7 @@ export function ProposalViewer({ tenant, proposal }: ProposalViewerProps) {
             required
           />
           <label htmlFor="proposal-consent" className="text-xs text-zinc-300 leading-snug cursor-pointer">
-            I confirm that I am authorized to bind the client organization. I have reviewed and accepted the production scope, itemized add-ons, contract addenda, and the 50% retainer milestone payment schedule.
+            I confirm that I am authorized to bind the client organization. I have reviewed and accepted the production scope, itemized add-ons, contract addenda, and the 50% deposit payment plan.
           </label>
         </div>
 

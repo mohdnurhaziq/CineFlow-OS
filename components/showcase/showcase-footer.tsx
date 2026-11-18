@@ -42,14 +42,14 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-zinc-800 bg-[#121215] text-white text-xs font-semibold hover:border-zinc-700"
             >
               <MessageSquare className="size-3.5 text-emerald-400" />
-              Direct WhatsApp Dispatch
+              WhatsApp the studio
             </a>
 
             <Link
               href={`/${tenant.slug}/book`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400"
             >
-              Calendar Booking
+              Book a session
             </Link>
           </div>
         </div>
@@ -57,13 +57,13 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] font-mono text-zinc-400">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="flex items-center gap-1 whitespace-nowrap">
-              <CreditCard className="size-3 text-zinc-500" /> Card &amp; Online Checkout
+              <CreditCard className="size-3 text-zinc-500" /> Pay online
             </span>
             <span className="flex items-center gap-1 whitespace-nowrap">
-              <QrCode className="size-3 text-zinc-500" /> Studio QR Scan &amp; Receipt Upload
+              <QrCode className="size-3 text-zinc-500" /> Pay by QR transfer
             </span>
             <span className="flex items-center gap-1 whitespace-nowrap">
-              <ShieldCheck className="size-3 text-zinc-500" /> 100% Gated Deliverable Vault
+              <ShieldCheck className="size-3 text-zinc-500" /> Your private online gallery
             </span>
           </div>
 
@@ -78,7 +78,7 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
               href={`/${tenant.slug}/my-booking`}
               className="inline-flex items-center min-h-11 sm:min-h-0 text-zinc-300 hover:text-amber-400 transition-colors"
             >
-              Track Booking
+              Find my booking
             </Link>
             <Link
               href={`/${tenant.slug}/login`}
@@ -87,7 +87,7 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
               Studio Login
             </Link>
             <span>
-              Powered by <Link href="/" className="text-white hover:text-amber-400">CineFlow OS</Link> Multi-Tenant System
+              Powered by <Link href="/" className="text-white hover:text-amber-400">CineFlow OS</Link>
             </span>
           </div>
         </div>

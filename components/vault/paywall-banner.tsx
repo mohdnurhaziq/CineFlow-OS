@@ -48,7 +48,7 @@ export function PaywallBanner({
 
           <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">
             {filesReleased
-              ? "You can view and download the full-resolution files below now. Please settle the remaining balance when you can."
+              ? "You can view and download the full-resolution files below now. Please pay the remaining balance when you can."
               : "You can view watermarked previews and pick your favourites below. The full-resolution files unlock as soon as the balance is paid."}
           </p>
         </div>
@@ -57,7 +57,7 @@ export function PaywallBanner({
         <div className="shrink-0 flex flex-col sm:items-end justify-between gap-3 p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
           <div>
             <span className="text-[10px] font-mono uppercase text-zinc-400 block text-left sm:text-right">
-              Balance Due Upon Delivery
+              Balance due
             </span>
             <div className="text-3xl font-bold font-mono tabular-nums text-amber-400 tracking-tight text-left sm:text-right">
               {currencySymbol}

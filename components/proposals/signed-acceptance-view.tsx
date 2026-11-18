@@ -71,13 +71,13 @@ export function SignedAcceptanceView({
 
         <div className="space-y-1">
           <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
-            CONTRACT LEGALLY EXECUTED
+            SIGNED
           </span>
           <h2 className="text-2xl font-bold tracking-tight text-white">
-            Proposal Formally Accepted
+            Proposal accepted
           </h2>
           <p className="text-xs text-zinc-400 max-w-md mx-auto">
-            Contract terms, addenda, and production milestones have been signed and locked into the studio database.
+            You&apos;ve signed the proposal. The studio has your signed copy, with its terms and payment plan.
           </p>
         </div>
       </div>
@@ -86,36 +86,36 @@ export function SignedAcceptanceView({
         {/* Execution Metadata Card */}
         <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/60 font-mono text-xs space-y-3">
           <div className="flex justify-between items-center pb-2.5 border-b border-zinc-800">
-            <span className="text-zinc-400">Proposal Ref:</span>
+            <span className="text-zinc-400">Proposal:</span>
             <span className="font-bold text-amber-400 tracking-wider">#{proposalNumber}</span>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-zinc-400">Authorized Signer:</span>
+            <span className="text-zinc-400">Signed by:</span>
             <span className="text-white font-semibold font-sans">{signerName}</span>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-zinc-400">Execution Timestamp:</span>
+            <span className="text-zinc-400">Signed on:</span>
             <span className="text-zinc-300">{signedDateStr}</span>
           </div>
 
           {projectNumber && (
             <div className="flex justify-between items-center pt-2.5 border-t border-zinc-800">
-              <span className="text-zinc-400">Linked Production Project:</span>
+              <span className="text-zinc-400">Project:</span>
               <span className="font-bold text-white tracking-wider">#{projectNumber}</span>
             </div>
           )}
 
           {invoiceNumber && (
             <div className="flex justify-between items-center">
-              <span className="text-zinc-400">Retainer Invoice Ref:</span>
+              <span className="text-zinc-400">Deposit invoice:</span>
               <span className="font-bold text-amber-400 tracking-wider">{invoiceNumber}</span>
             </div>
           )}
 
           <div className="flex justify-between items-center pt-2.5 border-t border-zinc-800 text-sm">
-            <span className="text-zinc-300 font-sans font-bold">50% Retainer Milestone Due:</span>
+            <span className="text-zinc-300 font-sans font-bold">Deposit due:</span>
             <span className="font-bold text-amber-400 tabular-nums">
               {currencySymbol}
               {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -127,7 +127,7 @@ export function SignedAcceptanceView({
         {clientSignature && (
           <div className="p-4 rounded-xl border border-zinc-800 bg-black/50 space-y-2">
             <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Cryptographic Digital Signature On File
+              Your signature
             </div>
             <div className="h-24 flex items-center justify-center p-2 rounded-lg bg-zinc-900/40 border border-zinc-800">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -148,12 +148,12 @@ export function SignedAcceptanceView({
               className="w-full py-3.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
             >
               <CreditCard className="size-4" />
-              Proceed to Retainer Checkout ({currencySymbol}
+              Pay the deposit ({currencySymbol}
               {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })})
             </Link>
 
             <p className="text-[10px] font-mono text-zinc-500 text-center">
-              Settle via Online Card, Studio QR Transfer, or Counter Cash.
+              By card, QR transfer, or cash at the studio.
             </p>
           </div>
         )}

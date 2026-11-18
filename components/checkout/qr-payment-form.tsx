@@ -264,7 +264,7 @@ export function QrPaymentForm({
           )}
         </button>
         <p className="text-[10px] text-zinc-500 text-center mt-2 font-mono">
-          Your slot is held while our front desk staff verifies the bank transfer.
+          Your slot is held while the studio checks your transfer.
         </p>
       </div>
     </form>

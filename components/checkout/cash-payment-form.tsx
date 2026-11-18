@@ -32,11 +32,11 @@ export function CashPaymentForm({
       <div className="p-5 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-950/20 via-[#15151a] to-[#15151a] space-y-3">
         <div className="flex items-center gap-2.5 text-amber-400 font-bold text-sm">
           <Banknote className="size-5" />
-          <span>Studio Front Desk Cash Counter Settlement</span>
+          <span>Pay cash at the studio</span>
         </div>
 
         <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-          You may settle your booking deposit in cash directly at the studio reception counter prior to the commencement of your scheduled production shoot.
+          Pay your deposit in cash at the studio before your session.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-[11px] font-mono text-zinc-400">
@@ -94,7 +94,7 @@ export function CashPaymentForm({
           )}
         </button>
         <p className="text-[10px] text-zinc-500 text-center mt-2 font-mono">
-          An official cash invoice will be issued. Front desk staff will confirm your slot upon cash receipt.
+          The studio confirms your booking when they receive the cash, and you get a receipt.
         </p>
       </div>
     </form>

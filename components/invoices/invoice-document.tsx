@@ -83,17 +83,17 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
               </div>
               <div>
                 <div className="text-xs font-bold uppercase tracking-wider text-emerald-950">
-                  Official Studio Payment Receipt • Paid in Full
+                  Payment receipt • Paid in full
                 </div>
                 <div className="text-[11px] text-emerald-800 font-mono">
-                  Settled {doc.paidAt ? day(doc.paidAt) : ""} {doc.paymentMethod ? `via ${method(doc.paymentMethod)}` : ""}
+                  Paid {doc.paidAt ? day(doc.paidAt) : ""} {doc.paymentMethod ? `by ${method(doc.paymentMethod)}` : ""}
                   {doc.paymentReference ? ` • Ref: ${doc.paymentReference}` : ""}
                 </div>
               </div>
             </div>
             {doc.verifiedBy && (
               <div className="text-left sm:text-right text-[11px] font-mono text-emerald-900 shrink-0">
-                <span className="block text-[9px] uppercase tracking-wider text-emerald-700 font-sans font-bold">Authorized & Verified</span>
+                <span className="block text-[9px] uppercase tracking-wider text-emerald-700 font-sans font-bold">Confirmed by</span>
                 <span>{doc.verifiedBy}</span>
               </div>
             )}

@@ -35,10 +35,10 @@ export function VideoPlayerCard({ items, projectId, filesReleased, canMarkUp }: 
     <div className="space-y-6">
       <div className="pb-4 border-b border-zinc-800">
         <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block">
-          CINEMATIC VIDEO MASTERS
+          VIDEOS
         </span>
         <h3 className="text-xl font-bold text-white tracking-tight">
-          Streaming Review Proxy &amp; 4K ProRes Deliverables
+          Your videos
         </h3>
       </div>
 
@@ -67,7 +67,7 @@ export function VideoPlayerCard({ items, projectId, filesReleased, canMarkUp }: 
                       : "bg-amber-500/20 text-amber-400 border-amber-500/40"
                   }`}
                 >
-                  {filesReleased ? "Director Cut (Unlocked)" : "Streaming Review Proxy"}
+                  {filesReleased ? "Full quality" : "Preview"}
                 </span>
               </div>
             </div>
@@ -85,7 +85,7 @@ export function VideoPlayerCard({ items, projectId, filesReleased, canMarkUp }: 
                   {video.resolution && (
                     <>
                       <span>•</span>
-                      <span>Master: {video.resolution}</span>
+                      <span>Full file: {video.resolution}</span>
                     </>
                   )}
                   {video.fileSize && (
@@ -99,7 +99,7 @@ export function VideoPlayerCard({ items, projectId, filesReleased, canMarkUp }: 
                 {video.clientNotes && (
                   <div className="mt-2 text-[11px] text-amber-300 font-sans bg-amber-500/10 p-2 rounded border border-amber-500/20">
                     <span className="font-mono text-[9px] uppercase font-bold text-amber-400 block">
-                      Revision Note:
+                      Your note:
                     </span>
                     {video.clientNotes}
                   </div>
@@ -116,7 +116,7 @@ export function VideoPlayerCard({ items, projectId, filesReleased, canMarkUp }: 
                     className={buttonVariants({ variant: "secondary" })}
                   >
                     <MessageSquare className="size-4 text-amber-400" />
-                    <span>Revision Note</span>
+                    <span>Add a note</span>
                   </button>
                 )}
 
@@ -128,16 +128,16 @@ export function VideoPlayerCard({ items, projectId, filesReleased, canMarkUp }: 
                     className={buttonVariants({ size: "lg" })}
                   >
                     <Download className="size-4" />
-                    <span>Download 4K ProRes Master</span>
+                    <span>Download full-quality video</span>
                   </a>
                 ) : (
                   <button
                     disabled
                     className="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-mono flex items-center gap-2 cursor-not-allowed opacity-60"
-                    title="Settle 50% balance to unlock master downloads"
+                    title="Pay the balance to download"
                   >
                     <Lock className="size-4" />
-                    <span>4K ProRes Master Locked ({video.fileSize || "Master"})</span>
+                    <span>Download locked{video.fileSize ? ` (${video.fileSize})` : ""}</span>
                   </button>
                 )}
               </div>

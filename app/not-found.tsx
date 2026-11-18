@@ -11,11 +11,11 @@ export default function NotFound() {
 
         <div className="space-y-2">
           <span className="text-[11px] font-mono uppercase tracking-widest text-amber-500/80">
-            Error 404 // Cut Missing
+            Error 404
           </span>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Scene Not Found</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Page not found</h1>
           <p className="text-sm text-zinc-400">
-            The requested studio portal, proposal, or delivery vault could not be found or has been relocated.
+            This page doesn&apos;t exist or has moved. Check the link, or go back to the start.
           </p>
         </div>
 

@@ -77,11 +77,11 @@ export function ShowcaseShell({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-            FILTER BY CAMPAIGN CATEGORY
+            Filter by category
           </span>
           {hasWorks && (
             <span className="text-xs font-mono text-zinc-400">
-              {filteredItems.length} {filteredItems.length === 1 ? "Work" : "Works"} Displayed
+              Showing {filteredItems.length}
             </span>
           )}
         </div>

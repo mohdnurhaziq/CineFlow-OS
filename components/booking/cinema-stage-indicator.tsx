@@ -19,8 +19,7 @@ export function CinemaStageIndicator({ brandColor }: CinemaStageIndicatorProps) 
       />
       <div className="mt-3 inline-flex items-center gap-2 text-[11px] font-mono tracking-[0.18em] uppercase text-zinc-400">
         <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
-        <span className="sm:hidden">Main production stage</span>
-        <span className="hidden sm:inline">Stage · Studio cyclorama wall &amp; main production stage</span>
+        <span>Choose a time</span>
       </div>
     </div>
   );

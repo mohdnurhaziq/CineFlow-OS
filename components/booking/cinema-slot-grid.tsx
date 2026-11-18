@@ -142,7 +142,7 @@ export function CinemaSlotGrid({
                   )}
                   {isHeldByOther && (
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
-                      BEING BOOKED
+                      ON HOLD
                     </span>
                   )}
                   {isBooked && (
@@ -152,7 +152,7 @@ export function CinemaSlotGrid({
                   )}
                   {isBlocked && (
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400">
-                      BLOCKED
+                      UNAVAILABLE
                     </span>
                   )}
                   {isAvailable && !isHeldByMe && !isPending && (
@@ -191,9 +191,9 @@ export function CinemaSlotGrid({
 
   return (
     <div className="space-y-8">
-      {renderSlotBlock("Morning Call Session", "Before 12:00 PM", morningSlots)}
-      {renderSlotBlock("Afternoon Production Session", "12:00 PM – 5:00 PM", afternoonSlots)}
-      {renderSlotBlock("Golden Hour & Evening Sessions", "From 5:00 PM", eveningSlots)}
+      {renderSlotBlock("Morning", "Before 12:00 PM", morningSlots)}
+      {renderSlotBlock("Afternoon", "12:00 PM – 5:00 PM", afternoonSlots)}
+      {renderSlotBlock("Evening", "From 5:00 PM", eveningSlots)}
     </div>
   );
 }

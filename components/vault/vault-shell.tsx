@@ -97,7 +97,7 @@ export function VaultShell({
           </Link>
 
           <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">
-            CINEMATIC DELIVERABLES VAULT
+            YOUR GALLERY
           </span>
         </div>
 
@@ -128,7 +128,7 @@ export function VaultShell({
               </div>
               <span>•</span>
               <div>
-                <span>Studio Lead: <strong className="text-white">{project.studioLead.name}</strong></span>
+                <span>Studio contact: <strong className="text-white">{project.studioLead.name}</strong></span>
               </div>
             </div>
           </div>
@@ -176,10 +176,10 @@ export function VaultShell({
                 <Lock className="size-5 text-amber-400" />
                 <div>
                   <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
-                    PAYWALL ACTIVE
+                    DOWNLOADS LOCKED
                   </span>
                   <span className="text-xs font-semibold text-white">
-                    50% Balance Milestone Due
+                    Balance still to pay
                   </span>
                 </div>
               </div>
@@ -218,10 +218,10 @@ export function VaultShell({
               <button
                 disabled
                 className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 font-mono text-xs flex items-center gap-2 cursor-not-allowed opacity-60"
-                title="Settle 50% balance to unlock high-res photo ZIP"
+                title="Pay the balance to download all photos"
               >
                 <Lock className="size-4 text-zinc-500" />
-                <span>Download All Photos (ZIP Locked)</span>
+                <span>Download all photos (locked)</span>
               </button>
             )
           )}
@@ -235,16 +235,16 @@ export function VaultShell({
                 className={buttonVariants({ variant: "secondary" })}
               >
                 <Film className="size-4 text-amber-400" />
-                <span>Download 4K ProRes Master</span>
+                <span>Download full-quality video</span>
               </a>
             ) : (
               <button
                 disabled
                 className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 font-mono text-xs flex items-center gap-2 cursor-not-allowed opacity-60"
-                title="Settle 50% balance to unlock 4K ProRes video master"
+                title="Pay the balance to download the full-quality video"
               >
                 <Lock className="size-4 text-zinc-500" />
-                <span>Download 4K Master (Locked)</span>
+                <span>Download video (locked)</span>
               </button>
             )
           )}

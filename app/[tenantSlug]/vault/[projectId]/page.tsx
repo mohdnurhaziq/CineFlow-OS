@@ -27,11 +27,11 @@ export async function generateMetadata({ params }: VaultPageProps): Promise<Meta
     select: { name: true },
   });
 
-  if (!tenant) return { title: "Vault" };
+  if (!tenant) return { title: "Gallery" };
 
   // Generic: the page needs a sign-in, so the tab title must not reveal the project.
   return {
-    title: `Delivery Vault | ${tenant.name}`,
+    title: `Your gallery | ${tenant.name}`,
     robots: { index: false, follow: false },
     description: "Review watermarked proofs, stream review video, select favorites, and access 4K master deliverables.",
   };

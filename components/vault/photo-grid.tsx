@@ -97,10 +97,10 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block">
-            GALLERY PROOFING &amp; SELECTIONS
+            PHOTOS
           </span>
           <h3 className="text-xl font-bold text-white tracking-tight">
-            High-Resolution Photo Deliverables ({activeItems.length})
+            Your photos ({activeItems.length})
           </h3>
         </div>
 
@@ -113,7 +113,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
               onClick={() => setFilterFavsOnly(false)}
               className={chipClass(!filterFavsOnly)}
             >
-              All Proofs ({activeItems.length})
+              All ({activeItems.length})
             </button>
 
             <button
@@ -155,10 +155,10 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
               ) : (
                 <div
                   className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-500 flex items-center gap-1.5"
-                  title="Final balance milestone unlocks full-resolution batch zip download"
+                  title="Pay the balance to download all photos at once"
                 >
                   <Lock className="size-3 text-amber-400" />
-                  <span>Batch ZIP Locked</span>
+                  <span>Download all (locked)</span>
                 </div>
               )}
             </div>
@@ -195,7 +195,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                 {!filesReleased && (
                   <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                     <span className="transform -rotate-12 px-3 py-1 rounded bg-black/60 backdrop-blur-xs border border-amber-500/30 text-[10px] font-mono tracking-widest text-amber-300 font-bold uppercase shadow-lg">
-                      Watermarked Proof
+                      Preview
                     </span>
                   </div>
                 )}
@@ -275,7 +275,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                     title={canMarkUp ? "Click to edit feedback" : undefined}
                   >
                     <span className="font-mono text-[9px] uppercase font-bold text-amber-400 block">
-                      Retouch Note:
+                      Your note:
                     </span>
                     {item.clientNotes}
                   </div>
@@ -290,16 +290,16 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                       className="w-full py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Download className="size-3.5 text-amber-400" />
-                      <span>Download Master</span>
+                      <span>Download</span>
                     </a>
                   ) : (
                     <button
                       disabled
                       className="w-full py-2 px-3 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-mono flex items-center justify-center gap-1.5 cursor-not-allowed opacity-60"
-                      title="Settle 50% balance to unlock master downloads"
+                      title="Pay the balance to download"
                     >
                       <Lock className="size-3.5" />
-                      <span>Master Locked</span>
+                      <span>Download locked</span>
                     </button>
                   )}
                 </div>
@@ -356,7 +356,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
               {!filesReleased && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                   <span className="transform -rotate-12 px-4 py-2 rounded-lg bg-black/75 border border-amber-500/40 text-xs font-mono tracking-widest text-amber-300 font-bold uppercase shadow-2xl">
-                    Watermarked Proof — Final Balance Due
+                    Preview: pay the balance to download
                   </span>
                 </div>
               )}

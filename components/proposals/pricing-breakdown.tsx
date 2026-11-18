@@ -25,10 +25,10 @@ export function PricingBreakdown({
       <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
         <div className="space-y-0.5">
           <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
-            REAL-TIME FINANCIAL RECALCULATION
+            UPDATES AS YOU CHOOSE
           </span>
           <h4 className="text-base font-bold text-white tracking-tight">
-            Production Investment &amp; Milestone Schedule
+            Price and payments
           </h4>
         </div>
 
@@ -70,7 +70,7 @@ export function PricingBreakdown({
         <div className="p-4 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-950/20 via-[#16161c] to-[#121215] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs">
             <span className="font-mono text-[10px] uppercase font-bold text-amber-400">
-              Milestone 1 // Signing
+              Payment 1 · When you sign
             </span>
             <Clock className="size-3.5 text-amber-400" />
           </div>
@@ -81,7 +81,7 @@ export function PricingBreakdown({
           </div>
 
           <p className="text-[11px] text-zinc-400 leading-tight font-sans">
-            50% Retainer Milestone due upon contract execution to reserve production crew and shoot dates.
+            {depositPercentage}% deposit, due when you sign, to reserve the crew and your shoot dates.
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export function PricingBreakdown({
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#16161b] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs">
             <span className="font-mono text-[10px] uppercase font-bold text-zinc-400">
-              Milestone 2 // Wrap
+              Payment 2 · On delivery
             </span>
             <Lock className="size-3.5 text-zinc-500" />
           </div>
@@ -100,7 +100,7 @@ export function PricingBreakdown({
           </div>
 
           <p className="text-[11px] text-zinc-400 leading-tight font-sans">
-            50% Final Balance due prior to master 4K ProRes &amp; high-res ZIP unlock in client delivery vault.
+            The remaining {100 - depositPercentage}%, due before your full-quality files unlock in your online gallery.
           </p>
         </div>
       </div>

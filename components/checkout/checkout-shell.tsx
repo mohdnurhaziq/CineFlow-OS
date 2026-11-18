@@ -310,7 +310,7 @@ export function CheckoutShell({
           CHECKOUT · {tenant.name.toUpperCase()}
         </span>
         <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-          {slot ? "Complete Studio Session Reservation" : "Pay your invoice"}
+          {slot ? "Book your session" : "Pay your invoice"}
         </h1>
       </div>
 
@@ -344,10 +344,10 @@ export function CheckoutShell({
             <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] space-y-4 shadow-xl">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
-                  Step 1: Production Client Intake
+                  Step 1: Your details
                 </span>
                 <span className="text-[10px] font-mono text-zinc-400">
-                  Required for Call Sheet &amp; Vault Delivery
+                  So the studio can reach you
                 </span>
               </div>
 
@@ -410,7 +410,7 @@ export function CheckoutShell({
 
                 <div className="space-y-1">
                   <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Shoot Concept / Creative Brief (Optional)
+                    Notes for the studio (optional)
                   </label>
                   <textarea
                     rows={2}
@@ -451,7 +451,7 @@ export function CheckoutShell({
                 }`}
               >
                 <CreditCard className="size-4" />
-                <span className="hidden sm:inline">{cardMode === "GATEWAY" ? "FPX / Card" : "Online Card"}</span>
+                <span className="hidden sm:inline">{cardMode === "GATEWAY" ? "FPX / Card" : "Card"}</span>
                 <span className="sm:hidden">{cardMode === "GATEWAY" ? "FPX / Card" : "Card"}</span>
               </button>
               )}
@@ -466,8 +466,8 @@ export function CheckoutShell({
                 }`}
               >
                 <QrCode className="size-4" />
-                <span className="hidden sm:inline">Studio QR</span>
-                <span className="sm:hidden">QR Slip</span>
+                <span className="hidden sm:inline">QR transfer</span>
+                <span className="sm:hidden">QR</span>
               </button>
 
               <button

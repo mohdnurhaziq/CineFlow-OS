@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: BookingPageProps): Promise<Me
   if (!tenant) return { title: "Booking" };
 
   return {
-    title: `Cinema Calendar Booking — ${tenant.name}`,
+    title: `Book a session — ${tenant.name}`,
     description: `Book your session with ${tenant.name} online: pick a date and time that suits you.`,
   };
 }

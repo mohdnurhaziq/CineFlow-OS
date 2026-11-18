@@ -42,7 +42,7 @@ export function RetouchNotesModal({
       });
 
       if (res.success) {
-        toast.success("Retouch feedback saved!");
+        toast.success("Note saved.");
         if (onNoteSaved) onNoteSaved(res.clientNotes || null);
         onClose();
       } else {

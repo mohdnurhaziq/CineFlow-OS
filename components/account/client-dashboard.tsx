@@ -112,11 +112,20 @@ interface ClientDashboardProps {
 
 const STAGES = [
   { id: "PRE_PRODUCTION", label: "Planning", icon: CalendarClock },
-  { id: "PRODUCTION", label: "Shoot Day", icon: Camera },
-  { id: "POST_PRODUCTION", label: "Color & Edit", icon: Sparkles },
-  { id: "IN_REVIEW", label: "Client Proofing", icon: Eye },
+  { id: "PRODUCTION", label: "Shoot day", icon: Camera },
+  { id: "POST_PRODUCTION", label: "Editing", icon: Sparkles },
+  { id: "IN_REVIEW", label: "Your review", icon: Eye },
   { id: "DELIVERED", label: "Delivered", icon: CheckCircle2 },
 ];
+
+const PROPOSAL_STATUS_TEXT: Record<string, string> = {
+  DRAFT: "Draft",
+  SENT: "Ready to review",
+  VIEWED: "Ready to review",
+  ACCEPTED: "Signed",
+  DECLINED: "Declined",
+  EXPIRED: "Expired",
+};
 
 const BOOKING_STATUS_TEXT: Record<string, { label: string; className: string }> = {
   CONFIRMED: { label: "Confirmed", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
@@ -286,17 +295,17 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   const getMilestoneLabel = (type: string) => {
     switch (type) {
       case "BOOKING_DEPOSIT":
-        return "Milestone 1: Booking Deposit";
+        return "Deposit (1 of 2)";
       case "BOOKING_BALANCE":
-        return "Milestone 2: Final Session Balance";
+        return "Balance (2 of 2)";
       case "RETAINER_50":
-        return "Milestone 1: Project Retainer (50%)";
+        return "Deposit (1 of 2)";
       case "FINAL_BALANCE_50":
-        return "Milestone 2: Final Balance (50%)";
+        return "Balance (2 of 2)";
       case "PRINT_FRAME_ORDER":
-        return "Print & Fine Art Frame Order";
+        return "Framed print order";
       case "CUSTOM":
-        return "Custom Studio Invoice";
+        return "Invoice";
       default:
         return humanize(type);
     }
@@ -417,12 +426,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <span>Welcome back, {client.name.split(" ")[0]}</span>
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Track shoot milestones, review call sheets, access deliverables in your vault, and manage invoices.
+              Your sessions, photos and invoices, all in one place.
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs font-mono text-zinc-400">
             <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-zinc-300">Client Portal Active</span>
+            <span className="text-zinc-300">Your account</span>
           </div>
         </div>
         {/* Priority 1: High-Visibility Action Notification Banner */}
@@ -504,7 +513,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                 href={`/${tenant.slug}/vault/${nextShoot.projectId}`}
                 className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono transition-colors whitespace-nowrap self-start sm:self-auto"
               >
-                <span>View Vault</span>
+                <span>Open gallery</span>
                 <ChevronRight className="size-3 text-zinc-400" />
               </Link>
             )}
@@ -572,7 +581,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
           >
             <div className="flex items-center justify-between text-zinc-400">
               <span className="text-[11px] font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">
-                Gallery Deliverables
+                Photos & videos
               </span>
               <Camera className="size-4 text-amber-400" />
             </div>
@@ -581,7 +590,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             </div>
             <p className="text-[11px] text-zinc-400 mt-1">
               {totalDeliverablesCount > 0
-                ? `${totalDeliverablesCount} photos & videos in vault`
+                ? `${totalDeliverablesCount} ready to view`
                 : "Delivered after shoot day"}
             </p>
           </button>
@@ -598,7 +607,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">
-                      Current Engagement
+                      Current booking
                     </span>
                     <span className="text-xs text-zinc-400 font-mono">
                       {spotlightProject.projectNumber}
@@ -637,7 +646,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     className={cn(buttonVariants(), "self-start")}
                   >
                     <FolderLock className="size-3.5" />
-                    <span>Open Photo Vault</span>
+                    <span>Open gallery</span>
                     <ChevronRight className="size-3.5" />
                   </Link>
                 </div>
@@ -645,9 +654,9 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                 {/* Compact Stage Timeline */}
                 <div className="bg-[#18181c] p-3.5 rounded-xl border border-zinc-800/80 space-y-2">
                   <div className="flex items-center justify-between text-[11px] font-mono">
-                    <span className="text-zinc-400 uppercase tracking-wider">Production Timeline</span>
+                    <span className="text-zinc-400 uppercase tracking-wider">Progress</span>
                     <span className="text-amber-400 font-semibold">
-                      Stage {spotlightStageIndex + 1} of 5: {STAGES[spotlightStageIndex]?.label}
+                      Step {spotlightStageIndex + 1} of 5: {STAGES[spotlightStageIndex]?.label}
                     </span>
                   </div>
                   <ol className="grid grid-cols-5 gap-1.5" aria-label="Stage timeline">
@@ -875,10 +884,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <FolderLock className="size-4 text-amber-400" />
-                  Your Galleries & Deliverables Vault ({projects.length})
+                  Your galleries ({projects.length})
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Follow stages from shoot to retouching selects and high-resolution gallery downloads.
+                  Follow each shoot from planning to your finished photos.
                 </p>
               </div>
             </div>
@@ -888,7 +897,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                 <Camera className="size-8 text-zinc-600 mx-auto" />
                 <h3 className="text-sm font-bold text-zinc-300">No active galleries yet</h3>
                 <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                  When you book a session or production, your gallery and deliverables vault activate here.
+                  When you book a session, its gallery appears here.
                 </p>
                 <Link
                   href={`/${tenant.slug}/book`}
@@ -938,7 +947,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                             )}
                           >
-                            {humanize(p.status)}
+                            {STAGES[stageIndex]?.label ?? humanize(p.status)}
                           </span>
                         </div>
                       </div>
@@ -947,10 +956,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                       <div className="bg-[#18181c] p-4 rounded-xl border border-zinc-800/80 space-y-2.5">
                         <div className="flex items-center justify-between text-xs font-mono">
                           <span className="text-zinc-400 text-[11px] uppercase tracking-wider">
-                            Production Stage
+                            Progress
                           </span>
                           <span className="text-amber-400 font-semibold">
-                            Stage {stageIndex + 1} of 5: {STAGES[stageIndex]?.label || "Planning"}
+                            Step {stageIndex + 1} of 5: {STAGES[stageIndex]?.label || "Planning"}
                           </span>
                         </div>
 
@@ -1059,7 +1068,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                           ) : (
                             <div className="text-xs text-zinc-400 flex items-center gap-1.5">
                               <Clock className="size-3.5 text-zinc-500" />
-                              <span>Production in progress. Vault gallery will populate upon first upload.</span>
+                              <span>Your photos will appear here once the studio uploads them.</span>
                             </div>
                           )}
 
@@ -1086,7 +1095,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             className={buttonVariants({ size: "lg" })}
                           >
                             <FolderLock className="size-4" />
-                            <span>Open Photo Vault</span>
+                            <span>Open gallery</span>
                             <ChevronRight className="size-3.5" />
                           </Link>
                         </div>
@@ -1122,10 +1131,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <CalendarClock className="size-4 text-amber-400" />
-                  Your Session Bookings ({bookings.length})
+                  Your bookings ({bookings.length})
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Scheduled time slots, venue locations, and booking confirmations.
+                  Your sessions, with their times and places.
                 </p>
               </div>
 
@@ -1219,7 +1228,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               href={`/${tenant.slug}/vault/${b.project.id}`}
                               className="text-[11px] text-amber-400 hover:underline inline-flex items-center gap-1 font-mono mt-0.5"
                             >
-                              <span>View Linked Project & Vault</span>
+                              <span>Open gallery</span>
                               <ChevronRight className="size-3" />
                             </Link>
                           )}
@@ -1268,7 +1277,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   Invoices & Payment Receipts ({invoices.length})
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Milestone deposits, final balances, and official tax receipts for your sessions.
+                  Deposits, balances and receipts for your sessions.
                 </p>
               </div>
 
@@ -1481,7 +1490,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   <div className="space-y-3 pt-2">
                     {invoiceGroups.length > 0 && (
                       <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-400 pt-2">
-                        Direct Orders &amp; Custom Invoices ({standaloneInvoices.length})
+                        Other invoices ({standaloneInvoices.length})
                       </h3>
                     )}
                     <div className="divide-y divide-zinc-800/60 rounded-2xl border border-zinc-800 bg-[#0d0d10] p-2 sm:p-3">
@@ -1601,10 +1610,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             <div>
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <FileText className="size-4 text-amber-400" />
-                Custom Project Proposals ({proposals.length})
+                Proposals ({proposals.length})
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Official studio quotes, scope agreements, and digital signing contracts.
+                Quotes from the studio to read and sign.
               </p>
             </div>
 
@@ -1630,7 +1639,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                           : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                       )}
                     >
-                      {p.status}
+                      {PROPOSAL_STATUS_TEXT[p.status] ?? humanize(p.status)}
                     </span>
                     <Link
                       href={`/${tenant.slug}/proposals/${p.id}`}
@@ -1653,7 +1662,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             Signed in as {client.email} · {tenant.name} Client Portal
           </p>
           <p className="text-[11px] text-zinc-600">
-            Need changes to your shoot or deliverables? Contact studio support directly.
+            Need to change something? Contact the studio.
           </p>
         </footer>
       </main>

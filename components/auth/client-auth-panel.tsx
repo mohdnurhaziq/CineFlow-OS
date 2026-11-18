@@ -257,7 +257,7 @@ export function ClientAuthPanel({
 
         {mode === "register" && needsClaim && (
           <Field
-            label="Tracking code"
+            label="Booking reference"
             icon={Hash}
             type="text"
             autoComplete="off"

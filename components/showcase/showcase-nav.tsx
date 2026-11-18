@@ -91,7 +91,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
             className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <MessageSquare className="size-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">WhatsApp Dispatch</span>
+            <span className="hidden sm:inline">WhatsApp</span>
           </a>
 
           <ClientAccountMenu tenantSlug={tenant.slug} client={client} staff={staff} />

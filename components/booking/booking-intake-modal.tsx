@@ -142,10 +142,10 @@ export function BookingIntakeModal({
           <div className="shrink-0 px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
             <div className="space-y-0.5">
               <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400">
-                {clientAccount ? "Booking summary" : "Quick account // 4 fields"}
+                {clientAccount ? "Booking summary" : "Your details"}
               </span>
               <Dialog.Title className="text-base font-bold text-white tracking-tight">
-                Complete Session Reservation
+                Book your session
               </Dialog.Title>
             </div>
 
@@ -167,11 +167,11 @@ export function BookingIntakeModal({
 
                 <div className="space-y-2">
                   <h4 className="text-xl font-bold text-white tracking-tight">
-                    {depositPaid ? "Reservation Confirmed!" : "Booking Received"}
+                    {depositPaid ? "Booking confirmed!" : "Booking received"}
                   </h4>
                   <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                     {depositPaid
-                      ? "Your session slot has been permanently locked. A confirmation email and calendar invite have been dispatched."
+                      ? "Your session is booked. We've emailed you the details."
                       : formData.paymentMethod === "QR_CODE"
                       ? "Your slot is held for 24 hours. Transfer the deposit, then upload the payment slip so the studio can confirm your booking. Without a slip, the slot is released after 24 hours."
                       : "Your slot is held for 24 hours. Pay the deposit at the studio counter so they can confirm your booking. Unpaid, the slot is released after 24 hours."}
@@ -179,7 +179,7 @@ export function BookingIntakeModal({
                 </div>
 
                 <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/60 font-mono text-xs space-y-1.5">
-                  <div className="text-zinc-400 uppercase text-[10px]">Booking Tracking Reference:</div>
+                  <div className="text-zinc-400 uppercase text-[10px]">Booking reference</div>
                   <div className="text-base font-black text-amber-400 tracking-wider">{confirmedCode}</div>
                   <div className="text-[11px] text-zinc-400 pt-2 border-t border-zinc-800">
                     {slotDateStr} • {slot.startTime} – {slot.endTime}
@@ -272,7 +272,7 @@ export function BookingIntakeModal({
                   {/* Optional Field 4: Brief */}
                   <div className="space-y-1">
                     <label htmlFor="booking-brief" className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      Shoot Concept / Creative Notes (Optional)
+                      Notes for the studio (optional)
                     </label>
                     <textarea
                       id="booking-brief"
@@ -291,9 +291,9 @@ export function BookingIntakeModal({
                     </span>
                     <div role="group" aria-labelledby="booking-payment-label" className="grid grid-cols-3 gap-2">
                       {[
-                        { id: "CARD", label: "Card (Instant)" },
-                        { id: "QR_CODE", label: "Studio QR Slip" },
-                        { id: "CASH", label: "Cash Counter" },
+                        { id: "CARD", label: "Card" },
+                        { id: "QR_CODE", label: "QR transfer" },
+                        { id: "CASH", label: "Cash at studio" },
                       ].map((p) => (
                         <button
                           type="button"

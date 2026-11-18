@@ -110,7 +110,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
                 className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
               >
                 <FolderLock className="size-3.5 text-zinc-400" />
-                <span>Shoots & Vault</span>
+                <span>Galleries</span>
               </Link>
             </DropdownMenu.Item>
 
