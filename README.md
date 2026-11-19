@@ -185,10 +185,16 @@ exact version staging ran.
    cd production
    node scripts/ops.mjs create-super-admin you@example.com
    ```
-   It prints a random password once. Studios then join through the studio sign-up page
-   (`/create-studio`). The super-admin signs in on any studio's sign-in page
-   (`/<studio>/login`) and then opens `/super-admin`, so that works once the first studio
-   has joined.
+   It prints a random password once. Sign in with it at `https://app.<domain>/super-admin/login`
+   (production doesn't link to that page anywhere, so bookmark it). Running the same command
+   again sets a new password if you forget it. Studios join through the studio sign-up page
+   (`/create-studio`).
+8. Check that alerts reach you: in `production/`, run `node scripts/ops.mjs test-alert`. Every
+   super-admin should get a "Test alert" email within a minute.
+9. Get told when the site is down. The 24/7 PC can't email you if it's off, so use a free
+   outside monitor: sign up at [UptimeRobot](https://uptimerobot.com), add a monitor of type
+   **HTTP(s)** for `https://app.<domain>/api/health`, every 5 minutes, alerting your email.
+   It emails you when the site stops answering and again when it's back.
 
 ### Releasing a change
 
@@ -224,6 +230,11 @@ it has room, because deliverables can be large.
 | --- | --- | --- |
 | Back up now | `production/` | `node scripts/ops.mjs backup now` |
 | Put a backup back | `production/` | `node scripts/ops.mjs restore <date_time>` |
+| Check that alerts reach you | `production/` | `node scripts/ops.mjs test-alert` |
+
+If a nightly backup fails, every super-admin gets an email saying so, with the error and what to
+do, sent through production's own email settings. A failed `backup now` shows its error right
+there instead.
 
 `restore` stops the app, puts the database and files back, switches to the version the
 backup was taken on, and starts it again. Anything saved after that backup is lost. Each backup
@@ -274,7 +285,8 @@ backup would be lost.
    your accounts came over with the database.
 6. **Check:** `https://app.<domain>` opens and you're still signed in,
    `node scripts/ops.mjs status` in `production/` shows the expected version, and
-   `node scripts/ops.mjs backup now` works. From here on, release changes as usual.
+   `node scripts/ops.mjs backup now` and `node scripts/ops.mjs test-alert` work. The uptime
+   monitor needs no change. From here on, release changes as usual.
 
 To move back, do the same in the other direction.
 

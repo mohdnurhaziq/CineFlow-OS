@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Aperture } from "lucide-react";
 
-export function SaasFooter() {
+interface SaasFooterProps {
+  /** Dev and staging: link the demo studios and the super-admin sign-in. Never in production. */
+  showDemo: boolean;
+}
+
+export function SaasFooter({ showDemo }: SaasFooterProps) {
   return (
     <footer className="border-t border-zinc-800 bg-[#09090b] text-zinc-400 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -16,15 +21,19 @@ export function SaasFooter() {
         </div>
 
         <div className="flex items-center gap-6">
-          <Link href="/lumina-cine" className="hover:text-white transition-colors">
-            Lumina CineWorks Demo
-          </Link>
-          <Link href="/apex-media" className="hover:text-white transition-colors">
-            Apex Photo &amp; Motion Demo
-          </Link>
-          <Link href="/super-admin" className="hover:text-white transition-colors">
-            Super-Admin Console
-          </Link>
+          {showDemo && (
+            <>
+              <Link href="/lumina-cine" className="hover:text-white transition-colors">
+                Lumina CineWorks Demo
+              </Link>
+              <Link href="/apex-media" className="hover:text-white transition-colors">
+                Apex Photo &amp; Motion Demo
+              </Link>
+              <Link href="/super-admin/login" className="hover:text-white transition-colors">
+                Super-Admin Console
+              </Link>
+            </>
+          )}
           <Link href="/create-studio" className="hover:text-amber-400 transition-colors">
             Launch Studio
           </Link>

@@ -7,6 +7,7 @@
 //   node scripts/ops.mjs backup now               back up this copy's database and files
 //   node scripts/ops.mjs restore <backup name>    put a backup back (and the version it ran)
 //   node scripts/ops.mjs create-super-admin <email>
+//   node scripts/ops.mjs test-alert                email the super-admins a test backup alert
 //   node scripts/ops.mjs status
 //
 // Needs only Node 20+, git and Docker. See README → "Staging and production".
@@ -90,9 +91,17 @@ function healthUrl(env) {
   return `http://127.0.0.1:${env.APP_PORT || "3000"}/api/health`;
 }
 
+/**
+ * Builds every service of this copy (the app, and in production the backup service, so a change
+ * to docker/backup reaches it too) while the old version keeps running.
+ */
+function buildAll() {
+  run("docker", ["compose", "build"]);
+}
+
 /** Builds the new version while the old one keeps running, then swaps and waits for it. */
 async function buildAndStart(env) {
-  run("docker", ["compose", "build", "app"]);
+  buildAll();
   run("docker", ["compose", "up", "-d"]);
   console.log(`\nWaiting for ${healthUrl(env)} …`);
   return waitForHealth(healthUrl(env));
@@ -152,7 +161,7 @@ async function deployProduction(env) {
       commitExists,
       listNew: (from, to) => (from ? read("git", ["log", "--oneline", `${from}..${to}`]) : ""),
       checkout: (sha) => run("git", ["checkout", "--detach", sha]),
-      build: () => run("docker", ["compose", "build", "app"]),
+      build: buildAll,
       backupNow,
       start: () => run("docker", ["compose", "up", "-d"]),
       waitHealthy: () => {
@@ -223,12 +232,16 @@ async function main() {
       if (!arg) fail("Use: node scripts/ops.mjs create-super-admin <email>");
       run("docker", ["compose", "exec", "app", "pnpm", "tsx", "scripts/create-super-admin.ts", arg]);
       return;
+    case "test-alert":
+      run("docker", ["compose", "run", "--rm", "backup", "alert-test"]);
+      console.log("\nTest alert sent. Check the super-admins' inboxes (staging: its test inbox).");
+      return;
     case "status":
       status(env);
       return;
     default:
       fail(
-        "Commands: deploy staging | deploy production | backup now | restore <backup name> | create-super-admin <email> | status"
+        "Commands: deploy staging | deploy production | backup now | restore <backup name> | create-super-admin <email> | test-alert | status"
       );
   }
 }

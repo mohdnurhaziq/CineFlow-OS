@@ -3,6 +3,7 @@
 #   daemon          back up every night at BACKUP_TIME (default 03:00) in TZ
 #   backup <name>   back up now into /backups/db/<name>, and mirror the files
 #   restore <name>  put /backups/db/<name> back (the app must be stopped)
+#   alert-test      ask the app to email the super-admins a test alert
 #
 # /backups/db/<name>/dev.db     the database, via SQLite's online backup (safe while the app runs)
 # /backups/db/<name>/info.txt   env=<copy>, commit=<version it ran>, taken=<time>
@@ -64,6 +65,21 @@ restore() {
   echo "Restored $name"
 }
 
+# Asks the app to email every super-admin (app/api/ops/alert). The key proves the request is ours:
+# sha256 of AUTH_SECRET and a label, as lib/ops-alert.ts expects; the secret itself never travels.
+# alert <kind> <backup name> [file with what the backup printed]
+alert() {
+  kind="$1"
+  name="${2:-}"
+  detail="${3:-/dev/null}"
+  key=$(printf '%s' "${AUTH_SECRET}:backup-alert" | sha256sum | cut -d' ' -f1)
+  curl -sS --max-time 60 --fail-with-body \
+    -H "x-cineflow-alert-key: $key" -H "Content-Type: text/plain" \
+    --data-binary "@$detail" \
+    "http://app:3000/api/ops/alert?kind=$kind&backup=$name"
+  echo
+}
+
 daemon() {
   at="${BACKUP_TIME:-03:00}"
   echo "Nightly backups at $at ($(date +%Z)), kept ${BACKUP_KEEP_DAYS:-14} days."
@@ -73,7 +89,14 @@ daemon() {
     [ "$next" -le "$now" ] && next=$((next + 86400))
     sleep $((next - now))
     # Its own process, so any unexpected error stops that backup (set -e) instead of being ignored.
-    /backup.sh backup "$(date +%Y-%m-%d_%H%M%S)" || echo "NIGHTLY BACKUP FAILED; trying again tomorrow."
+    name=$(date +%Y-%m-%d_%H%M%S)
+    if /backup.sh backup "$name" > /tmp/backup.log 2>&1; then
+      cat /tmp/backup.log
+    else
+      cat /tmp/backup.log
+      echo "NIGHTLY BACKUP FAILED; emailing the super-admins, and trying again tomorrow."
+      alert backup-failed "$name" /tmp/backup.log || echo "Couldn't send the alert email either (is the app running?)."
+    fi
   done
 }
 
@@ -81,5 +104,6 @@ case "${1:-}" in
   daemon) daemon ;;
   backup) backup "${2:?backup needs a name}" ;;
   restore) restore "${2:?restore needs a name}" ;;
-  *) echo "Use: daemon | backup <name> | restore <name>"; exit 1 ;;
+  alert-test) alert test "" ;;
+  *) echo "Use: daemon | backup <name> | restore <name> | alert-test"; exit 1 ;;
 esac

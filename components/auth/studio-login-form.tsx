@@ -9,19 +9,16 @@ import { Film, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, Spar
 import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
-
-/** Seeded demo studios only; real studios never show demo logins. */
-const DEMO_PERSONAS: Record<string, { owner: string; staff: string }> = {
-  "lumina-cine": { owner: "alex@luminacine.com", staff: "sarah@luminacine.com" },
-  "apex-media": { owner: "david@apexmedia.com", staff: "aisyah@apexmedia.com" },
-};
+import type { DemoPersonas } from "@/lib/demo-studios";
 
 interface StudioLoginFormProps {
   tenantSlug: string;
   tenantName: string;
+  /** The demo studios' accounts, offered as shortcuts (dev and staging only; see lib/demo-studios). */
+  demo: DemoPersonas | null;
 }
 
-export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps) {
+export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFormProps) {
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl");
   // Only allow same-site relative paths to prevent open redirects.
@@ -66,8 +63,6 @@ export function StudioLoginForm({ tenantSlug, tenantName }: StudioLoginFormProps
       setLoading(false);
     }
   };
-
-  const demo = DEMO_PERSONAS[tenantSlug];
 
   const setDemoUser = (demoEmail: string) => {
     setEmail(demoEmail);

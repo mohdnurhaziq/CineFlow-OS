@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { ArrowRight, Clock, ShieldCheck, Zap, Sparkles } from "lucide-react";
 
-export function SaasHero() {
+interface SaasHeroProps {
+  /** Dev and staging: offer the demo studios below. Production has none. */
+  showDemoStudios: boolean;
+}
+
+export function SaasHero({ showDemoStudios }: SaasHeroProps) {
   return (
     <section className="relative pt-20 pb-16 md:pt-28 md:pb-24 overflow-hidden">
       {/* Background radial gradient accent */}
@@ -38,12 +43,14 @@ export function SaasHero() {
             <ArrowRight className="size-4" />
           </Link>
 
-          <a
-            href="#studios"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg border border-zinc-800 bg-[#121215] hover:bg-[#18181b] hover:border-zinc-700 text-zinc-200 font-semibold text-sm tracking-tight transition-all"
-          >
-            Explore Flagship Studios
-          </a>
+          {showDemoStudios && (
+            <a
+              href="#studios"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg border border-zinc-800 bg-[#121215] hover:bg-[#18181b] hover:border-zinc-700 text-zinc-200 font-semibold text-sm tracking-tight transition-all"
+            >
+              Explore Flagship Studios
+            </a>
+          )}
         </div>
 
         {/* Key Platform Metric Indicators */}

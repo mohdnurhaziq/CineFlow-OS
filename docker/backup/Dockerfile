@@ -1,6 +1,6 @@
 # CineFlow OS backups: SQLite online backup + a file mirror. See backup.sh.
 FROM alpine:3.20
-RUN apk add --no-cache sqlite rsync tzdata
+RUN apk add --no-cache sqlite rsync tzdata curl
 COPY backup.sh /backup.sh
 RUN chmod +x /backup.sh
 ENTRYPOINT ["/backup.sh"]

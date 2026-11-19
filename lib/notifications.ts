@@ -707,3 +707,29 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
 export function getNotificationHistory(limit = 20): NotificationResult[] {
   return notificationLog.slice(-limit);
 }
+
+/**
+ * An email from the platform itself to its operator (the super-admin), such as a failed-backup
+ * alert. Not a studio notification: not logged with them, and signed "CineFlow OS".
+ * `bodyHtml` must already be escaped. Never throws.
+ */
+export async function sendPlatformEmail(input: {
+  to: string;
+  subject: string;
+  title: string;
+  bodyHtml: string;
+  text: string;
+}): Promise<{ delivery: "SENT" | "SKIPPED" | "FAILED"; error?: string }> {
+  return deliverEmail({
+    to: input.to,
+    subject: input.subject,
+    html: wrapEmailTemplate("CineFlow OS", input.title, input.bodyHtml),
+    text: input.text,
+    fromName: "CineFlow OS",
+  });
+}
+
+/** Escapes text for email HTML (for callers building `sendPlatformEmail` bodies). */
+export function escapeEmailHtml(value: unknown): string {
+  return esc(value);
+}

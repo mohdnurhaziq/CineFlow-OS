@@ -96,6 +96,43 @@ export async function loginWithCredentials(
 }
 
 /**
+ * Signs in the platform super-admin on its own page (/super-admin/login), so it works before
+ * any studio exists. Only super-admin accounts: a studio account's right password is refused
+ * like a wrong one, so this page reveals nothing about studio accounts.
+ */
+export async function loginPlatformAdmin(
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: "INVALID_CREDENTIALS" | "RATE_LIMITED" | "ACCOUNT_REMOVED" | "INTERNAL_ERROR"; user?: SessionUser }> {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (isRateLimited(`login:platform:${normalizedEmail}`, 10)) {
+      return { success: false, error: "RATE_LIMITED" };
+    }
+
+    const user = await db.user.findFirst({ where: { email: normalizedEmail, role: "SUPER_ADMIN" } });
+    if (!user?.passwordHash || !bcrypt.compareSync(password, user.passwordHash)) {
+      return { success: false, error: "INVALID_CREDENTIALS" };
+    }
+    if (user.deactivatedAt) return { success: false, error: "ACCOUNT_REMOVED" };
+
+    const sessionUser: SessionUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenantId,
+      tenantSlug: null,
+    };
+    await setSessionCookie(sessionUser);
+    return { success: true, user: sessionUser };
+  } catch (err) {
+    console.error("Platform sign-in error:", err);
+    return { success: false, error: "INTERNAL_ERROR" };
+  }
+}
+
+/**
  * Destroys the active session cookie.
  */
 export async function logoutAction(): Promise<{ success: boolean }> {

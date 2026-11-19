@@ -7,6 +7,7 @@ import { signInTarget } from "@/lib/auth/sign-in-target";
 import { getSessionClient } from "@/lib/clients";
 import { StudioLoginForm } from "@/components/auth/studio-login-form";
 import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
+import { demoPersonasFor } from "@/lib/demo-studios";
 
 interface LoginPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -49,7 +50,7 @@ export default async function StudioLoginPage({ params, searchParams }: LoginPag
       {session && (isClient || isStaff) ? (
         <SignedInRedirect name={session.name} href={target} />
       ) : (
-        <StudioLoginForm tenantSlug={tenant.slug} tenantName={tenant.name} />
+        <StudioLoginForm tenantSlug={tenant.slug} tenantName={tenant.name} demo={demoPersonasFor(tenant.slug)} />
       )}
     </div>
   );

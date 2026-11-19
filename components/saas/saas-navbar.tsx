@@ -4,7 +4,12 @@ import Link from "next/link";
 import { Aperture, ShieldCheck, Sparkles } from "lucide-react";
 import { ToastAnchor } from "@/components/ui/toast-anchor";
 
-export function SaasNavbar() {
+interface SaasNavbarProps {
+  /** Dev and staging: link the demo studios and the super-admin sign-in. Never in production. */
+  showDemo: boolean;
+}
+
+export function SaasNavbar({ showDemo }: SaasNavbarProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-[#09090b]/80 backdrop-blur-md">
       <ToastAnchor />
@@ -28,9 +33,11 @@ export function SaasNavbar() {
           <a href="#features" className="hover:text-white transition-colors">
             Features
           </a>
-          <a href="#studios" className="hover:text-white transition-colors">
-            Flagship Studios
-          </a>
+          {showDemo && (
+            <a href="#studios" className="hover:text-white transition-colors">
+              Flagship Studios
+            </a>
+          )}
           <a href="#demo" className="hover:text-white transition-colors">
             Interactive Demo
           </a>
@@ -41,13 +48,15 @@ export function SaasNavbar() {
 
         {/* Action Controls */}
         <div className="flex items-center gap-3">
-          <Link
-            href="/super-admin"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/60 border border-transparent hover:border-zinc-700 transition-all"
-          >
-            <ShieldCheck className="size-3.5 text-zinc-400" />
-            Super-Admin
-          </Link>
+          {showDemo && (
+            <Link
+              href="/super-admin/login"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/60 border border-transparent hover:border-zinc-700 transition-all"
+            >
+              <ShieldCheck className="size-3.5 text-zinc-400" />
+              Super-Admin
+            </Link>
+          )}
 
           <Link
             href="/create-studio"
