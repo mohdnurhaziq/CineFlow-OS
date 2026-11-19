@@ -933,7 +933,8 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const req = new NextRequest("http://localhost:3000/api/upload", {
       method: "POST",
       body: form,
-      headers: { "x-forwarded-for": opts.ip ?? `10.7.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` },
+      // The visitor's IP as Cloudflare reports it (X-Forwarded-For is never trusted: Tier 34).
+      headers: { "cf-connecting-ip": opts.ip ?? `10.7.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` },
     });
     const res = await withSession(opts.user ?? null, () => uploadHandler(req));
     const body = await res.json();
