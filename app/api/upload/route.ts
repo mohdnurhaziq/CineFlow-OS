@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { STAFF_ROLES } from "@/lib/auth/guard";
 import { loadAccess, type AccessArea, type AccessLevel } from "@/lib/auth/access";
 import { isRateLimited } from "@/lib/rate-limit";
+import { clientIpFrom } from "@/lib/client-ip";
 
 const ALLOWED_FOLDERS = new Set([
   "logos",
@@ -25,7 +26,7 @@ const ALLOWED_FOLDERS = new Set([
  */
 const ANONYMOUS_FOLDERS = new Set(["logos", "receipts"]);
 const ANONYMOUS_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
-const ANONYMOUS_MAX_UPLOADS = 20; // per IP per window
+const ANONYMOUS_MAX_UPLOADS = 20; // per visitor IP, per hour
 
 /**
  * Team folders that belong to an access area: a team member needs one of `levels` there to upload.
@@ -57,14 +58,53 @@ const MAX_BYTES_BY_KIND = { document: 10 * MB, video: 200 * MB };
 const maxBytesFor = (type: string) => (type.startsWith("video/") ? MAX_BYTES_BY_KIND.video : MAX_BYTES_BY_KIND.document);
 const MAX_REQUEST_BYTES = MAX_BYTES_BY_KIND.video + MB;
 
+const ANONYMOUS_MAX_REQUEST_BYTES = MAX_BYTES_BY_KIND.document + MB;
+const HOUR = 60 * 60 * 1000;
+const ANONYMOUS_MAX_UPLOADS_ALL = 300; // all visitors together, per hour
+const STAFF_MAX_UPLOADS = 300; // per team member, per hour
+
+class TooLarge extends Error {}
+
+/**
+ * The request body, read up to `max` bytes: a body that says it's bigger, or turns out bigger
+ * (a chunked upload declares no size), is refused without reading the rest.
+ */
+async function readCapped(request: NextRequest, max: number): Promise<FormData> {
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > max) throw new TooLarge();
+  const reader = request.body?.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  if (reader) {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > max) {
+        await reader.cancel().catch(() => {});
+        throw new TooLarge();
+      }
+      chunks.push(value);
+    }
+  }
+  return new Response(Buffer.concat(chunks), {
+    headers: { "content-type": request.headers.get("content-type") ?? "" },
+  }).formData();
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const declaredLength = Number(request.headers.get("content-length") ?? 0);
-    if (declaredLength > MAX_REQUEST_BYTES) {
-      return NextResponse.json({ error: "File too large" }, { status: 413 });
-    }
+    // Who is uploading decides how much is read: visitors only small documents, the team videos too.
+    const session = await getCurrentUser();
+    const isStaff = !!session && STAFF_ROLES.has(session.role);
 
-    const formData = await request.formData();
+    let formData: FormData;
+    try {
+      formData = await readCapped(request, isStaff ? MAX_REQUEST_BYTES : ANONYMOUS_MAX_REQUEST_BYTES);
+    } catch (err) {
+      if (err instanceof TooLarge) return NextResponse.json({ error: "File too large" }, { status: 413 });
+      throw err;
+    }
     const file = formData.get("file") as File | null;
     const requestedFolder = (formData.get("folder") as string) || "general";
 
@@ -81,8 +121,6 @@ export async function POST(request: NextRequest) {
 
     // Authorization: the team may write to the folders their access covers; visitors only to the
     // narrow public folders.
-    const session = await getCurrentUser();
-    const isStaff = !!session && STAFF_ROLES.has(session.role);
     const need = FOLDER_ACCESS[folder];
     if (isStaff && need) {
       const access = await loadAccess({ id: session.id, role: session.role, tenantId: session.tenantId });
@@ -100,10 +138,14 @@ export async function POST(request: NextRequest) {
       if (!ANONYMOUS_TYPES.has(file.type)) {
         return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
       }
-      const ip = (request.headers.get("x-forwarded-for") ?? "unknown").split(",")[0]!.trim();
-      if (isRateLimited(`upload:${ip}`, ANONYMOUS_MAX_UPLOADS)) {
+      // Per visitor (Cloudflare's IP: X-Forwarded-For is the visitor's to fake), and for all
+      // visitors together, so no one can fill the disk.
+      const ip = clientIpFrom((name) => request.headers.get(name));
+      if ((ip && isRateLimited(`upload:${ip}`, ANONYMOUS_MAX_UPLOADS, HOUR)) || isRateLimited("upload:anonymous", ANONYMOUS_MAX_UPLOADS_ALL, HOUR)) {
         return NextResponse.json({ error: "Too many uploads. Please wait and try again." }, { status: 429 });
       }
+    } else if (isRateLimited(`upload:staff:${session.id}`, STAFF_MAX_UPLOADS, HOUR)) {
+      return NextResponse.json({ error: "Too many uploads. Please wait and try again." }, { status: 429 });
     }
 
     if (file.size > maxBytesFor(file.type)) {
