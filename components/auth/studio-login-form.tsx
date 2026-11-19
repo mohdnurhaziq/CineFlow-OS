@@ -10,7 +10,7 @@ import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import type { DemoPersonas } from "@/lib/demo-studios";
-import { studioPath } from "@/lib/domain-name";
+import { isSafeRelativePath, studioPath } from "@/lib/domain-name";
 
 interface StudioLoginFormProps {
   tenantSlug: string;
@@ -23,8 +23,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl");
   // Only allow same-site relative paths to prevent open redirects.
-  const callbackUrl =
-    rawCallback && rawCallback.startsWith("/") && !rawCallback.startsWith("//") ? rawCallback : null;
+  const callbackUrl = rawCallback && isSafeRelativePath(rawCallback) ? rawCallback : null;
 
   // After a password reset the email comes back filled in.
   const justReset = searchParams.get("reset") === "1";

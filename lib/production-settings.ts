@@ -44,11 +44,16 @@ export function productionSettingProblems(env: Record<string, string | undefined
     problems.push(`NEXT_PUBLIC_APP_URL is still the example address (${url.hostname}); use your own domain.`);
   }
 
-  // Studio subdomains (<slug>.<domain>) need the domain to be the one the site lives at.
+  // Studio subdomains (<slug>.<domain>) need the site to live at the bare domain: www. and app.
+  // redirect to NEXT_PUBLIC_APP_URL, so an address there would redirect to itself forever.
   if (url && env.NEXT_PUBLIC_STUDIO_SUBDOMAINS?.trim() === "true") {
     const domain = (env.NEXT_PUBLIC_APP_DOMAIN ?? "").trim().toLowerCase().replace(/^www\./, "").replace(/:\d+$/, "");
-    const site = url.hostname.toLowerCase().replace(/^www\./, "");
-    if (domain !== site) {
+    const site = url.hostname.toLowerCase();
+    if (/^(www|app)\./.test(site)) {
+      problems.push(
+        `NEXT_PUBLIC_APP_URL must be your bare domain (https://${site.replace(/^(www|app)\./, "")}) when NEXT_PUBLIC_STUDIO_SUBDOMAINS is on: www. and app. redirect to it.`
+      );
+    } else if (domain !== site) {
       problems.push(
         `NEXT_PUBLIC_STUDIO_SUBDOMAINS is on, but NEXT_PUBLIC_APP_DOMAIN (${domain || "empty"}) isn't the address in NEXT_PUBLIC_APP_URL (${site}). Set both to your domain.`
       );

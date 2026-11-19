@@ -9,6 +9,7 @@ import {
   UpdateStudioSettingsSchema,
   type UpdateStudioSettingsInput,
 } from "@/lib/validations/admin-settings";
+import { RESERVED_SLUGS } from "@/lib/validations/onboarding";
 
 function safeRevalidate(path: string) {
   try {
@@ -30,6 +31,15 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
     });
     if (!currentTenant) {
       return { success: false, error: "TENANT_NOT_FOUND", message: "Studio tenant not found." };
+    }
+
+    // A reserved name would clash with the platform's own pages or addresses (super-admin, www, book…).
+    if (newSlug !== undefined && newSlug !== currentTenant.slug && RESERVED_SLUGS.has(newSlug.toLowerCase())) {
+      return {
+        success: false,
+        error: "SLUG_RESERVED",
+        message: `The web address '${newSlug}' is reserved. Choose another.`,
+      };
     }
 
     // Slug conflict check

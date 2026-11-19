@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Film, ArrowLeft } from "lucide-react";
+import { platformUrl } from "@/lib/domain-name";
 
 export default function NotFound() {
   return (
@@ -21,7 +22,8 @@ export default function NotFound() {
 
         <div className="pt-2">
           <Link
-            href="/"
+            // The platform's home, by its full address on a studio subdomain (where "/" is the studio).
+            href={platformUrl("/")}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-sm font-medium text-white hover:border-zinc-700 hover:bg-zinc-800 transition-all active:scale-[0.98]"
           >
             <ArrowLeft className="size-4" />

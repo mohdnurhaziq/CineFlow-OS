@@ -1,5 +1,5 @@
 import { STAFF_ROLES } from "@/lib/auth/roles";
-import { studioPath, studioSubdomainsOn } from "@/lib/domain-name";
+import { isSafeRelativePath, studioPath, studioSubdomainsOn } from "@/lib/domain-name";
 
 /**
  * Where a person goes after signing in to studio `tenantSlug`. One function for the login page and
@@ -17,13 +17,13 @@ export function signInTarget(opts: { role: string | undefined; tenantSlug: strin
   let safe: string | null;
   if (studioSubdomainsOn()) {
     // The studio is the whole host, so any plain path on it is the studio's; never another site
-    // (//evil.com, a backslash, a full address) and never the studio root itself.
-    const plain = cb.startsWith("/") && !cb.startsWith("//") && !cb.includes("\\") && !path.split("/").includes("..");
+    // (//evil.com, a backslash, a tab or line break, a full address) and never the studio root itself.
+    const plain = isSafeRelativePath(cb) && !path.split("/").includes("..");
     safe = plain && path !== "" ? cb : null;
   } else {
     const root = studioPath(tenantSlug);
     const sameStudio =
-      cb.startsWith(root) && !cb.startsWith("//") && (cb.length === root.length || /^[/?#]/.test(cb.charAt(root.length)));
+      isSafeRelativePath(cb) && cb.startsWith(root) && (cb.length === root.length || /^[/?#]/.test(cb.charAt(root.length)));
     safe = sameStudio && path !== root.toLowerCase() && path !== "" ? cb : null;
   }
 

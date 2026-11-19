@@ -77,12 +77,21 @@ export function studioUrl(slug: string, path = "/"): string {
 }
 
 /**
+ * Whether `p` is a path on this site, never another site: it starts with one "/", and has no
+ * backslash (browsers read "/\" as "//") and no control characters (the URL parser drops tabs and
+ * line breaks, so "/\t/evil.com" would become "//evil.com").
+ */
+export function isSafeRelativePath(p: string): boolean {
+  return p.startsWith("/") && !p.startsWith("//") && !p.includes("\\") && !/[\u0000-\u001f\u007f]/.test(p);
+}
+
+/**
  * Whether `p` is a path to one of this studio's own pages, safe to continue to after a sign-in or
  * sign-up: never another site (//host, a backslash, a full address) and, with subdomains off,
  * never another studio (/lumina-cinema is not /lumina-cine).
  */
 export function isStudioPath(slug: string, p: string): boolean {
-  if (!p.startsWith("/") || p.startsWith("//") || p.includes("\\")) return false;
+  if (!isSafeRelativePath(p)) return false;
   if (studioSubdomainsOn()) return true;
   const lower = p.toLowerCase();
   const root = `/${slug.toLowerCase()}`;

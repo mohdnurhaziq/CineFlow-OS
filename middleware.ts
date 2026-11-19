@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PLATFORM_BASE_DOMAINS, platformSubdomainSlug, studioExists, tenantSlugForDomain } from "@/lib/tenant-domain";
 import { APP_BASE_DOMAIN, platformUrl, studioPath, studioSubdomainsOn, studioUrl } from "@/lib/domain-name";
+import { RESERVED_SLUGS } from "@/lib/validations/onboarding";
 import { hostFrom, sessionCookieFor } from "@/lib/auth/cookie-name";
 
 // ─── Auth helpers (Web Crypto only) ────────────────────────
@@ -109,7 +110,8 @@ export async function middleware(request: NextRequest) {
     // <domain>/<studio>/… (the old studio address) → <studio>.<domain>/…
     if (hostname === APP_BASE_DOMAIN) {
       const [first = "", ...rest] = pathname.split("/").slice(1);
-      if (first && (await studioExists(first))) {
+      // A reserved name is always the platform's own page, even if some studio holds that name.
+      if (first && !RESERVED_SLUGS.has(first.toLowerCase()) && (await studioExists(first))) {
         return NextResponse.redirect(studioUrl(first.toLowerCase(), `/${rest.join("/")}${url.search}`), 308);
       }
     }

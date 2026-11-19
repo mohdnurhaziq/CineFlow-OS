@@ -22,6 +22,7 @@ import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
 import { productionSettingProblems } from "@/lib/production-settings";
+import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import {
   APP_BASE_DOMAIN,
   isPlatformHost,
@@ -425,6 +426,8 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
   await harness.test("T33-PAGE-03: studio pages never link to the platform with a bare path", async () => {
     const studioFiles = [
       ...sourceFiles("app/[tenantSlug]"),
+      // Shown on every host, studio subdomains included (an unknown studio's address too).
+      "app/not-found.tsx",
       ...["showcase", "account", "admin", "booking", "checkout", "vault", "auth"].flatMap((d) => sourceFiles(`components/${d}`)),
     ];
     const bare = /href=["'](\/|\/create-studio|\/super-admin[^"']*)["']/;
@@ -545,5 +548,66 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       });
     }
     harness.assert(found.length === 0, "Links to a studio go through studioUrl / studioPath", found.join("\n"));
+  });
+
+  // ── Final review fixes ───────────────────────────────────────────────────────
+
+  await harness.test("T33-FIX-01: a 'continue to' address with a tab or line break can't lead off the site", async () => {
+    // The URL parser drops tabs and line breaks: "/\t/evil.com" becomes "//evil.com".
+    const sneaky = ["/\t/evil.com", "/\n/evil.com", "/\r/evil.com", "/\u0000/evil.com", "\t//evil.com"];
+    await withSubdomains(true, () => {
+      for (const bad of sneaky) {
+        harness.assertEqual(signInTarget({ role: "STUDIO_OWNER", tenantSlug: "lumina-cine", callbackUrl: bad }), "/admin", `On: sign-in refuses ${JSON.stringify(bad)}`);
+        harness.assert(!isStudioPath("lumina-cine", bad), `On: continue-to refuses ${JSON.stringify(bad)}`);
+      }
+    });
+    await withSubdomains(false, () => {
+      for (const bad of ["/lumina-cine\t/x", "/lumina-cine/\n/evil.com"]) {
+        harness.assert(!isStudioPath("lumina-cine", bad), `Off: continue-to refuses ${JSON.stringify(bad)}`);
+      }
+    });
+    const form = read("components/auth/studio-login-form.tsx");
+    harness.assert(form.includes("isSafeRelativePath(rawCallback)"), "The sign-in form uses the same check for its callback");
+  });
+
+  await harness.test("T33-FIX-02: a studio can't take a reserved name by renaming itself, and reserved names never redirect", async () => {
+    const tenant = await db.tenant.findUniqueOrThrow({ where: { slug: "lumina-cine" } });
+    for (const name of ["super-admin", "create-studio", "www", "book"]) {
+      const res = await withSession(ownerUser, () => updateStudioSettings({ tenantId: tenant.id, tenantSlug: "lumina-cine", newSlug: name }));
+      harness.assert(!res.success, `Renaming to ${name} is refused`, JSON.stringify(res));
+    }
+    harness.assertEqual((await db.tenant.findUniqueOrThrow({ where: { id: tenant.id } })).slug, "lumina-cine", "The studio keeps its address");
+
+    // Even if a studio already has a reserved name (made before the rule), the platform page wins.
+    // (super-admin: a name no earlier test looked up, so the studio lookup's cache can't answer for it.)
+    const squatter = await db.tenant.create({ data: { name: "T33 Squatter", slug: "super-admin" } });
+    try {
+      await withSubdomains(true, async () => {
+        const res = await req(null, "/super-admin/login");
+        harness.assertEqual(loc(res), null, "<domain>/super-admin/login stays the platform's page");
+      });
+    } finally {
+      await db.tenant.delete({ where: { id: squatter.id } });
+    }
+  });
+
+  await harness.test("T33-FIX-03: with studio subdomains, production's address must be the bare domain", async () => {
+    const base = {
+      APP_ENV: "production",
+      AUTH_SECRET: "k".repeat(20) + "Q9".repeat(10),
+      NEXT_PUBLIC_STUDIO_SUBDOMAINS: "true",
+      RESEND_API_KEY: "re_123",
+    };
+    const check = (url: string, domain: string) => productionSettingProblems({ ...base, NEXT_PUBLIC_APP_URL: url, NEXT_PUBLIC_APP_DOMAIN: domain });
+    harness.assertDeepEqual(check("https://cineflow-os.app", "cineflow-os.app"), [], "Bare domain: fine");
+    const refused: [string, string][] = [
+      ["https://www.cineflow-os.app", "cineflow-os.app"],
+      ["https://www.cineflow-os.app", "www.cineflow-os.app"],
+      ["https://app.cineflow-os.app", "app.cineflow-os.app"],
+    ];
+    for (const [url, domain] of refused) {
+      const problems = check(url, domain);
+      harness.assertEqual(problems.length, 1, `Refused: ${url} with ${domain} (www. and app. redirect to the bare domain)`, problems.join(" | "));
+    }
   });
 }
