@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "app/api/upload/route.ts": {
-    "mtime": 1795097510.2903981,
-    "seen": 1795110862.9888453,
-    "ast_hash": "9b44d25df9936d6edc4d0f1777bc71b1",
+    "mtime": 1795111328.1201248,
+    "seen": 1795111496.3181572,
+    "ast_hash": "1dd00e44daa7deef8967c1f8d045a7e0",
     "semantic_hash": ""
   },
   "app/global-error.tsx": {
@@ -576,9 +576,9 @@
     "semantic_hash": ""
   },
   "components/booking/cinema-booking-shell.tsx": {
-    "mtime": 1795110197.9365249,
-    "seen": 1795110863.0003517,
-    "ast_hash": "d56407b5438e95ec28c5b97c0435adfb",
+    "mtime": 1795111356.006505,
+    "seen": 1795111496.3384664,
+    "ast_hash": "2d99d68d1e44eae6eaf2f78594a713f8",
     "semantic_hash": ""
   },
   "components/booking/cinema-slot-grid.tsx": {
@@ -996,15 +996,15 @@
     "semantic_hash": ""
   },
   "lib/actions/booking.ts": {
-    "mtime": 1795110300.6532097,
-    "seen": 1795110863.0187387,
-    "ast_hash": "e405cbd37c2bcb26be79e1a15c791ff1",
+    "mtime": 1795111345.1988497,
+    "seen": 1795111496.385533,
+    "ast_hash": "bb34dee6a36fab21d899fcc548f9ecb1",
     "semantic_hash": ""
   },
   "lib/actions/checkout.ts": {
-    "mtime": 1795110250.973941,
-    "seen": 1795110863.0187404,
-    "ast_hash": "9365ea7af3726b280d150adf4c0b775c",
+    "mtime": 1795111338.3002307,
+    "seen": 1795111496.3855357,
+    "ast_hash": "9b70dbd4ce24cb25387a98516f09dbad",
     "semantic_hash": ""
   },
   "lib/actions/gear.ts": {
@@ -1020,9 +1020,9 @@
     "semantic_hash": ""
   },
   "lib/actions/onboarding.ts": {
-    "mtime": 1795109543.5818782,
-    "seen": 1795110863.0193746,
-    "ast_hash": "f5d28d956b5bd26ccd048eefceb301b1",
+    "mtime": 1795111310.671346,
+    "seen": 1795111496.386554,
+    "ast_hash": "80d09e81fa18f2fe312f88065df0421b",
     "semantic_hash": ""
   },
   "lib/actions/proposals.ts": {
@@ -3816,9 +3816,9 @@
     "semantic_hash": ""
   },
   "scripts/start.ts": {
-    "mtime": 1795110649.5412335,
-    "seen": 1795110863.0399468,
-    "ast_hash": "e42752c34964fb783b078da3c76f851b",
+    "mtime": 1795111363.6399035,
+    "seen": 1795111496.4164681,
+    "ast_hash": "7da94def07ff960657600c5c9918e89d",
     "semantic_hash": ""
   },
   "tests/e2e/tier30-environments.test.ts": {
@@ -3918,15 +3918,15 @@
     "semantic_hash": ""
   },
   "lib/client-ip.ts": {
-    "mtime": 1795097337.0424702,
-    "seen": 1795110863.0255866,
-    "ast_hash": "25f07dcf61ffcb0f4609fcae7ab22e64",
+    "mtime": 1795111318.4823997,
+    "seen": 1795111496.3950257,
+    "ast_hash": "8cfd9add7e4231313d53b5ff1437af0e",
     "semantic_hash": ""
   },
   "tests/e2e/tier34-beta-security.test.ts": {
-    "mtime": 1795110686.2208548,
-    "seen": 1795110863.0480964,
-    "ast_hash": "914be891e4ab610d77d5a02eb44e3b92",
+    "mtime": 1795111385.3471274,
+    "seen": 1795111496.4266737,
+    "ast_hash": "a7c8743228c1d3105aa6149297833ca7",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-19-beta-security.md": {
@@ -3939,6 +3939,12 @@
     "mtime": 1795097296.1121686,
     "seen": 1795110863.0707197,
     "ast_hash": "3e9cdad8d5c22107485fd64684c0d7e7",
+    "semantic_hash": ""
+  },
+  "lib/random-id.ts": {
+    "mtime": 1795111281.7692533,
+    "seen": 1795111496.4076157,
+    "ast_hash": "0fc07b064d628300b3f5d70b652b64a7",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {
