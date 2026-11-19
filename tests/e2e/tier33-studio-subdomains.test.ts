@@ -21,6 +21,7 @@ import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
+import { productionSettingProblems } from "@/lib/production-settings";
 import {
   APP_BASE_DOMAIN,
   isPlatformHost,
@@ -492,5 +493,28 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
         else process.env.APP_ENV = saved;
       }
     });
+  });
+
+  // ── Task 7: production's settings agree ──────────────────────────────────────
+
+  await harness.test("T33-ENV-01: production refuses studio subdomains when its domain and address disagree", async () => {
+    const good = {
+      APP_ENV: "production",
+      AUTH_SECRET: "k".repeat(20) + "Q9".repeat(10),
+      NEXT_PUBLIC_APP_URL: "https://cineflow-os.app",
+      NEXT_PUBLIC_APP_DOMAIN: "cineflow-os.app",
+      NEXT_PUBLIC_STUDIO_SUBDOMAINS: "true",
+      RESEND_API_KEY: "re_123",
+    };
+    harness.assertDeepEqual(productionSettingProblems(good), [], "Domain and address agree: fine");
+    harness.assertDeepEqual(productionSettingProblems({ ...good, NEXT_PUBLIC_APP_DOMAIN: "www.cineflow-os.app" }), [], "A www. form is the same domain");
+    const bad = productionSettingProblems({ ...good, NEXT_PUBLIC_APP_DOMAIN: "app.cineflow-os.app" });
+    harness.assertEqual(bad.length, 1, "Disagreeing: one problem", bad.join(" | "));
+    harness.assert(bad[0]!.includes("NEXT_PUBLIC_APP_DOMAIN") && bad[0]!.includes("NEXT_PUBLIC_STUDIO_SUBDOMAINS"), "…naming the settings", bad[0]);
+    harness.assertDeepEqual(
+      productionSettingProblems({ ...good, NEXT_PUBLIC_APP_DOMAIN: "app.cineflow-os.app", NEXT_PUBLIC_STUDIO_SUBDOMAINS: "false" }),
+      [],
+      "Subdomains off: not checked"
+    );
   });
 }

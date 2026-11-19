@@ -148,10 +148,17 @@ database, uploads, address and Cloudflare tunnel; nothing is shared between them
 | --- | --- | --- | --- | --- |
 | **Dev** | this PC | building and testing changes | demo data | http://localhost:3000 |
 | **Staging** | the 24/7 PC | checking a change before it goes live | demo data | `https://staging.<domain>`, only you can open it |
-| **Production** | the 24/7 PC | real studios and their clients | real data | `https://app.<domain>` |
+| **Production** | the 24/7 PC | real studios and their clients | real data | `https://<domain>`, and each studio at `https://<studio>.<domain>` |
 
 A change goes dev → `main` on GitHub → staging → production. Production only ever gets the
 exact version staging ran.
+
+In production each studio lives at its own subdomain, `https://lumina-cine.<domain>`, and its
+pages carry no studio name (`/book`, `/admin`). Old `https://<domain>/lumina-cine/...` addresses
+redirect there, and one sign-in works across `<domain>` and every studio subdomain. This is
+`NEXT_PUBLIC_STUDIO_SUBDOMAINS=true` in production's `.env`. Dev and staging leave it off and keep
+studios at `<address>/lumina-cine`: Cloudflare's free certificate covers only one level of
+subdomain, so `lumina-cine.staging.<domain>` couldn't have HTTPS.
 
 ### One-time setup of the 24/7 PC
 
@@ -174,7 +181,10 @@ exact version staging ran.
    two tunnels of type **Cloudflared**, and copy each one's token (the long text after
    `--token`) into that copy's `TUNNEL_TOKEN`:
    - staging's tunnel: public hostname `staging.<domain>` → service **HTTP**, URL **`app:3000`**;
-   - production's tunnel: public hostname `app.<domain>` → service **HTTP**, URL **`app:3000`**.
+   - production's tunnel: two public hostnames, both → service **HTTP**, URL **`app:3000`**:
+     `<domain>` (subdomain left empty) and `*.<domain>` (subdomain `*`, every studio). Then check
+     **DNS → Records** has a proxied `*` CNAME to `<tunnel ID>.cfargotunnel.com`; add it if not.
+     A name with its own record (`staging`, Resend's `send`) still goes where that record says.
 5. Lock staging so only you can open it: in **Zero Trust → Access → Applications**, add a
    self-hosted application for `staging.<domain>` with a policy that allows only your email.
 6. Set up real email for production: SMTP (for example Gmail with an app password) or
@@ -185,7 +195,7 @@ exact version staging ran.
    cd production
    node scripts/ops.mjs create-super-admin you@example.com
    ```
-   It prints a random password once. Sign in with it at `https://app.<domain>/super-admin/login`
+   It prints a random password once. Sign in with it at `https://<domain>/super-admin/login`
    (production doesn't link to that page anywhere, so bookmark it). Running the same command
    again sets a new password if you forget it. Studios join through the studio sign-up page
    (`/create-studio`).
@@ -193,7 +203,7 @@ exact version staging ran.
    super-admin should get a "Test alert" email within a minute.
 9. Get told when the site is down. The 24/7 PC can't email you if it's off, so use a free
    outside monitor: sign up at [UptimeRobot](https://uptimerobot.com), add a monitor of type
-   **HTTP(s)** for `https://app.<domain>/api/health`, every 5 minutes, alerting your email.
+   **HTTP(s)** for `https://<domain>/api/health`, every 5 minutes, alerting your email.
    It emails you when the site stops answering and again when it's back.
 
 ### Releasing a change
@@ -297,7 +307,7 @@ backup would be lost.
    `restore` builds the version the backup was taken on, puts the database and files back,
    and starts the site with its tunnel and nightly backups. Don't run `create-super-admin`;
    your accounts came over with the database.
-6. **Check:** `https://app.<domain>` opens and you're still signed in,
+6. **Check:** `https://<domain>` opens and you're still signed in,
    `node scripts/ops.mjs status` in `production/` shows the expected version, and
    `node scripts/ops.mjs backup now` and `node scripts/ops.mjs test-alert` work. The uptime
    monitor needs no change. From here on, release changes as usual.

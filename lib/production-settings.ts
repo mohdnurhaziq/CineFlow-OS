@@ -44,6 +44,17 @@ export function productionSettingProblems(env: Record<string, string | undefined
     problems.push(`NEXT_PUBLIC_APP_URL is still the example address (${url.hostname}); use your own domain.`);
   }
 
+  // Studio subdomains (<slug>.<domain>) need the domain to be the one the site lives at.
+  if (url && env.NEXT_PUBLIC_STUDIO_SUBDOMAINS?.trim() === "true") {
+    const domain = (env.NEXT_PUBLIC_APP_DOMAIN ?? "").trim().toLowerCase().replace(/^www\./, "").replace(/:\d+$/, "");
+    const site = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (domain !== site) {
+      problems.push(
+        `NEXT_PUBLIC_STUDIO_SUBDOMAINS is on, but NEXT_PUBLIC_APP_DOMAIN (${domain || "empty"}) isn't the address in NEXT_PUBLIC_APP_URL (${site}). Set both to your domain.`
+      );
+    }
+  }
+
   const smtp = smtpConfigFromEnv(env as NodeJS.ProcessEnv);
   const resend = Boolean(env.RESEND_API_KEY?.trim());
   if (smtp && LOCAL_HOSTS.has(smtp.host.toLowerCase())) {
