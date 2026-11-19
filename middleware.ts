@@ -118,8 +118,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // Test simulation headers (essential for automated E2E testing without DNS edits)
-  const simulatedCustomDomain = request.headers.get("x-custom-domain");
-  const simulatedSlug = request.headers.get("x-tenant-slug");
+  // Never in production (anyone could send them), and only as a plain studio name or domain.
+  const testHeaders = process.env.NODE_ENV !== "production";
+  const rawSimulatedDomain = testHeaders ? request.headers.get("x-custom-domain") : null;
+  const rawSimulatedSlug = testHeaders ? request.headers.get("x-tenant-slug") : null;
+  const simulatedCustomDomain = rawSimulatedDomain && /^[a-z0-9.-]+$/i.test(rawSimulatedDomain) ? rawSimulatedDomain : null;
+  const simulatedSlug = rawSimulatedSlug && /^[a-z0-9-]+$/.test(rawSimulatedSlug) ? rawSimulatedSlug : null;
 
   // 3. Resolve Tenant Slug
   let resolvedTenantSlug: string | null = null;

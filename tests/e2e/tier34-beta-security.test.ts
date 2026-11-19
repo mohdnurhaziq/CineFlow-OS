@@ -21,6 +21,8 @@ import { findProp, provideReactGlobal } from "./react-tree";
 import StudioHomePage from "@/app/[tenantSlug]/page";
 import { UpdateStudioSettingsSchema } from "@/lib/validations/admin-settings";
 import { onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
+import nextConfig from "../../next.config";
+import { middleware } from "@/middleware";
 
 const run = Date.now().toString(36);
 const headersOf = (h: Record<string, string>) => (name: string) => h[name.toLowerCase()] ?? null;
@@ -276,5 +278,36 @@ export async function runTier34BetaSecurityTests(harness: TestHarness) {
     await withEnv({ STUDIO_SIGNUP_CODE: undefined, APP_ENV: "development" }, async () => {
       harness.assertDeepEqual(await studioSignupStatus(), { open: true, needsCode: false }, "Dev: open, no code");
     });
+  });
+
+  // ── Task 6: framing headers; test headers off in production ──────────────────
+
+  await harness.test("T34-HEAD-01: every page refuses to be framed by other sites, and doesn't name the framework", async () => {
+    harness.assertEqual(nextConfig.poweredByHeader, false, "No X-Powered-By header");
+    const rules = (await nextConfig.headers?.()) ?? [];
+    const all = rules.find((r) => r.source === "/:path*");
+    const value = (key: string) => all?.headers.find((h) => h.key.toLowerCase() === key.toLowerCase())?.value;
+    harness.assertEqual(value("X-Frame-Options"), "SAMEORIGIN", "X-Frame-Options");
+    harness.assertEqual(value("Content-Security-Policy"), "frame-ancestors 'self'", "frame-ancestors");
+    harness.assertEqual(value("Referrer-Policy"), "strict-origin-when-cross-origin", "Referrer-Policy");
+    harness.assertEqual(value("X-Content-Type-Options"), "nosniff", "nosniff");
+    harness.assert(rules.some((r) => r.source === "/uploads/:path*"), "The uploads' own sandbox rules stay");
+  });
+
+  await harness.test("T34-HEAD-02: the test-only studio headers do nothing in production, and only take a plain name", async () => {
+    const env = process.env as Record<string, string | undefined>;
+    const ask = (headers: Record<string, string>) =>
+      middleware(new NextRequest("http://localhost:3000/pricing", { headers: { host: "localhost:3000", ...headers } }));
+    const rewritten = async (headers: Record<string, string>) => (await ask(headers)).headers.get("x-middleware-rewrite") ?? "";
+    harness.assert((await rewritten({ "x-tenant-slug": "lumina-cine" })).endsWith("/lumina-cine/pricing"), "In tests the header still works");
+    harness.assertEqual(await rewritten({ "x-tenant-slug": "victim/." }), "", "A slug with a slash or dot is ignored");
+    const saved = env.NODE_ENV;
+    env.NODE_ENV = "production";
+    try {
+      harness.assertEqual(await rewritten({ "x-tenant-slug": "lumina-cine" }), "", "Production: x-tenant-slug is ignored");
+      harness.assertEqual(await rewritten({ "x-custom-domain": "studio.luminacine.com" }), "", "Production: x-custom-domain is ignored");
+    } finally {
+      env.NODE_ENV = saved;
+    }
   });
 }
