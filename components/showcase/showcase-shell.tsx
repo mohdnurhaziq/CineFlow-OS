@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { CategoryFilterBar } from "./category-filter-bar";
 import { PortfolioGrid, type ShowcasePortfolioItem } from "./portfolio-grid";
+import { ShowcaseBigSlider } from "./showcase-big-slider";
 import { PackageGrid, type ServicePackageItem } from "./package-grid";
 import { MediaLightboxModal, type LightboxItem } from "./media-lightbox-modal";
 import { VideoReelModal, type VideoItem } from "./video-reel-modal";
@@ -68,20 +69,40 @@ export function ShowcaseShell({
     return packages.filter((pkg) => pkg.category === selectedCategory);
   }, [packages, selectedCategory]);
 
+  // Featured & top works for the Big Hero Showcase Slider
+  const sliderItems = useMemo(() => {
+    if (showcaseItems.length === 0) return [];
+    const featured = showcaseItems.filter((i) => i.isFeatured);
+    if (featured.length >= 3) return featured;
+    const nonFeatured = showcaseItems.filter((i) => !i.isFeatured);
+    return [...featured, ...nonFeatured].slice(0, 8);
+  }, [showcaseItems]);
+
   // A studio with no portfolio yet: the filter still narrows packages, but there is no gallery to show.
   const hasWorks = showcaseItems.length > 0;
 
   return (
-    <div className="space-y-12">
-      {/* Category Filter Pills Bar */}
-      <div className="space-y-3">
+    <div className="space-y-16">
+      {/* Big Cinematic Showcase Photo Slider */}
+      {hasWorks && sliderItems.length > 0 && (
+        <ShowcaseBigSlider
+          items={sliderItems}
+          onOpenLightbox={setActiveLightboxItem}
+          onOpenVideo={setActiveVideoItem}
+          brandColor={tenant.brandColor}
+          categories={categories}
+        />
+      )}
+
+      {/* Category Filter Pills Bar & Gallery Catalog */}
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-            Filter by category
+          <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 font-semibold">
+            Explore by category
           </span>
           {hasWorks && (
             <span className="text-xs font-mono text-zinc-400">
-              Showing {filteredItems.length}
+              Showing {filteredItems.length} work{filteredItems.length === 1 ? "" : "s"}
             </span>
           )}
         </div>
@@ -93,18 +114,18 @@ export function ShowcaseShell({
           brandColor={tenant.brandColor}
           counts={hasWorks ? counts : undefined}
         />
-      </div>
 
-      {/* Responsive Portfolio Gallery */}
-      {hasWorks && (
-        <PortfolioGrid
-          items={filteredItems}
-          onOpenLightbox={setActiveLightboxItem}
-          onOpenVideo={setActiveVideoItem}
-          brandColor={tenant.brandColor}
-          categories={categories}
-        />
-      )}
+        {/* Responsive Portfolio Gallery */}
+        {hasWorks && (
+          <PortfolioGrid
+            items={filteredItems}
+            onOpenLightbox={setActiveLightboxItem}
+            onOpenVideo={setActiveVideoItem}
+            brandColor={tenant.brandColor}
+            categories={categories}
+          />
+        )}
+      </div>
 
       {/* Filtered Packages Section */}
       <PackageGrid

@@ -15,6 +15,7 @@ export interface ShowcasePortfolioItem {
   coverImageUrl: string;
   videoEmbedUrl?: string | null;
   galleryImages?: string | null;
+  isFeatured?: boolean;
   servicePackage?: {
     id: string;
     name: string;
