@@ -3,6 +3,7 @@ import { onInvoicePaid } from "@/lib/bookings/billing";
 import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import type { BookingSlot, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { studioUrl } from "@/lib/domain-name";
 import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
 import { findSuccessfulPayment, toSen, type ToyyibpayCredentials } from "@/lib/payments/toyyibpay";
@@ -196,7 +197,6 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
   }
 
   if (!result.alreadySettled && result.booking && !result.refundRequired && result.booking.clientEmail) {
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
     sendNotification({
       event: "BOOKING_CONFIRMED",
       studioName: invoice.tenant.name,
@@ -211,7 +211,8 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
       depositAmount: invoice.amount,
       currency: invoice.tenant.currency || "MYR",
       trackingCode: result.booking.trackingCode,
-      bookingUrl: `${appUrl}/${invoice.tenant.slug}/portal`,
+      // The client's account (there is no /portal page).
+      bookingUrl: studioUrl(invoice.tenant.slug, "/account"),
     }).catch((e) => console.error("Notification dispatch failed:", e));
   }
 

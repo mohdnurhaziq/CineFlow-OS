@@ -2,7 +2,6 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { env } from "@/lib/env";
 import { requireOwner } from "@/lib/auth/guard";
 import { TEAM_ACCOUNT_ROLES, parseAccess, serializeAccess } from "@/lib/auth/access";
 import { TEAM_INVITE_TTL_MINUTES, issuePasswordReset, passwordResetPath } from "@/lib/auth/password-reset";
@@ -23,6 +22,7 @@ import {
   type UpdateTeamMemberInput,
   type UpdateTeamRoleInput,
 } from "@/lib/validations/admin-team";
+import { studioUrl } from "@/lib/domain-name";
 
 function safeRevalidate(path: string) {
   try {
@@ -172,8 +172,7 @@ async function sendInvite(
   ownerName: string
 ): Promise<{ inviteUrl: string; emailDelivery: EmailDelivery; emailError?: string }> {
   const token = await issuePasswordReset(member.id, new Date(), TEAM_INVITE_TTL_MINUTES);
-  const appUrl = env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "");
-  const inviteUrl = `${appUrl}${passwordResetPath(tenant.slug, member.email, token)}&welcome=1`;
+  const inviteUrl = `${studioUrl(tenant.slug, passwordResetPath(member.email, token))}&welcome=1`;
   try {
     const res = await sendNotification(
       {

@@ -21,7 +21,7 @@ export function signInTarget(opts: { role: string | undefined; tenantSlug: strin
     const plain = cb.startsWith("/") && !cb.startsWith("//") && !cb.includes("\\") && !path.split("/").includes("..");
     safe = plain && path !== "" ? cb : null;
   } else {
-    const root = `/${tenantSlug}`;
+    const root = studioPath(tenantSlug);
     const sameStudio =
       cb.startsWith(root) && !cb.startsWith("//") && (cb.length === root.length || /^[/?#]/.test(cb.charAt(root.length)));
     safe = sameStudio && path !== root.toLowerCase() && path !== "" ? cb : null;

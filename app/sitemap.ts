@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { studioUrl } from "@/lib/domain-name";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
@@ -31,19 +32,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const tenantRoutes: MetadataRoute.Sitemap = tenants.flatMap((tenant) => [
       {
-        url: `${baseUrl}/${tenant.slug}`,
+        url: studioUrl(tenant.slug, "/"),
         lastModified: tenant.updatedAt || new Date(),
         changeFrequency: "weekly",
         priority: 0.9,
       },
       {
-        url: `${baseUrl}/${tenant.slug}/book`,
+        url: studioUrl(tenant.slug, "/book"),
         lastModified: tenant.updatedAt || new Date(),
         changeFrequency: "daily",
         priority: 0.85,
       },
       {
-        url: `${baseUrl}/${tenant.slug}/visualizer`,
+        url: studioUrl(tenant.slug, "/visualizer"),
         lastModified: tenant.updatedAt || new Date(),
         changeFrequency: "monthly",
         priority: 0.7,

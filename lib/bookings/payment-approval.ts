@@ -5,6 +5,7 @@ import { provisionProjectForBooking } from "@/lib/bookings/project-promotion";
 import { revalidatePath } from "next/cache";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { formatSlotDate } from "@/lib/slot-time";
+import { studioUrl } from "@/lib/domain-name";
 
 /**
  * Marks an invoice paid and applies what follows from it (booking confirmed, balance issued,
@@ -144,9 +145,8 @@ export async function applyInvoicePayment(
   // Dispatch automated transactional notifications
   let notifResult: NotificationResult | null = null;
   if (invoice.client?.email) {
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
-    const receiptUrl = `${appUrl}/${tenantSlug}/account/invoices/${invoice.id}`;
-    const vaultUrl = invoice.projectId ? `${appUrl}/${tenantSlug}/vault/${invoice.projectId}` : undefined;
+    const receiptUrl = studioUrl(tenantSlug, `/account/invoices/${invoice.id}`);
+    const vaultUrl = invoice.projectId ? studioUrl(tenantSlug, `/vault/${invoice.projectId}`) : undefined;
 
     try {
       notifResult = await sendNotification({
@@ -178,7 +178,7 @@ export async function applyInvoicePayment(
           const slotDate = slot?.date
             ? formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })
             : (linked.targetDate ?? "Scheduled Date");
-          const bookingUrl = `${appUrl}/${tenantSlug}/account`;
+          const bookingUrl = studioUrl(tenantSlug, "/account");
 
           await sendNotification({
             event: "BOOKING_CONFIRMED",

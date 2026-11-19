@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
 import { assertCanWorkOn, requireAccess, requireOwnOrManage, requireTick } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { deleteDeliverableFiles } from "@/lib/deliverables/storage";
@@ -12,6 +11,7 @@ import { filesReleased } from "@/lib/deliverables/access";
 import { sendNotification } from "@/lib/notifications";
 import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
 import { PROJECT_STAGES } from "@/lib/projects/constants";
+import { studioPath, studioUrl } from "@/lib/domain-name";
 
 /**
  * Studio-side management of proposals and the projects they turn into: create a proposal
@@ -72,10 +72,10 @@ async function emailProposalToClient(
   client: { id: string; name: string; email: string; phone: string | null; passwordHash: string | null },
   proposal: { id: string; title: string }
 ) {
-  const shareUrl = `/${tenant.slug}/proposals/${proposal.id}`;
+  const shareRel = `/proposals/${proposal.id}`;
   const link = client.passwordHash
-    ? shareUrl
-    : clientInvitePath(tenant.slug, client.email, await issueClientInvite(client.id), shareUrl);
+    ? shareRel
+    : clientInvitePath(client.email, await issueClientInvite(client.id), studioPath(tenant.slug, shareRel));
   sendNotification({
     event: "STUDIO_UPDATE",
     studioName: tenant.name,
@@ -85,7 +85,7 @@ async function emailProposalToClient(
     clientPhone: client.phone || undefined,
     headline: `Your proposal: ${proposal.title}`,
     message: `${tenant.name} has sent you a proposal. Review the details, choose any extras, and sign it online to book.`,
-    linkUrl: `${env.NEXT_PUBLIC_APP_URL}${link}`,
+    linkUrl: studioUrl(tenant.slug, link),
     linkLabel: client.passwordHash ? "Sign in to review and sign" : "Set your password, then review and sign",
   }).catch((e) => console.error("Notification dispatch failed:", e));
 }
@@ -172,7 +172,7 @@ export async function createProposal(
     }
     if (!proposal) return fail("NUMBER_CONFLICT", "Could not number the proposal. Try again.");
 
-    const shareUrl = `/${tenant.slug}/proposals/${proposal.id}`;
+    const shareUrl = studioPath(tenant.slug, `/proposals/${proposal.id}`);
     revalidate([`/${tenant.slug}/admin/proposals`, `/${tenant.slug}/admin`]);
     if (data.sendNow && data.notifyClient && client.email) await emailProposalToClient(tenant, client, proposal);
     return {
@@ -206,7 +206,7 @@ export async function sendProposal(input: z.input<typeof SendProposalSchema>): P
 
     if (data.notifyClient && proposal.client.email) await emailProposalToClient(proposal.tenant, proposal.client, proposal);
     revalidate([`/${proposal.tenant.slug}/admin/proposals`, `/${proposal.tenant.slug}/admin`]);
-    return { success: true, shareUrl: `/${proposal.tenant.slug}/proposals/${proposal.id}` };
+    return { success: true, shareUrl: studioPath(proposal.tenant.slug, `/proposals/${proposal.id}`) };
   } catch (err) {
     return fail("SEND_PROPOSAL_FAILED", actionErrorMessage(err, "Could not send the proposal."));
   }
@@ -424,7 +424,6 @@ export async function notifyClientPhotosReady(
     const videoCount = items.length - photoCount;
     if (items.length === 0) return fail("NO_FILES", "Upload the photos first: the client's gallery is empty.");
 
-    const appUrl = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
     const slug = project.tenant.slug;
     const unlocked = filesReleased(project, project.tenant);
     const balanceInvoice = project.isFinalBalancePaid
@@ -447,12 +446,12 @@ export async function notifyClientPhotosReady(
       clientEmail: project.client.email,
       clientPhone: project.client.phone || undefined,
       projectTitle: project.title,
-      vaultUrl: `${appUrl}/${slug}/vault/${project.id}`,
+      vaultUrl: studioUrl(slug, `/vault/${project.id}`),
       photoCount,
       videoCount,
       unlocked,
       balanceDue: balanceInvoice
-        ? { amount: balanceInvoice.amount, currency: project.tenant.currency, payUrl: `${appUrl}/${slug}/checkout?invoiceId=${balanceInvoice.id}` }
+        ? { amount: balanceInvoice.amount, currency: project.tenant.currency, payUrl: studioUrl(slug, `/checkout?invoiceId=${balanceInvoice.id}`) }
         : undefined,
     });
 

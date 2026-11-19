@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
-import { COOKIE_NAME, hostFrom, sessionCookieFor } from "./cookie-name";
+import { hostFrom, sessionCookieFor } from "./cookie-name";
 import { env } from "@/lib/env";
 import { db } from "@/lib/db";
 

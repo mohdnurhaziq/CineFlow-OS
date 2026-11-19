@@ -5,7 +5,12 @@
  * With it off (dev, staging), everything stays as it was.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import nodemailer, { type Transporter } from "nodemailer";
+import { setSmtpTransportForTests } from "@/lib/email/smtp";
+import { requestPasswordReset } from "@/lib/actions/password-reset";
+import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
+import { sendInvoiceReminder } from "@/lib/actions/admin-invoices";
 import path from "node:path";
 import { TestHarness } from "./test-harness";
 import {
@@ -24,7 +29,7 @@ import { db } from "@/lib/db";
 import { middleware } from "@/middleware";
 import { COOKIE_NAME, SHARED_COOKIE_NAME, createSessionToken, sessionCookieFor, setSessionCookie, type SessionUser } from "@/lib/auth/token";
 import { getCurrentUser, logoutAction } from "@/lib/auth/session";
-import { withHost, withRequest } from "./mocks/session";
+import { withHost, withRequest, withSession } from "./mocks/session";
 import { signInTarget } from "@/lib/auth/sign-in-target";
 
 const ROOT = process.cwd();
@@ -40,6 +45,48 @@ export async function withSubdomains<T>(on: boolean, fn: () => Promise<T> | T): 
     if (saved === undefined) delete process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS;
     else process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS = saved;
   }
+}
+
+
+/** Every .ts/.tsx file under `dir` (relative to the project). */
+function sourceFiles(dir: string): string[] {
+  const out: string[] = [];
+  const walk = (d: string) => {
+    for (const name of readdirSync(path.join(ROOT, d))) {
+      const rel = `${d}/${name}`;
+      if (statSync(path.join(ROOT, rel)).isDirectory()) walk(rel);
+      else if (/\.(ts|tsx)$/.test(name)) out.push(rel);
+    }
+  };
+  walk(dir);
+  return out;
+}
+
+/**
+ * Studio links built by hand (`/${slug}…` or `${appUrl}/${slug}…`) instead of through studioPath /
+ * studioUrl. Cache refreshes (revalidatePath, safeRevalidate, revalidate([...]) and the path lists
+ * fed to them) keep the internal /<slug>/ route path on purpose, so they're allowed.
+ */
+export function handBuiltStudioLinks(files: string[]): string[] {
+  const link = /`\/\$\{[^}`]*[sS]lug[^}`]*\}|\$\{[^}`]*(APP_URL|appUrl|baseUrl)[^}`]*\}\/\$\{[^}`]*[sS]lug/;
+  const refresh = /revalidat|^\s*(for \(const path of \[|const paths = \[)|paths\.push\(/i;
+  const found: string[] = [];
+  for (const file of files) {
+    if (file === "lib/domain-name.ts") continue;
+    let inRefreshCall = false;
+    read(file).split(/\r?\n/).forEach((line, i) => {
+      if (inRefreshCall) {
+        if (/^\s*\);?\s*$/.test(line)) inRefreshCall = false;
+        return;
+      }
+      if (/[rR]evalidate\w*\(\s*$/.test(line)) {
+        inRefreshCall = true;
+        return;
+      }
+      if (link.test(line) && !refresh.test(line)) found.push(`${file}:${i + 1}: ${line.trim()}`);
+    });
+  }
+  return found;
 }
 
 const B = APP_BASE_DOMAIN;
@@ -257,5 +304,60 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       harness.assertEqual(signInTarget({ role: "STUDIO_OWNER", tenantSlug: "lumina-cine" }), "/lumina-cine/admin", "Off: unchanged");
       harness.assertEqual(signInTarget({ role: "STUDIO_OWNER", tenantSlug: "lumina-cine", callbackUrl: "/lumina-cine/admin/x" }), "/lumina-cine/admin/x", "Off: callback unchanged");
     });
+  });
+
+  // ── Task 4: emails and server-side links ────────────────────────────────────
+
+  await harness.test("T33-LINK-01: emails link to the studio's subdomain when it's on, and to the old address when it's off", async () => {
+    const savedHost = process.env.SMTP_HOST;
+    const savedPort = process.env.SMTP_PORT;
+    process.env.SMTP_HOST = "smtp.links.test";
+    process.env.SMTP_PORT = "587";
+    const outbox: { to: string; subject: string; html: string; text: string }[] = [];
+    const json = nodemailer.createTransport({ jsonTransport: true });
+    setSmtpTransportForTests({
+      sendMail: async (mail: { to: string; subject: string; html: string; text: string }) => {
+        outbox.push(mail);
+        return json.sendMail(mail);
+      },
+    } as unknown as Transporter);
+    try {
+      const tenant = await db.tenant.findUniqueOrThrow({ where: { slug: "lumina-cine" } });
+      const client = await db.user.findFirstOrThrow({ where: { role: "CLIENT", tenantId: tenant.id }, orderBy: { createdAt: "desc" } });
+      const booking = await db.clientBooking.findFirstOrThrow({ where: { tenantId: tenant.id } });
+      const invoice = await db.milestoneInvoice.findFirstOrThrow({ where: { tenantId: tenant.id, status: { in: ["PENDING", "OVERDUE", "REJECTED"] } } });
+      const sendAll = async () => {
+        outbox.length = 0;
+        await requestPasswordReset({ tenantSlug: "lumina-cine", email: client.email });
+        await sendBookingConfirmation(booking.id);
+        const reminder = await withSession(ownerUser, () => sendInvoiceReminder({ tenantId: tenant.id, tenantSlug: "lumina-cine", invoiceId: invoice.id }));
+        harness.assert(reminder.success, "The invoice reminder was sent", JSON.stringify(reminder));
+        return outbox.map((m) => `${m.subject}\n${m.html}`);
+      };
+      const subHost = `lumina-cine.${new URL(U).host}`;
+      const on = await withSubdomains(true, sendAll);
+      harness.assert(on.length >= 3, "Reset, booking and invoice emails went out", String(on.length));
+      for (const mail of on) {
+        const subject = mail.split("\n")[0];
+        harness.assert(mail.includes(subHost), `On: "${subject}" links to ${subHost}`);
+        harness.assert(!mail.includes("/lumina-cine/") && !mail.includes("/lumina-cine?"), `On: "${subject}" has no /lumina-cine/ path`);
+      }
+      const off = await withSubdomains(false, sendAll);
+      for (const mail of off) {
+        harness.assert(mail.includes(`${U}/lumina-cine/`), `Off: "${mail.split("\n")[0]}" keeps ${U}/lumina-cine/`);
+      }
+    } finally {
+      setSmtpTransportForTests(null);
+      if (savedHost === undefined) delete process.env.SMTP_HOST;
+      else process.env.SMTP_HOST = savedHost;
+      if (savedPort === undefined) delete process.env.SMTP_PORT;
+      else process.env.SMTP_PORT = savedPort;
+    }
+  });
+
+  await harness.test("T33-LINK-02: server code builds no studio link by hand", async () => {
+    const files = [...sourceFiles("lib"), ...sourceFiles("app").filter((f) => /(\/route\.ts|actions?[^/]*\.ts|\/sitemap\.ts)$/.test(f))];
+    const found = handBuiltStudioLinks(files);
+    harness.assert(found.length === 0, "Every studio link goes through studioPath / studioUrl", found.join("\n"));
   });
 }

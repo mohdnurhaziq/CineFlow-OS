@@ -1,3 +1,5 @@
+import { studioPath } from "@/lib/domain-name";
+
 /**
  * The admin manual's table of contents. Each topic is a page at
  * `/[tenantSlug]/admin/manual/<slug>` (the admin layout keeps it to the studio's team).
@@ -104,5 +106,5 @@ export const MANUAL_TOPICS: ManualTopic[] = [
 ];
 
 export function manualTopicHref(tenantSlug: string, slug: string): string {
-  return `/${tenantSlug}/admin/manual/${slug}`;
+  return studioPath(tenantSlug, `/admin/manual/${slug}`);
 }

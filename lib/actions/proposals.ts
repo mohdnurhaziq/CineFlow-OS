@@ -16,6 +16,7 @@ import {
 } from "@/lib/validations/proposals";
 import { errorMessageOf } from "@/lib/action-error";
 import { isOpenProposal, OPEN_PROPOSAL_STATUSES } from "@/lib/proposals/status";
+import { studioPath } from "@/lib/domain-name";
 
 /** Why a proposal that isn't open can't be signed or declined, in the client's words. */
 function closedProposalMessage(status: string): string {
@@ -112,8 +113,8 @@ export async function acceptProposal(input: SignProposalInput) {
         invoiceNumber: existingInvoice?.invoiceNumber || "",
         amount: proposal.depositAmount,
         checkoutUrl: existingInvoice
-          ? `/${tenantSlug}/checkout?invoiceId=${existingInvoice.id}`
-          : `/${tenantSlug}/vault/${proposal.project.id}`,
+          ? studioPath(tenantSlug, `/checkout?invoiceId=${existingInvoice.id}`)
+          : studioPath(tenantSlug, `/vault/${proposal.project.id}`),
       };
     }
 
@@ -277,7 +278,7 @@ export async function acceptProposal(input: SignProposalInput) {
       invoiceId: result.invoice.id,
       invoiceNumber: result.invoice.invoiceNumber,
       amount: depositAmount,
-      checkoutUrl: `/${tenantSlug}/checkout?invoiceId=${result.invoice.id}`,
+      checkoutUrl: studioPath(tenantSlug, `/checkout?invoiceId=${result.invoice.id}`),
     };
   } catch (error) {
     console.error("Error accepting proposal:", error);

@@ -10,6 +10,7 @@ import {
   type OnboardStudioInput,
 } from "@/lib/validations/onboarding";
 import { errorMessageOf } from "@/lib/action-error";
+import { studioUrl } from "@/lib/domain-name";
 
 export async function checkSlugAvailability(rawSlug: string): Promise<{ available: boolean; error?: string }> {
   const parsed = CheckSlugSchema.safeParse({ slug: rawSlug });
@@ -287,7 +288,7 @@ export async function onboardStudio(formData: OnboardStudioInput) {
       success: true,
       tenantId: result.tenantId,
       slug: result.slug,
-      redirectUrl: `/${result.slug}/admin`,
+      redirectUrl: studioUrl(result.slug, "/admin"),
     };
   } catch (error) {
     console.error("Onboarding transaction error:", error);

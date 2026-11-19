@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
+import { studioUrl } from "@/lib/domain-name";
 
 /**
  * Emails the client when their framed prints are ready for pickup or have shipped.
@@ -19,8 +20,7 @@ async function loadOrder(orderId: string) {
 }
 
 function galleryUrl(slug: string, projectId: string): string {
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
-  return `${appUrl}/${slug}/vault/${projectId}`;
+  return studioUrl(slug, `/vault/${projectId}`);
 }
 
 function printCount(n: number): string {

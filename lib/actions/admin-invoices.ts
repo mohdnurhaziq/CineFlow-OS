@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
 import { requireAccess, requireTick } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { nextInvoiceNumber, UNPAID_INVOICE_STATUSES } from "@/lib/bookings/billing";
@@ -11,6 +10,7 @@ import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { applyInvoicePayment } from "@/lib/bookings/payment-approval";
 import { sendNotification } from "@/lib/notifications";
 import { formatMoney } from "@/lib/money";
+import { studioUrl } from "@/lib/domain-name";
 
 /**
  * Invoice actions for the studio. Recording or cancelling a payment needs the "record payments"
@@ -150,7 +150,7 @@ async function remind(data: z.output<typeof Base>): Promise<Result> {
     clientPhone: invoice.client.phone || undefined,
     headline: `Invoice ${invoice.invoiceNumber} is due`,
     message: `A reminder that invoice ${invoice.invoiceNumber} for ${formatMoney(invoice.tenant.currency, invoice.amount)} is due on ${due}.`,
-    linkUrl: `${env.NEXT_PUBLIC_APP_URL}/${invoice.tenant.slug}/account/invoices/${invoice.id}`,
+    linkUrl: studioUrl(invoice.tenant.slug, `/account/invoices/${invoice.id}`),
     linkLabel: "View and pay",
   });
   return { success: true };

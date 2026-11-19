@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { advanceProjectStage } from "@/lib/projects/stage";
-import { env } from "@/lib/env";
 import { assertCanWorkOn, requireAccess, requireOwnOrManage } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
@@ -13,6 +12,7 @@ import { isSlotInPast, minutesOfDay, slotDateKey } from "@/lib/slot-time";
 import { sendNotification } from "@/lib/notifications";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { notifyAssignees, sessionText } from "@/lib/bookings/assignment-emails";
+import { studioUrl } from "@/lib/domain-name";
 
 /**
  * What a studio does with a booking after it is made:
@@ -65,7 +65,7 @@ async function notifyClient(
     clientName: booking.clientName,
     clientEmail: booking.clientEmail,
     clientPhone: booking.clientPhone || undefined,
-    linkUrl: update.linkUrl ?? `${env.NEXT_PUBLIC_APP_URL}/${tenant.slug}/account`,
+    linkUrl: update.linkUrl ?? studioUrl(tenant.slug, "/account"),
     linkLabel: update.linkLabel ?? "View my booking",
     headline: update.headline,
     message: update.message,

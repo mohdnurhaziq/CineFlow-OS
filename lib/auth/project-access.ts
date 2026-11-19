@@ -3,6 +3,7 @@ import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
 import { AuthorizationError, STAFF_ROLES } from "@/lib/auth/guard";
 import { levelAtLeast, loadAccess, type AccessArea, type AccessLevel } from "@/lib/auth/access";
 import { canAccessProject, canWorkOn } from "@/lib/auth/access-guard";
+import { studioPath } from "@/lib/domain-name";
 
 /**
  * Access to a client's own records: projects (vault, call sheets, releases), proposals and invoices.
@@ -63,7 +64,7 @@ export async function requirePageAccess(opts: {
 }): Promise<SessionUser> {
   const session = await getCurrentUser();
   if (!session) {
-    redirect(`/${opts.tenantSlug}/login?callbackUrl=${encodeURIComponent(opts.returnTo)}`);
+    redirect(`${studioPath(opts.tenantSlug, "/login")}?callbackUrl=${encodeURIComponent(opts.returnTo)}`);
   }
   if (!(await canAccessClientRecord(session, opts.tenantId, opts.clientId, opts.record))) notFound();
   return session;

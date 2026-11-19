@@ -24,6 +24,7 @@ import {
 } from "@/lib/validations/checkout";
 import { errorMessageOf } from "@/lib/action-error";
 import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
+import { studioUrl } from "@/lib/domain-name";
 
 function safeRevalidate(path: string) {
   try {
@@ -227,7 +228,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
         description: `Deposit ${result.booking.trackingCode}`,
         amountMyr: deposit,
         payer: { name: result.booking.clientName, email: result.booking.clientEmail, phone: result.booking.clientPhone },
-        returnUrl: `${env.NEXT_PUBLIC_APP_URL}/${tenantSlug}/checkout/payment-return`,
+        returnUrl: studioUrl(tenantSlug, "/checkout/payment-return"),
         callbackUrl: `${env.NEXT_PUBLIC_APP_URL}/api/payments/toyyibpay/callback`,
         expiryMinutes: ONLINE_HOLD_MINUTES,
       });
@@ -319,7 +320,7 @@ export async function processInvoicePayment(input: ProcessInvoicePaymentInput) {
           description: `Invoice ${invoice.invoiceNumber}`,
           amountMyr: invoice.amount,
           payer: { name: invoice.client.name, email: invoice.client.email, phone: invoice.client.phone ?? "" },
-          returnUrl: `${env.NEXT_PUBLIC_APP_URL}/${tenantSlug}/checkout/payment-return`,
+          returnUrl: studioUrl(tenantSlug, "/checkout/payment-return"),
           callbackUrl: `${env.NEXT_PUBLIC_APP_URL}/api/payments/toyyibpay/callback`,
         });
         if (!bill.ok) return { success: false, error: "GATEWAY_ERROR", message: bill.error };

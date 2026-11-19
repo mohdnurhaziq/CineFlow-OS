@@ -53,7 +53,7 @@ export async function findStudioAccount(tenantId: string, email: string) {
   });
 }
 
-/** Link to the studio's reset page for this token. */
-export function passwordResetPath(tenantSlug: string, email: string, token: string): string {
-  return `/${tenantSlug}/reset-password?${new URLSearchParams({ token, email }).toString()}`;
+/** The studio's reset page for this token, within the studio: wrap it in studioUrl for an email. */
+export function passwordResetPath(email: string, token: string): string {
+  return `/reset-password?${new URLSearchParams({ token, email }).toString()}`;
 }

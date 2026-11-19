@@ -26,6 +26,7 @@ import {
   type PlaceOrderInput,
   type PlaceOrderValues,
 } from "@/lib/validations/print-orders";
+import { studioPath } from "@/lib/domain-name";
 
 type Tx = Prisma.TransactionClient;
 
@@ -342,7 +343,7 @@ export async function placePrintOrder(
       success: true,
       orderId: placed.order.id,
       orderNumber: placed.order.orderNumber,
-      checkoutUrl: placed.invoice ? `/${v.tenantSlug}/checkout?invoiceId=${placed.invoice.id}` : null,
+      checkoutUrl: placed.invoice ? studioPath(v.tenantSlug, `/checkout?invoiceId=${placed.invoice.id}`) : null,
     };
   } catch (err) {
     return failFrom(err, "Couldn't place this order.");

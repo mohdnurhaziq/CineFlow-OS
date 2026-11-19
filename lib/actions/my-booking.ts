@@ -5,6 +5,7 @@ import { filesReleased } from "@/lib/deliverables/access";
 import { liveProjectWhere } from "@/lib/projects/list";
 import { z } from "zod";
 import { clientVisibleProposalWhere } from "@/lib/proposals/status";
+import { studioPath } from "@/lib/domain-name";
 
 /**
  * Public "My Booking" lookup. Clients have no accounts, so a booking is
@@ -174,7 +175,7 @@ export async function lookupMyBooking(input: {
         paidAt: inv.paidAt ? inv.paidAt.toISOString() : null,
         payUrl:
           inv.status === "PENDING" || inv.status === "OVERDUE"
-            ? `/${tenantSlug}/checkout?invoiceId=${inv.id}`
+            ? studioPath(tenantSlug, `/checkout?invoiceId=${inv.id}`)
             : null,
       }));
 
@@ -185,7 +186,7 @@ export async function lookupMyBooking(input: {
         status: p.status,
         isFinalBalancePaid: p.isFinalBalancePaid,
         filesReleased: filesReleased(p, tenant),
-        vaultUrl: `/${tenantSlug}/vault/${p.id}`,
+        vaultUrl: studioPath(tenantSlug, `/vault/${p.id}`),
       }));
 
       proposals = proposalRows.map((p) => ({
@@ -194,7 +195,7 @@ export async function lookupMyBooking(input: {
         proposalNumber: p.proposalNumber,
         status: p.status,
         totalPrice: p.totalPrice,
-        url: `/${tenantSlug}/proposals/${p.id}`,
+        url: studioPath(tenantSlug, `/proposals/${p.id}`),
       }));
     }
 

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
 import { formatSlotDate } from "@/lib/slot-time";
 import { sendNotification } from "@/lib/notifications";
+import { studioUrl } from "@/lib/domain-name";
 
 /**
  * Tells team members about the shoots they are on: put on one, one moved or was cancelled, taken off one.
@@ -63,7 +63,7 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
       : booking.targetDate
         ? formatSlotDate(booking.targetDate, DATE_FORMAT)
         : "the date to be confirmed";
-    const scheduleUrl = `${env.NEXT_PUBLIC_APP_URL}/${booking.tenant.slug}/admin/schedule`;
+    const scheduleUrl = studioUrl(booking.tenant.slug, "/admin/schedule");
     const common = { studioName: booking.tenant.name, studioSlug: booking.tenant.slug, scheduleUrl, shootClientName: booking.clientName };
 
     const results: Array<"SENT" | "SKIPPED" | "FAILED"> = [];

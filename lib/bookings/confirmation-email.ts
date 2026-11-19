@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { formatSlotDate } from "@/lib/slot-time";
 import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
+import { studioPath, studioUrl } from "@/lib/domain-name";
 
 /**
  * Emails the customer their booking confirmation (reference, package, session, deposit).
@@ -18,7 +19,6 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
     });
     if (!booking?.clientEmail) return null;
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
     const slug = booking.tenant.slug;
 
     // Where "view my booking" goes. A customer account the studio created has no password yet:
@@ -29,10 +29,10 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
     let link: string;
     let linkLabel: string;
     if (account && !account.passwordHash) {
-      link = clientInvitePath(slug, account.email, await issueClientInvite(account.id), `/${slug}/account`);
+      link = clientInvitePath(account.email, await issueClientInvite(account.id), studioPath(slug, "/account"));
       linkLabel = "Set your password & view booking";
     } else if (account) {
-      link = `/${slug}/account`;
+      link = "/account";
       linkLabel = "View my booking";
       // A QR deposit still to pay: go straight to the slip upload (sign-in comes first if needed).
       const deposit = booking.depositPaid
@@ -42,11 +42,11 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
             select: { id: true, paymentMethod: true },
           });
       if (deposit?.paymentMethod === "QR_CODE") {
-        link = `/${slug}/checkout?invoiceId=${deposit.id}`;
+        link = `/checkout?invoiceId=${deposit.id}`;
         linkLabel = "Upload payment slip";
       }
     } else {
-      link = `/${slug}/my-booking?code=${encodeURIComponent(booking.trackingCode)}`;
+      link = `/my-booking?code=${encodeURIComponent(booking.trackingCode)}`;
       linkLabel = "View my booking";
     }
     // Slot dates are calendar days stored as midnight UTC: formatSlotDate keeps the day from shifting.
@@ -68,7 +68,7 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
       depositMethod: booking.paymentMethod,
       currency: booking.tenant.currency,
       trackingCode: booking.trackingCode,
-      bookingUrl: `${appUrl}${link}`,
+      bookingUrl: studioUrl(slug, link),
       bookingLinkLabel: linkLabel,
     });
   } catch (err) {

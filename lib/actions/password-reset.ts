@@ -13,6 +13,7 @@ import {
   passwordResetPath,
   resetTokenMatches,
 } from "@/lib/auth/password-reset";
+import { studioUrl } from "@/lib/domain-name";
 
 /**
  * "Forgot password" for a studio's accounts (clients and staff alike; accounts are per studio).
@@ -66,7 +67,6 @@ export async function requestPasswordReset(
   await afterResponse(async () => {
     try {
       const token = await issuePasswordReset(account.id);
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
       const res = await sendNotification(
         {
           event: "PASSWORD_RESET",
@@ -74,7 +74,7 @@ export async function requestPasswordReset(
           studioSlug: tenant.slug,
           clientName: account.name,
           clientEmail: account.email,
-          resetUrl: `${appUrl}${passwordResetPath(tenant.slug, account.email, token)}`,
+          resetUrl: studioUrl(tenant.slug, passwordResetPath(account.email, token)),
           expiresMinutes: PASSWORD_RESET_TTL_MINUTES,
         },
         "EMAIL"

@@ -39,8 +39,11 @@ export function inviteMatches(
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Link to the studio's sign-up page that claims the account with `token`, then continues to `next`. */
-export function clientInvitePath(tenantSlug: string, email: string, token: string, next: string): string {
+/**
+ * The studio's sign-up page, within the studio (wrap it in studioPath / studioUrl), that claims the
+ * account with `token`, then continues to `next` (a path on the site, from studioPath).
+ */
+export function clientInvitePath(email: string, token: string, next: string): string {
   const q = new URLSearchParams({ invite: token, email, next });
-  return `/${tenantSlug}/register?${q.toString()}`;
+  return `/register?${q.toString()}`;
 }

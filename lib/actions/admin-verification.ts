@@ -7,6 +7,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { errorMessageOf } from "@/lib/action-error";
+import { studioUrl } from "@/lib/domain-name";
 
 function safeRevalidate(path: string) {
   try {
@@ -112,8 +113,7 @@ export async function rejectPaymentVerification(input: RejectPaymentVerification
     // Dispatch rejection notification
     let notifResult: NotificationResult | null = null;
     if (invoice.client?.email) {
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
-      const reuploadUrl = `${appUrl}/${tenantSlug}/checkout?invoiceId=${invoice.id}`;
+      const reuploadUrl = studioUrl(tenantSlug, `/checkout?invoiceId=${invoice.id}`);
 
       try {
         notifResult = await sendNotification({
