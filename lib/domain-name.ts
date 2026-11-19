@@ -89,6 +89,14 @@ export function isStudioPath(slug: string, p: string): boolean {
   return lower === root || (lower.startsWith(root) && /^[/?#]/.test(lower.charAt(root.length)));
 }
 
+/**
+ * A studio page as linked from a platform page (home, super-admin console): its subdomain address
+ * when studios are on subdomains, otherwise its path (so the link stays on the site).
+ */
+export function studioLink(slug: string, path = "/"): string {
+  return studioSubdomainsOn() ? studioUrl(slug, path) : studioPath(slug, path);
+}
+
 /** A platform page (home, sign-up, super-admin) as linked from anywhere: absolute when studios are on subdomains. */
 export function platformUrl(path = "/"): string {
   return studioSubdomainsOn() ? `${appUrl().origin}${withSlash(path)}` : withSlash(path);

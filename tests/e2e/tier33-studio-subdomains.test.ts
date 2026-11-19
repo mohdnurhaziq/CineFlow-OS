@@ -27,6 +27,7 @@ import {
   isPlatformHost,
   isStudioPath,
   platformUrl,
+  studioLink,
   studioPath,
   studioSubdomainOf,
   studioSubdomainsOn,
@@ -112,6 +113,7 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       harness.assertEqual(studioPath("lumina-cine"), "/lumina-cine", "The studio's home");
       harness.assertEqual(studioUrl("lumina-cine", "/book"), `${U}/lumina-cine/book`, "Absolute address on the platform");
       harness.assertEqual(platformUrl("/create-studio"), "/create-studio", "Platform pages stay relative");
+      harness.assertEqual(studioLink("lumina-cine", "/book"), "/lumina-cine/book", "A platform page links to a studio by its path");
     });
   });
 
@@ -123,6 +125,7 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       harness.assertEqual(studioPath("lumina-cine"), "/", "The studio's home is /");
       harness.assertEqual(studioUrl("lumina-cine", "/book"), `${app.protocol}//lumina-cine.${app.host}/book`, "Absolute address on the subdomain");
       harness.assertEqual(platformUrl("/create-studio"), `${U}/create-studio`, "Platform pages are absolute, off the subdomain");
+      harness.assertEqual(studioLink("lumina-cine", "/book"), studioUrl("lumina-cine", "/book"), "A platform page links to a studio by its subdomain");
     });
     harness.assertEqual(studioSubdomainOf(`lumina-cine.${B}:3000`), "lumina-cine", "A studio subdomain, port ignored");
     harness.assertEqual(studioSubdomainOf(`www.${B}`), null, "www isn't a studio");
