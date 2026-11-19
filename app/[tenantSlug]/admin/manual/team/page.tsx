@@ -14,6 +14,7 @@ import {
   Ui,
 } from "@/components/admin/manual/manual-ui";
 import { AREA_LABELS, LEVEL_LABELS, TICK_LABELS } from "@/lib/team/access-labels";
+import { studioPath } from "@/lib/domain-name";
 
 interface TeamManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -41,7 +42,7 @@ const SECTIONS = [
 /** Manual → Team, roles and assigning shoots. Labels come from lib/team/access-labels.ts, the same file the screens use. */
 export default async function TeamManualPage({ params }: TeamManualPageProps) {
   const { tenantSlug } = await params;
-  const admin = `/${tenantSlug}/admin`;
+  const admin = studioPath(tenantSlug, "/admin");
 
   return (
     <ManualPage

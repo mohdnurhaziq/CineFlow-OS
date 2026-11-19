@@ -10,6 +10,7 @@ import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import type { DemoPersonas } from "@/lib/demo-studios";
+import { studioPath } from "@/lib/domain-name";
 
 interface StudioLoginFormProps {
   tenantSlug: string;
@@ -123,7 +124,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
               Password
             </label>
             <Link
-              href={`/${tenantSlug}/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+              href={studioPath(tenantSlug, `/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`)}
               className="text-[11px] font-mono text-amber-400 hover:text-amber-300 transition-colors"
             >
               Forgot password?
@@ -198,15 +199,15 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
         <Link
           href={
             callbackUrl && !callbackUrl.includes("/admin")
-              ? `/${tenantSlug}/register?next=${encodeURIComponent(callbackUrl)}`
-              : `/${tenantSlug}/register`
+              ? studioPath(tenantSlug, `/register?next=${encodeURIComponent(callbackUrl)}`)
+              : studioPath(tenantSlug, "/register")
           }
           className="block text-xs font-mono text-amber-400 hover:text-amber-300 transition-colors"
         >
           New client? Create a quick account
         </Link>
         <Link
-          href={`/${tenantSlug}`}
+          href={studioPath(tenantSlug)}
           className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           ← Back to studio website

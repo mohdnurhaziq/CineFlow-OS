@@ -9,6 +9,7 @@ import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirm
 import { loadBookingConfirmation } from "@/lib/payments/confirmation";
 import { loadFramedPrints } from "@/lib/prints/gallery";
 import { clientVisibleProposalWhere } from "@/lib/proposals/status";
+import { studioPath } from "@/lib/domain-name";
 
 interface AccountPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -34,17 +35,17 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
   if (!tenant) notFound();
 
   const session = await getCurrentUser();
-  if (!session) redirect(`/${tenant.slug}/login?callbackUrl=${encodeURIComponent(`/${tenant.slug}/account`)}`);
+  if (!session) redirect(studioPath(tenant.slug, `/login?callbackUrl=${encodeURIComponent(studioPath(tenant.slug, "/account"))}`));
 
   // Studio staff belong in the admin console, not the client dashboard.
-  if (session.role !== "CLIENT") redirect(`/${tenant.slug}/admin`);
-  if (session.tenantId !== tenant.id) redirect(`/${tenant.slug}/login`);
+  if (session.role !== "CLIENT") redirect(studioPath(tenant.slug, "/admin"));
+  if (session.tenantId !== tenant.id) redirect(studioPath(tenant.slug, "/login"));
 
   const client = await db.user.findFirst({
     where: { id: session.id, tenantId: tenant.id, role: "CLIENT" },
     select: { id: true, name: true, email: true, phone: true },
   });
-  if (!client) redirect(`/${tenant.slug}/login`);
+  if (!client) redirect(studioPath(tenant.slug, "/login"));
 
   // Release slots whose QR/cash deposit went unpaid for 24 hours, so the client sees it.
   await expireUnpaidDeposits(tenant.id);
@@ -159,7 +160,7 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
             tenantSlug={tenant.slug}
             currency={tenant.currency}
             confirmation={confirmation}
-            dismissHref={`/${tenant.slug}/account?tab=bookings`}
+            dismissHref={studioPath(tenant.slug, "/account?tab=bookings")}
           />
         ) : null
       }

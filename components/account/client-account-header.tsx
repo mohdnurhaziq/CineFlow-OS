@@ -7,6 +7,7 @@ import { ClientNavBar } from "./client-nav-bar";
 import { ClientUserNav } from "./client-user-nav";
 import { disciplineLabel } from "@/lib/labels";
 import { ToastAnchor } from "@/components/ui/toast-anchor";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientAccountHeaderProps {
   tenant: {
@@ -41,7 +42,7 @@ export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHea
           {/* Left: Studio Branding & Client Scope */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <Link
-              href={`/${tenant.slug}/account`}
+              href={studioPath(tenant.slug, "/account")}
               className="flex items-center gap-2.5 group text-zinc-400 hover:text-white transition-colors min-w-0"
               title="Client Hub Overview"
             >
@@ -71,7 +72,7 @@ export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHea
           {/* Right Header Actions: Quick Book & Client Menu (studio website link lives in the menu) */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Link
-              href={`/${tenant.slug}/book`}
+              href={studioPath(tenant.slug, "/book")}
               className={buttonVariants({ size: "sm" })}
             >
               <CalendarPlus className="size-3.5" />

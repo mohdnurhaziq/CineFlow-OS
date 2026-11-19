@@ -6,6 +6,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { KeyRound, Mail, ArrowRight, AlertCircle, MailCheck } from "lucide-react";
 import { requestPasswordReset } from "@/lib/actions/password-reset";
+import { studioPath } from "@/lib/domain-name";
 
 interface ForgotPasswordFormProps {
   tenantSlug: string;
@@ -102,7 +103,7 @@ export function ForgotPasswordForm({ tenantSlug, tenantName, initialEmail = "" }
       )}
 
       <div className="pt-2 text-center">
-        <Link href={`/${tenantSlug}/login`} className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors">
+        <Link href={studioPath(tenantSlug, "/login")} className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors">
           ← Back to sign in
         </Link>
       </div>

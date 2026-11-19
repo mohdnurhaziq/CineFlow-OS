@@ -15,6 +15,7 @@ import {
 } from "@/components/admin/manual/manual-ui";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
+import { studioPath } from "@/lib/domain-name";
 
 interface BookingsManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -41,7 +42,7 @@ const SECTIONS = [
 /** Manual → Bookings and the Calendar. Times come from the constants the code uses. */
 export default async function BookingsManualPage({ params }: BookingsManualPageProps) {
   const { tenantSlug } = await params;
-  const admin = `/${tenantSlug}/admin`;
+  const admin = studioPath(tenantSlug, "/admin");
   const deposit = `${DEPOSIT_HOLD_HOURS} hours`;
   const balanceDays = `${BALANCE_DUE_AFTER_SESSION_DAYS} days`;
 

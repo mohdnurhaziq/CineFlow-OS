@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, CreditCard } from "lucide-react";
 import confetti from "canvas-confetti";
 import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { studioPath } from "@/lib/domain-name";
 
 interface SignedAcceptanceViewProps {
   tenantSlug: string;
@@ -144,7 +145,7 @@ export function SignedAcceptanceView({
         {invoiceId && (
           <div className="pt-2 space-y-2">
             <Link
-              href={`/${tenantSlug}/checkout?invoiceId=${invoiceId}`}
+              href={studioPath(tenantSlug, `/checkout?invoiceId=${invoiceId}`)}
               className="w-full py-3.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
             >
               <CreditCard className="size-4" />

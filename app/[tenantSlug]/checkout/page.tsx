@@ -8,6 +8,7 @@ import { getSessionClient } from "@/lib/clients";
 import { getCheckoutGateway } from "@/lib/payments/settle";
 import { CheckoutAuthGate } from "@/components/checkout/checkout-auth-gate";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
+import { studioPath } from "@/lib/domain-name";
 
 interface CheckoutPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -117,14 +118,14 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       tenantId: tenant.id,
       clientId: invoice.clientId,
       record: { area: "invoices" },
-      returnTo: `/${tenant.slug}/checkout?${query.toString()}`,
+      returnTo: studioPath(tenant.slug, `/checkout?${query.toString()}`),
     });
     // After paying: the client sees their invoice (receipt + confirmation); staff paying on a
     // client's behalf go back to the admin invoice.
     invoiceDoneHref =
       payer.role === "CLIENT"
-        ? `/${tenant.slug}/account/invoices/${invoice.id}?paid=1`
-        : `/${tenant.slug}/admin/invoices/${invoice.id}`;
+        ? studioPath(tenant.slug, `/account/invoices/${invoice.id}?paid=1`)
+        : studioPath(tenant.slug, `/admin/invoices/${invoice.id}`);
   }
 
   // Packages offered for this slot set its price and deposit.

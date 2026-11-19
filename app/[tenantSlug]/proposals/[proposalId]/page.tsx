@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requirePageAccess } from "@/lib/auth/project-access";
 import { ProposalViewer } from "@/components/proposals/proposal-viewer";
 import { StudioPageHeader } from "@/components/layout/studio-page-header";
+import { studioPath } from "@/lib/domain-name";
 
 interface ProposalPageProps {
   params: Promise<{
@@ -93,7 +94,7 @@ export default async function ProposalPage({ params }: ProposalPageProps) {
     tenantId: tenant.id,
     clientId: proposal.client.id,
     record: { area: "proposals" },
-    returnTo: `/${tenant.slug}/proposals/${proposal.id}`,
+    returnTo: studioPath(tenant.slug, `/proposals/${proposal.id}`),
   });
   if (proposal.status === "DRAFT" && viewer.role === "CLIENT") notFound();
 

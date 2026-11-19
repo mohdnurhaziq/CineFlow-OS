@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Film, Camera, Sparkles, Calendar, ExternalLink } from "lucide-react";
+import { studioUrl } from "@/lib/domain-name";
 
 interface StudioData {
   id: string;
@@ -141,7 +142,7 @@ export function StudioSwitcher() {
 
               <div className="flex items-center gap-3">
                 <Link
-                  href={`/${activeStudio.slug}`}
+                  href={studioUrl(activeStudio.slug, "/")}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs sm:text-sm font-semibold transition-all"
                 >
                   View studio website
@@ -149,7 +150,7 @@ export function StudioSwitcher() {
                 </Link>
 
                 <Link
-                  href={`/${activeStudio.slug}/book`}
+                  href={studioUrl(activeStudio.slug, "/book")}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs sm:text-sm font-bold shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all"
                 >
                   <Calendar className="size-3.5" />

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AlertTriangle, Lightbulb, type LucideIcon } from "lucide-react";
 import { PageHeader, PageShell } from "@/components/ui/page";
 import { cn } from "@/lib/utils";
+import { studioPath } from "@/lib/domain-name";
 
 /**
  * Building blocks for admin manual pages, so every page reads the same way: sections with
@@ -183,7 +184,7 @@ export function ManualPage({ tenantSlug, icon, area, title, description, section
         eyebrow={`Manual · ${area}`}
         title={title}
         description={description}
-        back={{ href: `/${tenantSlug}/admin/manual`, label: "Manual" }}
+        back={{ href: studioPath(tenantSlug, "/admin/manual"), label: "Manual" }}
       />
       <ManualContents items={sections} />
       {children}

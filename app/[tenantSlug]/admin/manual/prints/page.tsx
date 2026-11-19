@@ -13,6 +13,7 @@ import {
   ManualTable,
   Ui,
 } from "@/components/admin/manual/manual-ui";
+import { studioPath } from "@/lib/domain-name";
 
 interface PrintsManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -39,7 +40,7 @@ const SECTIONS = [
 /** Manual → Framed prints and wall art. */
 export default async function PrintsManualPage({ params }: PrintsManualPageProps) {
   const { tenantSlug } = await params;
-  const admin = `/${tenantSlug}/admin`;
+  const admin = studioPath(tenantSlug, "/admin");
 
   return (
     <ManualPage

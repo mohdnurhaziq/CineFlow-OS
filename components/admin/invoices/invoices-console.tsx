@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Receipt, Search, Inbox } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { formatStudioDate } from "@/lib/slot-time";
+import { studioPath } from "@/lib/domain-name";
 
 export interface InvoiceRow {
   id: string;
@@ -199,7 +200,7 @@ export function InvoicesConsole({
               return (
                 <li key={inv.id}>
                   <Link
-                    href={`/${tenantSlug}/admin/invoices/${inv.id}`}
+                    href={studioPath(tenantSlug, `/admin/invoices/${inv.id}`)}
                     className={`grid grid-cols-[1fr_auto] ${COLS} gap-x-4 gap-y-1 px-5 py-3.5 items-center hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none transition-colors`}
                   >
                     <span className="min-w-0">

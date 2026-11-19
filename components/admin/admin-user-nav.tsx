@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LogOut, LogIn, PlayCircle } from "lucide-react";
 import { logoutAction, type SessionUser } from "@/lib/auth/session";
 import { signedOutHref } from "@/lib/auth/signed-out";
+import { studioPath } from "@/lib/domain-name";
 
 interface AdminUserNavProps {
   tenantSlug: string;
@@ -18,14 +19,14 @@ export function AdminUserNav({ tenantSlug, user, roleLabel }: AdminUserNavProps)
 
   const handleLogout = async () => {
     await logoutAction();
-    router.push(signedOutHref(`/${tenantSlug}/login`));
+    router.push(signedOutHref(studioPath(tenantSlug, "/login")));
     router.refresh();
   };
 
   if (!user) {
     return (
       <Link
-        href={`/${tenantSlug}/login`}
+        href={studioPath(tenantSlug, "/login")}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
       >
         <LogIn className="size-3.5" />
@@ -56,7 +57,7 @@ export function AdminUserNav({ tenantSlug, user, roleLabel }: AdminUserNavProps)
       </div>
 
       <Link
-        href={`/${tenantSlug}/admin?tour=1`}
+        href={studioPath(tenantSlug, "/admin?tour=1")}
         title="Take the tour"
         aria-label="Take the tour"
         className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"

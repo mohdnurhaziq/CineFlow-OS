@@ -8,6 +8,7 @@ import { ToastAnchor } from "@/components/ui/toast-anchor";
 import type { SessionUser } from "@/lib/auth/session";
 import { levelAtLeast, loadAccess } from "@/lib/auth/access";
 import { isStudioOwner } from "@/lib/auth/admin-page";
+import { studioPath } from "@/lib/domain-name";
 
 interface AdminHeaderProps {
   tenant: { id: string; name: string; slug: string; discipline: string };
@@ -49,7 +50,7 @@ export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
           {/* Brand & Studio Scope */}
           <div className="flex items-center gap-4">
             <Link
-              href={`/${tenant.slug}/admin`}
+              href={studioPath(tenant.slug, "/admin")}
               title="Admin dashboard"
               className="flex items-center gap-2 group text-zinc-400 hover:text-white transition-colors"
             >
@@ -72,7 +73,7 @@ export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
           {/* Right Header Actions: User Profile & Studio Website */}
           <div className="flex items-center gap-3">
             <Link
-              href={`/${tenant.slug}`}
+              href={studioPath(tenant.slug)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-colors"
             >
               <Globe className="size-3.5 text-amber-400" />

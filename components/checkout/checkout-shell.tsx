@@ -11,6 +11,7 @@ import { CashPaymentForm } from "./cash-payment-form";
 import { processBookingCheckout, processInvoicePayment } from "@/lib/actions/checkout";
 import { PackagePicker, type BookingPackageOption } from "@/components/booking/package-picker";
 import { errorMessageOf } from "@/lib/action-error";
+import { studioPath } from "@/lib/domain-name";
 
 interface CheckoutShellProps {
   tenant: {
@@ -111,10 +112,10 @@ export function CheckoutShell({
   };
   const bookingDoneHref = (trackingCode?: string) =>
     trackingCode
-      ? `/${tenant.slug}/account?tab=bookings&confirmed=${encodeURIComponent(trackingCode)}`
-      : `/${tenant.slug}/account?tab=bookings`;
+      ? studioPath(tenant.slug, `/account?tab=bookings&confirmed=${encodeURIComponent(trackingCode)}`)
+      : studioPath(tenant.slug, "/account?tab=bookings");
   const invoiceDoneHref =
-    invoiceDoneHrefProp ?? (invoice ? `/${tenant.slug}/account/invoices/${invoice.id}?paid=1` : `/${tenant.slug}/account?tab=invoices`);
+    invoiceDoneHrefProp ?? (invoice ? studioPath(tenant.slug, `/account/invoices/${invoice.id}?paid=1`) : studioPath(tenant.slug, "/account?tab=invoices"));
 
   const [packageId, setPackageId] = useState<string | null>(
     packages.some((p) => p.id === initialPackageId) ? (initialPackageId as string) : null

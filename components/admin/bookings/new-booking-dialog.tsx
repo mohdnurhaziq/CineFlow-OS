@@ -10,6 +10,7 @@ import { sameCategory } from "@/lib/bookings/pricing-shared";
 import { BookForCustomerDialog, type ClientOption } from "@/components/admin/calendar/book-for-customer-dialog";
 import type { BookingSlotRow, CategoryOption } from "@/components/admin/calendar/single-slot-dialog";
 import type { BookingPackageOption } from "@/components/booking/package-picker";
+import { studioPath } from "@/lib/domain-name";
 
 interface NewBookingDialogProps {
   isOpen: boolean;
@@ -140,7 +141,7 @@ export function NewBookingDialog({
                 A booking needs an open time slot. Add one in the Calendar, then come back here to book it for your client.
               </p>
               <Link
-                href={`/${tenantSlug}/admin/calendar`}
+                href={studioPath(tenantSlug, "/admin/calendar")}
                 className={buttonVariants()}
               >
                 Add a session time <ArrowRight className="size-3.5" aria-hidden="true" />

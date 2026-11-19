@@ -11,6 +11,7 @@ import { currencySymbol } from "@/lib/money";
 import { STAFF_ROLES } from "@/lib/auth/guard";
 import { levelAtLeast, loadAccess } from "@/lib/auth/access";
 import { canWorkOn } from "@/lib/auth/access-guard";
+import { studioPath } from "@/lib/domain-name";
 
 interface VaultPageProps {
   params: Promise<{
@@ -101,7 +102,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
     tenantId: tenant.id,
     clientId: project.client.id,
     record: { area: "galleries", projectId: project.id },
-    returnTo: `/${tenant.slug}/vault/${project.id}`,
+    returnTo: studioPath(tenant.slug, `/vault/${project.id}`),
   });
 
   // The client sees their own balance and marks up their own photos. The team sees money only with
@@ -157,8 +158,8 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
       <VaultShell
         back={
           isStaff
-            ? { href: `/${tenant.slug}/admin/projects/${project.id}`, label: "Back to project" }
-            : { href: `/${tenant.slug}/account?tab=projects`, label: "My galleries" }
+            ? { href: studioPath(tenant.slug, `/admin/projects/${project.id}`), label: "Back to project" }
+            : { href: studioPath(tenant.slug, "/account?tab=projects"), label: "My galleries" }
         }
         tenant={tenant}
         project={{
@@ -189,7 +190,7 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
             unlocked={framedPrints.unlocked}
             hasPhotos={framedPrints.hasPhotos}
             orders={framedPrints.orders}
-            {...(isStaff ? { staffOrderHref: `/${tenant.slug}/admin/projects/${project.id}/prints` } : {})}
+            {...(isStaff ? { staffOrderHref: studioPath(tenant.slug, `/admin/projects/${project.id}/prints`) } : {})}
           />
         )}
       </VaultShell>

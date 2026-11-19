@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClientAuthPanel } from "@/components/auth/client-auth-panel";
+import { studioPath } from "@/lib/domain-name";
 
 interface CheckoutAuthGateProps {
   tenantSlug: string;
@@ -31,7 +32,7 @@ export function CheckoutAuthGate({ tenantSlug, tenantName }: CheckoutAuthGatePro
 
         <div className="text-center">
           <Link
-            href={`/${tenantSlug}/book`}
+            href={studioPath(tenantSlug, "/book")}
             className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             ← Back to calendar

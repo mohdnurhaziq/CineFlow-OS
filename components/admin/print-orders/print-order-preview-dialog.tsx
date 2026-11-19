@@ -11,6 +11,7 @@ import type { MatBoardType } from "@/lib/prints/pricing";
 import { MAT_BOARD_LABELS, PRINT_ORDER_STATUS_STYLES, printOrderStatusLabel } from "@/lib/prints/status";
 import type { PrintOrderPreview, PrintOrderPreviewItem } from "@/lib/prints/order-preview";
 import { PrintFitNote, usePrintFit } from "./print-fit";
+import { studioPath } from "@/lib/domain-name";
 
 interface PrintOrderPreviewDialogProps {
   order: PrintOrderPreview;
@@ -142,7 +143,7 @@ export function PrintOrderPreviewDialog({ order, tenantSlug, currency, onClose }
         </div>
 
         <div className="flex justify-end">
-          <Link href={`/${tenantSlug}/admin/print-orders/${order.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          <Link href={studioPath(tenantSlug, `/admin/print-orders/${order.id}`)} className={buttonVariants({ variant: "secondary", size: "sm" })}>
             Open full order <ExternalLink />
           </Link>
         </div>

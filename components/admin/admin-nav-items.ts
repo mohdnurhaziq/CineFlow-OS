@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { levelAtLeast, type AccessArea, type AccessLevel, type AccessMap } from "@/lib/auth/access";
+import { studioPath } from "@/lib/domain-name";
 
 /**
  * The admin menu, filtered to what this person can open. It mirrors the page checks
@@ -50,7 +51,7 @@ const can = (rule: Rule, access: AccessMap, isOwner: boolean) =>
   typeof rule === "function" ? rule(access, isOwner) : levelAtLeast(access.areas[rule.area], rule.level);
 
 export function visibleNavItems(tenantSlug: string, access: AccessMap, isOwner: boolean): AdminNavEntry[] {
-  const base = `/${tenantSlug}/admin`;
+  const base = studioPath(tenantSlug, "/admin");
   const item = (rule: Rule, sub: NavSubItem): NavSubItem[] => (can(rule, access, isOwner) ? [sub] : []);
   const group = (entry: Extract<AdminNavEntry, { kind: "group" }>): AdminNavEntry[] => (entry.items.length > 0 ? [entry] : []);
 

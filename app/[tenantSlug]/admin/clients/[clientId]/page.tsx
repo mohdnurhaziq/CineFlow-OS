@@ -15,6 +15,7 @@ import { ClientNotesCard } from "@/components/admin/clients/client-notes-card";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientPageProps {
   params: Promise<{ tenantSlug: string; clientId: string }>;
@@ -136,7 +137,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
   if (!profile) notFound();
 
   const { client, bookings, projects, invoices, proposals, money } = profile;
-  const base = `/${tenant.slug}/admin`;
+  const base = studioPath(tenant.slug, "/admin");
 
   const stats: { label: string; value: string; highlight?: boolean }[] = [
     { label: "Bookings", value: String(bookings.length) },

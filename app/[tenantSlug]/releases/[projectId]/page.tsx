@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requirePageAccess } from "@/lib/auth/project-access";
 import { ReleaseFormShell } from "@/components/logistics/release-form-shell";
 import { StudioPageHeader } from "@/components/layout/studio-page-header";
+import { studioPath } from "@/lib/domain-name";
 
 interface ReleasesPageProps {
   params: Promise<{
@@ -57,7 +58,7 @@ export default async function ReleasesPage({ params }: ReleasesPageProps) {
     tenantId: tenant.id,
     clientId: project.clientId,
     record: { area: "production" },
-    returnTo: `/${tenant.slug}/releases/${project.id}`,
+    returnTo: studioPath(tenant.slug, `/releases/${project.id}`),
   });
 
   return (

@@ -38,6 +38,7 @@ import {
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { errorMessageOf } from "@/lib/action-error";
 import { ShippingZonesForm, type ShippingZoneRow } from "./shipping-zones-form";
+import { studioPath } from "@/lib/domain-name";
 
 export type FramesTab = "frames" | "sizes" | "shipping";
 
@@ -254,7 +255,7 @@ export function FramesManager({
         </div>
 
         <Link
-          href={`/${tenantSlug}/admin/frames/visualizer`}
+          href={studioPath(tenantSlug, "/admin/frames/visualizer")}
           className={cn(buttonVariants({ size: "sm" }), "shrink-0")}
         >
           <span>Open Visualizer</span>

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { ClientAccountHeader } from "@/components/account/client-account-header";
 import { loadClientHeaderBadges } from "@/lib/client-header-badges";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientAccountLayoutProps {
   children: React.ReactNode;
@@ -32,13 +33,13 @@ export default async function ClientAccountLayout({ children, params }: ClientAc
 
   // Portal is for authenticated clients of this studio only
   if (!currentUser) {
-    redirect(`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(`/${tenantSlug}/account`)}`);
+    redirect(studioPath(tenantSlug, `/login?callbackUrl=${encodeURIComponent(studioPath(tenantSlug, "/account"))}`));
   }
   if (currentUser.role !== "CLIENT") {
-    redirect(`/${tenantSlug}/admin`);
+    redirect(studioPath(tenantSlug, "/admin"));
   }
   if (currentUser.tenantId !== tenant.id) {
-    redirect(`/${tenantSlug}/login`);
+    redirect(studioPath(tenantSlug, "/login"));
   }
 
   // Release slots whose QR/cash deposit went unpaid for 24 hours before counting
@@ -52,7 +53,7 @@ export default async function ClientAccountLayout({ children, params }: ClientAc
     loadClientHeaderBadges(tenant.id, currentUser.id),
   ]);
 
-  if (!client) redirect(`/${tenantSlug}/login`);
+  if (!client) redirect(studioPath(tenantSlug, "/login"));
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-amber-500/20 selection:text-amber-400 print:bg-white print:min-h-0">

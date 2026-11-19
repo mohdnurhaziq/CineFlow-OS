@@ -23,6 +23,7 @@ import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
 import { BookingTeamSection, type BookingTeamControls } from "@/components/admin/bookings/booking-team-section";
 import type { AssignableMember } from "@/lib/team/members";
 import type { BookingActionPowers } from "@/lib/auth/page-powers";
+import { studioPath } from "@/lib/domain-name";
 
 // ---------------------------------------------------------------------------
 // Shared presentation helpers (also used by the Bookings list)
@@ -222,7 +223,7 @@ export function BookingDetailsDialog({
           </div>
           {booking && !loading && !error && (
             <Link
-              href={`/${tenantSlug}/admin/bookings/${booking.id}`}
+              href={studioPath(tenantSlug, `/admin/bookings/${booking.id}`)}
               className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:underline whitespace-nowrap"
             >
               Open full page <ExternalLink className="size-3" aria-hidden="true" />
@@ -344,7 +345,7 @@ export function BookingDetailsBody({
 
       {booking.project && (
         <Link
-          href={`/${tenantSlug}/admin/projects/${booking.project.id}`}
+          href={studioPath(tenantSlug, `/admin/projects/${booking.project.id}`)}
           className="flex items-center justify-between gap-3 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-200 hover:bg-amber-500/15 transition-colors"
         >
           <span className="flex items-center gap-2">
@@ -357,7 +358,7 @@ export function BookingDetailsBody({
 
       {booking.money && (stage === "VERIFYING" || stage === "BALANCE_VERIFYING") && (
         <Link
-          href={`/${tenantSlug}/admin/verification`}
+          href={studioPath(tenantSlug, "/admin/verification")}
           className="flex items-center justify-between gap-3 p-3 rounded-xl border border-blue-500/30 bg-blue-500/10 text-xs text-blue-200 hover:bg-blue-500/15 transition-colors"
         >
           <span className="flex items-center gap-2">
@@ -437,7 +438,7 @@ export function BookingDetailsBody({
         {inv ? (
           <>
             <Row label="Invoice">
-              <Link href={`/${tenantSlug}/admin/invoices/${inv.id}`} className="font-mono text-amber-400 hover:underline">
+              <Link href={studioPath(tenantSlug, `/admin/invoices/${inv.id}`)} className="font-mono text-amber-400 hover:underline">
                 {inv.invoiceNumber}
               </Link>{" "}
               <span className="text-zinc-500">· {titleCase(inv.status)}</span>
@@ -497,7 +498,7 @@ export function BookingDetailsBody({
             </Row>
             <Row label="Invoice">
               <Link
-                href={`/${tenantSlug}/admin/invoices/${booking.balanceInvoice.id}`}
+                href={studioPath(tenantSlug, `/admin/invoices/${booking.balanceInvoice.id}`)}
                 className="font-mono text-amber-400 hover:underline"
               >
                 {booking.balanceInvoice.invoiceNumber}

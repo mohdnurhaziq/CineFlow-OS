@@ -9,6 +9,7 @@ import { STAFF_ROLES } from "@/lib/auth/guard";
 import { ShowcaseHero } from "@/components/showcase/showcase-hero";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
+import { studioPath } from "@/lib/domain-name";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -146,7 +147,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
     "@type": "ProfessionalService",
     name: tenant.name,
     description: tenant.bio || tenant.tagline,
-    url: `/${tenant.slug}`,
+    url: studioPath(tenant.slug),
     image: tenant.logoUrl,
     priceRange: "$$$",
   };

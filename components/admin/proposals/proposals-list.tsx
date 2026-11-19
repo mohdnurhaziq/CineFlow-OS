@@ -7,6 +7,7 @@ import { ExternalLink, CheckCircle, Clock, FileText, Loader2, Send, Trash2, XCir
 import { toast } from "sonner";
 import { deleteDraftProposal, sendProposal } from "@/lib/actions/admin-projects";
 import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { studioPath } from "@/lib/domain-name";
 
 export interface ProposalRow {
   id: string;
@@ -199,7 +200,7 @@ export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSe
                     <div className="inline-flex flex-wrap justify-end gap-1.5">
                     {p.status === "DRAFT" && canSend && <DraftActions tenantId={tenantId} proposalId={p.id} />}
                     <Link
-                      href={`/${tenantSlug}/proposals/${p.id}`}
+                      href={studioPath(tenantSlug, `/proposals/${p.id}`)}
                       target="_blank"
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono text-zinc-300 hover:text-white bg-zinc-900 border border-zinc-700 hover:border-zinc-600 transition-colors"
                     >

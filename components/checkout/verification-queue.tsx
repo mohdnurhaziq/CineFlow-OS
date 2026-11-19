@@ -9,6 +9,7 @@ import { formatSlotDate, STUDIO_TIME_ZONE } from "@/lib/slot-time";
 import type { AdminVerificationConsoleProps } from "./admin-verification-console";
 import type { PrintOrderPreview } from "@/lib/prints/order-preview";
 import { PrintOrderPreviewDialog } from "@/components/admin/print-orders/print-order-preview-dialog";
+import { studioPath } from "@/lib/domain-name";
 
 export type PendingItem = AdminVerificationConsoleProps["pendingInvoices"][number];
 
@@ -229,7 +230,7 @@ export function VerificationQueue({
                   <>
                     <div className="font-semibold text-amber-400 font-mono">
                       <Link
-                        href={`/${tenantSlug}/admin/bookings/${selected.booking.id}`}
+                        href={studioPath(tenantSlug, `/admin/bookings/${selected.booking.id}`)}
                         className="underline decoration-amber-500/40 underline-offset-2 hover:decoration-amber-400"
                         title="Open this booking's full details"
                       >

@@ -5,6 +5,7 @@ import { MessageSquare, Calendar, Aperture, ArrowLeft } from "lucide-react";
 import { ClientAccountMenu } from "@/components/account/client-account-menu";
 import { disciplineLabel } from "@/lib/labels";
 import { ToastAnchor } from "@/components/ui/toast-anchor";
+import { platformUrl, studioPath } from "@/lib/domain-name";
 
 interface ShowcaseNavProps {
   tenant: {
@@ -37,7 +38,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
         {/* Brand */}
         <div className="flex items-center gap-3">
           <Link
-            href="/"
+            href={platformUrl("/")}
             // Platform home is for studio owners, not a studio's clients; hidden on phones to fit the header.
             className="hidden sm:inline-flex p-1.5 items-center justify-center rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
             title="Back to Platform Home"
@@ -46,7 +47,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
             <ArrowLeft className="size-4" aria-hidden="true" />
           </Link>
 
-          <Link href={`/${tenant.slug}`} className="flex items-center gap-2.5 group">
+          <Link href={studioPath(tenant.slug)} className="flex items-center gap-2.5 group">
             <div
               className="size-8 rounded-lg flex items-center justify-center font-bold text-black text-sm shadow-md transition-transform group-hover:scale-105"
               style={{ backgroundColor: brandColor }}
@@ -76,7 +77,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
         {/* Action CTAs */}
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            href={`/${tenant.slug}/visualizer`}
+            href={studioPath(tenant.slug, "/visualizer")}
             className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-mono text-zinc-300 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             <Aperture className="size-3.5 text-amber-400" />
@@ -97,7 +98,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
           <ClientAccountMenu tenantSlug={tenant.slug} client={client} staff={staff} />
 
           <Link
-            href={`/${tenant.slug}/book`}
+            href={studioPath(tenant.slug, "/book")}
             aria-label={`Book production session with ${tenant.name}`}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-xs sm:text-sm font-bold text-black shadow-lg active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
             style={{

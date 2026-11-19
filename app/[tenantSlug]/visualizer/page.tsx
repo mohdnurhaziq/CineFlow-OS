@@ -15,6 +15,7 @@ import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { ClientAccountHeader } from "@/components/account/client-account-header";
 import { getSessionClient } from "@/lib/clients";
 import type { PhotoOption } from "@/components/visualizer/configurator-panel";
+import { studioPath } from "@/lib/domain-name";
 
 interface VisualizerPageProps {
   params: Promise<{
@@ -81,14 +82,14 @@ export default async function VisualizerPage({
       tenantId: tenant.id,
       clientId: project.clientId,
       record: { area: "galleries", projectId: project.id },
-      returnTo: `/${tenant.slug}/visualizer?projectId=${project.id}`,
+      returnTo: studioPath(tenant.slug, `/visualizer?projectId=${project.id}`),
     });
     viewerIsProjectClient = session.role === "CLIENT" && session.id === project.clientId;
 
     ({ photos, ordering } = await loadProjectOrdering({
       tenantId: tenant.id,
       project,
-      galleryHref: `/${tenant.slug}/vault/${project.id}`,
+      galleryHref: studioPath(tenant.slug, `/vault/${project.id}`),
       claim,
     }));
   } else {
@@ -148,7 +149,7 @@ export default async function VisualizerPage({
     session && STAFF_ROLES.has(session.role) && (session.role === "SUPER_ADMIN" || session.tenantId === tenant.id)
       ? { name: session.name, email: session.email, role: session.role }
       : null;
-  const signInHref = `/${tenant.slug}/login?callbackUrl=${encodeURIComponent(`/${tenant.slug}/account`)}`;
+  const signInHref = studioPath(tenant.slug, `/login?callbackUrl=${encodeURIComponent(studioPath(tenant.slug, "/account"))}`);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">

@@ -5,6 +5,7 @@ import { User, Mail, Phone, Lock, Hash, AlertCircle, Loader2, CheckCircle2 } fro
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientAuthPanelProps {
   tenantSlug: string;
@@ -247,7 +248,7 @@ export function ClientAuthPanel({
         {mode === "login" && (
           <div className="-mt-2 text-right">
             <a
-              href={`/${tenantSlug}/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+              href={studioPath(tenantSlug, `/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`)}
               className="text-[11px] font-mono text-amber-400 hover:text-amber-300 transition-colors"
             >
               Forgot password?

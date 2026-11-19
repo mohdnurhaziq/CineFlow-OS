@@ -13,6 +13,7 @@ import { remainingForLines } from "@/lib/prints/entitlements";
 import { loadAssignableFor } from "@/lib/team/members";
 import { bookingActionPowers } from "@/lib/auth/page-powers";
 import { BookingDetailView } from "@/components/admin/bookings/booking-detail-view";
+import { studioPath } from "@/lib/domain-name";
 
 interface BookingPageProps {
   params: Promise<{ tenantSlug: string; bookingId: string }>;
@@ -61,7 +62,7 @@ export default async function AdminBookingPage({ params }: BookingPageProps) {
       <AdminBreadcrumb
         items={[
           { label: "Production" },
-          { label: "Bookings", href: `/${tenant.slug}/admin/bookings` },
+          { label: "Bookings", href: studioPath(tenant.slug, "/admin/bookings") },
           { label: booking.trackingCode },
         ]}
       />

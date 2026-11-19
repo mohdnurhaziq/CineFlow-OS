@@ -13,6 +13,7 @@ import {
   ManualTable,
   Ui,
 } from "@/components/admin/manual/manual-ui";
+import { studioPath } from "@/lib/domain-name";
 
 interface GettingStartedManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -37,7 +38,7 @@ const SECTIONS = [
 /** Manual → Start here. The overview every other manual page hangs from. */
 export default async function GettingStartedManualPage({ params }: GettingStartedManualPageProps) {
   const { tenantSlug } = await params;
-  const admin = `/${tenantSlug}/admin`;
+  const admin = studioPath(tenantSlug, "/admin");
   const manual = `${admin}/manual`;
 
   return (

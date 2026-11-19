@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { lookupMyBooking, type MyBookingView } from "@/lib/actions/my-booking";
 import { formatMoney } from "@/lib/money";
+import { studioPath } from "@/lib/domain-name";
 
 interface MyBookingLookupProps {
   tenantSlug: string;
@@ -326,7 +327,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
 
       <div className="text-center">
         <Link
-          href={`/${tenantSlug}`}
+          href={studioPath(tenantSlug)}
           className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           ← Back to {tenantName}

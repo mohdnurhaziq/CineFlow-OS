@@ -10,6 +10,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { canAccessProject } from "@/lib/auth/access-guard";
 import { NoAccess } from "@/components/admin/no-access";
+import { studioPath } from "@/lib/domain-name";
 
 interface AdminProjectPrintsPageProps {
   params: Promise<{ tenantSlug: string; projectId: string }>;
@@ -56,8 +57,8 @@ export default async function AdminProjectPrintsPage({ params }: AdminProjectPri
     loadProjectOrdering({
       tenantId: tenant.id,
       project,
-      galleryHref: `/${tenant.slug}/admin/projects/${project.id}`,
-      staffOrdersHref: `/${tenant.slug}/admin/print-orders`,
+      galleryHref: studioPath(tenant.slug, `/admin/projects/${project.id}`),
+      staffOrdersHref: studioPath(tenant.slug, "/admin/print-orders"),
     }),
   ]);
 
@@ -75,7 +76,7 @@ export default async function AdminProjectPrintsPage({ params }: AdminProjectPri
               ? "Framed prints unlock when the client's balance is paid."
               : "Upload photos to this gallery before ordering prints."
         }
-        back={{ href: `/${tenant.slug}/admin/projects/${project.id}`, label: project.title }}
+        back={{ href: studioPath(tenant.slug, `/admin/projects/${project.id}`), label: project.title }}
       />
       <VisualizerShell
         tenantSlug={tenant.slug}

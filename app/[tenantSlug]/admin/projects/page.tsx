@@ -13,6 +13,7 @@ import { catchUpShotStages } from "@/lib/projects/stage";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { studioPath } from "@/lib/domain-name";
 
 interface ProjectsPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -60,7 +61,7 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
         {PROJECT_LIST_TABS.map((t) => (
           <Link
             key={t}
-            href={t === "productions" ? `/${tenant.slug}/admin/projects` : `/${tenant.slug}/admin/projects?tab=${t}`}
+            href={t === "productions" ? studioPath(tenant.slug, "/admin/projects") : studioPath(tenant.slug, `/admin/projects?tab=${t}`)}
             aria-current={t === tab ? "page" : undefined}
             className={chipClass(t === tab)}
           >
@@ -76,7 +77,7 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
           <p className="text-xs text-zinc-500">
             Every confirmed booking gets a gallery automatically: sessions (convocation, portrait, Raya) under Sessions, productions
             (weddings, commercial, events) here. Signed{" "}
-            <Link href={`/${tenant.slug}/admin/proposals`} className="text-amber-400 hover:underline">
+            <Link href={studioPath(tenant.slug, "/admin/proposals")} className="text-amber-400 hover:underline">
               proposals
             </Link>{" "}
             become productions.
@@ -103,7 +104,7 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
                 return (
                   <tr key={p.id} className="hover:bg-zinc-900/30">
                     <td className="px-4 py-3">
-                      <Link href={`/${tenant.slug}/admin/projects/${p.id}`} className="font-semibold text-white hover:text-amber-400">
+                      <Link href={studioPath(tenant.slug, `/admin/projects/${p.id}`)} className="font-semibold text-white hover:text-amber-400">
                         {p.title}
                       </Link>
                       <div className="flex flex-wrap items-center gap-1.5 mt-0.5">

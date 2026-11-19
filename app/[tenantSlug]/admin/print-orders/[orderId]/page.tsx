@@ -16,6 +16,7 @@ import { PrintFitNote } from "@/components/admin/print-orders/print-fit";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { studioPath } from "@/lib/domain-name";
 
 interface PrintOrderPageProps {
   params: Promise<{ tenantSlug: string; orderId: string }>;
@@ -65,7 +66,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
     <PageShell width="detail">
       <PageHeader
         icon={Frame}
-        back={{ href: `/${tenant.slug}/admin/print-orders`, label: "Print orders" }}
+        back={{ href: studioPath(tenant.slug, "/admin/print-orders"), label: "Print orders" }}
         title={<span className="font-mono">{order.orderNumber}</span>}
         badge={
           <span
@@ -77,7 +78,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
         description={
           <>
             Placed {formatStudioDate(order.createdAt.toISOString())} for {order.client.name}, from{" "}
-            <Link href={`/${tenant.slug}/admin/projects/${order.project.id}`} className="text-amber-400 hover:underline">
+            <Link href={studioPath(tenant.slug, `/admin/projects/${order.project.id}`)} className="text-amber-400 hover:underline">
               {order.project.title}
             </Link>
             .
@@ -213,7 +214,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
             </div>
             {order.invoice ? (
               <Link
-                href={`/${tenant.slug}/admin/invoices/${order.invoice.id}`}
+                href={studioPath(tenant.slug, `/admin/invoices/${order.invoice.id}`)}
                 className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline"
               >
                 Invoice {order.invoice.invoiceNumber} ({INVOICE_STATE[order.invoice.status] ?? "unpaid"})

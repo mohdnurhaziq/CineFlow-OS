@@ -30,6 +30,7 @@ import { getBookingDetails } from "@/lib/actions/admin-bookings";
 import type { BookingDetails } from "@/lib/bookings/details";
 import type { BookingActionPowers } from "@/lib/auth/page-powers";
 import { isSlotInPast } from "@/lib/slot-time";
+import { studioPath } from "@/lib/domain-name";
 
 interface CalendarAdminDashboardProps {
   tenantId: string;
@@ -176,7 +177,7 @@ export function CalendarAdminDashboard({
         description={
           <>
             Open time slots for clients to book, block out days, and see who has booked.{" "}
-            <Link href={`/${tenantSlug}/admin/manual/slot-hold`} className="text-amber-400 hover:underline whitespace-nowrap">
+            <Link href={studioPath(tenantSlug, "/admin/manual/slot-hold")} className="text-amber-400 hover:underline whitespace-nowrap">
               How slot holds work
             </Link>
           </>

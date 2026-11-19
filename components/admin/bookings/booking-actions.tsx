@@ -19,6 +19,7 @@ import {
 } from "@/lib/actions/admin-booking-lifecycle";
 import { formatSlotDate, isSlotInPast } from "@/lib/slot-time";
 import { bookingGalleryLink } from "@/lib/bookings/gallery-link";
+import { studioPath } from "@/lib/domain-name";
 
 interface BookingActionsProps {
   booking: BookingDetails;
@@ -143,7 +144,7 @@ export function BookingActions({
           {booking.project ? (
             galleryLink && (
               <Link
-                href={`/${tenantSlug}/admin/projects/${booking.project.id}${galleryLink === "upload" ? "#files" : ""}`}
+                href={studioPath(tenantSlug, `/admin/projects/${booking.project.id}${galleryLink === "upload" ? "#files" : ""}`)}
                 className={galleryLink === "upload" ? buttonVariants() : quiet}
               >
                 <ImageUp className="size-3.5" /> {galleryLink === "upload" ? "Upload photos" : "Open gallery"}

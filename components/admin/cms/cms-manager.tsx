@@ -34,6 +34,7 @@ import {
 import { disciplineLabel } from "@/lib/labels";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { studioPath } from "@/lib/domain-name";
 
 interface CmsManagerProps {
   tenantId: string;
@@ -137,7 +138,7 @@ export function CmsManager({
         actions={
           <>
           <Link
-            href={`/${tenantSlug}`}
+            href={studioPath(tenantSlug)}
             target="_blank"
             className={buttonVariants({ variant: "secondary" })}
           >

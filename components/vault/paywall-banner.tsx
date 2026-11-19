@@ -3,6 +3,7 @@
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { Lock, ArrowRight, Sparkles } from "lucide-react";
+import { studioPath } from "@/lib/domain-name";
 
 interface PaywallBannerProps {
   tenantSlug: string;
@@ -23,9 +24,10 @@ export function PaywallBanner({
   filesReleased = false,
 }: PaywallBannerProps) {
   const currencySymbol = currency === "MYR" ? "RM " : "$";
-  const checkoutUrl = `/${tenantSlug}/checkout?projectId=${projectId}&type=FINAL_BALANCE${
-    invoiceId ? `&invoiceId=${invoiceId}` : ""
-  }`;
+  const checkoutUrl = studioPath(
+    tenantSlug,
+    `/checkout?projectId=${projectId}&type=FINAL_BALANCE${invoiceId ? `&invoiceId=${invoiceId}` : ""}`
+  );
 
   return (
     <div className="relative rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/30 via-[#15151a] to-[#121215] p-6 sm:p-7 shadow-2xl overflow-hidden animate-fadeIn">

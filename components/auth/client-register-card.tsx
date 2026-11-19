@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClientAuthPanel } from "@/components/auth/client-auth-panel";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientRegisterCardProps {
   tenantSlug: string;
@@ -50,14 +51,14 @@ export function ClientRegisterCard({
         // One navigation only: a refresh here re-renders /register, which itself redirects signed-in
         // clients, and the two navigations race (the page could be left blank). /account is
         // dynamic, so it renders fresh with the new session; replace keeps /register out of history.
-        onSuccess={() => router.replace(next || `/${tenantSlug}/account`)}
+        onSuccess={() => router.replace(next || studioPath(tenantSlug, "/account"))}
       />
 
       <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
-        <Link href={`/${tenantSlug}`} className="hover:text-zinc-300 transition-colors">
+        <Link href={studioPath(tenantSlug)} className="hover:text-zinc-300 transition-colors">
           ← Back to studio website
         </Link>
-        <Link href={`/${tenantSlug}/login`} className="hover:text-zinc-300 transition-colors">
+        <Link href={studioPath(tenantSlug, "/login")} className="hover:text-zinc-300 transition-colors">
           Studio staff login
         </Link>
       </div>

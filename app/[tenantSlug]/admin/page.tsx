@@ -14,6 +14,7 @@ import { SetupChecklist } from "@/components/admin/onboarding/setup-checklist";
 import { countUnassignedUpcoming } from "@/lib/bookings/schedule";
 import { studioNow } from "@/lib/slot-time";
 import { DashboardTour } from "@/components/admin/onboarding/dashboard-tour";
+import { studioUrl } from "@/lib/domain-name";
 
 interface AdminPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -68,8 +69,7 @@ export default async function AdminDashboardPage({ params }: AdminPageProps) {
     ? await countUnassignedUpcoming(analytics.tenant.id, studioNow().dateKey)
     : 0;
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/+$/, "");
-  const bookingUrl = `${appUrl}/${tenantSlug}`;
+  const bookingUrl = studioUrl(tenantSlug, "/");
 
   return (
     <PageShell>

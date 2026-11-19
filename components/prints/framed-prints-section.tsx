@@ -11,6 +11,7 @@ import { cancelPrintOrder } from "@/lib/actions/print-orders";
 import { errorMessageOf } from "@/lib/action-error";
 import { PRINT_ORDER_STATUS_STYLES, printOrderStatusLabel } from "@/lib/prints/status";
 import type { FramedPrintLine, FramedPrintOrder } from "@/lib/prints/gallery";
+import { studioPath } from "@/lib/domain-name";
 
 interface FramedPrintsSectionProps {
   tenantId: string;
@@ -51,7 +52,7 @@ export function FramedPrintsSection({
 
   const includedCount = lines.reduce((n, l) => n + l.quantity, 0);
   const canOrder = unlocked && hasPhotos;
-  const wallArtHref = `/${tenantSlug}/visualizer?projectId=${projectId}`;
+  const wallArtHref = studioPath(tenantSlug, `/visualizer?projectId=${projectId}`);
   const orderHref = staffOrderHref ?? wallArtHref;
   const claimHref = (lineId: string) => staffOrderHref ?? `${wallArtHref}&claim=${lineId}`;
   const lockedMessage = !unlocked
@@ -186,7 +187,7 @@ export function FramedPrintsSection({
                 {o.status === "AWAITING_PAYMENT" && (
                   <div className="flex flex-wrap gap-2">
                     {o.invoiceId && (
-                      <Link href={`/${tenantSlug}/checkout?invoiceId=${o.invoiceId}`} className={buttonVariants({ size: "sm" })}>
+                      <Link href={studioPath(tenantSlug, `/checkout?invoiceId=${o.invoiceId}`)} className={buttonVariants({ size: "sm" })}>
                         <CreditCard className="size-3.5" />
                         Pay
                       </Link>

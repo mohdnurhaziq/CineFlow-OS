@@ -10,6 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientNavBarProps {
   tenantSlug: string;
@@ -26,14 +27,14 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab");
 
-  const isInvoiceSubPage = pathname.startsWith(`/${tenantSlug}/account/invoices`);
-  const isBaseAccount = pathname === `/${tenantSlug}/account`;
+  const isInvoiceSubPage = pathname.startsWith(studioPath(tenantSlug, "/account/invoices"));
+  const isBaseAccount = pathname === studioPath(tenantSlug, "/account");
 
   const tabs = [
     {
       id: "overview",
       label: "Overview",
-      href: `/${tenantSlug}/account`,
+      href: studioPath(tenantSlug, "/account"),
       icon: LayoutDashboard,
       isActive: isBaseAccount && (!currentTab || currentTab === "overview"),
       badge: null,
@@ -42,7 +43,7 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
     {
       id: "projects",
       label: "Galleries",
-      href: `/${tenantSlug}/account?tab=projects`,
+      href: studioPath(tenantSlug, "/account?tab=projects"),
       icon: FolderLock,
       isActive: isBaseAccount && currentTab === "projects",
       badge: badges.projects > 0 ? badges.projects : null,
@@ -51,7 +52,7 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
     {
       id: "bookings",
       label: "My Bookings",
-      href: `/${tenantSlug}/account?tab=bookings`,
+      href: studioPath(tenantSlug, "/account?tab=bookings"),
       icon: CalendarClock,
       isActive: isBaseAccount && currentTab === "bookings",
       badge: badges.activeBookings > 0 ? `${badges.activeBookings}` : null,
@@ -60,7 +61,7 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
     {
       id: "invoices",
       label: "Invoices & Receipts",
-      href: `/${tenantSlug}/account?tab=invoices`,
+      href: studioPath(tenantSlug, "/account?tab=invoices"),
       icon: Receipt,
       isActive: isInvoiceSubPage || (isBaseAccount && currentTab === "invoices"),
       badge: badges.unpaidInvoices > 0 ? `${badges.unpaidInvoices} Due` : null,
@@ -71,7 +72,7 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
           {
             id: "proposals",
             label: "Proposals",
-            href: `/${tenantSlug}/account?tab=proposals`,
+            href: studioPath(tenantSlug, "/account?tab=proposals"),
             icon: FileText,
             isActive: isBaseAccount && currentTab === "proposals",
             badge: badges.proposals,

@@ -23,6 +23,7 @@ import { SolarHudStrip } from "./solar-hud-strip";
 import { CrewRosterCard } from "./crew-roster-card";
 import { ShotListHud, type ShotItemData } from "./shot-list-hud";
 import { formatSlotDate } from "@/lib/slot-time";
+import { studioPath } from "@/lib/domain-name";
 
 export interface CallSheetDetails {
   id: string;
@@ -168,7 +169,7 @@ export function CallSheetShell({
 
             {/* Digital Releases Link */}
             <Link
-              href={`/${tenantSlug}/releases/${projectId}`}
+              href={studioPath(tenantSlug, `/releases/${projectId}`)}
               className={buttonVariants({ variant: "secondary" })}
             >
               <FileSignature className="size-3.5" />

@@ -40,6 +40,7 @@ import { categoryName } from "@/lib/bookings/category-name";
 import { BOOKING_MILESTONES, PROPOSAL_MILESTONES, billSums, invoiceBookingId, invoiceProposalId } from "@/lib/invoices/bill-groups";
 import { cn } from "@/lib/utils";
 import { STUDIO_TIME_ZONE, formatSlotDate } from "@/lib/slot-time";
+import { studioPath } from "@/lib/domain-name";
 
 type BookingRow = ClientBooking & {
   slot: BookingSlot | null;
@@ -161,7 +162,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
   const switchTab = (tab: "overview" | "projects" | "bookings" | "invoices" | "proposals") => {
     setActiveTab(tab);
-    const url = tab === "overview" ? `/${tenant.slug}/account` : `/${tenant.slug}/account?tab=${tab}`;
+    const url = tab === "overview" ? studioPath(tenant.slug, "/account") : studioPath(tenant.slug, `/account?tab=${tab}`);
     router.push(url, { scroll: false });
   };
 
@@ -461,7 +462,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             </div>
             {nextPayment.action ? (
               <Link
-                href={`/${tenant.slug}/checkout?invoiceId=${nextPayment.invoice.id}`}
+                href={studioPath(tenant.slug, `/checkout?invoiceId=${nextPayment.invoice.id}`)}
                 className={cn(buttonVariants({ size: "lg" }), "self-start")}
               >
                 <span>{nextPayment.action}</span>
@@ -469,7 +470,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               </Link>
             ) : (
               <Link
-                href={`/${tenant.slug}/account/invoices/${nextPayment.invoice.id}`}
+                href={studioPath(tenant.slug, `/account/invoices/${nextPayment.invoice.id}`)}
                 className={cn(buttonVariants({ size: "lg", variant: "secondary" }), "self-start")}
               >
                 <span>View invoice</span>
@@ -510,7 +511,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             </div>
             {nextShoot.projectId && (
               <Link
-                href={`/${tenant.slug}/vault/${nextShoot.projectId}`}
+                href={studioPath(tenant.slug, `/vault/${nextShoot.projectId}`)}
                 className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono transition-colors whitespace-nowrap self-start sm:self-auto"
               >
                 <span>Open gallery</span>
@@ -642,7 +643,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     )}
                   </div>
                   <Link
-                    href={`/${tenant.slug}/vault/${spotlightProject.id}`}
+                    href={studioPath(tenant.slug, `/vault/${spotlightProject.id}`)}
                     className={cn(buttonVariants(), "self-start")}
                   >
                     <FolderLock className="size-3.5" />
@@ -717,7 +718,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-zinc-500">No upcoming sessions right now.</p>
                       <Link
-                        href={`/${tenant.slug}/book`}
+                        href={studioPath(tenant.slug, "/book")}
                         className="inline-flex items-center gap-1 text-xs font-mono text-amber-400 hover:underline"
                       >
                         + Book a session
@@ -840,13 +841,13 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               </span>
                               {payable ? (
                                 <Link
-                                  href={`/${tenant.slug}/checkout?invoiceId=${payable.id}`}
+                                  href={studioPath(tenant.slug, `/checkout?invoiceId=${payable.id}`)}
                                   className="shrink-0 whitespace-nowrap font-bold text-amber-300 hover:underline uppercase"
                                 >
                                   {clientPayAction(payable)?.label} →
                                 </Link>
                               ) : lone?.status === "PAID" ? (
-                                <Link href={`/${tenant.slug}/account/invoices/${lone.id}`} className="shrink-0 whitespace-nowrap text-zinc-300 hover:text-white hover:underline">
+                                <Link href={studioPath(tenant.slug, `/account/invoices/${lone.id}`)} className="shrink-0 whitespace-nowrap text-zinc-300 hover:text-white hover:underline">
                                   Receipt →
                                 </Link>
                               ) : (
@@ -900,7 +901,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   When you book a session, its gallery appears here.
                 </p>
                 <Link
-                  href={`/${tenant.slug}/book`}
+                  href={studioPath(tenant.slug, "/book")}
                   className={cn(buttonVariants({ size: "sm" }), "mt-2")}
                 >
                   <CalendarPlus className="size-3.5" /> Book a session
@@ -1091,7 +1092,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                         <div className="flex-shrink-0 flex items-center gap-2">
                           <Link
-                            href={`/${tenant.slug}/vault/${p.id}`}
+                            href={studioPath(tenant.slug, `/vault/${p.id}`)}
                             className={buttonVariants({ size: "lg" })}
                           >
                             <FolderLock className="size-4" />
@@ -1225,7 +1226,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                           {b.project && (
                             <Link
-                              href={`/${tenant.slug}/vault/${b.project.id}`}
+                              href={studioPath(tenant.slug, `/vault/${b.project.id}`)}
                               className="text-[11px] text-amber-400 hover:underline inline-flex items-center gap-1 font-mono mt-0.5"
                             >
                               <span>Open gallery</span>
@@ -1413,7 +1414,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                     {getMilestoneLabel(inv.milestoneType)}
                                   </span>
                                   <Link
-                                    href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                    href={studioPath(tenant.slug, `/account/invoices/${inv.id}`)}
                                     className="font-mono text-[11px] text-zinc-400 hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-0.5"
                                   >
                                     <span>{inv.invoiceNumber}</span>
@@ -1462,7 +1463,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               {isPaid && (
                                 <Link
-                                  href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                  href={studioPath(tenant.slug, `/account/invoices/${inv.id}`)}
                                   className="px-2.5 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
                                 >
                                   Receipt
@@ -1471,7 +1472,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               {payAction && (
                                 <Link
-                                  href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                                  href={studioPath(tenant.slug, `/checkout?invoiceId=${inv.id}`)}
                                   className={buttonVariants({ size: "sm" })}
                                 >
                                   {payAction.label}
@@ -1513,7 +1514,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             <div className="space-y-0.5">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Link
-                                  href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                  href={studioPath(tenant.slug, `/account/invoices/${inv.id}`)}
                                   className="font-mono text-xs font-bold text-white hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-1"
                                 >
                                   <span>{inv.invoiceNumber}</span>
@@ -1562,7 +1563,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               {isPaid && (
                                 <Link
-                                  href={`/${tenant.slug}/account/invoices/${inv.id}`}
+                                  href={studioPath(tenant.slug, `/account/invoices/${inv.id}`)}
                                   className="px-2.5 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
                                 >
                                   Receipt
@@ -1571,7 +1572,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               {payAction && (
                                 <Link
-                                  href={`/${tenant.slug}/checkout?invoiceId=${inv.id}`}
+                                  href={studioPath(tenant.slug, `/checkout?invoiceId=${inv.id}`)}
                                   className={buttonVariants({ size: "sm" })}
                                 >
                                   {payAction.label}
@@ -1642,7 +1643,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                       {PROPOSAL_STATUS_TEXT[p.status] ?? humanize(p.status)}
                     </span>
                     <Link
-                      href={`/${tenant.slug}/proposals/${p.id}`}
+                      href={studioPath(tenant.slug, `/proposals/${p.id}`)}
                       target="_blank"
                       className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs font-mono transition-colors"
                     >

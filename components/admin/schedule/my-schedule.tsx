@@ -3,6 +3,7 @@ import { Phone, MessageCircle, Images, CalendarClock } from "lucide-react";
 import { formatSlotDate } from "@/lib/slot-time";
 import { cn } from "@/lib/utils";
 import type { ScheduleDay } from "@/lib/bookings/schedule";
+import { studioPath } from "@/lib/domain-name";
 
 interface MyScheduleProps {
   tenantSlug: string;
@@ -41,7 +42,7 @@ const chip =
 
 export function MySchedule({ tenantSlug, days, past, today, openableProjects }: MyScheduleProps) {
   const openable = new Set(openableProjects);
-  const base = `/${tenantSlug}/admin/schedule`;
+  const base = studioPath(tenantSlug, "/admin/schedule");
   const tab = (active: boolean) =>
     cn(
       "px-3 py-1.5 rounded-lg text-xs font-mono border",
@@ -100,7 +101,7 @@ export function MySchedule({ tenantSlug, days, past, today, openableProjects }: 
                       </>
                     )}
                     {s.projectId && openable.has(s.projectId) && (
-                      <Link href={`/${tenantSlug}/admin/projects/${s.projectId}`} className={chip}>
+                      <Link href={studioPath(tenantSlug, `/admin/projects/${s.projectId}`)} className={chip}>
                         <Images className="size-3.5" aria-hidden="true" /> Open gallery
                       </Link>
                     )}

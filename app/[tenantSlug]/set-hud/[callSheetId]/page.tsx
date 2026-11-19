@@ -6,6 +6,7 @@ import { calculateGoldenHour, extractCoordinates } from "@/lib/solar";
 import { generateWhatsAppCallSheetUrl } from "@/lib/whatsapp";
 import { CallSheetShell, type CallSheetDetails } from "@/components/logistics/call-sheet-shell";
 import { StudioPageHeader } from "@/components/layout/studio-page-header";
+import { studioPath } from "@/lib/domain-name";
 
 interface SetHudPageProps {
   params: Promise<{
@@ -65,7 +66,7 @@ export default async function SetHudPage({ params }: SetHudPageProps) {
     tenantId: tenant.id,
     clientId: callSheet.project.clientId,
     record: { area: "production" },
-    returnTo: `/${tenant.slug}/set-hud/${callSheet.id}`,
+    returnTo: studioPath(tenant.slug, `/set-hud/${callSheet.id}`),
   });
 
   // 3. Compute Solar Golden Hour Times using astronomical algorithms

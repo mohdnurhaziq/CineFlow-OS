@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check, Calendar, Clock, Sparkles, Frame } from "lucide-react";
 import { disciplineLabel, humanize } from "@/lib/labels";
+import { studioPath } from "@/lib/domain-name";
 
 export interface ServicePackageItem {
   id: string;
@@ -136,7 +137,7 @@ export function PackageGrid({
               {/* Book CTA */}
               <div className="pt-6">
                 <Link
-                  href={`/${tenantSlug}/book?category=${pkg.category}&packageId=${pkg.id}`}
+                  href={studioPath(tenantSlug, `/book?category=${pkg.category}&packageId=${pkg.id}`)}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold text-black transition-all active:scale-[0.98] shadow-md"
                   style={{
                     backgroundColor: brandColor || "#f59e0b",

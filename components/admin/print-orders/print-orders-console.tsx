@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page";
 import { formatCurrency } from "@/lib/utils";
 import { formatStudioDate } from "@/lib/slot-time";
 import { PRINT_ORDER_STATUS_STYLES, printOrderStatusLabel } from "@/lib/prints/status";
+import { studioPath } from "@/lib/domain-name";
 
 export interface PrintOrderRow {
   id: string;
@@ -119,7 +120,7 @@ export function PrintOrdersConsole({ tenantSlug, currency, orders }: { tenantSlu
               return (
                 <li key={o.id}>
                   <Link
-                    href={`/${tenantSlug}/admin/print-orders/${o.id}`}
+                    href={studioPath(tenantSlug, `/admin/print-orders/${o.id}`)}
                     className={`grid grid-cols-[1fr_auto] ${COLS} gap-x-4 gap-y-1.5 px-5 py-3.5 items-center hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none transition-colors`}
                   >
                     <span className="min-w-0">

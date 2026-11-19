@@ -16,6 +16,7 @@ import {
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
 import { ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
+import { studioPath } from "@/lib/domain-name";
 
 interface PaymentsManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -42,7 +43,7 @@ const SECTIONS = [
 /** Manual → Payments, invoices and verification. Times come from the constants the code uses. */
 export default async function PaymentsManualPage({ params }: PaymentsManualPageProps) {
   const { tenantSlug } = await params;
-  const admin = `/${tenantSlug}/admin`;
+  const admin = studioPath(tenantSlug, "/admin");
   const deposit = `${DEPOSIT_HOLD_HOURS} hours`;
   const online = `${ONLINE_HOLD_MINUTES} minutes`;
   const balanceDays = `${BALANCE_DUE_AFTER_SESSION_DAYS} days`;

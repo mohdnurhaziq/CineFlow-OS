@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import type { UpdateStudioSettingsInput } from "@/lib/validations/admin-settings";
 import { errorMessageOf } from "@/lib/action-error";
+import { studioUrl } from "@/lib/domain-name";
 
 /** What the settings screen knows about the studio. Never the encrypted gateway secret. */
 export interface StudioTenantData {
@@ -79,7 +80,8 @@ export function useSettingsSave(tenant: StudioTenantData) {
       }
       if (res.slugChanged && res.newSlug) {
         toast.success("Saved. Taking you to your new studio address…");
-        router.push(`/${res.newSlug}/admin/settings`);
+        // A full page load: with studio subdomains on, a new address is a new host.
+        window.location.href = studioUrl(res.newSlug, "/admin/settings");
       } else {
         toast.success("Saved.");
         router.refresh();

@@ -16,6 +16,7 @@ import type { TeamRoleRow } from "./team-role-dialog";
 import type { TeamMemberRow } from "./team-member-dialog";
 import { PlanTab } from "./plan-tab";
 import { SETTINGS_TABS, type SettingsTabId } from "./tabs";
+import { studioPath } from "@/lib/domain-name";
 
 
 /**
@@ -56,7 +57,7 @@ export function SettingsShell({
       return;
     }
     dirtyForms.current.clear();
-    router.push(next === "studio" ? `/${tenant.slug}/admin/settings` : `/${tenant.slug}/admin/settings?tab=${next}`);
+    router.push(next === "studio" ? studioPath(tenant.slug, "/admin/settings") : studioPath(tenant.slug, `/admin/settings?tab=${next}`));
   };
 
   const current = SETTINGS_TABS.find((t) => t.id === tab)!;
@@ -76,7 +77,7 @@ export function SettingsShell({
           {SETTINGS_TABS.map((t) => (
             <a
               key={t.id}
-              href={t.id === "studio" ? `/${tenant.slug}/admin/settings` : `/${tenant.slug}/admin/settings?tab=${t.id}`}
+              href={t.id === "studio" ? studioPath(tenant.slug, "/admin/settings") : studioPath(tenant.slug, `/admin/settings?tab=${t.id}`)}
               onClick={(e) => {
                 if (e.metaKey || e.ctrlKey || e.shiftKey) return;
                 e.preventDefault();

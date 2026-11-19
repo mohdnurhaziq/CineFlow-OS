@@ -76,6 +76,19 @@ export function studioUrl(slug: string, path = "/"): string {
   return `${app.origin}${studioPath(slug, path)}`;
 }
 
+/**
+ * Whether `p` is a path to one of this studio's own pages, safe to continue to after a sign-in or
+ * sign-up: never another site (//host, a backslash, a full address) and, with subdomains off,
+ * never another studio (/lumina-cinema is not /lumina-cine).
+ */
+export function isStudioPath(slug: string, p: string): boolean {
+  if (!p.startsWith("/") || p.startsWith("//") || p.includes("\\")) return false;
+  if (studioSubdomainsOn()) return true;
+  const lower = p.toLowerCase();
+  const root = `/${slug.toLowerCase()}`;
+  return lower === root || (lower.startsWith(root) && /^[/?#]/.test(lower.charAt(root.length)));
+}
+
 /** A platform page (home, sign-up, super-admin) as linked from anywhere: absolute when studios are on subdomains. */
 export function platformUrl(path = "/"): string {
   return studioSubdomainsOn() ? `${appUrl().origin}${withSlash(path)}` : withSlash(path);

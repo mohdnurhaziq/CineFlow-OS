@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { SaveBar, SettingsForm, SettingsSection, useSettingsSave, useUnsavedGuard, type StudioTenantData } from "./settings-ui";
+import { studioPath } from "@/lib/domain-name";
 
 const OPTIONS = [
   {
@@ -56,7 +57,7 @@ export function DeliveryTab({ tenant }: { tenant: StudioTenantData }) {
     </SettingsForm>
     <p className="text-sm text-zinc-400">
       Shipping fees for wall art are set in{" "}
-      <Link href={`/${tenant.slug}/admin/frames?tab=shipping`} className="text-amber-400 hover:text-amber-300 underline underline-offset-2">
+      <Link href={studioPath(tenant.slug, "/admin/frames?tab=shipping")} className="text-amber-400 hover:text-amber-300 underline underline-offset-2">
         Frames &amp; Prints → Shipping zones
       </Link>
       .

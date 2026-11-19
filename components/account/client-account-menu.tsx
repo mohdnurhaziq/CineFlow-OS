@@ -6,6 +6,7 @@ import Link from "next/link";
 import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
 import { signedOutHref } from "@/lib/auth/signed-out";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientAccountMenuProps {
   tenantSlug: string;
@@ -32,7 +33,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
     return (
       <div className="inline-flex items-center rounded-lg border border-amber-500/30 bg-amber-500/10">
         <Link
-          href={`/${tenantSlug}/admin`}
+          href={studioPath(tenantSlug, "/admin")}
           title={`Signed in as ${staff.name}`}
           aria-label={`Studio admin (signed in as ${staff.name})`}
           className="inline-flex items-center gap-1.5 pl-2.5 pr-2.5 sm:pr-3 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 rounded-l-lg text-xs font-semibold text-amber-300 hover:text-amber-200 hover:bg-amber-500/15 transition-colors"
@@ -48,7 +49,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
           onClick={() =>
             startTransition(async () => {
               await logoutAction();
-              window.location.href = signedOutHref(`/${tenantSlug}`);
+              window.location.href = signedOutHref(studioPath(tenantSlug));
             })
           }
           title="Sign out"
@@ -64,10 +65,10 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
   if (!client) {
     const normalizedReturn = returnTo?.replace(/\/+$/, "").toLowerCase();
     const hasSpecificReturn =
-      Boolean(normalizedReturn) && normalizedReturn !== `/${tenantSlug}`.toLowerCase();
+      Boolean(normalizedReturn) && normalizedReturn !== studioPath(tenantSlug).toLowerCase();
     const loginHref = hasSpecificReturn
-      ? `/${tenantSlug}/login?callbackUrl=${encodeURIComponent(returnTo!)}`
-      : `/${tenantSlug}/login`;
+      ? studioPath(tenantSlug, `/login?callbackUrl=${encodeURIComponent(returnTo!)}`)
+      : studioPath(tenantSlug, "/login");
     return (
       <Link
         href={loginHref}
@@ -83,7 +84,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
   return (
     <div className="inline-flex items-center rounded-lg border border-zinc-800 bg-[#121215]">
       <Link
-        href={`/${tenantSlug}/account`}
+        href={studioPath(tenantSlug, "/account")}
         title={`Signed in as ${client.email}`}
         aria-label={`My account (signed in as ${client.name})`}
         className="inline-flex items-center gap-2 pl-1.5 pr-1.5 sm:pr-3 py-1 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 rounded-l-lg text-xs font-semibold text-zinc-200 hover:text-white hover:bg-zinc-800/60 transition-colors"
@@ -103,7 +104,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
         onClick={() =>
           startTransition(async () => {
             await logoutAction();
-            window.location.href = signedOutHref(`/${tenantSlug}`);
+            window.location.href = signedOutHref(studioPath(tenantSlug));
           })
         }
         title="Sign out"

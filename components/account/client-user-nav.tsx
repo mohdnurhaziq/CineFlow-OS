@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
 import { signedOutHref } from "@/lib/auth/signed-out";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientUserNavProps {
   tenantSlug: string;
@@ -41,7 +42,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
   const handleLogout = () => {
     startTransition(async () => {
       await logoutAction();
-      router.push(signedOutHref(`/${tenantSlug}/login`));
+      router.push(signedOutHref(studioPath(tenantSlug, "/login")));
       router.refresh();
     });
   };
@@ -94,7 +95,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
           <div className="space-y-0.5">
             <DropdownMenu.Item asChild>
               <Link
-                href={`/${tenantSlug}/account`}
+                href={studioPath(tenantSlug, "/account")}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
               >
@@ -105,7 +106,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
 
             <DropdownMenu.Item asChild>
               <Link
-                href={`/${tenantSlug}/account?tab=projects`}
+                href={studioPath(tenantSlug, "/account?tab=projects")}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
               >
@@ -116,7 +117,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
 
             <DropdownMenu.Item asChild>
               <Link
-                href={`/${tenantSlug}/account?tab=bookings`}
+                href={studioPath(tenantSlug, "/account?tab=bookings")}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
               >
@@ -127,7 +128,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
 
             <DropdownMenu.Item asChild>
               <Link
-                href={`/${tenantSlug}/account?tab=invoices`}
+                href={studioPath(tenantSlug, "/account?tab=invoices")}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
               >
@@ -142,7 +143,7 @@ export function ClientUserNav({ tenantSlug, client }: ClientUserNavProps) {
           {/* The studio's public website (portfolio, packages, wall art) */}
           <DropdownMenu.Item asChild>
             <Link
-              href={`/${tenantSlug}`}
+              href={studioPath(tenantSlug)}
               onClick={() => setOpen(false)}
               className="flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
             >

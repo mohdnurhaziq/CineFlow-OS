@@ -6,6 +6,7 @@ import { inviteMatches } from "@/lib/auth/invite";
 import { ClientRegisterCard } from "@/components/auth/client-register-card";
 import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
 import { InviteForAnotherAccount } from "@/components/auth/invite-for-another-account";
+import { isStudioPath, studioPath } from "@/lib/domain-name";
 
 interface RegisterPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -47,7 +48,7 @@ export default async function ClientRegisterPage({ params, searchParams }: Regis
 
   // Only continue to a page inside this studio (never an outside site).
   const next =
-    typeof rawNext === "string" && rawNext.startsWith(`/${tenant.slug}/`) && !rawNext.startsWith("//") && !rawNext.includes("/admin")
+    typeof rawNext === "string" && isStudioPath(tenant.slug, rawNext) && !rawNext.includes("/admin")
       ? rawNext
       : undefined;
 
@@ -59,10 +60,10 @@ export default async function ClientRegisterPage({ params, searchParams }: Regis
           inviteEmail={inviteEmail}
           signedInEmail={client.email}
           signedInName={client.name}
-          accountHref={`/${tenant.slug}/account`}
+          accountHref={studioPath(tenant.slug, "/account")}
         />
       ) : client ? (
-        <SignedInRedirect name={client.name} href={next ?? `/${tenant.slug}/account`} />
+        <SignedInRedirect name={client.name} href={next ?? studioPath(tenant.slug, "/account")} />
       ) : (
         <ClientRegisterCard
           tenantSlug={tenant.slug}

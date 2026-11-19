@@ -22,6 +22,7 @@ import {
 import type { StudioAnalyticsData } from "@/lib/analytics/studio-analytics";
 import { conditionLabel, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { formatCurrency as formatMoneyAmount } from "@/lib/utils";
+import { studioPath } from "@/lib/domain-name";
 
 interface StudioDashboardProps {
   data: StudioAnalyticsData;
@@ -88,7 +89,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
           <>
           {sections.money && kpis.pendingVerificationCount > 0 && (
             <Link
-              href={`/${tenant.slug}/admin/verification`}
+              href={studioPath(tenant.slug, "/admin/verification")}
               className={buttonVariants()}
             >
               <ShieldAlert className="size-4" />
@@ -97,7 +98,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
           )}
           {sections.calendar && (
             <Link
-              href={`/${tenant.slug}/admin/calendar`}
+              href={studioPath(tenant.slug, "/admin/calendar")}
               className={buttonVariants({ variant: "secondary" })}
             >
               <Calendar className="size-3.5 text-amber-400" />
@@ -106,7 +107,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
           )}
           {sections.gear && (
             <Link
-              href={`/${tenant.slug}/admin/inventory`}
+              href={studioPath(tenant.slug, "/admin/inventory")}
               className={buttonVariants({ variant: "secondary" })}
             >
               <Layers className="size-3.5 text-amber-400" />
@@ -121,7 +122,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
 
       {unassignedUpcoming > 0 && (
         <Link
-          href={`/${tenant.slug}/admin/bookings?filter=unassigned`}
+          href={studioPath(tenant.slug, "/admin/bookings?filter=unassigned")}
           className="flex items-center gap-2 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-200 hover:bg-amber-500/15 transition-colors"
         >
           <AlertTriangle className="size-4 text-amber-400 shrink-0" aria-hidden="true" />
@@ -142,7 +143,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
         {/* Metric 1: Collected Revenue */}
         {sections.money && (
         <Link
-          href={`/${tenant.slug}/admin/invoices`}
+          href={studioPath(tenant.slug, "/admin/invoices")}
           className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-emerald-500/40 transition-all shadow-sm block"
         >
           <div className="flex items-center justify-between text-zinc-400">
@@ -171,7 +172,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
         {/* Metric 2: Pending Invoices / Verification */}
         {sections.money && (
         <Link
-          href={`/${tenant.slug}/admin/verification`}
+          href={studioPath(tenant.slug, "/admin/verification")}
           className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-amber-500/40 transition-all shadow-sm block"
         >
           <div className="flex items-center justify-between text-zinc-400">
@@ -197,7 +198,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
         {/* Metric 3: Active Productions & Shoots */}
         {sections.work && (
         <div className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-blue-500/40 transition-all shadow-sm">
-          <Link href={`/${tenant.slug}/admin/projects`} className="block">
+          <Link href={studioPath(tenant.slug, "/admin/projects")} className="block">
             <div className="flex items-center justify-between text-zinc-400">
               <span className="text-xs font-mono uppercase tracking-wider group-hover:text-zinc-200 transition-colors">Active Productions</span>
               <div className="size-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500/20 group-hover:scale-105 transition-all">
@@ -212,13 +213,13 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
           </Link>
           <div className="flex items-center justify-between mt-2 text-xs text-zinc-400 pt-2 border-t border-zinc-800/60">
             <Link
-              href={`/${tenant.slug}/admin/bookings`}
+              href={studioPath(tenant.slug, "/admin/bookings")}
               className="text-zinc-400 hover:text-amber-400 hover:underline flex items-center gap-0.5"
             >
               {kpis.confirmedBookingsCount} confirmed {kpis.confirmedBookingsCount === 1 ? "booking" : "bookings"}
             </Link>
             <Link
-              href={`/${tenant.slug}/admin/projects`}
+              href={studioPath(tenant.slug, "/admin/projects")}
               className="text-zinc-500 hover:text-zinc-300 hover:underline"
             >
               {kpis.completedProjectsCount} delivered
@@ -230,7 +231,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
         {/* Metric 4: Fleet Readiness & Quarantine */}
         {sections.gear && (
         <Link
-          href={`/${tenant.slug}/admin/inventory`}
+          href={studioPath(tenant.slug, "/admin/inventory")}
           className="group p-5 rounded-xl bg-gradient-to-br from-[#121215] to-[#18181c] border border-zinc-800/80 hover:border-purple-500/40 transition-all shadow-sm block"
         >
           <div className="flex items-center justify-between text-zinc-400">
@@ -274,7 +275,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
               </h2>
             </div>
             <Link
-              href={`/${tenant.slug}/admin/invoices`}
+              href={studioPath(tenant.slug, "/admin/invoices")}
               className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 whitespace-nowrap"
             >
               All Invoices <ArrowUpRight className="size-3" />
@@ -304,7 +305,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                     <tr key={inv.id} className="hover:bg-zinc-800/30 transition-colors group">
                       <td className="px-3 py-3 first:pl-5 last:pr-5 whitespace-nowrap">
                         <Link
-                          href={`/${tenant.slug}/admin/invoices/${inv.id}`}
+                          href={studioPath(tenant.slug, `/admin/invoices/${inv.id}`)}
                           className="font-bold text-amber-400 hover:text-amber-300 hover:underline inline-flex items-center gap-1 group/link"
                         >
                           <span>{inv.invoiceNumber}</span>
@@ -316,7 +317,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                         <div className="font-sans font-medium text-white">{inv.clientName}</div>
                         {inv.projectId && inv.projectTitle ? (
                           <Link
-                            href={`/${tenant.slug}/admin/projects/${inv.projectId}`}
+                            href={studioPath(tenant.slug, `/admin/projects/${inv.projectId}`)}
                             className="text-[11px] text-zinc-400 hover:text-amber-400 font-sans truncate max-w-[160px] block hover:underline transition-colors"
                             title={inv.projectTitle}
                           >
@@ -338,7 +339,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                         <div className="flex items-center justify-end gap-1.5">
                           {inv.status === "PENDING_VERIFICATION" ? (
                             <Link
-                              href={`/${tenant.slug}/admin/verification`}
+                              href={studioPath(tenant.slug, "/admin/verification")}
                               className={buttonVariants({ size: "sm" })}
                             >
                               Verify
@@ -346,7 +347,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                             </Link>
                           ) : (
                             <Link
-                              href={`/${tenant.slug}/admin/invoices/${inv.id}`}
+                              href={studioPath(tenant.slug, `/admin/invoices/${inv.id}`)}
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 hover:text-white text-[11px] font-sans transition-colors whitespace-nowrap"
                             >
                               View
@@ -377,7 +378,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 </h3>
               </div>
               <Link
-                href={`/${tenant.slug}/admin/proposals`}
+                href={studioPath(tenant.slug, "/admin/proposals")}
                 className="text-[11px] font-mono text-zinc-400 hover:text-amber-400"
               >
                 Configure
@@ -385,7 +386,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
             </div>
 
             <Link
-              href={`/${tenant.slug}/admin/proposals`}
+              href={studioPath(tenant.slug, "/admin/proposals")}
               className="block bg-zinc-900/80 hover:bg-zinc-800/80 transition-colors p-3.5 rounded-lg border border-zinc-800/80 group space-y-1"
             >
               <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono uppercase">
@@ -399,7 +400,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
               <Link
-                href={`/${tenant.slug}/admin/proposals`}
+                href={studioPath(tenant.slug, "/admin/proposals")}
                 className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all block group"
               >
                 <div className="text-base font-bold text-emerald-400 tabular-nums">
@@ -408,7 +409,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">Signed</div>
               </Link>
               <Link
-                href={`/${tenant.slug}/admin/proposals`}
+                href={studioPath(tenant.slug, "/admin/proposals")}
                 className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all block group"
               >
                 <div className="text-base font-bold text-amber-400 tabular-nums">
@@ -417,7 +418,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">In Review</div>
               </Link>
               <Link
-                href={`/${tenant.slug}/admin/proposals`}
+                href={studioPath(tenant.slug, "/admin/proposals")}
                 className="p-2.5 rounded bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50 transition-all block group"
               >
                 <div className="text-base font-bold text-zinc-400 tabular-nums">
@@ -440,7 +441,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 </h3>
               </div>
               <Link
-                href={`/${tenant.slug}/admin/inventory`}
+                href={studioPath(tenant.slug, "/admin/inventory")}
                 className="text-[11px] font-mono text-zinc-400 hover:text-amber-400"
               >
                 Gear
@@ -458,7 +459,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 {gearAlerts.map((item) => (
                   <Link
                     key={item.id}
-                    href={`/${tenant.slug}/admin/inventory`}
+                    href={studioPath(tenant.slug, "/admin/inventory")}
                     className="p-2.5 rounded-lg bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/60 transition-all flex items-center justify-between text-xs font-mono group block"
                   >
                     <div>
@@ -498,7 +499,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
             </h2>
           </div>
           <Link
-            href={`/${tenant.slug}/admin/projects`}
+            href={studioPath(tenant.slug, "/admin/projects")}
             className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1"
           >
             Galleries <ChevronRight className="size-3" />
@@ -530,7 +531,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                   </p>
                   {cs.projectId ? (
                     <Link
-                      href={`/${tenant.slug}/admin/projects/${cs.projectId}`}
+                      href={studioPath(tenant.slug, `/admin/projects/${cs.projectId}`)}
                       className="text-sm font-bold text-white mt-1.5 line-clamp-1 hover:text-amber-400 transition-colors block"
                     >
                       {cs.projectTitle}
@@ -553,14 +554,14 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                   <div className="flex items-center gap-1.5">
                     {cs.projectId && (
                       <Link
-                        href={`/${tenant.slug}/admin/projects/${cs.projectId}`}
+                        href={studioPath(tenant.slug, `/admin/projects/${cs.projectId}`)}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] font-mono text-zinc-200 hover:text-white transition-colors"
                       >
                         Project <ChevronRight className="size-3 text-zinc-400" />
                       </Link>
                     )}
                     <Link
-                      href={`/${tenant.slug}/set-hud/${cs.id}`}
+                      href={studioPath(tenant.slug, `/set-hud/${cs.id}`)}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-[10px] font-mono text-amber-300 transition-colors"
                     >
                       Set HUD <ArrowUpRight className="size-3 text-amber-400" />

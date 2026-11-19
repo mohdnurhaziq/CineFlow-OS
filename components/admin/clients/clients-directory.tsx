@@ -13,6 +13,7 @@ import { CLIENT_ACCOUNT_STATUS_LABELS } from "@/lib/client-directory-labels";
 import type { ClientDirectoryRow } from "@/lib/client-directory";
 import type { ClientAccountStatus } from "@/lib/client-directory-labels";
 import { ClientAccountBadge } from "@/components/admin/clients/client-account-badge";
+import { studioPath } from "@/lib/domain-name";
 
 type Filter = "ALL" | ClientAccountStatus | "OWING";
 
@@ -186,7 +187,7 @@ export function ClientsDirectory({ tenantSlug, currency, clients, showMoney }: C
             {visible.map((c) => (
               <li key={c.id}>
                 <Link
-                  href={`/${tenantSlug}/admin/clients/${c.id}`}
+                  href={studioPath(tenantSlug, `/admin/clients/${c.id}`)}
                   className={cn(
                     "group grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 items-center px-4 py-3 hover:bg-zinc-800/40 focus-visible:bg-zinc-800/40 outline-none transition-colors",
                     showMoney ? GRID_WITH_MONEY : GRID_NO_MONEY

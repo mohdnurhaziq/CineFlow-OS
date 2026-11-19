@@ -15,6 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import type { PlatformMetrics } from "@/lib/actions/super-admin";
+import { studioUrl } from "@/lib/domain-name";
 
 interface TenantSummaryItem {
   id: string;
@@ -304,7 +305,7 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex items-center gap-2">
                           <Link
-                            href={`/${t.slug}`}
+                            href={studioUrl(t.slug, "/")}
                             className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
                             title="View studio website"
                             aria-label="View studio website"
@@ -312,7 +313,7 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
                             <ExternalLink className="size-3.5" />
                           </Link>
                           <Link
-                            href={`/${t.slug}/admin`}
+                            href={studioUrl(t.slug, "/admin")}
                             className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-amber-400 transition-colors"
                             title="Studio Admin"
                           >

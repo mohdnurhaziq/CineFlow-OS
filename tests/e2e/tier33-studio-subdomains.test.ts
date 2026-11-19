@@ -12,10 +12,17 @@ import { requestPasswordReset } from "@/lib/actions/password-reset";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { sendInvoiceReminder } from "@/lib/actions/admin-invoices";
 import path from "node:path";
+import { renderToStaticMarkup } from "react-dom/server";
 import { TestHarness } from "./test-harness";
+import { provideReactGlobal } from "./react-tree";
+import { visibleNavItems } from "@/components/admin/admin-nav-items";
+import { FULL_ACCESS } from "@/lib/auth/access";
+import { ShowcaseNav } from "@/components/showcase/showcase-nav";
+import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 import {
   APP_BASE_DOMAIN,
   isPlatformHost,
+  isStudioPath,
   platformUrl,
   studioPath,
   studioSubdomainOf,
@@ -359,5 +366,70 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
     const files = [...sourceFiles("lib"), ...sourceFiles("app").filter((f) => /(\/route\.ts|actions?[^/]*\.ts|\/sitemap\.ts)$/.test(f))];
     const found = handBuiltStudioLinks(files);
     harness.assert(found.length === 0, "Every studio link goes through studioPath / studioUrl", found.join("\n"));
+  });
+
+  // ── Task 5: pages and components ─────────────────────────────────────────────
+
+  await harness.test("T33-PAGE-01: pages and components build no studio link by hand", async () => {
+    const found = handBuiltStudioLinks([...sourceFiles("app"), ...sourceFiles("components")]);
+    harness.assert(found.length === 0, "Every studio link goes through studioPath / studioUrl", found.join("\n"));
+  });
+
+  await harness.test("T33-PAGE-02: studio pages link within the studio, and out to the platform by its full address", async () => {
+    await provideReactGlobal();
+    const tenant = { name: "Lumina CineWorks", slug: "lumina-cine", discipline: "HYBRID", currency: "MYR", brandColor: null };
+    const hrefsOf = (html: string) => [...html.matchAll(/href="([^"]*)"/g)].map((m) => m[1]!.replace(/&amp;/g, "&"));
+    const internal = (hrefs: string[]) => hrefs.filter((h) => h.startsWith("/"));
+    const menuHrefs = () =>
+      visibleNavItems("lumina-cine", FULL_ACCESS, true).flatMap((e) => (e.kind === "group" ? e.items.map((i) => i.href) : [e.href]));
+    const pageHrefs = () => [
+      ...hrefsOf(renderToStaticMarkup(ShowcaseNav({ tenant }) as Parameters<typeof renderToStaticMarkup>[0])),
+      ...hrefsOf(renderToStaticMarkup(ShowcaseFooter({ tenant }) as Parameters<typeof renderToStaticMarkup>[0])),
+    ];
+
+    await withSubdomains(true, () => {
+      const menu = menuHrefs();
+      harness.assert(menu.length > 5 && menu.every((h) => h.startsWith("/admin")), "On: the admin menu links to /admin/…", menu.join(" "));
+      const hrefs = pageHrefs();
+      harness.assert(internal(hrefs).length > 2, "On: the showcase has studio links", hrefs.join(" "));
+      harness.assert(!hrefs.some((h) => h.startsWith("/lumina-cine")), "On: none carries the studio name", hrefs.join(" "));
+      harness.assert(hrefs.includes(`${U}/`), "On: the platform home is linked by its full address", hrefs.join(" "));
+      harness.assert(hrefs.filter((h) => h === `${U}/`).length === 2, "On: both platform links (header and footer) are full addresses", hrefs.join(" "));
+    });
+    await withSubdomains(false, () => {
+      harness.assert(menuHrefs().every((h) => h.startsWith("/lumina-cine/admin")), "Off: the menu keeps /lumina-cine/admin");
+      const hrefs = internal(pageHrefs()).filter((h) => h !== "/");
+      harness.assert(hrefs.length > 2 && hrefs.every((h) => h.startsWith("/lumina-cine")), "Off: showcase links keep /lumina-cine", hrefs.join(" "));
+    });
+  });
+
+  await harness.test("T33-PAGE-03: studio pages never link to the platform with a bare path", async () => {
+    const studioFiles = [
+      ...sourceFiles("app/[tenantSlug]"),
+      ...["showcase", "account", "admin", "booking", "checkout", "vault", "auth"].flatMap((d) => sourceFiles(`components/${d}`)),
+    ];
+    const bare = /href=["'](\/|\/create-studio|\/super-admin[^"']*)["']/;
+    const found: string[] = [];
+    for (const file of studioFiles) {
+      read(file).split(/\r?\n/).forEach((line, i) => {
+        if (bare.test(line)) found.push(`${file}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    harness.assert(found.length === 0, "Platform links from studio pages use platformUrl", found.join("\n"));
+  });
+
+  await harness.test("T33-PAGE-04: a 'continue to' address is only ever a page of this studio", async () => {
+    await withSubdomains(true, () => {
+      for (const ok of ["/account", "/proposals/1?x=1", "/"]) harness.assert(isStudioPath("lumina-cine", ok), `On: ${ok} is allowed`);
+      for (const bad of ["//evil.com", "/\\evil.com", "https://evil.com", "evil.com", ""]) {
+        harness.assert(!isStudioPath("lumina-cine", bad), `On: ${JSON.stringify(bad)} is refused`);
+      }
+    });
+    await withSubdomains(false, () => {
+      for (const ok of ["/lumina-cine", "/lumina-cine/account", "/lumina-cine?x=1"]) harness.assert(isStudioPath("lumina-cine", ok), `Off: ${ok} is allowed`);
+      for (const bad of ["/lumina-cinema/account", "/apex-media/account", "//evil.com", "/lumina-cine\\..\\x", "/account"]) {
+        harness.assert(!isStudioPath("lumina-cine", bad), `Off: ${JSON.stringify(bad)} is refused`);
+      }
+    });
   });
 }

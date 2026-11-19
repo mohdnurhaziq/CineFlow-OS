@@ -6,6 +6,7 @@ import Link from "next/link";
 import { MyBookingLookup } from "@/components/booking/my-booking-lookup";
 import { getSessionClient } from "@/lib/clients";
 import { StudioPageHeader } from "@/components/layout/studio-page-header";
+import { studioPath } from "@/lib/domain-name";
 
 interface MyBookingPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -50,7 +51,7 @@ export default async function MyBookingPage({ params, searchParams }: MyBookingP
             <div className="text-xs text-zinc-400">All your bookings, invoices and photos are in your account.</div>
           </div>
           <Link
-            href={`/${tenant.slug}/account`}
+            href={studioPath(tenant.slug, "/account")}
             className={buttonVariants()}
           >
             Go to My Account

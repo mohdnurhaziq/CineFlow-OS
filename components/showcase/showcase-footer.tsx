@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MessageSquare, ShieldCheck, CreditCard, QrCode } from "lucide-react";
 import { disciplineLabel } from "@/lib/labels";
+import { platformUrl, studioPath } from "@/lib/domain-name";
 
 interface ShowcaseFooterProps {
   tenant: {
@@ -46,7 +47,7 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
             </a>
 
             <Link
-              href={`/${tenant.slug}/book`}
+              href={studioPath(tenant.slug, "/book")}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400"
             >
               Book a session
@@ -69,25 +70,25 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link
-              href={`/${tenant.slug}/account`}
+              href={studioPath(tenant.slug, "/account")}
               className="inline-flex items-center min-h-11 sm:min-h-0 text-zinc-300 hover:text-amber-400 transition-colors"
             >
               Client Login
             </Link>
             <Link
-              href={`/${tenant.slug}/my-booking`}
+              href={studioPath(tenant.slug, "/my-booking")}
               className="inline-flex items-center min-h-11 sm:min-h-0 text-zinc-300 hover:text-amber-400 transition-colors"
             >
               Find my booking
             </Link>
             <Link
-              href={`/${tenant.slug}/login`}
+              href={studioPath(tenant.slug, "/login")}
               className="inline-flex items-center min-h-11 sm:min-h-0 text-zinc-300 hover:text-amber-400 transition-colors"
             >
               Studio Login
             </Link>
             <span>
-              Powered by <Link href="/" className="text-white hover:text-amber-400">CineFlow OS</Link>
+              Powered by <Link href={platformUrl("/")} className="text-white hover:text-amber-400">CineFlow OS</Link>
             </span>
           </div>
         </div>

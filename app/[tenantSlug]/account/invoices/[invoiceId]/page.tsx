@@ -10,6 +10,7 @@ import { InvoiceDocumentView, invoiceStatus } from "@/components/invoices/invoic
 import { PrintButton } from "@/components/invoices/print-button";
 import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
 import { loadInvoiceConfirmation } from "@/lib/payments/confirmation";
+import { studioPath } from "@/lib/domain-name";
 
 interface ClientInvoicePageProps {
   params: Promise<{ tenantSlug: string; invoiceId: string }>;
@@ -30,12 +31,12 @@ export default async function ClientInvoicePage({ params, searchParams }: Client
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, currency: true } });
   if (!tenant) notFound();
 
-  const self = `/${tenant.slug}/account/invoices/${invoiceId}`;
+  const self = studioPath(tenant.slug, `/account/invoices/${invoiceId}`);
   const session = await getCurrentUser();
-  if (!session) redirect(`/${tenant.slug}/login?callbackUrl=${encodeURIComponent(self)}`);
+  if (!session) redirect(studioPath(tenant.slug, `/login?callbackUrl=${encodeURIComponent(self)}`));
   // Studio staff see invoices in the admin console.
-  if (session.role !== "CLIENT") redirect(`/${tenant.slug}/admin/invoices/${invoiceId}`);
-  if (session.tenantId !== tenant.id) redirect(`/${tenant.slug}/login?callbackUrl=${encodeURIComponent(self)}`);
+  if (session.role !== "CLIENT") redirect(studioPath(tenant.slug, `/admin/invoices/${invoiceId}`));
+  if (session.tenantId !== tenant.id) redirect(studioPath(tenant.slug, `/login?callbackUrl=${encodeURIComponent(self)}`));
 
   const doc = await loadInvoiceDocument(tenant.id, invoiceId);
   // Only the client the invoice is addressed to may see it; anything else looks like it doesn't exist.
@@ -66,7 +67,7 @@ export default async function ClientInvoicePage({ params, searchParams }: Client
           actions={
             <>
               <Link
-                href={`/${tenant.slug}/account?tab=invoices`}
+                href={studioPath(tenant.slug, "/account?tab=invoices")}
                 className="mr-auto inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
               >
                 <ArrowLeft className="size-3.5" />
@@ -74,7 +75,7 @@ export default async function ClientInvoicePage({ params, searchParams }: Client
               </Link>
               {(canPay || needsSlip) && (
                 <Link
-                  href={`/${tenant.slug}/checkout?invoiceId=${doc.id}`}
+                  href={studioPath(tenant.slug, `/checkout?invoiceId=${doc.id}`)}
                   className={buttonVariants()}
                 >
                   {needsSlip ? <Upload className="size-4" /> : <CreditCard className="size-4" />}

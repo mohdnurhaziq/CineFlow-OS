@@ -10,6 +10,7 @@ import { formatSlotDate } from "@/lib/slot-time";
 import { ClientAuthPanel } from "@/components/auth/client-auth-panel";
 import { logoutAction } from "@/lib/auth/session";
 import { PackagePicker, packagesFor, type BookingPackageOption } from "./package-picker";
+import { studioPath } from "@/lib/domain-name";
 
 interface BookingIntakeModalProps {
   isOpen: boolean;
@@ -190,8 +191,8 @@ export function BookingIntakeModal({
                   <a
                     href={
                       formData.paymentMethod === "QR_CODE" && confirmedInvoiceId
-                        ? `/${tenantSlug}/checkout?invoiceId=${confirmedInvoiceId}`
-                        : `/${tenantSlug}/account`
+                        ? studioPath(tenantSlug, `/checkout?invoiceId=${confirmedInvoiceId}`)
+                        : studioPath(tenantSlug, "/account")
                     }
                     className="block w-full py-3 rounded-lg bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400 text-center"
                   >

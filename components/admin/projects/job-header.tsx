@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { PROJECT_STAGES, PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
 import { formatSlotDate } from "@/lib/slot-time";
+import { studioPath } from "@/lib/domain-name";
 
 type Stage = (typeof PROJECT_STAGES)[number];
 
@@ -106,7 +107,7 @@ export function JobHeader({
           <dt className="text-xs text-zinc-400">{booking ? "Booking" : "Project"}</dt>
           <dd className="text-sm font-semibold mt-1">
             {booking ? (
-              <Link href={`/${tenantSlug}/admin/bookings/${booking.id}`} className="text-amber-400 hover:underline">
+              <Link href={studioPath(tenantSlug, `/admin/bookings/${booking.id}`)} className="text-amber-400 hover:underline">
                 {booking.trackingCode}
               </Link>
             ) : (

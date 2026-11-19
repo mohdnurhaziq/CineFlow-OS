@@ -6,6 +6,7 @@ import { LinkIcon } from "lucide-react";
 import { db } from "@/lib/db";
 import { findStudioAccount, resetTokenMatches } from "@/lib/auth/password-reset";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
+import { studioPath } from "@/lib/domain-name";
 
 interface ResetPasswordPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -57,12 +58,12 @@ export default async function ResetPasswordPage({ params, searchParams }: ResetP
           </p>
           <div className="flex flex-col gap-2 pt-2">
             <Link
-              href={`/${tenant.slug}/forgot-password${typeof email === "string" ? `?email=${encodeURIComponent(email)}` : ""}`}
+              href={studioPath(tenant.slug, `/forgot-password${typeof email === "string" ? `?email=${encodeURIComponent(email)}` : ""}`)}
               className={buttonVariants({ size: "lg" })}
             >
               Send a new link
             </Link>
-            <Link href={`/${tenant.slug}/login`} className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors">
+            <Link href={studioPath(tenant.slug, "/login")} className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors">
               ← Back to sign in
             </Link>
           </div>

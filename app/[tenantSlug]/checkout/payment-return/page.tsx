@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { settleToyyibpayBill } from "@/lib/payments/settle";
 import { getCurrentUser } from "@/lib/auth/session";
 import { StudioPageHeader } from "@/components/layout/studio-page-header";
+import { studioPath } from "@/lib/domain-name";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Payment status", robots: { index: false, follow: false } };
@@ -30,14 +31,14 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
 
   if (outcome.status === "PAID" && !outcome.refundRequired) {
     if (outcome.trackingCode && !signedInClient) {
-      redirect(`/${tenantSlug}/my-booking?code=${encodeURIComponent(outcome.trackingCode)}`);
+      redirect(studioPath(tenantSlug, `/my-booking?code=${encodeURIComponent(outcome.trackingCode)}`));
     }
     // Same landing as the other payment methods: the booking (with its confirmation) or the
     // paid invoice's receipt.
     redirect(
       outcome.trackingCode
-        ? `/${tenantSlug}/account?tab=bookings&confirmed=${encodeURIComponent(outcome.trackingCode)}`
-        : `/${tenantSlug}/account/invoices/${outcome.invoiceId}?paid=1`
+        ? studioPath(tenantSlug, `/account?tab=bookings&confirmed=${encodeURIComponent(outcome.trackingCode)}`)
+        : studioPath(tenantSlug, `/account/invoices/${outcome.invoiceId}?paid=1`)
     );
   }
 
@@ -62,14 +63,14 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
           {outcome.status === "NOT_PAID" && (
             <Link
               className={buttonVariants({ size: "lg" })}
-              href={`/${tenantSlug}/checkout/payment-return?billcode=${encodeURIComponent(billcode)}`}
+              href={studioPath(tenantSlug, `/checkout/payment-return?billcode=${encodeURIComponent(billcode)}`)}
             >
               Check again
             </Link>
           )}
           <Link
             className="inline-flex items-center justify-center min-h-11 px-4 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200 hover:text-white text-xs font-semibold transition-colors"
-            href={signedInClient ? `/${tenantSlug}/account` : `/${tenantSlug}/my-booking`}
+            href={signedInClient ? studioPath(tenantSlug, "/account") : studioPath(tenantSlug, "/my-booking")}
           >
             {signedInClient ? "My account" : "My booking"}
           </Link>

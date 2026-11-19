@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { getCurrentUser } from "@/lib/auth/session";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
+import { studioPath } from "@/lib/domain-name";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -30,11 +31,11 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
 
   // Admin console is for this studio's staff (or platform super-admins) only.
   if (!currentUser) {
-    redirect(`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(`/${tenantSlug}/admin`)}`);
+    redirect(studioPath(tenantSlug, `/login?callbackUrl=${encodeURIComponent(studioPath(tenantSlug, "/admin"))}`));
   }
-  if (currentUser.role === "CLIENT") redirect(`/${tenantSlug}/account`);
+  if (currentUser.role === "CLIENT") redirect(studioPath(tenantSlug, "/account"));
   if (currentUser.role !== "SUPER_ADMIN" && currentUser.tenantId !== tenant.id) {
-    redirect(`/${tenantSlug}/login?callbackUrl=${encodeURIComponent(`/${tenantSlug}/admin`)}`);
+    redirect(studioPath(tenantSlug, `/login?callbackUrl=${encodeURIComponent(studioPath(tenantSlug, "/admin"))}`));
   }
 
   // Release slots whose QR/cash deposit went unpaid for 24 hours, before the menu counts them.

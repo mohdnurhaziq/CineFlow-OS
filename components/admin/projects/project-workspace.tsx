@@ -25,6 +25,7 @@ import { formatSlotDate } from "@/lib/slot-time";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ShotListHud, type ShotItemData } from "@/components/logistics/shot-list-hud";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
+import { studioPath } from "@/lib/domain-name";
 
 interface ProjectWorkspaceProps {
   tenantId: string;
@@ -201,7 +202,7 @@ export function ProjectWorkspace({
         <AdminBreadcrumb
           items={[
             { label: "Production" },
-            { label: "Galleries", href: `/${tenantSlug}/admin/projects` },
+            { label: "Galleries", href: studioPath(tenantSlug, "/admin/projects") },
             { label: project.title },
           ]}
         />
@@ -250,7 +251,7 @@ export function ProjectWorkspace({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/${tenantSlug}/set-hud/${c.id}`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+                    <Link href={studioPath(tenantSlug, `/set-hud/${c.id}`)} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
                       Call sheet <ExternalLink className="size-3" />
                     </Link>
                     {canManageProduction && (
@@ -345,7 +346,7 @@ export function ProjectWorkspace({
             icon={Layers}
             title="Gear"
             aside={
-              <Link href={`/${tenantSlug}/admin/inventory`} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+              <Link href={studioPath(tenantSlug, "/admin/inventory")} className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
                 Fleet &amp; Inspections <ExternalLink className="size-3" />
               </Link>
             }
@@ -364,7 +365,7 @@ export function ProjectWorkspace({
                   </div>
                   <div className="flex items-center gap-3">
                     <Link
-                      href={`/${tenantSlug}/admin/inventory`}
+                      href={studioPath(tenantSlug, "/admin/inventory")}
                       className="text-xs text-amber-400 hover:underline font-mono text-[11px]"
                     >
                       {r.status === "RESERVED" ? "Check-out →" : r.status === "CHECKED_OUT" ? "Check-in return →" : "View audit →"}
@@ -440,11 +441,11 @@ export function ProjectWorkspace({
         aside={
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             {canOrderPrints && (
-              <Link href={`/${tenantSlug}/admin/projects/${project.id}/prints`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
+              <Link href={studioPath(tenantSlug, `/admin/projects/${project.id}/prints`)} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
                 <Frame className="size-3.5" /> Order framed prints for client
               </Link>
             )}
-            <Link href={`/${tenantSlug}/vault/${project.id}`} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
+            <Link href={studioPath(tenantSlug, `/vault/${project.id}`)} className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline">
               See what the client sees <ExternalLink className="size-3.5" />
             </Link>
           </div>
@@ -522,7 +523,7 @@ export function ProjectWorkspace({
           <ul className="divide-y divide-zinc-800">
             {money.invoices.map((inv) => (
               <li key={inv.id} className="py-2 flex items-center justify-between gap-3 text-sm">
-                <Link href={`/${tenantSlug}/admin/invoices/${inv.id}`} className="font-mono text-amber-400 hover:underline">
+                <Link href={studioPath(tenantSlug, `/admin/invoices/${inv.id}`)} className="font-mono text-amber-400 hover:underline">
                   {inv.invoiceNumber}
                 </Link>
                 <span className="text-xs text-zinc-400">{milestoneLabel(inv.milestoneType)}</span>

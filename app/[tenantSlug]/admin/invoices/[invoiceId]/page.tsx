@@ -12,6 +12,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
+import { studioPath } from "@/lib/domain-name";
 
 interface AdminInvoicePageProps {
   params: Promise<{ tenantSlug: string; invoiceId: string }>;
@@ -54,13 +55,13 @@ export default async function AdminInvoicePage({ params }: AdminInvoicePageProps
               className="mr-auto"
               items={[
                 { label: "Finance" },
-                { label: "Invoices", href: `/${tenant.slug}/admin/invoices` },
+                { label: "Invoices", href: studioPath(tenant.slug, "/admin/invoices") },
                 { label: doc.invoiceNumber },
               ]}
             />
             {doc.status === "PENDING_VERIFICATION" && (
               <Link
-                href={`/${tenant.slug}/admin/verification`}
+                href={studioPath(tenant.slug, "/admin/verification")}
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-blue-500 text-white text-xs font-bold hover:bg-blue-400 transition-colors"
               >
                 <ShieldCheck className="size-4" />

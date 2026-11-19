@@ -13,6 +13,7 @@ import {
   ManualTable,
   Ui,
 } from "@/components/admin/manual/manual-ui";
+import { studioPath } from "@/lib/domain-name";
 
 interface ServicesManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -38,7 +39,7 @@ const SECTIONS = [
 /** Manual → Services and your website. */
 export default async function ServicesManualPage({ params }: ServicesManualPageProps) {
   const { tenantSlug } = await params;
-  const admin = `/${tenantSlug}/admin`;
+  const admin = studioPath(tenantSlug, "/admin");
 
   return (
     <ManualPage

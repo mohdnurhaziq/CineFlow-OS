@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/money";
 import { paymentMethodLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import type { PaymentConfirmation } from "@/lib/payments/confirmation";
+import { studioPath } from "@/lib/domain-name";
 
 interface PaymentConfirmationBannerProps {
   tenantSlug: string;
@@ -124,7 +125,7 @@ export function PaymentConfirmationBanner({ tenantSlug, currency, confirmation: 
 
       {c.vaultProjectId && (
         <Link
-          href={`/${tenantSlug}/vault/${c.vaultProjectId}`}
+          href={studioPath(tenantSlug, `/vault/${c.vaultProjectId}`)}
           className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 min-h-11 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold uppercase tracking-wider transition-colors"
         >
           <Download className="size-4" aria-hidden="true" />

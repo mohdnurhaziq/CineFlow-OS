@@ -16,6 +16,7 @@ import {
 import { SLOT_HOLD_MINUTES, SLOT_HOLD_NUDGE_SECONDS } from "@/lib/bookings/hold";
 import { ONLINE_HOLD_MINUTES } from "@/lib/payments/settle";
 import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
+import { studioPath } from "@/lib/domain-name";
 
 interface SlotHoldManualPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -45,7 +46,7 @@ const SECTIONS = [
  */
 export default async function SlotHoldManualPage({ params }: SlotHoldManualPageProps) {
   const { tenantSlug } = await params;
-  const admin = `/${tenantSlug}/admin`;
+  const admin = studioPath(tenantSlug, "/admin");
   const hold = `${SLOT_HOLD_MINUTES} minutes`;
   const nudge = `${SLOT_HOLD_NUDGE_SECONDS / 60} minutes`;
   const online = `${ONLINE_HOLD_MINUTES} minutes`;

@@ -7,6 +7,7 @@ import { Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { createInvoice } from "@/lib/actions/admin-invoices";
 import { useDialog } from "@/lib/use-dialog";
+import { studioPath } from "@/lib/domain-name";
 
 interface NewInvoiceButtonProps {
   tenantId: string;
@@ -56,7 +57,7 @@ export function NewInvoiceButton({ tenantId, tenantSlug, currency, clients }: Ne
       toast.success(`Invoice ${res.invoiceNumber} created.`);
       setOpen(false);
       reset();
-      router.push(`/${tenantSlug}/admin/invoices/${res.invoiceId}`);
+      router.push(studioPath(tenantSlug, `/admin/invoices/${res.invoiceId}`));
     });
   };
 

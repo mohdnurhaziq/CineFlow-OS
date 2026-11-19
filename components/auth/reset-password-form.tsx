@@ -7,6 +7,7 @@ import Link from "next/link";
 import { KeyRound, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { resetPassword } from "@/lib/actions/password-reset";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
+import { studioPath } from "@/lib/domain-name";
 
 interface ResetPasswordFormProps {
   tenantSlug: string;
@@ -37,7 +38,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
     try {
       const res = await resetPassword({ tenantSlug, email, token, password });
       if (res.success) {
-        window.location.assign(`/${tenantSlug}/login?reset=1&email=${encodeURIComponent(email)}`);
+        window.location.assign(studioPath(tenantSlug, `/login?reset=1&email=${encodeURIComponent(email)}`));
         return;
       }
       setExpired(res.error === "INVALID_LINK");
@@ -75,7 +76,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
             <span>
               {error}{" "}
               {expired && (
-                <Link href={`/${tenantSlug}/forgot-password?email=${encodeURIComponent(email)}`} className="underline underline-offset-2 text-rose-200">
+                <Link href={studioPath(tenantSlug, `/forgot-password?email=${encodeURIComponent(email)}`)} className="underline underline-offset-2 text-rose-200">
                   Send a new link
                 </Link>
               )}

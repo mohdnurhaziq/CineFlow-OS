@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ArrowRight, Check, Copy, PartyPopper, PlayCircle, X } from "lucide-react";
 import type { SetupChecklist as SetupChecklistData, SetupStepId } from "@/lib/onboarding/checklist";
 import { dismissSetupChecklist } from "@/lib/actions/onboarding-guide";
+import { studioPath } from "@/lib/domain-name";
 
 interface SetupChecklistProps {
   tenantSlug: string;
@@ -125,7 +126,7 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
               </p>
             </div>
             <Link
-              href={`/${tenantSlug}/admin?tour=1`}
+              href={studioPath(tenantSlug, "/admin?tour=1")}
               className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "self-start sm:self-auto")}
             >
               <PlayCircle className="size-3.5 text-amber-400" aria-hidden="true" />
@@ -198,7 +199,7 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
               return (
                 <li key={step.id}>
                   <Link
-                    href={`/${tenantSlug}/admin/${copy.path}`}
+                    href={studioPath(tenantSlug, `/admin/${copy.path}`)}
                     className={`${rowClass} group hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500`}
                   >
                     {body}

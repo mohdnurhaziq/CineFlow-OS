@@ -2,9 +2,8 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { APP_DOMAIN } from "@/lib/domain-name";
+import { APP_DOMAIN, studioSubdomainsOn, studioUrl } from "@/lib/domain-name";
 import {
   Sparkles,
   ArrowRight,
@@ -35,7 +34,8 @@ const COLOR_PRESETS = [
 ];
 
 export default function CreateStudioPage() {
-  const router = useRouter();
+  // With studio subdomains on, a studio's address is <slug>.<domain>.
+  const subdomains = studioSubdomainsOn();
   const [isPending, startTransition] = useTransition();
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -142,7 +142,8 @@ export default function CreateStudioPage() {
       const res = await onboardStudio(formData);
       if (res.success && res.slug) {
         toast.success("Studio workspace launched successfully!");
-        router.push(res.redirectUrl || `/${res.slug}/admin`);
+        // A full page load: with studio subdomains on, the new studio's admin is on another host.
+        window.location.href = res.redirectUrl || studioUrl(res.slug, "/admin");
       } else {
         toast.error(res.error || "Failed to create studio workspace");
       }
@@ -260,9 +261,11 @@ export default function CreateStudioPage() {
                       )}
                     </div>
                     <div className="flex items-center rounded-lg border border-zinc-700 bg-[#18181b] overflow-hidden focus-within:border-amber-500">
-                      <span className="px-3 text-xs font-mono text-zinc-400 border-r border-zinc-800">
-                        {APP_DOMAIN}/
-                      </span>
+                      {!subdomains && (
+                        <span className="px-3 text-xs font-mono text-zinc-400 border-r border-zinc-800">
+                          {APP_DOMAIN}/
+                        </span>
+                      )}
                       <input
                         type="text"
                         placeholder="velox-cinema"
@@ -271,9 +274,14 @@ export default function CreateStudioPage() {
                           setFormData((prev) => ({ ...prev, slug: e.target.value.toLowerCase().trim() }))
                         }
                         onBlur={handleSlugBlur}
-                        className="w-full px-3 py-2 bg-transparent text-white text-sm font-mono focus:outline-none"
+                        className="w-full min-w-0 px-3 py-2 bg-transparent text-white text-sm font-mono focus:outline-none"
                         required
                       />
+                      {subdomains && (
+                        <span className="px-3 text-xs font-mono text-zinc-400 border-l border-zinc-800 whitespace-nowrap">
+                          .{APP_DOMAIN}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -734,7 +742,9 @@ export default function CreateStudioPage() {
                 <div className="p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs font-mono text-zinc-400">
                   <span>URL:</span>
                   <span className="text-white">
-                    {APP_DOMAIN}/{formData.slug || "your-slug"}
+                    {subdomains
+                      ? `${formData.slug || "your-slug"}.${APP_DOMAIN}`
+                      : `${APP_DOMAIN}/${formData.slug || "your-slug"}`}
                   </span>
                 </div>
 
