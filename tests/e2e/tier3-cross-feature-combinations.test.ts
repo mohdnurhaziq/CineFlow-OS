@@ -112,7 +112,7 @@ export async function runTier3CrossFeatureTests(harness: TestHarness) {
       clientEmail: "qr@buyer.com",
       clientPhone: "+15553334444",
       paymentMethod: "QR_CODE",
-      paymentProofUrl: "/uploads/proof.jpg",
+      paymentProofUrl: "/uploads/receipts/proof.jpg",
       paymentReference: "QR-SLIP-9900",
     });
 
