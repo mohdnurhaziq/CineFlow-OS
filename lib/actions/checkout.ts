@@ -37,13 +37,15 @@ function safeRevalidate(path: string) {
 }
 
 export async function processBookingCheckout(input: ProcessBookingCheckoutInput) {
-  // One visitor can't book every slot (or send booking emails to any address) in a loop.
-  const ip = await requestIp();
-  if (ip && isRateLimited(`booking:${ip}`, 10, 60 * 60 * 1000)) {
-    return { success: false, error: "RATE_LIMITED", message: "Too many bookings from here. Please try again later." };
-  }
   try {
     const validated = ProcessBookingCheckoutSchema.parse(input);
+    // One visitor can't book every slot (or send booking emails to any address) in a loop. Counted
+    // once per real attempt (after the input is valid), here only: the booking pop-up comes through
+    // here too. 20 an hour leaves room for a family on one mobile network.
+    const ip = await requestIp();
+    if (ip && isRateLimited(`booking:${ip}`, 20, 60 * 60 * 1000)) {
+      return { success: false, error: "RATE_LIMITED", message: "Too many bookings from here. Please try again later." };
+    }
     const {
       tenantId,
       tenantSlug,

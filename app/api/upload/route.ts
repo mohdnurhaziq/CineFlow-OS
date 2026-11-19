@@ -62,6 +62,7 @@ const ANONYMOUS_MAX_REQUEST_BYTES = MAX_BYTES_BY_KIND.document + MB;
 const HOUR = 60 * 60 * 1000;
 const ANONYMOUS_MAX_UPLOADS_ALL = 300; // all visitors together, per hour
 const STAFF_MAX_UPLOADS = 300; // per team member, per hour
+const CLIENT_MAX_UPLOADS = 60; // per signed-in client, per hour
 
 class TooLarge extends Error {}
 
@@ -138,11 +139,19 @@ export async function POST(request: NextRequest) {
       if (!ANONYMOUS_TYPES.has(file.type)) {
         return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
       }
-      // Per visitor (Cloudflare's IP: X-Forwarded-For is the visitor's to fake), and for all
-      // visitors together, so no one can fill the disk.
-      const ip = clientIpFrom((name) => request.headers.get(name));
-      if ((ip && isRateLimited(`upload:${ip}`, ANONYMOUS_MAX_UPLOADS, HOUR)) || isRateLimited("upload:anonymous", ANONYMOUS_MAX_UPLOADS_ALL, HOUR)) {
-        return NextResponse.json({ error: "Too many uploads. Please wait and try again." }, { status: 429 });
+      if (session) {
+        // A signed-in client (payment slips): their own allowance, not the visitors' shared one,
+        // so a flood of anonymous uploads can't block their checkout.
+        if (isRateLimited(`upload:user:${session.id}`, CLIENT_MAX_UPLOADS, HOUR)) {
+          return NextResponse.json({ error: "Too many uploads. Please wait and try again." }, { status: 429 });
+        }
+      } else {
+        // Per visitor (Cloudflare's IP: X-Forwarded-For is the visitor's to fake), and for all
+        // visitors together, so no one can fill the disk.
+        const ip = clientIpFrom((name) => request.headers.get(name));
+        if ((ip && isRateLimited(`upload:${ip}`, ANONYMOUS_MAX_UPLOADS, HOUR)) || isRateLimited("upload:anonymous", ANONYMOUS_MAX_UPLOADS_ALL, HOUR)) {
+          return NextResponse.json({ error: "Too many uploads. Please wait and try again." }, { status: 429 });
+        }
       }
     } else if (isRateLimited(`upload:staff:${session.id}`, STAFF_MAX_UPLOADS, HOUR)) {
       return NextResponse.json({ error: "Too many uploads. Please wait and try again." }, { status: 429 });

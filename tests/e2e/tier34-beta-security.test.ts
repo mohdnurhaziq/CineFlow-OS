@@ -7,7 +7,7 @@ import { TestHarness } from "./test-harness";
 import { clientIpFrom } from "@/lib/client-ip";
 import { isRateLimited, rateLimiterSize } from "@/lib/rate-limit";
 import { loginWithCredentials } from "@/lib/auth/session";
-import { withIp, withRequest } from "./mocks/session";
+import { withIp, withRequest, withSession } from "./mocks/session";
 import { NextRequest } from "next/server";
 import { rm } from "node:fs/promises";
 import { readFileSync } from "node:fs";
@@ -29,8 +29,10 @@ import VisualizerPage from "@/app/[tenantSlug]/visualizer/page";
 import BookingPage from "@/app/[tenantSlug]/book/page";
 import * as bookingActions from "@/lib/actions/booking";
 import { settingsRefusal } from "../../scripts/start";
+import { randomId } from "@/lib/random-id";
 
 const run = Date.now().toString(36);
+const read34 = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8");
 const headersOf = (h: Record<string, string>) => (name: string) => h[name.toLowerCase()] ?? null;
 
 export async function runTier34BetaSecurityTests(harness: TestHarness) {
@@ -401,5 +403,79 @@ export async function runTier34BetaSecurityTests(harness: TestHarness) {
     const app = compose.slice(compose.indexOf("\n  app:"), compose.indexOf("\n  mailpit:"));
     const runtime = app.slice(app.indexOf("environment:"));
     harness.assert(/APP_ENV: \$\{APP_ENV:-\}/.test(runtime), "Docker passes APP_ENV through as given, never filling in development", runtime.slice(0, 200));
+  });
+
+  // ── Final review fixes ───────────────────────────────────────────────────────
+
+  await harness.test("T34-FIX-01: the invite code can't be guessed over and over", async () => {
+    await withEnv({ STUDIO_SIGNUP_CODE: "a-long-beta-code-2026", APP_ENV: "production" }, async () => {
+      const ip = `192.0.2.${Math.floor(Math.random() * 200) + 20}`;
+      const replies: Array<{ success: boolean; error?: string }> = [];
+      await withIp(ip, async () => {
+        for (let i = 0; i < 6; i++) replies.push(await withRequest(() => onboardStudio(studioInput(`t34-guess-${run}-${i}`, `guess-${i}`))));
+      });
+      harness.assert(replies.slice(0, 5).every((r) => !r.success && !/too many/i.test(r.error ?? "")), "The first wrong guesses are just wrong");
+      harness.assert(/too many/i.test(replies[5]?.error ?? ""), "After 5 wrong guesses from one visitor, it stops answering", JSON.stringify(replies[5]));
+    });
+  });
+
+  await harness.test("T34-FIX-02: signed-in clients don't share the anonymous upload limit; IPv6 visitors are grouped", async () => {
+    const client = await db.user.findFirstOrThrow({ where: { tenantId: lumina.id, role: "CLIENT", passwordHash: { not: null } } });
+    const clientUser = { id: client.id, email: client.email, name: client.name, role: client.role, tenantId: client.tenantId, tenantSlug: "lumina-cine" };
+    const ip = `203.0.113.${Math.floor(Math.random() * 200) + 20}`;
+    const statuses: number[] = [];
+    const saved: string[] = [];
+    try {
+      for (let i = 0; i < 22; i++) {
+        const form = new FormData();
+        form.append("file", new File([PNG], "slip.png", { type: "image/png" }));
+        form.append("folder", "receipts");
+        const res = await withSession(clientUser, () =>
+          uploadPOST(new NextRequest("http://localhost:3000/api/upload", { method: "POST", body: form, headers: { "cf-connecting-ip": ip } }))
+        );
+        statuses.push(res.status);
+        if (res.status === 201) saved.push(((await res.json()) as { url: string }).url);
+      }
+    } finally {
+      for (const url of saved) await rm(path.join(process.cwd(), "public", url.replace(/^\//, "")), { force: true });
+    }
+    harness.assert(statuses.every((s) => s === 201), "A signed-in client's 22 slips all go through", statuses.join(","));
+    harness.assertEqual(
+      clientIpFrom(headersOf({ "cf-connecting-ip": "2001:db8:1:2:aaaa::1" })),
+      clientIpFrom(headersOf({ "cf-connecting-ip": "2001:db8:1:2:bbbb:cccc:dddd:9" })),
+      "Two IPv6 addresses in one /64 count as one visitor"
+    );
+    harness.assertEqual(clientIpFrom(headersOf({ "cf-connecting-ip": "203.0.113.7" })), "203.0.113.7", "IPv4 is unchanged");
+  });
+
+  await harness.test("T34-FIX-03: a booking attempt counts once, and failed attempts don't use up the limit", async () => {
+    const ip = `198.51.100.${Math.floor(Math.random() * 200) + 20}`;
+    const replies: Array<{ success: boolean; error?: string }> = [];
+    await withIp(ip, async () => {
+      for (let i = 0; i < 12; i++) {
+        replies.push(await bookingActions.createClientBooking({ tenantId: lumina.id, tenantSlug: "lumina-cine", slotId: "t34-no-such-slot" } as unknown as Parameters<typeof bookingActions.createClientBooking>[0]));
+      }
+    });
+    harness.assert(!replies.some((r) => r.error === "RATE_LIMITED"), "12 failed tries from one visitor aren't rate-limited", replies.map((r) => r.error).join(","));
+  });
+
+  await harness.test("T34-FIX-04: the booking page makes a hold id even where crypto.randomUUID is missing (plain http)", async () => {
+    const real = crypto.randomUUID;
+    const ids: string[] = [];
+    try {
+      (crypto as { randomUUID?: unknown }).randomUUID = undefined;
+      ids.push(randomId(), randomId());
+    } finally {
+      (crypto as { randomUUID: typeof real }).randomUUID = real;
+    }
+    harness.assert(ids.every((id) => /^[0-9a-f-]{32,}$/.test(id)), "A long random id without randomUUID", ids.join(" "));
+    harness.assert(ids[0] !== ids[1], "…different each time");
+    harness.assert(read34("components/booking/cinema-booking-shell.tsx").includes("randomId()"), "The booking page uses it");
+  });
+
+  await harness.test("T34-FIX-05: APP_ENV=development on a live address refuses too", async () => {
+    const refusal = settingsRefusal({ APP_ENV: "development", NEXT_PUBLIC_APP_URL: "https://cineflow-os.app" });
+    harness.assert(!!refusal && refusal.includes("APP_ENV=production"), "Refused, saying what to set", String(refusal));
+    harness.assertEqual(settingsRefusal({ APP_ENV: "development", NEXT_PUBLIC_APP_URL: "http://localhost:3000" }), null, "Dev on this computer: fine");
   });
 }

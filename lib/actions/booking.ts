@@ -178,10 +178,7 @@ export async function releaseBookingSlot(input: z.infer<typeof ReleaseSlotSchema
  * payment gateway instead of being confirmed without payment.
  */
 export async function createClientBooking(input: CreateBookingInput) {
-  const ip = await requestIp();
-  if (ip && isRateLimited(`booking:${ip}`, 10, 60 * 60 * 1000)) {
-    return { success: false, error: "RATE_LIMITED", message: "Too many bookings from here. Please try again later." };
-  }
+  // Rate-limited in processBookingCheckout, which this goes through: counted once there.
   try {
     const validated = CreateBookingInputSchema.parse(input);
 

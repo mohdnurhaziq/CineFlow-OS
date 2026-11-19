@@ -56,12 +56,13 @@ export async function onboardStudio(formData: OnboardStudioInput) {
   if (!status.open) {
     return { success: false, error: "Studio sign-up is closed during the beta. Ask us for an invite." };
   }
-  if (status.needsCode && !signupCodeMatches(formData.signupCode)) {
-    return { success: false, error: "That invite code isn't right. Check it and try again." };
-  }
+  // Every attempt counts, before the code is checked, so the code can't be guessed over and over.
   const ip = await requestIp();
   if (ip && isRateLimited(`studio-signup:${ip}`, 5, 60 * 60 * 1000)) {
-    return { success: false, error: "Too many new studios from here. Please try again later." };
+    return { success: false, error: "Too many tries from here. Please try again later." };
+  }
+  if (status.needsCode && !signupCodeMatches(formData.signupCode)) {
+    return { success: false, error: "That invite code isn't right. Check it and try again." };
   }
 
   const validated = OnboardStudioSchema.safeParse(formData);

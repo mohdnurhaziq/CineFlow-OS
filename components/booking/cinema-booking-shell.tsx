@@ -12,6 +12,7 @@ import { BookingIntakeModal } from "./booking-intake-modal";
 import { holdBookingSlot, releaseBookingSlot } from "@/lib/actions/booking";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
 import { formatMoney, packagesFor, type BookingPackageOption } from "./package-picker";
+import { randomId } from "@/lib/random-id";
 
 interface TenantData {
   id: string;
@@ -70,7 +71,7 @@ export function CinemaBookingShell({
     let sid = localStorage.getItem("cineflow_session_id");
     if (!sid) {
       // Long and random: the hold id is what lets this browser keep, release or book its slot.
-      sid = `sess_${crypto.randomUUID()}`;
+      sid = `sess_${randomId()}`;
       localStorage.setItem("cineflow_session_id", sid);
     }
     setSessionId(sid);
