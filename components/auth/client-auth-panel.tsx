@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type ComponentType, type InputHTMLAttributes } from "react";
-import { User, Mail, Phone, Lock, Hash, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { User, Mail, Phone, Lock, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
@@ -72,16 +72,16 @@ export function ClientAuthPanel({
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState(defaultPhone);
   const [password, setPassword] = useState("");
-  const [claimCode, setClaimCode] = useState("");
-  const [needsClaim, setNeedsClaim] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Not an error: the account exists and its owner has been emailed a link to set the password.
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [signedIn, setSignedIn] = useState<{ name: string; kind: "created" | "signedIn" } | null>(null);
 
   const switchMode = (next: "register" | "login") => {
     setMode(next);
     setError(null);
-    setNeedsClaim(false);
+    setNotice(null);
   };
 
   /** Shows an explicit "you're signed in" state, then hands control back to the host page. */
@@ -94,6 +94,7 @@ export function ClientAuthPanel({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     setLoading(true);
 
     try {
@@ -104,12 +105,11 @@ export function ClientAuthPanel({
           email,
           phone,
           password,
-          claimCode: needsClaim ? claimCode : undefined,
           inviteToken: inviteToken || undefined,
         });
         if (!res.success) {
-          if (res.error === "CLAIM_REQUIRED" || res.error === "CLAIM_INVALID") setNeedsClaim(true);
-          setError(res.message);
+          if (res.error === "CHECK_EMAIL") setNotice(res.message);
+          else setError(res.message);
           return;
         }
         await confirmSignedIn(res.user.name, "created");
@@ -194,6 +194,15 @@ export function ClientAuthPanel({
             <span>{error}</span>
           </div>
         )}
+        {notice && (
+          <div
+            role="status"
+            className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 text-xs text-amber-200"
+          >
+            <Mail className="size-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <span>{notice}</span>
+          </div>
+        )}
 
         {mode === "register" && (
           <Field
@@ -254,20 +263,6 @@ export function ClientAuthPanel({
               Forgot password?
             </a>
           </div>
-        )}
-
-        {mode === "register" && needsClaim && (
-          <Field
-            label="Booking reference"
-            icon={Hash}
-            type="text"
-            autoComplete="off"
-            placeholder="From your earlier booking"
-            value={claimCode}
-            onChange={(e) => setClaimCode(e.target.value)}
-            className="font-mono uppercase"
-            required
-          />
         )}
 
         <button

@@ -410,12 +410,13 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     const invited = await db.user.create({
       data: { tenantId: lumina.id, email: `t10-invited-${run}@example.test`, name: "Invited", role: "CLIENT", isQuickCreated: true },
     });
-    const token = await issueClientInvite(invited.id);
     const base = { tenantSlug: "lumina-cine", name: "Invited Client", email: invited.email, phone: "+60123456789", password: "a-strong-pass" };
+    // Without the emailed invite the address is sent a fresh one (Tier 34), which replaces older links.
     const none = loose(await withSession(null, () => registerClient(base)));
-    harness.assertEqual(none.error, "CLAIM_REQUIRED", "No proof: refused");
+    harness.assertEqual(none.error, "CHECK_EMAIL", "No proof: refused, a link is emailed instead");
     const wrong = loose(await withSession(null, () => registerClient({ ...base, inviteToken: "not-the-token" })));
-    harness.assertEqual(wrong.error, "CLAIM_INVALID", "Wrong invite: refused");
+    harness.assertEqual(wrong.error, "CHECK_EMAIL", "Wrong invite: refused, a link is emailed instead");
+    const token = await issueClientInvite(invited.id);
     const ok = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
     harness.assertEqual(ok.success, true, "Correct invite: password set", JSON.stringify(ok));
     const after = await db.user.findUnique({ where: { id: invited.id } });

@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { filesReleased } from "@/lib/deliverables/access";
 import { liveProjectWhere } from "@/lib/projects/list";
 import { z } from "zod";
-import { clientVisibleProposalWhere } from "@/lib/proposals/status";
 import { studioPath } from "@/lib/domain-name";
 
 /**
@@ -143,24 +142,21 @@ export async function lookupMyBooking(input: {
       return NOT_FOUND;
     }
 
-    // Related records are reached through the booking's client user, always
-    // scoped to this tenant.
+    // Only this booking's own records. Anyone can make a booking with someone else's email (and so
+    // get its tracking code), so the email and code prove nothing about the client's other
+    // invoices, projects or proposals: those are for the signed-in account.
     let invoices: MyBookingInvoice[] = [];
     let projects: MyBookingProject[] = [];
-    let proposals: MyBookingProposal[] = [];
+    const proposals: MyBookingProposal[] = [];
 
-    if (booking.userId) {
-      const [invoiceRows, projectRows, proposalRows] = await Promise.all([
+    {
+      const [invoiceRows, projectRows] = await Promise.all([
         db.milestoneInvoice.findMany({
-          where: { tenantId: tenant.id, clientId: booking.userId },
+          where: { tenantId: tenant.id, bookingId: booking.id },
           orderBy: { createdAt: "desc" },
         }),
         db.project.findMany({
-          where: { tenantId: tenant.id, clientId: booking.userId, ...liveProjectWhere },
-          orderBy: { createdAt: "desc" },
-        }),
-        db.proposal.findMany({
-          where: { tenantId: tenant.id, clientId: booking.userId, ...clientVisibleProposalWhere },
+          where: { tenantId: tenant.id, bookingId: booking.id, ...liveProjectWhere },
           orderBy: { createdAt: "desc" },
         }),
       ]);
@@ -187,15 +183,6 @@ export async function lookupMyBooking(input: {
         isFinalBalancePaid: p.isFinalBalancePaid,
         filesReleased: filesReleased(p, tenant),
         vaultUrl: studioPath(tenantSlug, `/vault/${p.id}`),
-      }));
-
-      proposals = proposalRows.map((p) => ({
-        id: p.id,
-        title: p.title,
-        proposalNumber: p.proposalNumber,
-        status: p.status,
-        totalPrice: p.totalPrice,
-        url: studioPath(tenantSlug, `/proposals/${p.id}`),
       }));
     }
 

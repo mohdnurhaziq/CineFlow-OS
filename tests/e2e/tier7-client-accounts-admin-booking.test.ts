@@ -16,6 +16,7 @@ import { db } from "@/lib/db";
 import { POST as uploadHandler } from "@/app/api/upload/route";
 import { TestHarness } from "./test-harness";
 import { registerClient } from "@/lib/actions/client-auth";
+import { issueClientInvite } from "@/lib/auth/invite";
 import { createBookingForCustomer, getBookingDetails } from "@/lib/actions/admin-bookings";
 import { resendBookingConfirmation } from "@/lib/actions/admin-booking-lifecycle";
 import ClientRegisterPage from "@/app/[tenantSlug]/register/page";
@@ -141,7 +142,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     }
   });
 
-  await harness.test("T7-REG-09: guest-booking account requires a matching tracking code to claim", async () => {
+  await harness.test("T7-REG-09: a guest-booking account is claimed only with the link emailed to its address", async () => {
     const guestEmail = email("guest");
     createdUserEmails.push(guestEmail);
     const guest = await db.user.create({
@@ -164,20 +165,22 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     });
     const claimInput = { ...validInput("guest"), email: guestEmail };
 
+    // The booking's tracking code is no proof: whoever made the booking was shown it (Tier 34).
     const none = await registerClient(claimInput);
-    harness.assert(none.success === false && none.error === "CLAIM_REQUIRED", "No code -> CLAIM_REQUIRED");
-    const wrong = await registerClient({ ...claimInput, claimCode: "BK-WRONG" });
-    harness.assert(wrong.success === false && wrong.error === "CLAIM_INVALID", "Wrong code -> CLAIM_INVALID");
+    harness.assert(none.success === false && none.error === "CHECK_EMAIL", "No link -> the address is emailed one");
+    const withCode = await registerClient({ ...claimInput, claimCode: code } as Parameters<typeof registerClient>[0]);
+    harness.assert(withCode.success === false && withCode.error === "CHECK_EMAIL", "The tracking code doesn't claim it");
     const stillOpen = await db.user.findUnique({ where: { id: guest.id } });
-    harness.assert(!stillOpen?.passwordHash, "Account not claimed by failed attempts");
+    harness.assert(!stillOpen?.passwordHash, "Account not claimed by those attempts");
 
-    const good = await registerClient({ ...claimInput, claimCode: code.toLowerCase() });
-    harness.assert(good.success === true, "Correct code (case-insensitive) claims the account");
+    const token = await issueClientInvite(guest.id);
+    const good = await registerClient({ ...claimInput, inviteToken: token });
+    harness.assert(good.success === true, "The emailed link claims the account");
     const claimed = await db.user.findUnique({ where: { id: guest.id } });
     harness.assert(!!claimed?.passwordHash, "Password now set");
     harness.assertEqual(claimed?.isQuickCreated, false, "isQuickCreated cleared");
 
-    const replay = await registerClient({ ...claimInput, claimCode: code });
+    const replay = await registerClient({ ...claimInput, inviteToken: token });
     harness.assert(replay.success === false && replay.error === "EMAIL_EXISTS", "Claimed account cannot be re-claimed");
   });
 

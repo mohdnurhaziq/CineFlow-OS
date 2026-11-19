@@ -5,18 +5,17 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { isRateLimited } from "@/lib/rate-limit";
 import { setSessionCookie, type SessionUser } from "@/lib/auth/token";
-import { inviteMatches } from "@/lib/auth/invite";
+import { clientInvitePath, inviteMatches, issueClientInvite } from "@/lib/auth/invite";
+import { sendNotification } from "@/lib/notifications";
+import { studioPath, studioUrl } from "@/lib/domain-name";
 
 /**
  * Quick client account creation: Name, Email, Phone, Password.
  *
- * If a guest booking already created a passwordless account for this email at
- * this studio, the person must prove they own it by supplying a tracking code
- * from one of that account's bookings before a password can be set. This stops
- * anyone from claiming someone else's email and seeing their bookings.
- *
- * An account the studio created for the client (e.g. with a proposal) has no booking, so its
- * email carries an invite token instead; that token is accepted as the same proof.
+ * If this studio already has a passwordless account for the email (a guest booking, or a client
+ * the studio added), only the invite link emailed to that address can set its password. Anything
+ * else (such as a booking's tracking code, which whoever made the booking was shown) is no proof:
+ * the address is sent a fresh link instead, so only its owner can get in.
  */
 
 const RegisterSchema = z.object({
@@ -28,7 +27,6 @@ const RegisterSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters.")
     .max(72, "Password cannot exceed 72 characters."),
-  claimCode: z.string().trim().max(40).optional(),
   inviteToken: z.string().trim().max(100).optional(),
 });
 
@@ -42,8 +40,7 @@ export type RegisterClientResult =
         | "INVALID_INPUT"
         | "TENANT_NOT_FOUND"
         | "EMAIL_EXISTS"
-        | "CLAIM_REQUIRED"
-        | "CLAIM_INVALID"
+        | "CHECK_EMAIL"
         | "RATE_LIMITED"
         | "INTERNAL_ERROR";
       message: string;
@@ -59,7 +56,7 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
     };
   }
 
-  const { tenantSlug, name, phone, password, claimCode, inviteToken } = parsed.data;
+  const { tenantSlug, name, phone, password, inviteToken } = parsed.data;
   const rawEmail = parsed.data.email;
   const email = rawEmail.toLowerCase();
 
@@ -74,7 +71,7 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
   try {
     const tenant = await db.tenant.findUnique({
       where: { slug: tenantSlug },
-      select: { id: true, slug: true, subscriptionStatus: true },
+      select: { id: true, slug: true, name: true, subscriptionStatus: true },
     });
     if (!tenant || tenant.subscriptionStatus === "CANCELLED") {
       return { success: false, error: "TENANT_NOT_FOUND", message: "Studio not found." };
@@ -116,41 +113,27 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
         data: { name, phone, passwordHash, isQuickCreated: false, inviteToken: null, inviteTokenExpires: null },
       });
     } else {
-      // Passwordless account created by an earlier guest booking: require proof of ownership.
-      if (inviteToken && !claimCode) {
-        return {
-          success: false,
-          error: "CLAIM_INVALID",
-          message: "This invite link has expired or was replaced by a newer one. Please ask the studio to send it again.",
-        };
+      // Passwordless account and no valid invite: email its owner a fresh link to set the password.
+      if (!isRateLimited(`invite-email:${tenant.id}:${email}`, 3, 60 * 60 * 1000)) {
+        const token = await issueClientInvite(existing.id);
+        const link = clientInvitePath(existing.email, token, studioPath(tenant.slug, "/account"));
+        sendNotification({
+          event: "STUDIO_UPDATE",
+          studioName: tenant.name,
+          studioSlug: tenant.slug,
+          clientName: existing.name,
+          clientEmail: existing.email,
+          headline: "Set your password",
+          message: `Someone asked to set a password for your ${tenant.name} account. If it was you, use the link below. If not, you can ignore this email.`,
+          linkUrl: studioUrl(tenant.slug, link),
+          linkLabel: "Set your password",
+        }).catch((e) => console.error("Set-password email failed:", e));
       }
-      if (!claimCode) {
-        return {
-          success: false,
-          error: "CLAIM_REQUIRED",
-          message:
-            "This email already has a booking with us. Enter the tracking code from that booking to claim it and set your password.",
-        };
-      }
-      const owned = await db.clientBooking.findFirst({
-        where: {
-          tenantId: tenant.id,
-          userId: existing.id,
-          trackingCode: claimCode.toUpperCase(),
-        },
-        select: { id: true },
-      });
-      if (!owned) {
-        return {
-          success: false,
-          error: "CLAIM_INVALID",
-          message: "That tracking code doesn't match a booking for this email.",
-        };
-      }
-      user = await db.user.update({
-        where: { id: existing.id },
-        data: { name, phone, passwordHash, isQuickCreated: false },
-      });
+      return {
+        success: false,
+        error: "CHECK_EMAIL",
+        message: "This email already has an account with us. We've emailed you a link to set your password.",
+      };
     }
 
     const sessionUser: SessionUser = {
