@@ -2,10 +2,19 @@
  * Runs before `next start` in the container (see the Dockerfile's CMD):
  *   0. in production, refuses to start with unsafe settings (lib/production-settings.ts);
  *   1. brings the database up to date with the recorded changes in prisma/migrations;
- *   2. fills a brand-new database with demo data, except in production.
+ *   2. fills a brand-new database with demo data, except in production;
+ *   3. in production, removes demo files an older version left in the uploads.
  *
  * A database made before migrations existed (by `prisma db push`) is adopted only when it
  * matches the starting point (0_init) exactly; otherwise start-up stops and nothing changes.
+ *
+ * When start-up stops, it says why once and then waits instead of exiting: an exit would make
+ * Docker restart it over and over, burying the reason in the log. `docker compose ps` shows it
+ * as unhealthy (the health check in docker-compose.yml).
+ *
+ *   --check-settings   only check production's settings: exit 1 listing the problems, or 0.
+ *                      `node scripts/ops.mjs deploy production` runs this with the new version
+ *                      before taking the old one down.
  */
 
 import { spawnSync } from "node:child_process";
@@ -15,9 +24,25 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { appEnvFrom } from "@/lib/app-env";
 import { productionSettingProblems } from "@/lib/production-settings";
+import { removeDemoUploads } from "../prisma/setup-assets";
 
 const SCHEMA = "prisma/schema.prisma";
 const BASELINE = "0_init";
+const START_AGAIN = "docker compose up -d --force-recreate app";
+
+/** Why production must not start with these settings (each problem, then how to start again), or null. */
+export function settingsRefusal(env: Record<string, string | undefined> = process.env): string | null {
+  if (appEnvFrom(env) !== "production") return null;
+  const problems = productionSettingProblems(env);
+  if (problems.length === 0) return null;
+  return [
+    "Production can't start:",
+    ...problems.map((p) => `- ${p}`),
+    "",
+    `Fix these in this copy's .env, then run: ${START_AGAIN}`,
+    "(If you changed NEXT_PUBLIC_APP_URL, deploy again instead: it's fixed into the build.)",
+  ].join("\n");
+}
 
 /** "file:./dev.db" → <schemaDir>/dev.db; absolute paths stay. Like Prisma, relative is next to the schema. */
 export function sqlitePathFromUrl(url: string, schemaDir: string): string {
@@ -126,13 +151,8 @@ async function main() {
   const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
   const appEnv = appEnvFrom();
 
-  if (appEnv === "production") {
-    const problems = productionSettingProblems();
-    if (problems.length > 0) {
-      console.error(["Production can't start:", ...problems.map((p) => `- ${p}`)].join("\n"));
-      process.exit(1);
-    }
-  }
+  const refusal = settingsRefusal();
+  if (refusal) throw new Error(refusal);
 
   const result = await prepareDatabase({ databaseUrl, cwd });
 
@@ -146,12 +166,34 @@ async function main() {
     });
     if (r.status !== 0) throw new Error("Demo data couldn't be added.");
   }
+
+  if (appEnv === "production") {
+    const removed = await removeDemoUploads(path.join(cwd, "public", "uploads"));
+    if (removed.length > 0) console.log(`Removed ${removed.length} demo files an older version left in the uploads.`);
+  }
+}
+
+/** Says why start-up stopped, once, then keeps the process alive so Docker doesn't restart it. */
+function stopAndWait(err: unknown): void {
+  const reason = err instanceof Error ? err.message : String(err);
+  console.error(reason);
+  if (!reason.includes(START_AGAIN)) console.error(`\nFix it, then run: ${START_AGAIN}`);
+  console.error(
+    "\nCineFlow OS isn't running. It waits here instead of restarting over and over, so this stays at the end of the log."
+  );
+  setInterval(() => {}, 1 << 30);
 }
 
 const invokedDirectly = Boolean(process.argv[1]) && path.resolve(process.argv[1]!).endsWith(path.join("scripts", "start.ts"));
 if (invokedDirectly) {
-  main().catch((err) => {
-    console.error(err instanceof Error ? err.message : err);
-    process.exit(1);
-  });
+  if (process.argv.includes("--check-settings")) {
+    const refusal = settingsRefusal();
+    if (refusal) {
+      console.error(refusal);
+      process.exit(1);
+    }
+    console.log(appEnvFrom() === "production" ? "Production's settings are fine." : "Not production: no settings to check.");
+    process.exit(0);
+  }
+  main().catch(stopAndWait);
 }

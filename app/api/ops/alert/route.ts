@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/ops/alert?kind=backup-failed&backup=<name>   body: what the backup printed (text)
+ * POST /api/ops/alert?kind=disk-low                     body: the free space it measured
  * POST /api/ops/alert?kind=test
  *
  * Called by the backup service (docker/backup/backup.sh) with the alert key (lib/ops-alert).

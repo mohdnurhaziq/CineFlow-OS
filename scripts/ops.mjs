@@ -5,6 +5,7 @@
 //   node scripts/ops.mjs deploy staging           latest main → staging
 //   node scripts/ops.mjs deploy production        backup, then staging's version → production
 //   node scripts/ops.mjs backup now               back up this copy's database and files
+//   node scripts/ops.mjs check-backup <name>      check a backup could be restored
 //   node scripts/ops.mjs restore <backup name>    put a backup back (and the version it ran)
 //   node scripts/ops.mjs create-super-admin <email>
 //   node scripts/ops.mjs test-alert                email the super-admins a test backup alert
@@ -99,9 +100,22 @@ function buildAll() {
   run("docker", ["compose", "build"]);
 }
 
+/**
+ * Asks the newly built version whether production would start with this folder's .env, without
+ * starting it (scripts/start.ts --check-settings), so a refusal never takes the site down.
+ */
+function checkSettings() {
+  console.log("\nChecking this folder's settings with the new version…");
+  const args = ["compose", "run", "--rm", "--no-deps", "-T", "app", "pnpm", "tsx", "scripts/start.ts", "--check-settings"];
+  const r = spawnSync("docker", args, { cwd: CWD, stdio: "inherit" });
+  if (r.error) fail(`Couldn't run docker: ${r.error.message}`);
+  if (r.status !== 0) fail("Production would refuse to start with this folder's .env (the problems are listed above). Fix .env, then run this again.");
+}
+
 /** Builds the new version while the old one keeps running, then swaps and waits for it. */
 async function buildAndStart(env) {
   buildAll();
+  if (env.APP_ENV === "production") checkSettings();
   run("docker", ["compose", "up", "-d"]);
   console.log(`\nWaiting for ${healthUrl(env)} …`);
   return waitForHealth(healthUrl(env));
@@ -162,6 +176,7 @@ async function deployProduction(env) {
       listNew: (from, to) => (from ? read("git", ["log", "--oneline", `${from}..${to}`]) : ""),
       checkout: (sha) => run("git", ["checkout", "--detach", sha]),
       build: buildAll,
+      checkSettings,
       backupNow,
       start: () => run("docker", ["compose", "up", "-d"]),
       waitHealthy: () => {
@@ -198,13 +213,27 @@ async function restore(env, name) {
   console.log(`\nRestored ${name} (${now.slice(0, 7)}).`);
 }
 
-function status(env) {
+async function status(env) {
   const rec = readRecord(CWD);
   console.log(`Copy:      ${env.APP_ENV || "(no APP_ENV: development)"}`);
   console.log(`Deployed:  ${rec ? `${describe(rec.commit)} at ${rec.at}` : "(never deployed from this folder)"}`);
   console.log(`Code here: ${describe("HEAD")}`);
   console.log("");
   run("docker", ["compose", "ps"]);
+  const fetchWithLimit = (/** @type {string} */ url, /** @type {RequestInit} */ init) => fetch(url, { ...init, signal: AbortSignal.timeout(5000) });
+  if (await waitForHealth(healthUrl(env), { timeoutMs: 0, fetchImpl: fetchWithLimit })) {
+    console.log(`\nThe app is answering at ${healthUrl(env)}.`);
+    return;
+  }
+  // Not answering: starting up, stopped, or refused to start. The reason is at the end of its log.
+  console.log(`\nThe app isn't answering at ${healthUrl(env)}. The end of its log:`);
+  spawnSync("docker", ["compose", "logs", "--tail", "25", "--no-log-prefix", "app"], { cwd: CWD, stdio: "inherit" });
+}
+
+/** Shows free space (never stops a command); the nightly job emails when it's low. */
+function showDiskSpace() {
+  const r = spawnSync("docker", ["compose", "run", "--rm", "backup", "disk-check"], { cwd: CWD, stdio: "inherit" });
+  if (r.status !== 0) console.warn("Warning: free space is low. See README → Backups.");
 }
 
 async function main() {
@@ -222,8 +251,13 @@ async function main() {
       if (arg !== "now") fail("Use: node scripts/ops.mjs backup now");
       {
         const name = backupNow();
-        console.log(name ? `\nBackup ${name} taken.` : "\nNo database yet, so nothing to back up.");
+        console.log(name ? `\nBackup ${name} taken and checked.` : "\nNo database yet, so nothing to back up.");
+        showDiskSpace();
       }
+      return;
+    case "check-backup":
+      if (!arg) fail("Say which backup: node scripts/ops.mjs check-backup <backup name> (they're in BACKUP_DIR/db).");
+      run("docker", ["compose", "run", "--rm", "backup", "verify", arg]);
       return;
     case "restore":
       await restore(env, arg);
@@ -237,11 +271,11 @@ async function main() {
       console.log("\nTest alert sent. Check the super-admins' inboxes (staging: its test inbox).");
       return;
     case "status":
-      status(env);
+      await status(env);
       return;
     default:
       fail(
-        "Commands: deploy staging | deploy production | backup now | restore <backup name> | create-super-admin <email> | test-alert | status"
+        "Commands: deploy staging | deploy production | backup now | check-backup <backup name> | restore <backup name> | create-super-admin <email> | test-alert | status"
       );
   }
 }

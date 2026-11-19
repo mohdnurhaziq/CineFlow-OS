@@ -208,8 +208,9 @@ Push the change to `main` and wait for GitHub's checks to pass. Then, on the 24/
 | See what's running | either | `node scripts/ops.mjs status` |
 
 `deploy production` lists what's new, builds the new version while the old one keeps
-running, takes a backup just before swapping them, and waits until the site answers. If the
-build fails, the old version simply stays live. If the new version doesn't come up, it prints
+running, checks that the new version would start with this folder's `.env`, takes a backup just
+before swapping them, and waits until the site answers. If the build fails or the settings would
+be refused, the old version simply stays live. If the new version doesn't come up, it prints
 the command that puts the backup back. Both commands refuse to run in the wrong folder, or in a
 folder with changed files.
 
@@ -229,12 +230,25 @@ it has room, because deliverables can be large.
 | Task | Run in | Command |
 | --- | --- | --- |
 | Back up now | `production/` | `node scripts/ops.mjs backup now` |
+| Check a backup could be restored | `production/` | `node scripts/ops.mjs check-backup <date_time>` |
 | Put a backup back | `production/` | `node scripts/ops.mjs restore <date_time>` |
 | Check that alerts reach you | `production/` | `node scripts/ops.mjs test-alert` |
 
-If a nightly backup fails, every super-admin gets an email saying so, with the error and what to
-do, sent through production's own email settings. A failed `backup now` shows its error right
-there instead.
+Every backup is checked as it's taken, the way a restore needs it: SQLite's full integrity
+check, a record of the database changes it has, the same tables as the live database, and every
+current upload and deliverable in `files/`. A backup that fails the check is removed and counts
+as failed. `restore` runs the same check first and refuses a damaged backup, leaving the current
+database alone.
+
+Every super-admin gets an email, sent through production's own email settings, when:
+
+- a nightly backup fails, with the error and what to do (a failed `backup now` shows its error
+  right there instead);
+- free space on the backup folder's drive or on Docker's disk drops below `BACKUP_MIN_FREE_GB`
+  (default 5), checked every night, with what to clear. `backup now` also shows free space.
+
+Each deploy leaves the previous version's build behind on Docker's disk; the low-space email
+says how to clear those (`docker image prune -f`, `docker builder prune -f`).
 
 `restore` stops the app, puts the database and files back, switches to the version the
 backup was taken on, and starts it again. Anything saved after that backup is lost. Each backup
@@ -292,7 +306,7 @@ To move back, do the same in the other direction.
 
 ### What production refuses to start with
 
-Production checks its settings when it starts and stops, listing each problem, if:
+Production checks its settings when it starts, and won't start, listing each problem, if:
 
 - `AUTH_SECRET` is missing, shorter than 32 characters, or the built-in development one;
 - `ALLOW_SIMULATED_CARD_PAYMENTS` is on;
@@ -300,6 +314,9 @@ Production checks its settings when it starts and stops, listing each problem, i
 - no real email is set up (no SMTP or Resend, or SMTP pointing at the Mailpit test inbox);
 - `TOYYIBPAY_BASE_URL` is the Toyyibpay sandbox.
 
-See the problems with `docker compose logs app` in `production/`, fix `.env`, and run
-`docker compose up -d --force-recreate app` (or deploy again if you changed `NEXT_PUBLIC_APP_URL`,
-which is fixed into the build).
+`deploy production` checks this before taking the running version down. If production refuses
+anyway (say `.env` was changed and the app restarted), it says why once and then waits rather
+than restarting over and over: `node scripts/ops.mjs status` shows it as unhealthy, with the
+end of its log. Fix `.env`, and run `docker compose up -d --force-recreate app` (or deploy again
+if you changed `NEXT_PUBLIC_APP_URL`, which is fixed into the build). Any other start-up problem,
+such as a database that can't be brought up to date, waits the same way.

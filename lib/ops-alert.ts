@@ -13,7 +13,7 @@ import { escapeEmailHtml } from "@/lib/notifications";
  */
 
 export const ALERT_KEY_HEADER = "x-cineflow-alert-key";
-export const ALERT_KINDS = ["backup-failed", "test"] as const;
+export const ALERT_KINDS = ["backup-failed", "disk-low", "test"] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
 
 export function backupAlertKey(secret: string): string {
@@ -42,6 +42,29 @@ export function alertEmail(kind: AlertKind, backup: string, detail: string, env:
       title: "Test alert",
       bodyHtml: lines.map((l) => `<p>${escapeEmailHtml(l)}</p>`).join(""),
       text: lines.join("\n"),
+    };
+  }
+  if (kind === "disk-low") {
+    const intro = `The 24/7 PC running CineFlow OS ${copy} is low on disk space. When a disk fills up, backups fail and the app can't save uploads.`;
+    const steps = [
+      "1. Free space on that drive: empty the Recycle Bin, and move or delete large files you don't need.",
+      "2. Each deploy leaves the previous app version's build behind. On the 24/7 PC, run: docker image prune -f",
+      "   and: docker builder prune -f   (both remove only leftovers nothing uses).",
+      "3. Backups are kept BACKUP_KEEP_DAYS days (in the production folder's .env). Lower it if the backup drive is small.",
+      "The site keeps running meanwhile. This email repeats each night until there's enough room.",
+    ];
+    return {
+      subject: `[CineFlow ${copy}] Low disk space`,
+      title: "Low disk space",
+      bodyHtml: [
+        `<p>${escapeEmailHtml(intro)}</p>`,
+        cleanDetail
+          ? `<pre style="white-space:pre-wrap;word-break:break-word;background:#18181c;border:1px solid #27272a;border-radius:8px;padding:12px;font-size:12px;color:#fafafa;">${escapeEmailHtml(cleanDetail)}</pre>`
+          : "",
+        `<p style="margin-bottom:6px;color:#a1a1aa;">What to do:</p>`,
+        `<p style="white-space:pre-line;">${escapeEmailHtml(steps.join("\n"))}</p>`,
+      ].join(""),
+      text: [intro, "", cleanDetail ? `${cleanDetail}\n` : "", "What to do:", ...steps].join("\n"),
     };
   }
   const next = [

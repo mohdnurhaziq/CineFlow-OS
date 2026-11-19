@@ -353,6 +353,7 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
       },
       checkout: (sha: string) => step(`checkout ${sha}`),
       build: () => step("build"),
+      checkSettings: () => step("settings"),
       backupNow: () => {
         step("backup");
         return "2026-11-18_030000";
@@ -375,9 +376,14 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
     await runProductionDeploy(ok.deps);
     harness.assertDeepEqual(
       ok.steps,
-      ["fetch", "list old1234..new5678", "checkout new5678", "build", "backup", "start", "health", "record new5678"],
-      "Build while the old version serves, then back up, then swap"
+      ["fetch", "list old1234..new5678", "checkout new5678", "build", "settings", "backup", "start", "health", "record new5678"],
+      "Build and check settings while the old version serves, then back up, then swap"
     );
+
+    const badSettings = fakeProduction({ failAt: "settings" });
+    await harness.assertRejects(() => runProductionDeploy(badSettings.deps), "keeps running the old one", "Settings the new version would refuse: the old version stays live");
+    harness.assert(!badSettings.steps.includes("backup") && !badSettings.steps.includes("start"), "…no backup taken, nothing swapped");
+    harness.assertEqual(badSettings.steps[badSettings.steps.length - 1], "checkout old1234", "…and the folder goes back to the running version");
 
     const first = fakeProduction({ deployed: null });
     await runProductionDeploy(first.deps);

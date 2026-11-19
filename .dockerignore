@@ -8,6 +8,10 @@ node_modules
 *.db-wal
 *.db-shm
 storage
+# Uploads are data, not code: the image starts with empty upload folders. Dev and staging get
+# the demo studios' files from the demo data (prisma/setup-assets.ts); production gets none.
+public/uploads/**
+!public/uploads/**/.gitkeep
 backups
 .cineflow-deployed.json
 graphify-out

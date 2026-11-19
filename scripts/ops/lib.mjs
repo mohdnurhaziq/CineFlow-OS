@@ -116,6 +116,7 @@ export async function waitForHealth(url, opts = {}) {
  * @property {(from: string | null, to: string) => string} listNew   one line per commit going live
  * @property {(sha: string) => void} checkout
  * @property {() => void} build                       builds the new image; the old one keeps serving
+ * @property {() => void} checkSettings               throws when the new image would refuse this folder's .env
  * @property {() => string | null} backupNow          the backup's name, or null when there's no database yet
  * @property {() => void} start                       swaps to the new image (docker compose up -d)
  * @property {() => Promise<boolean>} waitHealthy
@@ -151,6 +152,13 @@ export async function runProductionDeploy(d) {
   } catch (err) {
     d.checkout(running);
     throw new Error(`Building the new version failed, so production keeps running the old one. ${err instanceof Error ? err.message : err}`);
+  }
+  // Production refuses unsafe settings at start-up; find out now, while the old version still serves.
+  try {
+    d.checkSettings();
+  } catch (err) {
+    d.checkout(running);
+    throw new Error(`The new version wouldn't start with this folder's settings, so production keeps running the old one. ${err instanceof Error ? err.message : err}`);
   }
 
   const backup = d.backupNow();
