@@ -27,3 +27,17 @@ export async function tenantSlugForDomain(host: string): Promise<string | null> 
   cache.set(domain, { slug, at: Date.now() });
   return slug;
 }
+
+const studioCache = new Map<string, { exists: boolean; at: number }>();
+
+/** Whether a studio with this slug exists (remembered for CACHE_MS, like custom domains). */
+export async function studioExists(slug: string): Promise<boolean> {
+  const key = slug.toLowerCase();
+  const hit = studioCache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.exists;
+  const exists = (await db.tenant.findUnique({ where: { slug: key }, select: { id: true } })) !== null;
+  // Any path's first segment is looked up, so a flood of made-up ones mustn't grow this forever.
+  if (studioCache.size >= 5000) studioCache.clear();
+  studioCache.set(key, { exists, at: Date.now() });
+  return exists;
+}

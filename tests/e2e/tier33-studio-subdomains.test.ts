@@ -25,6 +25,7 @@ import { middleware } from "@/middleware";
 import { COOKIE_NAME, SHARED_COOKIE_NAME, createSessionToken, sessionCookieFor, setSessionCookie, type SessionUser } from "@/lib/auth/token";
 import { getCurrentUser, logoutAction } from "@/lib/auth/session";
 import { withHost, withRequest } from "./mocks/session";
+import { signInTarget } from "@/lib/auth/sign-in-target";
 
 const ROOT = process.cwd();
 const read = (file: string) => readFileSync(path.join(ROOT, file), "utf8");
@@ -157,6 +158,104 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       harness.assert(!(shared.headers.get("location") ?? "").includes("/login"), "Middleware: the shared cookie lets the owner into admin", shared.headers.get("location") ?? "");
       const old = await mw(COOKIE_NAME);
       harness.assert((old.headers.get("location") ?? "").includes("/login"), "…the old cookie on a subdomain doesn't", old.headers.get("location") ?? "");
+    });
+  });
+
+  // ── Task 3: redirects and sign-in paths ────────────────────────────────────
+
+  const app = new URL(U);
+  const port = app.port ? `:${app.port}` : "";
+  const hostOf = (sub: string | null) => `${sub ? `${sub}.` : ""}${B}${port}`;
+  const req = (sub: string | null, pathAndQuery: string, cookie?: string) =>
+    middleware(
+      new NextRequest(`${app.protocol}//${hostOf(sub)}${pathAndQuery}`, {
+        headers: { host: hostOf(sub), ...(cookie ? { cookie } : {}) },
+      })
+    );
+  const loc = (res: Response) => res.headers.get("location");
+
+  await harness.test("T33-MW-01: www. and app. send you to the platform's own address", async () => {
+    await withSubdomains(true, async () => {
+      for (const sub of ["www", "app"]) {
+        const res = await req(sub, "/pricing?a=1");
+        harness.assertEqual(res.status, 308, `${sub}.: permanent redirect`);
+        // To NEXT_PUBLIC_APP_URL (in production its host is the domain itself; Task 7 checks they agree).
+        harness.assertEqual(loc(res), `${app.origin}/pricing?a=1`, `${sub}.: same path and query on the platform`);
+      }
+    });
+  });
+
+  await harness.test("T33-MW-02: an old studio address on the platform redirects to the studio's subdomain", async () => {
+    await withSubdomains(true, async () => {
+      const book = await req(null, "/lumina-cine/book?d=1");
+      harness.assertEqual(book.status, 308, "Permanent redirect");
+      harness.assertEqual(loc(book), `${app.protocol}//lumina-cine.${app.host}/book?d=1`, "To the same page and query on the subdomain");
+      harness.assertEqual(loc(await req(null, "/lumina-cine")), `${app.protocol}//lumina-cine.${app.host}/`, "The studio's home");
+      harness.assertEqual(loc(await req(null, "/no-such-studio/book")), null, "A name that isn't a studio isn't redirected");
+      harness.assertEqual(loc(await req(null, "/create-studio")), null, "Platform pages aren't redirected");
+    });
+  });
+
+  await harness.test("T33-MW-03: on a subdomain the studio name never stays in the path", async () => {
+    await withSubdomains(true, async () => {
+      const prefixed = await req("lumina-cine", "/lumina-cine/book?d=1");
+      harness.assertEqual(prefixed.status, 308, "A path that still carries the name is redirected");
+      harness.assertEqual(loc(prefixed), `${app.protocol}//${hostOf("lumina-cine")}/book?d=1`, "…without it");
+      harness.assertEqual(loc(await req("lumina-cine", "/lumina-cine")), `${app.protocol}//${hostOf("lumina-cine")}/`, "The bare name goes to /");
+      const book = await req("lumina-cine", "/book");
+      harness.assert((book.headers.get("x-middleware-rewrite") ?? "").endsWith("/lumina-cine/book"), "/book shows the studio's booking page", book.headers.get("x-middleware-rewrite") ?? "");
+      const similar = await req("lumina-cine", "/lumina-cinema-tips");
+      harness.assertEqual(loc(similar), null, "A path that only starts with the same letters isn't stripped");
+      harness.assert((similar.headers.get("x-middleware-rewrite") ?? "").endsWith("/lumina-cine/lumina-cinema-tips"), "…it's served as a studio page");
+    });
+  });
+
+  await harness.test("T33-MW-04: signing in to a studio's admin keeps clean addresses", async () => {
+    const clientUser = await db.user.findFirstOrThrow({ where: { role: "CLIENT", tenant: { slug: "lumina-cine" } }, include: { tenant: true } });
+    const clientToken = await createSessionToken({
+      id: clientUser.id, email: clientUser.email, name: clientUser.name, role: clientUser.role,
+      tenantId: clientUser.tenantId, tenantSlug: "lumina-cine",
+    });
+    await withSubdomains(true, async () => {
+      const anon = await req("lumina-cine", "/admin/invoices?x=1");
+      harness.assertEqual(loc(anon), `${app.protocol}//${hostOf("lumina-cine")}/login?callbackUrl=%2Fadmin%2Finvoices%3Fx%3D1`, "Signed out: to the studio's sign-in, coming back to the same page");
+      const client = await req("lumina-cine", "/admin", `${SHARED_COOKIE_NAME}=${clientToken}`);
+      harness.assertEqual(loc(client), `${app.protocol}//${hostOf("lumina-cine")}/account`, "A client: to their account");
+      const own = await middleware(new NextRequest("http://studio.luminacine.com/admin/invoices", { headers: { host: "studio.luminacine.com" } }));
+      harness.assertEqual(loc(own), "http://studio.luminacine.com/login?callbackUrl=%2Fadmin%2Finvoices", "On a studio's own domain too");
+    });
+  });
+
+  await harness.test("T33-MW-05: unknown studios, the API and uploads aren't redirected", async () => {
+    await withSubdomains(true, async () => {
+      const nope = await req("nope", "/book");
+      harness.assertEqual(loc(nope), null, "An unknown studio: no redirect loop");
+      harness.assert((nope.headers.get("x-middleware-rewrite") ?? "").endsWith("/nope/book"), "…its page shows not found");
+      for (const p of ["/api/health", "/uploads/x.png"]) {
+        for (const sub of [null, "lumina-cine", "www"]) {
+          const res = await req(sub, p);
+          harness.assertEqual(loc(res), null, `${p} on ${hostOf(sub)} isn't redirected`);
+          harness.assertEqual(res.headers.get("x-middleware-rewrite"), null, "…or rewritten");
+        }
+      }
+    });
+  });
+
+  await harness.test("T33-MW-06: where sign-in takes you, with clean paths and no way out of the studio", async () => {
+    await withSubdomains(true, () => {
+      const t = (role: string, callbackUrl?: string | null) => signInTarget({ role, tenantSlug: "lumina-cine", callbackUrl });
+      harness.assertEqual(t("PHOTOGRAPHER"), "/admin/schedule", "Team member: My schedule");
+      harness.assertEqual(t("STUDIO_OWNER"), "/admin", "Owner: Overview");
+      harness.assertEqual(t("CLIENT"), "/account", "Client: their account");
+      harness.assertEqual(t("STUDIO_OWNER", "/admin/invoices/1?x=1"), "/admin/invoices/1?x=1", "A page in the studio is kept");
+      for (const bad of ["//evil.com", "https://evil.com/admin", "/../admin", "", "/\\evil.com"]) {
+        harness.assertEqual(t("STUDIO_OWNER", bad), "/admin", `Refused: ${JSON.stringify(bad)}`);
+      }
+      harness.assertEqual(t("CLIENT", "/admin/x"), "/account", "A client never into admin");
+    });
+    await withSubdomains(false, () => {
+      harness.assertEqual(signInTarget({ role: "STUDIO_OWNER", tenantSlug: "lumina-cine" }), "/lumina-cine/admin", "Off: unchanged");
+      harness.assertEqual(signInTarget({ role: "STUDIO_OWNER", tenantSlug: "lumina-cine", callbackUrl: "/lumina-cine/admin/x" }), "/lumina-cine/admin/x", "Off: callback unchanged");
     });
   });
 }

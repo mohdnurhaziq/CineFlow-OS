@@ -1,4 +1,5 @@
 import { STAFF_ROLES } from "@/lib/auth/roles";
+import { studioPath, studioSubdomainsOn } from "@/lib/domain-name";
 
 /**
  * Where a person goes after signing in to studio `tenantSlug`. One function for the login page and
@@ -11,15 +12,23 @@ import { STAFF_ROLES } from "@/lib/auth/roles";
  */
 export function signInTarget(opts: { role: string | undefined; tenantSlug: string; callbackUrl?: string | null }): string {
   const { role, tenantSlug } = opts;
-  const root = `/${tenantSlug}`;
   const cb = opts.callbackUrl ?? "";
-  const sameStudio =
-    cb.startsWith(root) && !cb.startsWith("//") && (cb.length === root.length || /^[/?#]/.test(cb.charAt(root.length)));
   const path = (cb.split(/[?#]/)[0] ?? "").replace(/\/+$/, "").toLowerCase();
-  const safe = sameStudio && path !== root.toLowerCase() && path !== "" ? cb : null;
+  let safe: string | null;
+  if (studioSubdomainsOn()) {
+    // The studio is the whole host, so any plain path on it is the studio's; never another site
+    // (//evil.com, a backslash, a full address) and never the studio root itself.
+    const plain = cb.startsWith("/") && !cb.startsWith("//") && !cb.includes("\\") && !path.split("/").includes("..");
+    safe = plain && path !== "" ? cb : null;
+  } else {
+    const root = `/${tenantSlug}`;
+    const sameStudio =
+      cb.startsWith(root) && !cb.startsWith("//") && (cb.length === root.length || /^[/?#]/.test(cb.charAt(root.length)));
+    safe = sameStudio && path !== root.toLowerCase() && path !== "" ? cb : null;
+  }
 
-  if (role === "CLIENT") return safe && !safe.includes("/admin") ? safe : `${root}/account`;
+  if (role === "CLIENT") return safe && !safe.includes("/admin") ? safe : studioPath(tenantSlug, "/account");
   if (safe) return safe;
   const isTeam = !!role && STAFF_ROLES.has(role) && role !== "STUDIO_OWNER" && role !== "SUPER_ADMIN";
-  return isTeam ? `${root}/admin/schedule` : `${root}/admin`;
+  return studioPath(tenantSlug, isTeam ? "/admin/schedule" : "/admin");
 }

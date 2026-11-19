@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PLATFORM_BASE_DOMAINS, platformSubdomainSlug, tenantSlugForDomain } from "@/lib/tenant-domain";
+import { PLATFORM_BASE_DOMAINS, platformSubdomainSlug, studioExists, tenantSlugForDomain } from "@/lib/tenant-domain";
+import { APP_BASE_DOMAIN, platformUrl, studioPath, studioSubdomainsOn, studioUrl } from "@/lib/domain-name";
 import { hostFrom, sessionCookieFor } from "@/lib/auth/cookie-name";
 
 // ─── Auth helpers (Web Crypto only) ────────────────────────
@@ -93,6 +94,27 @@ export async function middleware(request: NextRequest) {
   const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
   const hostname = (rawHost.split(":")[0] ?? "").toLowerCase();
 
+  // With studio subdomains on (production), each studio lives at <slug>.<domain> and its paths
+  // carry no slug. `to` builds an address on the host the visitor used (behind Cloudflare the
+  // app itself is reached over http, so the visitor's scheme comes from X-Forwarded-Proto).
+  const subdomains = studioSubdomainsOn();
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || url.protocol.replace(/:$/, "");
+  const to = (path: string) => (subdomains ? new URL(`${proto}://${rawHost}${path}`) : new URL(path, request.url));
+
+  if (subdomains) {
+    // www.<domain> and app.<domain> (the old platform address) → <domain>
+    if (hostname === `www.${APP_BASE_DOMAIN}` || hostname === `app.${APP_BASE_DOMAIN}`) {
+      return NextResponse.redirect(platformUrl(`${pathname}${url.search}`), 308);
+    }
+    // <domain>/<studio>/… (the old studio address) → <studio>.<domain>/…
+    if (hostname === APP_BASE_DOMAIN) {
+      const [first = "", ...rest] = pathname.split("/").slice(1);
+      if (first && (await studioExists(first))) {
+        return NextResponse.redirect(studioUrl(first.toLowerCase(), `/${rest.join("/")}${url.search}`), 308);
+      }
+    }
+  }
+
   // Test simulation headers (essential for automated E2E testing without DNS edits)
   const simulatedCustomDomain = request.headers.get("x-custom-domain");
   const simulatedSlug = request.headers.get("x-tenant-slug");
@@ -108,6 +130,19 @@ export async function middleware(request: NextRequest) {
     // <slug>.<APP_DOMAIN> (or <slug>.localhost) is a platform subdomain; any other host is a
     // studio's own domain, looked up from the domain saved in its settings.
     resolvedTenantSlug = platformSubdomainSlug(hostname) ?? (await tenantSlugForDomain(hostname));
+  }
+
+  // A path that starts with the whole segment /<slug> (case-insensitive).
+  const startsWithSlug = (p: string, slug: string) => {
+    const lower = p.toLowerCase();
+    const prefix = `/${slug.toLowerCase()}`;
+    return lower === prefix || lower.startsWith(`${prefix}/`);
+  };
+
+  // On a studio's own host with subdomains on, the slug never stays in the path: a link that
+  // still carries it (or a typed old address) is sent to the same page without it.
+  if (subdomains && resolvedTenantSlug && startsWithSlug(pathname, resolvedTenantSlug)) {
+    return NextResponse.redirect(to(`${pathname.slice(resolvedTenantSlug.length + 1) || "/"}${url.search}`), 308);
   }
 
   // 4. Admin Route Guard. Runs on the effective (post-rewrite) path so custom
@@ -131,13 +166,13 @@ export async function middleware(request: NextRequest) {
     const slug = adminMatch[1] ?? "";
     const session = await readSession(request);
     // After signing in, return to the exact admin page that was asked for (e.g. one invoice).
-    const loginUrl = new URL(`/${slug}/login`, request.url);
-    loginUrl.searchParams.set("callbackUrl", `${effectivePath}${url.search}`);
+    const loginUrl = to(studioPath(slug, "/login"));
+    loginUrl.searchParams.set("callbackUrl", `${studioPath(slug, effectivePath.slice(slug.length + 1) || "/")}${url.search}`);
     if (!session) {
       return NextResponse.redirect(loginUrl);
     }
     if (session.role === "CLIENT") {
-      return NextResponse.redirect(new URL(`/${slug}/account`, request.url));
+      return NextResponse.redirect(to(studioPath(slug, "/account")));
     }
     if (session.role !== "SUPER_ADMIN" && session.tenantSlug?.toLowerCase() !== slug.toLowerCase()) {
       return NextResponse.redirect(loginUrl);
@@ -146,8 +181,9 @@ export async function middleware(request: NextRequest) {
 
   // 5. Handle Custom Domain / Subdomain Rewrites
   if (resolvedTenantSlug) {
-    // Avoid double-prefixing if the path already starts with the tenant slug
-    const targetPath = pathname.startsWith(`/${resolvedTenantSlug}`)
+    // Avoid double-prefixing if the path already starts with the tenant slug (as a whole segment:
+    // /lumina-cinema-tips on lumina-cine's host is a page of lumina-cine, not lumina-cine itself)
+    const targetPath = startsWithSlug(pathname, resolvedTenantSlug)
       ? pathname
       : `/${resolvedTenantSlug}${pathname}`;
 
