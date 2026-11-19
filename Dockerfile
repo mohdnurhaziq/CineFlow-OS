@@ -22,9 +22,12 @@ ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
 ARG NEXT_PUBLIC_APP_DOMAIN=localhost:3000
 # Which copy this is (development, staging, production): shows the Staging bar on pages built ahead of time.
 ARG APP_ENV=development
+# true in production: each studio lives at <slug>.<domain> (lib/domain-name.ts).
+ARG NEXT_PUBLIC_STUDIO_SUBDOMAINS=false
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     NEXT_PUBLIC_APP_DOMAIN=$NEXT_PUBLIC_APP_DOMAIN \
     APP_ENV=$APP_ENV \
+    NEXT_PUBLIC_STUDIO_SUBDOMAINS=$NEXT_PUBLIC_STUDIO_SUBDOMAINS \
     NEXT_TELEMETRY_DISABLED=1 \
     DATABASE_URL=file:/tmp/build.db
 COPY --from=deps /app/node_modules ./node_modules

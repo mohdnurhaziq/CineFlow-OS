@@ -40,6 +40,63 @@ export function normalizeDomain(input: string): string | null {
   return host;
 }
 
+// ─── Studio subdomains ───────────────────────────────────────────────────────────────────────
+// With NEXT_PUBLIC_STUDIO_SUBDOMAINS=true (production), each studio lives at <slug>.<domain> and
+// its paths carry no slug: lumina-cine.cineflow-os.app/book. Off (dev, staging), studios live at
+// <domain>/<slug>/…. Every studio link goes through studioPath / studioUrl, so both work. The
+// setting is read inside each function: Next inlines it, and tests can switch it.
+
+/** Whether studios live on their own subdomain (NEXT_PUBLIC_STUDIO_SUBDOMAINS=true). */
+export function studioSubdomainsOn(): boolean {
+  return process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS === "true";
+}
+
+function appUrl(): URL {
+  return new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+}
+
+function withSlash(p: string): string {
+  return p.startsWith("/") ? p : `/${p}`;
+}
+
+/**
+ * A studio page's path within the site: "/book" with subdomains on (the page is on the studio's
+ * own host), "/lumina-cine/book" with them off. Query and fragment pass through.
+ */
+export function studioPath(slug: string, path = "/"): string {
+  const p = withSlash(path);
+  if (studioSubdomainsOn()) return p;
+  return p === "/" ? `/${slug}` : `/${slug}${p}`;
+}
+
+/** A studio page's full address, for emails and anywhere outside the site. */
+export function studioUrl(slug: string, path = "/"): string {
+  const app = appUrl();
+  if (studioSubdomainsOn()) return `${app.protocol}//${slug}.${app.host}${withSlash(path)}`;
+  return `${app.origin}${studioPath(slug, path)}`;
+}
+
+/** A platform page (home, sign-up, super-admin) as linked from anywhere: absolute when studios are on subdomains. */
+export function platformUrl(path = "/"): string {
+  return studioSubdomainsOn() ? `${appUrl().origin}${withSlash(path)}` : withSlash(path);
+}
+
+const hostname = (host: string) => (host.split(":")[0] ?? "").toLowerCase().replace(/\.$/, "");
+
+/** The platform's own host: the domain itself, or its www. or app. form (port ignored). */
+export function isPlatformHost(host: string): boolean {
+  const h = hostname(host);
+  return h === APP_BASE_DOMAIN || h === `www.${APP_BASE_DOMAIN}` || h === `app.${APP_BASE_DOMAIN}`;
+}
+
+/** The studio slug for a `<slug>.<domain>` host (port ignored), or null. */
+export function studioSubdomainOf(host: string): string | null {
+  const h = hostname(host);
+  if (!h.endsWith(`.${APP_BASE_DOMAIN}`)) return null;
+  const label = h.slice(0, -(APP_BASE_DOMAIN.length + 1));
+  return label && !label.includes(".") && label !== "www" && label !== "app" ? label : null;
+}
+
 /** The studio slug for a `<slug>.<APP_DOMAIN>`-style platform subdomain, or null. */
 export function platformSubdomainSlug(host: string): string | null {
   for (const base of PLATFORM_BASE_DOMAINS) {

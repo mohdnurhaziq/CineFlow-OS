@@ -17,6 +17,13 @@ export const RESERVED_SLUGS = new Set([
   "favicon.ico",
   "settings",
   "dashboard",
+  // Real addresses on the platform domain, which a studio subdomain would clash with.
+  "www", "app", "staging", "mail", "email", "send", "smtp", "imap", "pop", "ftp", "cdn", "static", "assets",
+  "status", "help", "support", "docs", "blog", "dev", "test", "ns1", "ns2", "autoconfig", "autodiscover",
+  // A studio's own pages: on its subdomain the path no longer carries the slug, so a studio with
+  // one of these names would break that page.
+  "account", "book", "checkout", "forgot-password", "my-booking", "proposals", "register", "releases",
+  "reset-password", "set-hud", "vault", "visualizer",
 ]);
 
 export const SlugSchema = z
