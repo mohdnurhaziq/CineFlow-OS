@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { isRateLimited } from "@/lib/rate-limit";
+import { requestIp } from "@/lib/client-ip";
 import { decodeSessionToken, isSessionRevoked, requestHost, sessionCookieFor, setSessionCookie, type SessionUser } from "./token";
 
 // NOTE: this is a "use server" module, so every export is a public server
@@ -43,7 +44,13 @@ export async function loginWithCredentials(
   try {
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (isRateLimited(`login:${tenantSlug ?? "*"}:${normalizedEmail}`, 10)) {
+    // Per email across every studio: a per-studio key let a made-up studio name reset the count
+    // (and studio sign-in also accepts the super-admin). Plus a per-visitor limit when the IP is known.
+    if (isRateLimited(`login:${normalizedEmail}`, 10)) {
+      return { success: false, error: "RATE_LIMITED" };
+    }
+    const ip = await requestIp();
+    if (ip && isRateLimited(`login-ip:${ip}`, 30)) {
       return { success: false, error: "RATE_LIMITED" };
     }
 
@@ -107,6 +114,10 @@ export async function loginPlatformAdmin(
   try {
     const normalizedEmail = email.trim().toLowerCase();
     if (isRateLimited(`login:platform:${normalizedEmail}`, 10)) {
+      return { success: false, error: "RATE_LIMITED" };
+    }
+    const ip = await requestIp();
+    if (ip && isRateLimited(`login-ip:${ip}`, 30)) {
       return { success: false, error: "RATE_LIMITED" };
     }
 
