@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "app/not-found.tsx": {
-    "mtime": 1794951511.7669036,
-    "seen": 1794975033.6495667,
-    "ast_hash": "620037fddac692218e39a0a5fa15dee8",
+    "mtime": 1795095468.9861953,
+    "seen": 1795095601.945933,
+    "ast_hash": "19c5b338ba4337b643b48c980d6d30f2",
     "semantic_hash": ""
   },
   "app/robots.ts": {
@@ -564,9 +564,9 @@
     "semantic_hash": ""
   },
   "components/auth/studio-login-form.tsx": {
-    "mtime": 1795093330.9004958,
-    "seen": 1795094777.4627128,
-    "ast_hash": "c3d07a88f928cb9a1bad86746c86eb64",
+    "mtime": 1795095453.7870004,
+    "seen": 1795095601.9639413,
+    "ast_hash": "51c5367aee52abf6deb4bbacdadd9bc9",
     "semantic_hash": ""
   },
   "components/booking/booking-intake-modal.tsx": {
@@ -984,9 +984,9 @@
     "semantic_hash": ""
   },
   "lib/actions/admin-settings.ts": {
-    "mtime": 1794662838.0596921,
-    "seen": 1794664963.320383,
-    "ast_hash": "3b533371cc4c451b80bf88abc20dfc5a",
+    "mtime": 1795095432.4176452,
+    "seen": 1795095601.9866183,
+    "ast_hash": "f3ae008b2caa9dae29183c256f281528",
     "semantic_hash": ""
   },
   "lib/actions/admin-verification.ts": {
@@ -1176,9 +1176,9 @@
     "semantic_hash": ""
   },
   "middleware.ts": {
-    "mtime": 1795094497.4418635,
-    "seen": 1795094777.4990933,
-    "ast_hash": "a5d463454474cbb19d99963d88d9fbcb",
+    "mtime": 1795095432.6699011,
+    "seen": 1795095602.0094614,
+    "ast_hash": "d46da4acdfff8ebb889ee5263fc1bcf7",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -2520,9 +2520,9 @@
     "semantic_hash": ""
   },
   "lib/domain-name.ts": {
-    "mtime": 1795094890.3051312,
-    "seen": 1795095017.0880911,
-    "ast_hash": "b3951aa15410c45416899a8fc7d3280a",
+    "mtime": 1795095439.6730094,
+    "seen": 1795095601.9976795,
+    "ast_hash": "6b5e09103b4ba7eaa88f1453f21af9d5",
     "semantic_hash": ""
   },
   "lib/tenant-domain.ts": {
@@ -3666,9 +3666,9 @@
     "semantic_hash": ""
   },
   "lib/auth/sign-in-target.ts": {
-    "mtime": 1795092952.6554925,
-    "seen": 1795094777.4831202,
-    "ast_hash": "6bfc8e93b1918f2fdae605411da65f3e",
+    "mtime": 1795095447.9412715,
+    "seen": 1795095601.992184,
+    "ast_hash": "3f63ea2b0a40e1b6567cda2fe2dd4b5b",
     "semantic_hash": ""
   },
   "lib/bookings/gallery-link.ts": {
@@ -3780,9 +3780,9 @@
     "semantic_hash": ""
   },
   "lib/production-settings.ts": {
-    "mtime": 1795093843.530301,
-    "seen": 1795094777.49328,
-    "ast_hash": "d8e6e61bf87d4e1094b7d12e9021f7de",
+    "mtime": 1795095460.510895,
+    "seen": 1795095602.0035028,
+    "ast_hash": "3b996ad67be7c7bc1a9aa1ea6da87395",
     "semantic_hash": ""
   },
   "scripts/check-migrations.mjs": {
@@ -3894,9 +3894,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier33-studio-subdomains.test.ts": {
-    "mtime": 1795094878.8618183,
-    "seen": 1795095017.115414,
-    "ast_hash": "29bde12684d9f0c7feb9979561b7c6a1",
+    "mtime": 1795095396.1300607,
+    "seen": 1795095602.0220146,
+    "ast_hash": "d0380d895c4b821305096fcba71246ee",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-19-studio-subdomains.md": {
