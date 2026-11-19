@@ -17,6 +17,9 @@ import { db } from "@/lib/db";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { registerClient } from "@/lib/actions/client-auth";
 import { lookupMyBooking } from "@/lib/actions/my-booking";
+import { findProp, provideReactGlobal } from "./react-tree";
+import StudioHomePage from "@/app/[tenantSlug]/page";
+import { UpdateStudioSettingsSchema } from "@/lib/validations/admin-settings";
 
 const run = Date.now().toString(36);
 const headersOf = (h: Record<string, string>) => (name: string) => h[name.toLowerCase()] ?? null;
@@ -186,5 +189,31 @@ export async function runTier34BetaSecurityTests(harness: TestHarness) {
     const invoices = (res as { booking?: { invoices?: { id: string }[] } }).booking?.invoices ?? [];
     harness.assert(Array.isArray((res as { booking?: { invoices?: unknown } }).booking?.invoices), "The result lists invoices");
     harness.assert(!invoices.some((i) => i.id === other.id), "The client's other invoice isn't listed");
+  });
+
+  // ── Task 4: studio text can't become a script ────────────────────────────────
+
+  await harness.test("T34-XSS-01: a studio's bio can't close the search-engine script on its home page", async () => {
+    await provideReactGlobal();
+    const saved = await db.tenant.findUniqueOrThrow({ where: { id: lumina.id }, select: { bio: true, tagline: true } });
+    await db.tenant.update({ where: { id: lumina.id }, data: { bio: "</script><script>alert(document.cookie)</script>", tagline: null } });
+    try {
+      const tree = await withRequest(() =>
+        StudioHomePage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }), searchParams: Promise.resolve({}) })
+      );
+      const html = findProp<{ __html: string }>(tree, "dangerouslySetInnerHTML")?.__html ?? "";
+      harness.assert(html.includes("alert(document.cookie)"), "The bio is in the search-engine data", html.slice(0, 120));
+      harness.assert(!html.toLowerCase().includes("</script"), "…but can't close the script tag", html.slice(0, 200));
+      harness.assertEqual(JSON.parse(html.replace(/\\u003c/g, "<")).description, "</script><script>alert(document.cookie)</script>", "…and still reads back as the same text");
+    } finally {
+      await db.tenant.update({ where: { id: lumina.id }, data: saved });
+    }
+  });
+
+  await harness.test("T34-XSS-02: tagline and bio have length limits", async () => {
+    const base = { tenantId: lumina.id, tenantSlug: "lumina-cine" };
+    harness.assert(!UpdateStudioSettingsSchema.safeParse({ ...base, tagline: "x".repeat(201) }).success, "A 201-character tagline is refused");
+    harness.assert(!UpdateStudioSettingsSchema.safeParse({ ...base, bio: "x".repeat(2001) }).success, "A 2001-character bio is refused");
+    harness.assert(UpdateStudioSettingsSchema.safeParse({ ...base, tagline: "x".repeat(200), bio: "x".repeat(2000) }).success, "The limits themselves are fine");
   });
 }

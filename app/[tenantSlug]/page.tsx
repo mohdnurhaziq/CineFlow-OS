@@ -167,7 +167,8 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        // "<" escaped so studio text (bio, tagline, name) can never close this script tag.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
       {/* Studio Navigation Bar */}
       <ShowcaseNav

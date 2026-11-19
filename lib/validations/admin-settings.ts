@@ -31,8 +31,8 @@ export const UpdateStudioSettingsSchema = z.object({
       return domain;
     }),
   discipline: z.enum(["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"]).optional(),
-  tagline: z.string().optional().nullable(),
-  bio: z.string().optional().nullable(),
+  tagline: z.string().max(200, "The tagline can be up to 200 characters").optional().nullable(),
+  bio: z.string().max(2000, "The bio can be up to 2000 characters").optional().nullable(),
   logoUrl: z.string().optional().nullable(),
   brandColor: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Enter a colour like #f59e0b").optional(),
   currency: z.enum(["USD", "MYR", "SGD", "EUR", "GBP"]).optional(),
