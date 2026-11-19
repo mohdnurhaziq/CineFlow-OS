@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
 import { OnboardStudioSchema } from "@/lib/validations/onboarding";
-import { holdBookingSlot, getTenantBookingSlots } from "@/lib/actions/booking";
+import { holdBookingSlot,  } from "@/lib/actions/booking";
+import { getTenantBookingSlots } from "@/lib/bookings/slot-list";
 import { middleware } from "@/middleware";
 import { NextRequest } from "next/server";
 import { APP_BASE_DOMAIN } from "@/lib/domain-name";

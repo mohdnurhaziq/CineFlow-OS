@@ -36,7 +36,6 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "client-auth.registerClient": "client sign-up",
   "booking.holdBookingSlot": "public booking flow",
   "booking.releaseBookingSlot": "public booking flow (session-scoped)",
-  "booking.getTenantBookingSlots": "public slot grid",
   "booking.createClientBooking": "public booking flow",
   "onboarding.checkSlugAvailability": "public studio sign-up",
   "onboarding.studioSignupStatus": "public studio sign-up: only says whether it's open and needs a code",

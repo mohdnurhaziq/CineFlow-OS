@@ -7,7 +7,7 @@ import { TestHarness } from "./test-harness";
 import { clientIpFrom } from "@/lib/client-ip";
 import { isRateLimited, rateLimiterSize } from "@/lib/rate-limit";
 import { loginWithCredentials } from "@/lib/auth/session";
-import { withRequest } from "./mocks/session";
+import { withIp, withRequest } from "./mocks/session";
 import { NextRequest } from "next/server";
 import { rm } from "node:fs/promises";
 import path from "node:path";
@@ -23,6 +23,10 @@ import { UpdateStudioSettingsSchema } from "@/lib/validations/admin-settings";
 import { onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
 import nextConfig from "../../next.config";
 import { middleware } from "@/middleware";
+import { ProcessBookingCheckoutSchema, ProcessInvoicePaymentSchema } from "@/lib/validations/checkout";
+import VisualizerPage from "@/app/[tenantSlug]/visualizer/page";
+import BookingPage from "@/app/[tenantSlug]/book/page";
+import * as bookingActions from "@/lib/actions/booking";
 
 const run = Date.now().toString(36);
 const headersOf = (h: Record<string, string>) => (name: string) => h[name.toLowerCase()] ?? null;
@@ -309,5 +313,74 @@ export async function runTier34BetaSecurityTests(harness: TestHarness) {
     } finally {
       env.NODE_ENV = saved;
     }
+  });
+
+  // ── Task 7: payment slips, studio data on the visualizer, booking slots ──────
+
+  await harness.test("T34-SLIP-01: a payment slip must be a file uploaded here", async () => {
+    for (const schema of [ProcessBookingCheckoutSchema, ProcessInvoicePaymentSchema]) {
+      const shape = schema.shape.paymentProofUrl;
+      harness.assert(!shape.safeParse("https://evil.example/slip.jpg").success, "An outside link is refused");
+      harness.assert(!shape.safeParse("/uploads/receipts/../../x.jpg").success, "A path that climbs out is refused");
+      harness.assert(!shape.safeParse("/uploads/logos/a.png").success, "Another folder is refused");
+      harness.assert(shape.safeParse("/uploads/receipts/1763600000000-a1b2c3.jpg").success, "An uploaded receipt is fine");
+      harness.assert(shape.safeParse(undefined).success, "None at all is fine");
+    }
+  });
+
+  /** Every object passed as a `tenant` prop anywhere in the tree. */
+  const tenantProps = (node: unknown, out: Record<string, unknown>[] = []): Record<string, unknown>[] => {
+    if (!node || typeof node !== "object") return out;
+    if (Array.isArray(node)) {
+      for (const child of node) tenantProps(child, out);
+      return out;
+    }
+    const props = (node as { props?: Record<string, unknown> }).props;
+    if (!props) return out;
+    if (props.tenant && typeof props.tenant === "object") out.push(props.tenant as Record<string, unknown>);
+    tenantProps(props.children, out);
+    return out;
+  };
+
+  await harness.test("T34-DATA-01: the visualizer page sends the browser no payment keys or account fields", async () => {
+    await provideReactGlobal();
+    const tree = await withRequest(() =>
+      VisualizerPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }), searchParams: Promise.resolve({}) } as Parameters<typeof VisualizerPage>[0])
+    );
+    const tenants = tenantProps(tree);
+    harness.assert(tenants.length > 0, "The page passes studio details to its components");
+    for (const key of ["toyyibpaySecretEnc", "toyyibpayCategoryCode", "subscriptionTier", "customDomain"]) {
+      harness.assert(!tenants.some((t) => key in t), `No ${key}`);
+    }
+  });
+
+  await harness.test("T34-SLOT-01: the booking page never shows other visitors' hold ids", async () => {
+    await provideReactGlobal();
+    const slot = await db.bookingSlot.findFirstOrThrow({ where: { tenantId: lumina.id, status: "AVAILABLE", date: { gte: new Date() } } });
+    const secret = `t34-hold-${run}`;
+    await db.bookingSlot.update({ where: { id: slot.id }, data: { status: "HELD", heldBySessionId: secret, heldUntil: new Date(Date.now() + 10 * 60_000) } });
+    try {
+      const tree = await withRequest(() =>
+        BookingPage({ params: Promise.resolve({ tenantSlug: "lumina-cine" }), searchParams: Promise.resolve({}) } as Parameters<typeof BookingPage>[0])
+      );
+      const slots = findProp<Array<{ id: string; heldBySessionId: string | null }>>(tree, "initialSlots") ?? [];
+      harness.assert(slots.some((s) => s.id === slot.id), "The held slot is listed");
+      harness.assert(!JSON.stringify(slots).includes(secret), "…without its hold id");
+    } finally {
+      await db.bookingSlot.update({ where: { id: slot.id }, data: { status: "AVAILABLE", heldBySessionId: null, heldUntil: null } });
+    }
+  });
+
+  await harness.test("T34-SLOT-02: one visitor can't hold slots without limit, and the slot-listing action is gone", async () => {
+    harness.assert(!("getTenantBookingSlots" in bookingActions), "getTenantBookingSlots is no longer a public action");
+    const ip = `198.51.100.${Math.floor(Math.random() * 200) + 20}`;
+    const replies: Array<{ success: boolean; error?: string }> = [];
+    await withIp(ip, async () => {
+      for (let i = 0; i < 31; i++) {
+        replies.push(await bookingActions.holdBookingSlot({ tenantId: lumina.id, slotId: "t34-no-such-slot", sessionId: `t34-${run}` }));
+      }
+    });
+    harness.assert(replies.slice(0, 30).every((r) => r.error !== "RATE_LIMITED"), "The first 30 aren't rate-limited", JSON.stringify(replies[0]));
+    harness.assertEqual(replies[30]?.error, "RATE_LIMITED", "The 31st from the same visitor is");
   });
 }

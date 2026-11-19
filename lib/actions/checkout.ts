@@ -22,7 +22,9 @@ import {
   ProcessInvoicePaymentSchema,
   type ProcessInvoicePaymentInput,
 } from "@/lib/validations/checkout";
+import { requestIp } from "@/lib/client-ip";
 import { errorMessageOf } from "@/lib/action-error";
+import { isRateLimited } from "@/lib/rate-limit";
 import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
 import { studioUrl } from "@/lib/domain-name";
 
@@ -35,6 +37,11 @@ function safeRevalidate(path: string) {
 }
 
 export async function processBookingCheckout(input: ProcessBookingCheckoutInput) {
+  // One visitor can't book every slot (or send booking emails to any address) in a loop.
+  const ip = await requestIp();
+  if (ip && isRateLimited(`booking:${ip}`, 10, 60 * 60 * 1000)) {
+    return { success: false, error: "RATE_LIMITED", message: "Too many bookings from here. Please try again later." };
+  }
   try {
     const validated = ProcessBookingCheckoutSchema.parse(input);
     const {

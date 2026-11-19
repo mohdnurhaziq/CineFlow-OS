@@ -1,12 +1,13 @@
 "use server";
 
-import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { processBookingCheckout } from "@/lib/actions/checkout";
 import { isSlotInPast } from "@/lib/slot-time";
 import { SLOT_HOLD_MINUTES } from "@/lib/bookings/hold";
 import { errorMessageOf } from "@/lib/action-error";
+import { requestIp } from "@/lib/client-ip";
+import { isRateLimited } from "@/lib/rate-limit";
 
 const HoldSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -40,6 +41,11 @@ export type CreateBookingInput = z.input<typeof CreateBookingInputSchema>;
 export type CreateBookingOutput = z.output<typeof CreateBookingInputSchema>;
 
 export async function holdBookingSlot(input: z.infer<typeof HoldSlotSchema>) {
+  // One visitor can't grab slot after slot to block a studio's calendar.
+  const ip = await requestIp();
+  if (ip && isRateLimited(`slot-hold:${ip}`, 30)) {
+    return { success: false, error: "RATE_LIMITED", message: "Too many tries. Please wait a few minutes." };
+  }
   try {
     const validated = HoldSlotSchema.parse(input);
     const { tenantId, slotId, sessionId, previousSlotId } = validated;
@@ -163,59 +169,6 @@ export async function releaseBookingSlot(input: z.infer<typeof ReleaseSlotSchema
   }
 }
 
-export async function getTenantBookingSlots(params: {
-  tenantSlug: string;
-  category?: string;
-  date?: string;
-}) {
-  try {
-    const tenant = await db.tenant.findUnique({
-      where: { slug: params.tenantSlug },
-      select: { id: true },
-    });
-
-    if (!tenant) {
-      return { success: false, error: "Tenant not found", slots: [] };
-    }
-
-    const now = new Date();
-
-    // Auto-cleanup expired holds
-    await db.bookingSlot.updateMany({
-      where: {
-        tenantId: tenant.id,
-        status: "HELD",
-        heldUntil: { lt: now },
-      },
-      data: {
-        status: "AVAILABLE",
-        heldUntil: null,
-        heldBySessionId: null,
-      },
-    });
-
-    const whereClause: Prisma.BookingSlotWhereInput = { tenantId: tenant.id };
-    if (params.category && params.category !== "all") {
-      whereClause.category = params.category;
-    }
-
-    const slots = await db.bookingSlot.findMany({
-      where: whereClause,
-      orderBy: [{ date: "asc" }, { startTime: "asc" }],
-      include: {
-        booking: {
-          select: { id: true, clientName: true, status: true },
-        },
-      },
-    });
-
-    return { success: true, slots };
-  } catch (err) {
-    console.error("Error fetching slots:", err);
-    return { success: false, error: errorMessageOf(err), slots: [] };
-  }
-}
-
 /**
  * Books a held slot from the booking-page popup.
  *
@@ -225,6 +178,10 @@ export async function getTenantBookingSlots(params: {
  * payment gateway instead of being confirmed without payment.
  */
 export async function createClientBooking(input: CreateBookingInput) {
+  const ip = await requestIp();
+  if (ip && isRateLimited(`booking:${ip}`, 10, 60 * 60 * 1000)) {
+    return { success: false, error: "RATE_LIMITED", message: "Too many bookings from here. Please try again later." };
+  }
   try {
     const validated = CreateBookingInputSchema.parse(input);
 

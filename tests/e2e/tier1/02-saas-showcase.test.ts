@@ -11,8 +11,8 @@ import { getPlatformMetrics, getAllTenantsSummary } from "@/lib/actions/super-ad
 import {
   holdBookingSlot,
   releaseBookingSlot,
-  getTenantBookingSlots,
 } from "@/lib/actions/booking";
+import { getTenantBookingSlots } from "@/lib/bookings/slot-list";
 import { TestHarness } from "../test-harness";
 
 export async function runSaaSShowcaseTests(harness: TestHarness) {

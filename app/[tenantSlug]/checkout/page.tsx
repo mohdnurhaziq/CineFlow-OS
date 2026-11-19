@@ -68,10 +68,22 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // 2. Resolve Slot (if booking a held session slot)
   let slot = null;
   if (search.slotId) {
+    // Only what checkout shows: never who holds the slot (see the booking page).
     slot = await db.bookingSlot.findFirst({
       where: {
         id: search.slotId,
         tenantId: tenant.id,
+      },
+      select: {
+        id: true,
+        startTime: true,
+        endTime: true,
+        date: true,
+        price: true,
+        depositRequired: true,
+        category: true,
+        campaignTitle: true,
+        heldUntil: true,
       },
     });
   }

@@ -40,6 +40,9 @@ interface CinemaBookingShellProps {
   packages?: BookingPackageOption[];
 }
 
+/** The slot this browser holds (the page doesn't say who holds which). */
+const HELD_SLOT_KEY = "cineflow_held_slot";
+
 export function CinemaBookingShell({
   tenant,
   categories,
@@ -66,19 +69,24 @@ export function CinemaBookingShell({
   useEffect(() => {
     let sid = localStorage.getItem("cineflow_session_id");
     if (!sid) {
-      sid = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      // Long and random: the hold id is what lets this browser keep, release or book its slot.
+      sid = `sess_${crypto.randomUUID()}`;
       localStorage.setItem("cineflow_session_id", sid);
     }
     setSessionId(sid);
 
-    // Check if any slot is currently held by this session
+    // The page never says who holds a slot, so this browser remembers the slot it held.
+    const myHeldId = localStorage.getItem(HELD_SLOT_KEY);
     const myHeld = initialSlots.find(
-      (s) => s.status === "HELD" && s.heldBySessionId === sid && s.heldUntil && new Date(s.heldUntil) > new Date()
+      (s) => s.id === myHeldId && s.status === "HELD" && s.heldUntil && new Date(s.heldUntil) > new Date()
     );
 
     if (myHeld) {
       setHeldSlot(myHeld);
       setHeldUntil(new Date(myHeld.heldUntil!).toISOString());
+      setSlots((prev) => prev.map((s) => (s.id === myHeld.id ? { ...s, heldBySessionId: sid } : s)));
+    } else if (myHeldId) {
+      localStorage.removeItem(HELD_SLOT_KEY);
     }
   }, [initialSlots]);
 
@@ -116,6 +124,7 @@ export function CinemaBookingShell({
       setHeldSlot(res.slot);
       setHeldUntil(res.heldUntil);
 
+      localStorage.setItem(HELD_SLOT_KEY, slot.id);
       // Update local slots list
       setSlots((prev) =>
         prev.map((s) => {
@@ -162,6 +171,7 @@ export function CinemaBookingShell({
       });
 
       if (res.success) {
+        localStorage.removeItem(HELD_SLOT_KEY);
         setHeldSlot(null);
         setHeldUntil(null);
         setSlots((prev) =>
@@ -176,6 +186,7 @@ export function CinemaBookingShell({
     toast.error("This time is no longer reserved for you. Please select it again to continue.");
     if (heldSlot) {
       const expiredId = heldSlot.id;
+      localStorage.removeItem(HELD_SLOT_KEY);
       setHeldSlot(null);
       setHeldUntil(null);
       setIntakeOpen(false);

@@ -9,6 +9,7 @@ interface CookieState {
   jar: Map<string, string>;
   ambient: { name: string; value: string } | null;
   host: string | null;
+  ip: string | null;
   calls: Array<{ op: "set" | "delete"; args: unknown[] }>;
 }
 
@@ -72,6 +73,18 @@ export async function withHost<T>(host: string, fn: () => Promise<T>): Promise<{
   } finally {
     state.host = saved;
     state.calls = [];
+  }
+}
+
+/** Runs `fn` as if the request came from visitor IP `ip` (what Cloudflare would report). */
+export async function withIp<T>(ip: string, fn: () => Promise<T>): Promise<T> {
+  const state = cookieState();
+  const saved = state.ip;
+  state.ip = ip;
+  try {
+    return await fn();
+  } finally {
+    state.ip = saved;
   }
 }
 

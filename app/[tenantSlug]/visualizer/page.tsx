@@ -48,9 +48,11 @@ export default async function VisualizerPage({
   const { tenantSlug } = await params;
   const { projectId: requestedProjectId, claim } = await searchParams;
 
-  // 1. Resolve Tenant
+  // 1. Resolve Tenant: only what the page shows (it's passed to browser components), never the
+  // payment keys or account fields.
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
+    select: { id: true, name: true, slug: true, discipline: true, brandColor: true, currency: true, matBoardPrice: true },
   });
   if (!tenant) notFound();
 

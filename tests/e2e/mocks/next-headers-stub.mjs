@@ -8,6 +8,7 @@
 const state = (globalThis.__cineflowTestCookies ??= { enabled: false, jar: new Map(), ambient: null });
 // The request's host (see withHost in ./session.ts) and a record of cookie writes, with their options.
 state.host ??= null;
+state.ip ??= null;
 state.calls ??= [];
 
 export async function cookies() {
@@ -42,7 +43,10 @@ export async function cookies() {
 }
 
 export async function headers() {
-  return new Headers(state.host ? { host: state.host } : {});
+  const h = new Headers(state.host ? { host: state.host } : {});
+  // The visitor's IP as Cloudflare reports it (see withIp in ./session.ts).
+  if (state.ip) h.set("cf-connecting-ip", state.ip);
+  return h;
 }
 
 export async function draftMode() {

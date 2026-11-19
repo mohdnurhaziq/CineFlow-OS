@@ -2,9 +2,9 @@ import { db } from "@/lib/db";
 import {
   holdBookingSlot,
   releaseBookingSlot,
-  getTenantBookingSlots,
   createClientBooking,
 } from "@/lib/actions/booking";
+import { getTenantBookingSlots } from "@/lib/bookings/slot-list";
 import { performance } from "perf_hooks";
 
 interface TestReport {

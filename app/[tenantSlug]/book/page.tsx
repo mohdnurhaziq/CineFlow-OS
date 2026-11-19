@@ -97,7 +97,11 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
       where: { tenantId: tenant.id, date: { gte: new Date(`${today.dateKey}T00:00:00.000Z`) } },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     })
-  ).filter((slot) => !isSlotInPast(slot, now));
+  )
+    .filter((slot) => !isSlotInPast(slot, now))
+    // Never send who holds a slot: with another visitor's hold id anyone could release or take
+    // over their hold. The browser remembers its own held slot (cinema-booking-shell).
+    .map((slot) => ({ ...slot, heldBySessionId: null }));
 
   // 5. The signed-in client of this studio, if any: they book as themselves.
   const client = await getSessionClient(tenant.id);
