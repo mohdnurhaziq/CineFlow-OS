@@ -10,6 +10,7 @@ import { loginWithCredentials } from "@/lib/auth/session";
 import { withIp, withRequest } from "./mocks/session";
 import { NextRequest } from "next/server";
 import { rm } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { POST as uploadPOST } from "@/app/api/upload/route";
 import nodemailer, { type Transporter } from "nodemailer";
@@ -27,6 +28,7 @@ import { ProcessBookingCheckoutSchema, ProcessInvoicePaymentSchema } from "@/lib
 import VisualizerPage from "@/app/[tenantSlug]/visualizer/page";
 import BookingPage from "@/app/[tenantSlug]/book/page";
 import * as bookingActions from "@/lib/actions/booking";
+import { settingsRefusal } from "../../scripts/start";
 
 const run = Date.now().toString(36);
 const headersOf = (h: Record<string, string>) => (name: string) => h[name.toLowerCase()] ?? null;
@@ -382,5 +384,22 @@ export async function runTier34BetaSecurityTests(harness: TestHarness) {
     });
     harness.assert(replies.slice(0, 30).every((r) => r.error !== "RATE_LIMITED"), "The first 30 aren't rate-limited", JSON.stringify(replies[0]));
     harness.assertEqual(replies[30]?.error, "RATE_LIMITED", "The 31st from the same visitor is");
+  });
+
+  // ── Task 8: a live address without APP_ENV doesn't start as a demo site ──────
+
+  await harness.test("T34-START-01: a public https address with no APP_ENV refuses to start as a demo", async () => {
+    const missing = settingsRefusal({ NEXT_PUBLIC_APP_URL: "https://cineflow-os.app" });
+    harness.assert(!!missing && missing.includes("APP_ENV"), "No APP_ENV on the live address: refused, naming APP_ENV", String(missing));
+    harness.assert(!!missing && missing.includes("APP_ENV=production"), "…saying what to set");
+    harness.assertEqual(settingsRefusal({ NEXT_PUBLIC_APP_URL: "https://cineflow-os.app", APP_ENV: "staging" }), null, "Staging says so: fine");
+    harness.assertEqual(settingsRefusal({ NEXT_PUBLIC_APP_URL: "http://localhost:3000" }), null, "Dev on this computer: fine");
+    harness.assertEqual(settingsRefusal({ NEXT_PUBLIC_APP_URL: "http://cineflow.localhost:3300" }), null, "A local test copy: fine");
+    harness.assertEqual(settingsRefusal({ NEXT_PUBLIC_APP_URL: "https://app.example.com" }), null, "An example address: fine");
+    harness.assertEqual(settingsRefusal({}), null, "No address at all (dev defaults): fine");
+    const compose = readFileSync(path.join(process.cwd(), "docker-compose.yml"), "utf8");
+    const app = compose.slice(compose.indexOf("\n  app:"), compose.indexOf("\n  mailpit:"));
+    const runtime = app.slice(app.indexOf("environment:"));
+    harness.assert(/APP_ENV: \$\{APP_ENV:-\}/.test(runtime), "Docker passes APP_ENV through as given, never filling in development", runtime.slice(0, 200));
   });
 }

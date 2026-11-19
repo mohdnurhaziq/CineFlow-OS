@@ -25,7 +25,9 @@ services:
       # Overrides .env so the database lives on the persistent volume
       DATABASE_URL: file:/app/data/dev.db
       NODE_ENV: production
-      APP_ENV: ${APP_ENV:-development}
+      # As given in .env (empty means development): start-up refuses a live https address with no
+      # APP_ENV, so a production copy can't start as a demo by a missing line (scripts/start.ts).
+      APP_ENV: ${APP_ENV:-}
     # Shows as "unhealthy" in `docker compose ps` (and ops.mjs status) when the app isn't
     # answering, e.g. when production refused its settings: the reason is in `docker compose logs app`.
     healthcheck:

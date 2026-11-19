@@ -9,13 +9,28 @@ import { smtpConfigFromEnv } from "@/lib/email/smtp";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "mailpit"]);
 
 /** Addresses reserved for examples and tests (RFC 2606), e.g. the one in .env.production.example. */
-function isPlaceholderHost(hostname: string): boolean {
+export function isPlaceholderHost(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/\.$/, "");
   return (
     /(^|\.)example\.(com|net|org)$/.test(h) ||
     /\.(example|test|invalid|localhost)$/.test(h) ||
     h === "example"
   );
+}
+
+/**
+ * Whether `appUrl` is a live public address: https, and not this computer or an example. A copy
+ * at such an address must say which copy it is (APP_ENV), or it would start as a demo site.
+ */
+export function isLiveAddress(appUrl: string | undefined): boolean {
+  let url: URL;
+  try {
+    url = new URL(appUrl ?? "");
+  } catch {
+    return false;
+  }
+  const host = url.hostname.toLowerCase();
+  return url.protocol === "https:" && !LOCAL_HOSTS.has(host) && !isPlaceholderHost(host);
 }
 
 export function productionSettingProblems(env: Record<string, string | undefined> = process.env): string[] {

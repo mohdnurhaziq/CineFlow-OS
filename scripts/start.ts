@@ -23,7 +23,7 @@ import os from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { appEnvFrom } from "@/lib/app-env";
-import { productionSettingProblems } from "@/lib/production-settings";
+import { isLiveAddress, productionSettingProblems } from "@/lib/production-settings";
 import { removeDemoUploads } from "../prisma/setup-assets";
 
 const SCHEMA = "prisma/schema.prisma";
@@ -32,6 +32,14 @@ const START_AGAIN = "docker compose up -d --force-recreate app";
 
 /** Why production must not start with these settings (each problem, then how to start again), or null. */
 export function settingsRefusal(env: Record<string, string | undefined> = process.env): string | null {
+  // No APP_ENV means development: demo data and a demo super-admin. Never on a live address.
+  if (!env.APP_ENV?.trim() && isLiveAddress(env.NEXT_PUBLIC_APP_URL)) {
+    return [
+      `This copy has no APP_ENV, but its address (${env.NEXT_PUBLIC_APP_URL}) is a live one, so it would start as a demo site with demo accounts.`,
+      "",
+      `Set APP_ENV=production (or APP_ENV=staging) in this copy's .env, then run: ${START_AGAIN}`,
+    ].join("\n");
+  }
   if (appEnvFrom(env) !== "production") return null;
   const problems = productionSettingProblems(env);
   if (problems.length === 0) return null;
