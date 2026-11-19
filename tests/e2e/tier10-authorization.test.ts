@@ -39,6 +39,7 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "booking.getTenantBookingSlots": "public slot grid",
   "booking.createClientBooking": "public booking flow",
   "onboarding.checkSlugAvailability": "public studio sign-up",
+  "onboarding.studioSignupStatus": "public studio sign-up: only says whether it's open and needs a code",
   "onboarding.onboardStudio": "public studio sign-up",
   "my-booking.lookupMyBooking": "tracking-code lookup",
   "checkout.processBookingCheckout": "client checkout",
