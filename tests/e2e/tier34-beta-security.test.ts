@@ -20,6 +20,7 @@ import { lookupMyBooking } from "@/lib/actions/my-booking";
 import { findProp, provideReactGlobal } from "./react-tree";
 import StudioHomePage from "@/app/[tenantSlug]/page";
 import { UpdateStudioSettingsSchema } from "@/lib/validations/admin-settings";
+import { onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
 
 const run = Date.now().toString(36);
 const headersOf = (h: Record<string, string>) => (name: string) => h[name.toLowerCase()] ?? null;
@@ -215,5 +216,65 @@ export async function runTier34BetaSecurityTests(harness: TestHarness) {
     harness.assert(!UpdateStudioSettingsSchema.safeParse({ ...base, tagline: "x".repeat(201) }).success, "A 201-character tagline is refused");
     harness.assert(!UpdateStudioSettingsSchema.safeParse({ ...base, bio: "x".repeat(2001) }).success, "A 2001-character bio is refused");
     harness.assert(UpdateStudioSettingsSchema.safeParse({ ...base, tagline: "x".repeat(200), bio: "x".repeat(2000) }).success, "The limits themselves are fine");
+  });
+
+  // ── Task 5: studio sign-up needs an invite code ──────────────────────────────
+
+  /** Runs `fn` with these env values (undefined = unset), then puts them back. */
+  async function withEnv<T>(vars: Record<string, string | undefined>, fn: () => Promise<T>): Promise<T> {
+    const saved = Object.fromEntries(Object.keys(vars).map((k) => [k, process.env[k]]));
+    for (const [k, v] of Object.entries(vars)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    try {
+      return await fn();
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  }
+  const studioInput = (slug: string, signupCode?: string) => ({
+    name: "T34 Signup Studio",
+    slug,
+    discipline: "HYBRID" as const,
+    currency: "USD" as const,
+    ownerName: "T34 Owner",
+    ownerEmail: `${slug}@studio.test`,
+    ownerPhone: "+15559876543",
+    password: "StrongPassword123!",
+    subscriptionTier: "PRO" as const,
+    ...(signupCode === undefined ? {} : { signupCode }),
+  });
+
+  await harness.test("T34-SIGNUP-01: with an invite code set, studio sign-up needs it", async () => {
+    await withEnv({ STUDIO_SIGNUP_CODE: "beta-friends-2026", APP_ENV: "production" }, async () => {
+      harness.assertDeepEqual(await studioSignupStatus(), { open: true, needsCode: true }, "Sign-up asks for a code");
+      for (const [label, code] of [["No code", undefined], ["Wrong code", "guess"]] as const) {
+        const slug = `t34-signup-${run}-${label === "No code" ? "none" : "wrong"}`;
+        const res = await withRequest(() => onboardStudio(studioInput(slug, code)));
+        harness.assert(!res.success, `${label}: refused`, JSON.stringify(res));
+        harness.assertEqual(await db.tenant.count({ where: { slug } }), 0, `${label}: no studio made`);
+      }
+      const slug = `t34-signup-${run}-ok`;
+      const ok = await withRequest(() => onboardStudio(studioInput(slug, "beta-friends-2026")));
+      harness.assert(ok.success, "The right code: the studio is made", JSON.stringify(ok));
+      await db.tenant.delete({ where: { slug } }).catch(() => null);
+    });
+  });
+
+  await harness.test("T34-SIGNUP-02: without a code, sign-up is closed in production and open elsewhere", async () => {
+    await withEnv({ STUDIO_SIGNUP_CODE: undefined, APP_ENV: "production" }, async () => {
+      harness.assertDeepEqual(await studioSignupStatus(), { open: false, needsCode: false }, "Production: closed");
+      const slug = `t34-signup-${run}-closed`;
+      const res = await withRequest(() => onboardStudio(studioInput(slug)));
+      harness.assert(!res.success, "Production: sign-up refused", JSON.stringify(res));
+      harness.assertEqual(await db.tenant.count({ where: { slug } }), 0, "…no studio made");
+    });
+    await withEnv({ STUDIO_SIGNUP_CODE: undefined, APP_ENV: "development" }, async () => {
+      harness.assertDeepEqual(await studioSignupStatus(), { open: true, needsCode: false }, "Dev: open, no code");
+    });
   });
 }

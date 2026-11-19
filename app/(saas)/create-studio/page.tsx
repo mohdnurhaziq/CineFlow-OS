@@ -1,7 +1,7 @@
 "use client";
 
 import { buttonVariants } from "@/components/ui/button";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { APP_DOMAIN, studioSubdomainsOn, studioUrl } from "@/lib/domain-name";
 import {
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { toast } from "sonner";
-import { checkSlugAvailability, onboardStudio } from "@/lib/actions/onboarding";
+import { checkSlugAvailability, onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
 import type { OnboardStudioInput } from "@/lib/validations/onboarding";
 import { disciplineLabel } from "@/lib/labels";
 
@@ -55,6 +55,14 @@ export default function CreateStudioPage() {
     ownerPhone: "",
     subscriptionTier: "PRO",
   });
+
+  // Whether sign-up is open, and whether it needs the beta's invite code (studioSignupStatus).
+  const [signup, setSignup] = useState<{ open: boolean; needsCode: boolean } | null>(null);
+  useEffect(() => {
+    studioSignupStatus()
+      .then(setSignup)
+      .catch(() => setSignup({ open: true, needsCode: false }));
+  }, []);
 
   const [slugChecking, setSlugChecking] = useState<boolean>(false);
   const [slugStatus, setSlugStatus] = useState<{ available?: boolean; error?: string }>({});
@@ -150,6 +158,23 @@ export default function CreateStudioPage() {
     });
   };
 
+  // Production without an invite code: sign-up is closed during the beta.
+  if (signup && !signup.open) {
+    return (
+      <div className="min-h-[70vh] bg-[#09090b] text-[#fafafa] flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-[#121215] border border-zinc-800 text-center space-y-3">
+          <h1 className="text-xl font-bold tracking-tight text-white">Studio sign-up is closed for now</h1>
+          <p className="text-sm text-zinc-400">
+            CineFlow OS is in a private beta. If you&apos;d like to join, ask us for an invite.
+          </p>
+          <Link href="/" className="inline-block text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors">
+            ← Back to CineFlow OS
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -225,6 +250,25 @@ export default function CreateStudioPage() {
                 </div>
 
                 <div className="space-y-4">
+                  {/* Invite code: during the beta, sign-up needs the code we hand out */}
+                  {signup?.needsCode && (
+                    <div className="space-y-1.5">
+                      <label htmlFor="signup-code" className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                        Invite code *
+                      </label>
+                      <input
+                        id="signup-code"
+                        type="text"
+                        autoComplete="off"
+                        placeholder="The code we sent you"
+                        value={formData.signupCode ?? ""}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, signupCode: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm font-mono focus:outline-none focus:border-amber-500 transition-colors"
+                        required
+                      />
+                    </div>
+                  )}
+
                   {/* Studio Name */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">

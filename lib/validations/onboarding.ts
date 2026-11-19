@@ -43,6 +43,8 @@ export const CheckSlugSchema = z.object({
 });
 
 export const OnboardStudioSchema = z.object({
+  // The beta's invite code (STUDIO_SIGNUP_CODE), when sign-up needs one: checked before this schema.
+  signupCode: z.string().max(100).optional(),
   // Step 1: Identity & Discipline
   name: z.string().min(2, "Studio name must be at least 2 characters").max(100),
   slug: SlugSchema,

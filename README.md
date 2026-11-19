@@ -198,7 +198,8 @@ subdomain, so `lumina-cine.staging.<domain>` couldn't have HTTPS.
    It prints a random password once. Sign in with it at `https://<domain>/super-admin/login`
    (production doesn't link to that page anywhere, so bookmark it). Running the same command
    again sets a new password if you forget it. Studios join through the studio sign-up page
-   (`/create-studio`).
+   (`/create-studio`), which in production asks for the invite code in `STUDIO_SIGNUP_CODE`
+   (empty: sign-up is closed). Give the code to the people you invite.
 8. Check that alerts reach you: in `production/`, run `node scripts/ops.mjs test-alert`. Every
    super-admin should get a "Test alert" email within a minute.
 9. Get told when the site is down. The 24/7 PC can't email you if it's off, so use a free
