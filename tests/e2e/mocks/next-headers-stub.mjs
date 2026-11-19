@@ -6,6 +6,9 @@
  * a signed-in request by enabling the shared jar (see ./session.ts).
  */
 const state = (globalThis.__cineflowTestCookies ??= { enabled: false, jar: new Map(), ambient: null });
+// The request's host (see withHost in ./session.ts) and a record of cookie writes, with their options.
+state.host ??= null;
+state.calls ??= [];
 
 export async function cookies() {
   if (!state.enabled) {
@@ -26,16 +29,20 @@ export async function cookies() {
     get: (name) => (state.jar.has(name) ? { name, value: state.jar.get(name) } : undefined),
     has: (name) => state.jar.has(name),
     getAll: () => Array.from(state.jar, ([name, value]) => ({ name, value })),
-    set: (nameOrOptions, value) => {
+    set: (nameOrOptions, value, options) => {
+      state.calls.push({ op: "set", args: [nameOrOptions, value, options] });
       if (typeof nameOrOptions === "string") state.jar.set(nameOrOptions, value);
       else state.jar.set(nameOrOptions.name, nameOrOptions.value);
     },
-    delete: (name) => state.jar.delete(typeof name === "string" ? name : name.name),
+    delete: (name) => {
+      state.calls.push({ op: "delete", args: [name] });
+      return state.jar.delete(typeof name === "string" ? name : name.name);
+    },
   };
 }
 
 export async function headers() {
-  return new Headers();
+  return new Headers(state.host ? { host: state.host } : {});
 }
 
 export async function draftMode() {

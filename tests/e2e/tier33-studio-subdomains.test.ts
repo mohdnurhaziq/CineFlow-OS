@@ -19,6 +19,12 @@ import {
 } from "@/lib/domain-name";
 import { RESERVED_SLUGS } from "@/lib/validations/onboarding";
 import { checkSlugAvailability } from "@/lib/actions/onboarding";
+import { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { middleware } from "@/middleware";
+import { COOKIE_NAME, SHARED_COOKIE_NAME, createSessionToken, sessionCookieFor, setSessionCookie, type SessionUser } from "@/lib/auth/token";
+import { getCurrentUser, logoutAction } from "@/lib/auth/session";
+import { withHost, withRequest } from "./mocks/session";
 
 const ROOT = process.cwd();
 const read = (file: string) => readFileSync(path.join(ROOT, file), "utf8");
@@ -89,5 +95,68 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
     harness.assert(read("docker-compose.yml").includes("NEXT_PUBLIC_STUDIO_SUBDOMAINS: ${NEXT_PUBLIC_STUDIO_SUBDOMAINS:-false}"), "Compose passes it from .env");
     harness.assert(/^NEXT_PUBLIC_STUDIO_SUBDOMAINS=true$/m.test(read(".env.production.example")), "On in production's example");
     harness.assert(!/^NEXT_PUBLIC_STUDIO_SUBDOMAINS=true$/m.test(read(".env.staging.example")), "Not on in staging's");
+  });
+
+  // ── Task 2: one sign-in across the platform domain ─────────────────────────
+
+  const owner = await db.user.findFirstOrThrow({ where: { email: "alex@luminacine.com" }, include: { tenant: true } });
+  const ownerUser: SessionUser = {
+    id: owner.id,
+    email: owner.email,
+    name: owner.name,
+    role: owner.role,
+    tenantId: owner.tenantId,
+    tenantSlug: owner.tenant?.slug ?? null,
+  };
+  const studioHost = `lumina-cine.${B}`;
+
+  await harness.test("T33-COOKIE-01: the sign-in cookie is shared on the platform domain only when subdomains are on", async () => {
+    await withSubdomains(false, () => {
+      for (const host of [studioHost, B, "studio.com"]) {
+        harness.assertDeepEqual(sessionCookieFor(host), { name: COOKIE_NAME }, `Off: today's cookie on ${host}`);
+      }
+    });
+    await withSubdomains(true, () => {
+      for (const host of [B, `${studioHost}:443`, `www.${B}`]) {
+        harness.assertDeepEqual(sessionCookieFor(host), { name: SHARED_COOKIE_NAME, domain: B }, `On: shared on ${host}`);
+      }
+      harness.assertDeepEqual(sessionCookieFor("studio.com"), { name: COOKIE_NAME }, "On: a studio's own domain keeps its own");
+    });
+    harness.assertEqual(SHARED_COOKIE_NAME, "cineflow_session_shared", "The shared cookie's name");
+  });
+
+  await harness.test("T33-COOKIE-02: sign-in, reading and sign-out use the cookie that belongs to the host", async () => {
+    const token = await createSessionToken(ownerUser);
+    await withSubdomains(true, async () => {
+      const read = (host: string, name: string) =>
+        withRequest(async (jar) => {
+          jar.set(name, token);
+          return (await withHost(host, () => getCurrentUser())).result;
+        });
+      harness.assertEqual((await read(studioHost, SHARED_COOKIE_NAME))?.id, owner.id, "Subdomain: the shared cookie signs you in");
+      harness.assertEqual(await read(studioHost, COOKIE_NAME), null, "…the old one doesn't");
+      harness.assertEqual((await read("studio.com", COOKIE_NAME))?.id, owner.id, "A studio's own domain: its own cookie");
+      harness.assertEqual(await read("studio.com", SHARED_COOKIE_NAME), null, "…not the shared one");
+
+      const signIn = await withRequest(() => withHost(studioHost, () => setSessionCookie(ownerUser)));
+      const set = signIn.calls.find((c) => c.op === "set");
+      harness.assertEqual(set?.args[0], SHARED_COOKIE_NAME, "Signing in sets the shared cookie");
+      harness.assertEqual((set?.args[2] as { domain?: string } | undefined)?.domain, B, "…for the whole domain");
+      harness.assertEqual((set?.args[2] as { httpOnly?: boolean } | undefined)?.httpOnly, true, "…still httpOnly");
+
+      const signOut = await withRequest(() => withHost(studioHost, () => logoutAction()));
+      harness.assertDeepEqual(
+        signOut.calls.find((c) => c.op === "delete")?.args[0],
+        { name: SHARED_COOKIE_NAME, domain: B, path: "/" },
+        "Signing out deletes the shared cookie with its domain"
+      );
+
+      const mw = (cookieName: string) =>
+        middleware(new NextRequest(`http://${studioHost}/admin`, { headers: { host: studioHost, cookie: `${cookieName}=${token}` } }));
+      const shared = await mw(SHARED_COOKIE_NAME);
+      harness.assert(!(shared.headers.get("location") ?? "").includes("/login"), "Middleware: the shared cookie lets the owner into admin", shared.headers.get("location") ?? "");
+      const old = await mw(COOKIE_NAME);
+      harness.assert((old.headers.get("location") ?? "").includes("/login"), "…the old cookie on a subdomain doesn't", old.headers.get("location") ?? "");
+    });
   });
 }

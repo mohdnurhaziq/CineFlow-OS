@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { COOKIE_NAME, hostFrom, sessionCookieFor } from "./cookie-name";
 import { env } from "@/lib/env";
 import { db } from "@/lib/db";
 
@@ -27,7 +28,17 @@ interface TokenPayload extends SessionUser {
   iat?: number;
 }
 
-export const COOKIE_NAME = "cineflow_session";
+export { COOKIE_NAME, SHARED_COOKIE_NAME, sessionCookieFor } from "./cookie-name";
+
+/** The host of the current request, or "" outside one. */
+export async function requestHost(): Promise<string> {
+  try {
+    const h = await headers();
+    return hostFrom((name) => h.get(name));
+  } catch {
+    return "";
+  }
+}
 const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function createSignature(payloadBase64: string): string {
@@ -104,7 +115,9 @@ export async function setSessionCookie(user: SessionUser): Promise<boolean> {
   const token = await createSessionToken(user);
   try {
     const cookieStore = await cookies();
-    cookieStore.set(COOKIE_NAME, token, {
+    const cookie = sessionCookieFor(await requestHost());
+    cookieStore.set(cookie.name, token, {
+      ...(cookie.domain ? { domain: cookie.domain } : {}),
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

@@ -8,6 +8,8 @@ interface CookieState {
   enabled: boolean;
   jar: Map<string, string>;
   ambient: { name: string; value: string } | null;
+  host: string | null;
+  calls: Array<{ op: "set" | "delete"; args: unknown[] }>;
 }
 
 /**
@@ -52,6 +54,24 @@ export async function withRequest<T>(fn: (jar: Map<string, string>) => Promise<T
   } finally {
     state.enabled = false;
     state.jar.clear();
+  }
+}
+
+/**
+ * Runs `fn` as if the request came to `host` (what `headers()` reports), and returns what it did
+ * to cookies: each set/delete with its arguments, options included.
+ */
+export async function withHost<T>(host: string, fn: () => Promise<T>): Promise<{ result: T; calls: CookieState["calls"] }> {
+  const state = cookieState();
+  const saved = state.host;
+  state.host = host;
+  state.calls = [];
+  try {
+    const result = await fn();
+    return { result, calls: [...state.calls] };
+  } finally {
+    state.host = saved;
+    state.calls = [];
   }
 }
 

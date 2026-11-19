@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { isRateLimited } from "@/lib/rate-limit";
-import { COOKIE_NAME, decodeSessionToken, isSessionRevoked, setSessionCookie, type SessionUser } from "./token";
+import { decodeSessionToken, isSessionRevoked, requestHost, sessionCookieFor, setSessionCookie, type SessionUser } from "./token";
 
 // NOTE: this is a "use server" module, so every export is a public server
 // action. Token minting/verification lives in ./token (not an action module).
@@ -16,7 +16,7 @@ export type { SessionUser } from "./token";
 export async function getCurrentUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get(COOKIE_NAME);
+    const sessionCookie = cookieStore.get(sessionCookieFor(await requestHost()).name);
     if (!sessionCookie?.value) return null;
 
     const decoded = await decodeSessionToken(sessionCookie.value);
@@ -138,7 +138,10 @@ export async function loginPlatformAdmin(
 export async function logoutAction(): Promise<{ success: boolean }> {
   try {
     const cookieStore = await cookies();
-    cookieStore.delete(COOKIE_NAME);
+    const cookie = sessionCookieFor(await requestHost());
+    // A cookie set for the whole domain is only removed when deleted with that domain.
+    if (cookie.domain) cookieStore.delete({ name: cookie.name, domain: cookie.domain, path: "/" });
+    else cookieStore.delete(cookie.name);
     return { success: true };
   } catch {
     return { success: false };

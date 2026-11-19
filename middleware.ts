@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PLATFORM_BASE_DOMAINS, platformSubdomainSlug, tenantSlugForDomain } from "@/lib/tenant-domain";
+import { hostFrom, sessionCookieFor } from "@/lib/auth/cookie-name";
 
 // ─── Auth helpers (Web Crypto only) ────────────────────────
-const COOKIE_NAME = "cineflow_session";
 const ADMIN_PATTERN = /^\/([^/]+)\/admin(\/|$)/i;
 const DEV_FALLBACK_AUTH_SECRET = "cineflow_super_secure_random_session_secret_32_chars_min";
 
@@ -31,7 +31,8 @@ function bytesToBase64url(bytes: Uint8Array): string {
  */
 async function readSession(request: NextRequest): Promise<EdgeSession | null> {
   try {
-    const token = request.cookies.get(COOKIE_NAME)?.value;
+    // The cookie that belongs to this host (lib/auth/cookie-name.ts).
+    const token = request.cookies.get(sessionCookieFor(hostFrom((name) => request.headers.get(name))).name)?.value;
     if (!token) return null;
     const parts = token.split(".");
     if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
