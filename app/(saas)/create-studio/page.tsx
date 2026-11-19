@@ -244,7 +244,7 @@ export default function CreateStudioPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-                        Subpath URL Slug *
+                        {subdomains ? "Studio address" : "Subpath URL Slug"} *
                       </label>
                       {slugChecking && (
                         <span className="text-[11px] text-zinc-400 font-mono flex items-center gap-1">

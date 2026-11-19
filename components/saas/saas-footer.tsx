@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Aperture } from "lucide-react";
+import { studioUrl } from "@/lib/domain-name";
 
 interface SaasFooterProps {
   /** Dev and staging: link the demo studios and the super-admin sign-in. Never in production. */
@@ -23,10 +24,10 @@ export function SaasFooter({ showDemo }: SaasFooterProps) {
         <div className="flex items-center gap-6">
           {showDemo && (
             <>
-              <Link href="/lumina-cine" className="hover:text-white transition-colors">
+              <Link href={studioUrl("lumina-cine", "/")} className="hover:text-white transition-colors">
                 Lumina CineWorks Demo
               </Link>
-              <Link href="/apex-media" className="hover:text-white transition-colors">
+              <Link href={studioUrl("apex-media", "/")} className="hover:text-white transition-colors">
                 Apex Photo &amp; Motion Demo
               </Link>
               <Link href="/super-admin/login" className="hover:text-white transition-colors">

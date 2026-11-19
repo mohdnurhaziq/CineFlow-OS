@@ -264,7 +264,20 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       const similar = await req("lumina-cine", "/lumina-cinema-tips");
       harness.assertEqual(loc(similar), null, "A path that only starts with the same letters isn't stripped");
       harness.assert((similar.headers.get("x-middleware-rewrite") ?? "").endsWith("/lumina-cine/lumina-cinema-tips"), "…it's served as a studio page");
+      // A reset or invite link carries its token in the query: the page must still get it.
+      const reset = await req("lumina-cine", "/reset-password?token=abc&email=a%40b.c");
+      harness.assert(
+        (reset.headers.get("x-middleware-rewrite") ?? "").endsWith("/lumina-cine/reset-password?token=abc&email=a%40b.c"),
+        "The query string reaches the studio's page",
+        reset.headers.get("x-middleware-rewrite") ?? ""
+      );
     });
+    const own = await middleware(new NextRequest("http://studio.luminacine.com/checkout?invoiceId=inv_1", { headers: { host: "studio.luminacine.com" } }));
+    harness.assert(
+      (own.headers.get("x-middleware-rewrite") ?? "").endsWith("/lumina-cine/checkout?invoiceId=inv_1"),
+      "On a studio's own domain too (subdomains on or off)",
+      own.headers.get("x-middleware-rewrite") ?? ""
+    );
   });
 
   await harness.test("T33-MW-04: signing in to a studio's admin keeps clean addresses", async () => {
@@ -516,5 +529,18 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       [],
       "Subdomains off: not checked"
     );
+  });
+
+  await harness.test("T33-PAGE-05: no studio address is typed out by hand", async () => {
+    const slugs = (await db.tenant.findMany({ select: { slug: true } })).map((t) => t.slug);
+    // Slugs are lowercase letters, digits and hyphens: nothing to escape.
+    const typed = new RegExp(`["'\`]/(${slugs.join("|")})(["'\`/?#])`);
+    const found: string[] = [];
+    for (const file of [...sourceFiles("app"), ...sourceFiles("components")]) {
+      read(file).split(/\r?\n/).forEach((line, i) => {
+        if (typed.test(line)) found.push(`${file}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    harness.assert(found.length === 0, "Links to a studio go through studioUrl / studioPath", found.join("\n"));
   });
 }

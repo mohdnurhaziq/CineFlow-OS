@@ -187,7 +187,8 @@ export async function middleware(request: NextRequest) {
       ? pathname
       : `/${resolvedTenantSlug}${pathname}`;
 
-    const rewriteUrl = new URL(targetPath, request.url);
+    // Keep the query: reset and invite links carry their token in it, payments their invoice.
+    const rewriteUrl = new URL(`${targetPath}${url.search}`, request.url);
     const response = NextResponse.rewrite(rewriteUrl);
 
     // Pass tenant identification downstream to Server Components
