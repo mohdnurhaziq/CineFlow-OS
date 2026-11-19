@@ -19,6 +19,8 @@ import { visibleNavItems } from "@/components/admin/admin-nav-items";
 import { FULL_ACCESS } from "@/lib/auth/access";
 import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
+import sitemap from "@/app/sitemap";
+import robots from "@/app/robots";
 import {
   APP_BASE_DOMAIN,
   isPlatformHost,
@@ -429,6 +431,65 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       for (const ok of ["/lumina-cine", "/lumina-cine/account", "/lumina-cine?x=1"]) harness.assert(isStudioPath("lumina-cine", ok), `Off: ${ok} is allowed`);
       for (const bad of ["/lumina-cinema/account", "/apex-media/account", "//evil.com", "/lumina-cine\\..\\x", "/account"]) {
         harness.assert(!isStudioPath("lumina-cine", bad), `Off: ${JSON.stringify(bad)} is refused`);
+      }
+    });
+  });
+
+  // ── Task 6: search engines per host ─────────────────────────────────────────
+
+  const urlsOf = (map: { url: string }[]) => map.map((e) => e.url);
+  const rulesOf = (r: Awaited<ReturnType<typeof robots>>) => {
+    const rule = (Array.isArray(r.rules) ? r.rules[0] : r.rules)!;
+    const list = (v: string | string[] | undefined) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
+    return { allow: list(rule.allow), disallow: list(rule.disallow), sitemap: r.sitemap };
+  };
+
+  await harness.test("T33-SEO-01: with subdomains off, sitemap and robots stay as they were", async () => {
+    await withSubdomains(false, async () => {
+      const tenants = await db.tenant.findMany({ select: { slug: true } });
+      const urls = urlsOf(await withHost(B, () => sitemap()).then((r) => r.result));
+      harness.assert(urls.includes(U) && urls.includes(`${U}/create-studio`), "Platform pages listed");
+      for (const t of tenants) {
+        for (const p of ["", "/book", "/visualizer"]) harness.assert(urls.includes(`${U}/${t.slug}${p}`), `Lists ${U}/${t.slug}${p}`);
+      }
+      const r = rulesOf((await withHost(B, () => robots())).result);
+      harness.assert(r.disallow.includes("/*/admin") && r.disallow.includes("/api/"), "Robots keeps its studio-path rules", r.disallow.join(" "));
+      harness.assertEqual(r.sitemap, `${U}/sitemap.xml`, "Points at the platform sitemap");
+    });
+  });
+
+  await harness.test("T33-SEO-02: with subdomains on, the platform and each studio list only their own pages", async () => {
+    await withSubdomains(true, async () => {
+      const platform = urlsOf((await withHost(B, () => sitemap())).result);
+      harness.assertDeepEqual(platform, [U, `${U}/create-studio`], "Platform sitemap: its own pages only");
+      const pr = rulesOf((await withHost(B, () => robots())).result);
+      harness.assert(pr.allow.includes("/"), "Platform robots allows its pages");
+      harness.assert(pr.disallow.includes("/api/") && pr.disallow.includes("/super-admin"), "…and keeps the API and console out", pr.disallow.join(" "));
+      harness.assertEqual(pr.sitemap, `${U}/sitemap.xml`, "…pointing at its own sitemap");
+
+      const host = `lumina-cine.${B}`;
+      const studio = urlsOf((await withHost(host, () => sitemap())).result);
+      harness.assertDeepEqual(
+        studio,
+        [studioUrl("lumina-cine", "/"), studioUrl("lumina-cine", "/book"), studioUrl("lumina-cine", "/visualizer")],
+        "Studio sitemap: its public pages at clean addresses"
+      );
+      const sr = rulesOf((await withHost(host, () => robots())).result);
+      for (const p of ["/admin", "/checkout", "/vault", "/account", "/proposals", "/set-hud", "/releases"]) {
+        harness.assert(sr.disallow.includes(p) && sr.disallow.includes(`${p}/*`), `Studio robots keeps ${p} out`, sr.disallow.join(" "));
+      }
+      harness.assertEqual(sr.sitemap, studioUrl("lumina-cine", "/sitemap.xml"), "…pointing at the studio's own sitemap");
+
+      harness.assertDeepEqual((await withHost(`nope.${B}`, () => sitemap())).result, [], "An unknown studio lists nothing");
+
+      const saved = process.env.APP_ENV;
+      process.env.APP_ENV = "staging";
+      try {
+        const st = rulesOf((await withHost(host, () => robots())).result);
+        harness.assertDeepEqual(st.disallow, ["/"], "Staging still keeps everything out");
+      } finally {
+        if (saved === undefined) delete process.env.APP_ENV;
+        else process.env.APP_ENV = saved;
       }
     });
   });

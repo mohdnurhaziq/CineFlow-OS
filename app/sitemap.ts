@@ -1,10 +1,30 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { studioUrl } from "@/lib/domain-name";
+import { studioSubdomainOf, studioSubdomainsOn, studioUrl } from "@/lib/domain-name";
+import { requestHost } from "@/lib/auth/token";
 
+/**
+ * With studio subdomains off, one sitemap lists the platform and every studio. With them on,
+ * each host lists only its own pages: search engines ignore entries on another host.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+
+  if (studioSubdomainsOn()) {
+    const slug = studioSubdomainOf(await requestHost());
+    if (slug) {
+      const tenant = await db.tenant.findUnique({ where: { slug }, select: { updatedAt: true } }).catch(() => null);
+      if (!tenant) return [];
+      const page = (path: string, changeFrequency: "daily" | "weekly" | "monthly", priority: number) => ({
+        url: studioUrl(slug, path),
+        lastModified: tenant.updatedAt,
+        changeFrequency,
+        priority,
+      });
+      return [page("/", "weekly", 1.0), page("/book", "daily", 0.9), page("/visualizer", "monthly", 0.7)];
+    }
+  }
 
   // Base platform routes
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -21,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
   ];
+  if (studioSubdomainsOn()) return staticRoutes;
 
   try {
     const tenants = await db.tenant.findMany({

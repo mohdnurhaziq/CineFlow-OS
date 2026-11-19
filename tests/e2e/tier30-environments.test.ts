@@ -223,10 +223,10 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
     const saved = process.env.APP_ENV;
     try {
       process.env.APP_ENV = "staging";
-      const staging = robots();
+      const staging = await robots();
       harness.assertDeepEqual(staging.rules, [{ userAgent: "*", disallow: "/" }], "Staging: everything disallowed");
       delete process.env.APP_ENV;
-      const dev = robots();
+      const dev = await robots();
       const rule = Array.isArray(dev.rules) ? dev.rules[0] : dev.rules;
       harness.assert(Array.isArray(rule?.allow) && rule.allow.includes("/create-studio"), "Otherwise the usual rules");
     } finally {

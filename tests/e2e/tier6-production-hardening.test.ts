@@ -195,7 +195,7 @@ export async function runTier6ProductionHardeningTests(harness: TestHarness) {
   });
 
   await harness.test("T6-F03-02: robots() protects private admin & client vault routes while allowing public showcase", async () => {
-    const rules = robots();
+    const rules = await robots();
     harness.assert(rules.rules !== undefined, "Robots rules defined");
     harness.assert(rules.sitemap !== undefined, "Robots references sitemap.xml");
 
