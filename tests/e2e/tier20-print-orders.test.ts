@@ -792,7 +792,7 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
   await harness.test("T20-PAY-02: a QR slip approved by the studio moves the order to NEW", async () => {
     const a = await placeAwaiting();
     const slip = await withSession(a.p.session, () =>
-      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t20-slip.jpg" })
     );
     harness.assertEqual(slip.success, true, "Slip sent");
     harness.assertEqual(await invoiceStatus(a.invoice.id), "PENDING_VERIFICATION", "Invoice awaiting verification");
@@ -1002,7 +1002,7 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
   await harness.test("T20-CANCEL-04: a client can't cancel while their payment slip is being checked; staff can", async () => {
     const a = await placeAwaiting();
     const slip = await withSession(a.p.session, () =>
-      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t20-slip.jpg" })
     );
     harness.assertEqual(slip.success, true, "Slip sent");
     const res = await withSession(a.p.session, () => cancelPrintOrder({ ...orderBase, orderId: a.orderId }));
@@ -1022,7 +1022,7 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
   await harness.test("T20-VOID-03: an invoice cancelled before approval can't be approved or paid", async () => {
     const a = await placeAwaiting();
     await withSession(a.p.session, () =>
-      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t20-slip.jpg" })
     );
     const voided = await withSession(ownerSession, () => voidInvoice({ ...orderBase, invoiceId: a.invoice.id, reason: "Duplicate order" }));
     harness.assertEqual(voided.success, true, "Voided");
@@ -1285,7 +1285,7 @@ export async function runTier20PrintOrderTests(harness: TestHarness) {
     const a = await placeAwaiting();
     await db.deliverableItem.update({ where: { id: a.p.photo.id }, data: { resolution: "4000 × 6000" } });
     const slip = await withSession(a.p.session, () =>
-      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/t20/slip.jpg" })
+      processInvoicePayment({ ...orderBase, invoiceId: a.invoice.id, paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t20-slip.jpg" })
     );
     harness.assertEqual(slip.success, true, "Slip sent");
     const other = await db.milestoneInvoice.create({
