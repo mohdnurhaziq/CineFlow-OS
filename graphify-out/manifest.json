@@ -756,9 +756,9 @@
     "semantic_hash": ""
   },
   "components/saas/saas-footer.tsx": {
-    "mtime": 1795094185.6941807,
-    "seen": 1795094777.469609,
-    "ast_hash": "b60e0f5aaf68159ba074a5d3f1ad11ae",
+    "mtime": 1795094891.1468413,
+    "seen": 1795095017.0597131,
+    "ast_hash": "8b666af1b90c4313e7ad994b3f15f893",
     "semantic_hash": ""
   },
   "components/saas/saas-hero.tsx": {
@@ -774,9 +774,9 @@
     "semantic_hash": ""
   },
   "components/saas/studio-switcher.tsx": {
-    "mtime": 1795093486.0730784,
-    "seen": 1795094777.470034,
-    "ast_hash": "403e77fa25ad985a7ae7800010e6f40d",
+    "mtime": 1795094891.2196176,
+    "seen": 1795095017.0601172,
+    "ast_hash": "5a7459fb44c5854ce3216f185f5c751f",
     "semantic_hash": ""
   },
   "components/showcase/category-filter-bar.tsx": {
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "components/super-admin/super-admin-view.tsx": {
-    "mtime": 1795093486.07465,
-    "seen": 1795094777.472095,
-    "ast_hash": "e3c7365e20d74383999e4f6704d88f15",
+    "mtime": 1795094891.279953,
+    "seen": 1795095017.0626895,
+    "ast_hash": "89ad759e32fc4a8d5a43eb8b0ec5a39d",
     "semantic_hash": ""
   },
   "components/ui/badge.tsx": {
@@ -2520,9 +2520,9 @@
     "semantic_hash": ""
   },
   "lib/domain-name.ts": {
-    "mtime": 1795093430.0505338,
-    "seen": 1795094777.4882908,
-    "ast_hash": "876923db468f717a723f09502ce15b04",
+    "mtime": 1795094890.3051312,
+    "seen": 1795095017.0880911,
+    "ast_hash": "b3951aa15410c45416899a8fc7d3280a",
     "semantic_hash": ""
   },
   "lib/tenant-domain.ts": {
@@ -3894,9 +3894,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier33-studio-subdomains.test.ts": {
-    "mtime": 1795094485.0468338,
-    "seen": 1795094777.511554,
-    "ast_hash": "fb84346537a287e150e0fb61905cea2f",
+    "mtime": 1795094878.8618183,
+    "seen": 1795095017.115414,
+    "ast_hash": "29bde12684d9f0c7feb9979561b7c6a1",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-19-studio-subdomains.md": {
