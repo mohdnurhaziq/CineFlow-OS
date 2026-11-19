@@ -402,16 +402,16 @@ export function CmsManager({
 
       {/* Dialog Modal */}
       {canManage && (
-      <ShowcaseItemDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        tenantId={tenantId}
-        tenantSlug={tenantSlug}
-        categories={categories}
-        packages={packages}
-        itemToEdit={itemToEdit}
-        onSuccess={handleSuccess}
-      />
+        <ShowcaseItemDialog
+          isOpen={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          tenantId={tenantId}
+          tenantSlug={tenantSlug}
+          categories={categories}
+          packages={packages}
+          itemToEdit={itemToEdit}
+          onSuccess={handleSuccess}
+        />
       )}
       {confirmDialog}
     </div>

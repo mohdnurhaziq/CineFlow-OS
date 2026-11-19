@@ -14,6 +14,7 @@ export interface ShowcasePortfolioItem {
   discipline: string;
   coverImageUrl: string;
   videoEmbedUrl?: string | null;
+  galleryImages?: string | null;
   servicePackage?: {
     id: string;
     name: string;

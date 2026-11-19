@@ -9,10 +9,12 @@ import {
   UpdateShowcaseItemSchema,
   DeleteShowcaseItemSchema,
   ToggleShowcaseFeaturedSchema,
+  BatchCreateShowcaseItemsSchema,
   type CreateShowcaseItemInput,
   type UpdateShowcaseItemInput,
   type DeleteShowcaseItemInput,
   type ToggleShowcaseFeaturedInput,
+  type BatchCreateShowcaseItemsInput,
 } from "@/lib/validations/admin-cms";
 import { errorMessageOf } from "@/lib/action-error";
 
@@ -190,6 +192,49 @@ export async function toggleShowcaseFeatured(input: ToggleShowcaseFeaturedInput)
       success: false,
       error: "TOGGLE_FEATURED_FAILED",
       message: errorMessageOf(error) || "Failed to toggle featured status.",
+    };
+  }
+}
+
+export async function batchCreateShowcaseItems(input: BatchCreateShowcaseItemsInput) {
+  try {
+    const validated = BatchCreateShowcaseItemsSchema.parse(input);
+    await requireAccess(validated.tenantId, "catalog", "MANAGE");
+    const { tenantId, tenantSlug, items } = validated;
+
+    const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) {
+      return { success: false, error: "TENANT_NOT_FOUND", message: "Studio tenant not found." };
+    }
+
+    const createdItems = await db.$transaction(
+      items.map((item) =>
+        db.showcaseItem.create({
+          data: {
+            tenantId,
+            title: item.title,
+            clientName: item.clientName,
+            category: item.category,
+            discipline: item.discipline,
+            coverImageUrl: item.coverImageUrl,
+            videoEmbedUrl: item.videoEmbedUrl || null,
+            galleryImages: item.galleryImages || null,
+            isFeatured: item.isFeatured,
+            sortOrder: item.sortOrder,
+          },
+        })
+      )
+    );
+
+    safeRevalidate(`/${tenantSlug}/admin/cms`);
+    safeRevalidate(`/${tenantSlug}`);
+
+    return { success: true, count: createdItems.length, items: createdItems };
+  } catch (error) {
+    return {
+      success: false,
+      error: "BATCH_CREATE_SHOWCASE_FAILED",
+      message: errorMessageOf(error) || "Failed to batch create showcase items.",
     };
   }
 }

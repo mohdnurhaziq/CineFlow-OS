@@ -39,3 +39,25 @@ export const ToggleShowcaseFeaturedSchema = z.object({
 });
 
 export type ToggleShowcaseFeaturedInput = z.infer<typeof ToggleShowcaseFeaturedSchema>;
+
+export const BatchCreateShowcaseItemsSchema = z.object({
+  tenantId: z.string().min(1, "Tenant ID is required"),
+  tenantSlug: z.string().min(1, "Tenant slug is required"),
+  items: z
+    .array(
+      z.object({
+        title: z.string().min(1, "Title must be at least 1 character"),
+        clientName: z.string().default("Studio Portfolio"),
+        category: z.string().min(1, "Category is required"),
+        discipline: z.enum(["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"]).default("PHOTOGRAPHY"),
+        coverImageUrl: z.string().min(1, "Cover image URL is required"),
+        videoEmbedUrl: z.string().optional().nullable(),
+        galleryImages: z.string().optional().nullable(),
+        isFeatured: z.boolean().default(false),
+        sortOrder: z.coerce.number().int().default(0),
+      })
+    )
+    .min(1, "At least one item is required"),
+});
+
+export type BatchCreateShowcaseItemsInput = z.infer<typeof BatchCreateShowcaseItemsSchema>;
