@@ -23,6 +23,7 @@ import {
   type UpdateTeamRoleInput,
 } from "@/lib/validations/admin-team";
 import { studioUrl } from "@/lib/domain-name";
+import { notifyAssignees } from "@/lib/bookings/assignment-emails";
 
 function safeRevalidate(path: string) {
   try {
@@ -302,7 +303,7 @@ export async function removeTeamMember(input: TeamMemberRefInput) {
     const now = new Date();
     const today = studioNow(now).dateKey;
 
-    const unassigned = await db.$transaction(async (tx) => {
+    const { count: unassigned, confirmedBookingIds } = await db.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: member.id },
         data: {
@@ -316,17 +317,22 @@ export async function removeTeamMember(input: TeamMemberRefInput) {
       // finished this morning is past work), and cancelled ones stay as they were.
       const assignments = await tx.bookingAssignment.findMany({
         where: { userId: member.id, booking: { status: { in: ["PENDING", "CONFIRMED"] } } },
-        select: { id: true, booking: { select: { targetDate: true, slot: { select: { date: true } } } } },
+        select: { id: true, booking: { select: { id: true, status: true, targetDate: true, slot: { select: { date: true } } } } },
       });
       const upcoming = assignments.filter(({ booking }) => {
         const day = sessionDay(booking);
         // No date yet: still to come.
         return !day || day >= today;
       });
-      if (upcoming.length === 0) return 0;
+      if (upcoming.length === 0) return { count: 0, confirmedBookingIds: [] as string[] };
       const { count } = await tx.bookingAssignment.deleteMany({ where: { id: { in: upcoming.map((a) => a.id) } } });
-      return count;
+      return { count, confirmedBookingIds: upcoming.filter((a) => a.booking.status === "CONFIRMED").map((a) => a.booking.id) };
     });
+
+    // Their confirmed shoots come out of their calendar (only the calendar cancellation is sent).
+    for (const bookingId of confirmedBookingIds) {
+      void notifyAssignees(bookingId, { kind: "UNASSIGNED", userIds: [member.id], removedMember: true });
+    }
 
     safeRevalidate(`/${v.tenantSlug}/admin/settings`);
     safeRevalidate(`/${v.tenantSlug}/admin/bookings`);

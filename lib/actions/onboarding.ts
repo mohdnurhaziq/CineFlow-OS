@@ -51,6 +51,22 @@ function signupCodeMatches(given: string | undefined): boolean {
   return timingSafeEqual(expected, actual);
 }
 
+/**
+ * Checks the invite code on the form's first step, so a wrong one is caught before the rest is filled
+ * in. Limited per visitor (10 an hour) so the code can't be guessed; onboardStudio checks it again.
+ */
+export async function checkSignupCode(code: string): Promise<{ valid: boolean; message?: string }> {
+  const status = await studioSignupStatus();
+  if (!status.needsCode) return { valid: true };
+  const ip = await requestIp();
+  if (ip && isRateLimited(`studio-signup-code:${ip}`, 10, 60 * 60 * 1000)) {
+    return { valid: false, message: "Too many tries from here. Please try again later." };
+  }
+  return signupCodeMatches(code)
+    ? { valid: true }
+    : { valid: false, message: "That invite code isn't right. Check it and try again." };
+}
+
 export async function onboardStudio(formData: OnboardStudioInput) {
   const status = await studioSignupStatus();
   if (!status.open) {

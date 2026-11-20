@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" role="img" aria-label="No cover photo yet">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18181b"/>
+      <stop offset="1" stop-color="#0b0b0d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <g fill="none" stroke="#3f3f46" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(800 470)">
+    <path d="M-150 -70 h70 l30 -40 h100 l30 40 h70 a20 20 0 0 1 20 20 v190 a20 20 0 0 1 -20 20 h-300 a20 20 0 0 1 -20 -20 v-190 a20 20 0 0 1 20 -20 z"/>
+    <circle cx="0" cy="45" r="70"/>
+  </g>
+  <text x="800" y="700" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="40" fill="#71717a">No cover photo yet</text>
+</svg>

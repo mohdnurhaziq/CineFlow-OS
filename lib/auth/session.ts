@@ -44,12 +44,17 @@ export async function loginWithCredentials(
   try {
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Per email across every studio: a per-studio key let a made-up studio name reset the count
-    // (and studio sign-in also accepts the super-admin). Plus a per-visitor limit when the IP is known.
-    if (isRateLimited(`login:${normalizedEmail}`, 10)) {
+    // Per email across every studio (a per-studio key let a made-up studio name reset the count, and
+    // studio sign-in also accepts the super-admin). Counted per visitor when the IP is known, so
+    // someone failing on purpose can't lock the real owner out: 10 tries per email per visitor, and
+    // a much higher ceiling for one email from everywhere (a guess spread over many addresses).
+    const ip = await requestIp();
+    if (isRateLimited(ip ? `login:${normalizedEmail}:${ip}` : `login:${normalizedEmail}`, 10)) {
       return { success: false, error: "RATE_LIMITED" };
     }
-    const ip = await requestIp();
+    if (ip && isRateLimited(`login:${normalizedEmail}`, 100, 60 * 60 * 1000)) {
+      return { success: false, error: "RATE_LIMITED" };
+    }
     if (ip && isRateLimited(`login-ip:${ip}`, 30)) {
       return { success: false, error: "RATE_LIMITED" };
     }
@@ -113,10 +118,14 @@ export async function loginPlatformAdmin(
 ): Promise<{ success: boolean; error?: "INVALID_CREDENTIALS" | "RATE_LIMITED" | "ACCOUNT_REMOVED" | "INTERNAL_ERROR"; user?: SessionUser }> {
   try {
     const normalizedEmail = email.trim().toLowerCase();
-    if (isRateLimited(`login:platform:${normalizedEmail}`, 10)) {
+    // As for studio sign-in: counted per visitor, so a stranger's failures can't lock the admin out.
+    const ip = await requestIp();
+    if (isRateLimited(ip ? `login:platform:${normalizedEmail}:${ip}` : `login:platform:${normalizedEmail}`, 10)) {
       return { success: false, error: "RATE_LIMITED" };
     }
-    const ip = await requestIp();
+    if (ip && isRateLimited(`login:platform:${normalizedEmail}`, 100, 60 * 60 * 1000)) {
+      return { success: false, error: "RATE_LIMITED" };
+    }
     if (ip && isRateLimited(`login-ip:${ip}`, 30)) {
       return { success: false, error: "RATE_LIMITED" };
     }

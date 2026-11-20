@@ -17,6 +17,7 @@ import type { LightboxItem } from "./media-lightbox-modal";
 import type { VideoItem } from "./video-reel-modal";
 import { categoryName } from "@/lib/bookings/category-name";
 import { disciplineLabel } from "@/lib/labels";
+import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
 
 interface ShowcaseBigSliderProps {
   items: ShowcasePortfolioItem[];
@@ -74,7 +75,10 @@ export function ShowcaseBigSlider({
 
     for (const item of items) {
       const gallery = parseGalleryUrls(item.galleryImages);
-      const allPhotos = Array.from(new Set([item.coverImageUrl, ...gallery].filter(Boolean)));
+      // A missing cover is skipped when the item has gallery photos; with none, the placeholder shows.
+      const cover = showcaseCover(item.coverImageUrl);
+      const photos = Array.from(new Set([cover === SHOWCASE_PLACEHOLDER ? "" : cover, ...gallery].filter(Boolean)));
+      const allPhotos = photos.length > 0 ? photos : [SHOWCASE_PLACEHOLDER];
       const count = allPhotos.length;
 
       allPhotos.forEach((photoUrl, idx) => {

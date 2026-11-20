@@ -35,6 +35,7 @@ import { disciplineLabel } from "@/lib/labels";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { errorMessageOf } from "@/lib/action-error";
 import { studioPath } from "@/lib/domain-name";
+import { showcaseCover } from "@/lib/showcase/cover";
 
 interface CmsManagerProps {
   tenantId: string;
@@ -293,7 +294,7 @@ export function CmsManager({
                 <div className="relative aspect-video bg-zinc-900 overflow-hidden flex items-center justify-center">
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform hover:scale-105 duration-300"
-                    style={{ backgroundImage: `url(${item.coverImageUrl})` }}
+                    style={{ backgroundImage: `url(${showcaseCover(item.coverImageUrl)})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 

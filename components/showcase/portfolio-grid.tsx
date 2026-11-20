@@ -5,6 +5,7 @@ import { Play, Eye, Camera, Film } from "lucide-react";
 import type { LightboxItem } from "./media-lightbox-modal";
 import type { VideoItem } from "./video-reel-modal";
 import { categoryName } from "@/lib/bookings/category-name";
+import { showcaseCover } from "@/lib/showcase/cover";
 
 export interface ShowcasePortfolioItem {
   id: string;
@@ -118,7 +119,7 @@ export function PortfolioGrid({
             {/* Image Thumbnail Container */}
             <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
               <CoverImage
-                src={item.coverImageUrl}
+                src={showcaseCover(item.coverImageUrl)}
                 alt={item.title}
                 isVideo={isVideo}
                 brandColor={brandColor || "#f59e0b"}

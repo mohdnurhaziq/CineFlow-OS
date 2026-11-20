@@ -166,7 +166,7 @@ export async function runTier35CalendarInvitesTests(harness: TestHarness) {
       harness.assertEqual(bodies[1]?.attachments, undefined, "No invite, no attachment");
 
       delete process.env.RESEND_FROM_EMAIL;
-      harness.assertEqual(platformSenderAddress(), "noreply@cineflow-os.my", "Falls back to the platform address");
+      harness.assertEqual(platformSenderAddress(), "onboarding@resend.dev", "Falls back to Resend's default sender, which the email then comes from");
     } finally {
       restoreMail();
     }

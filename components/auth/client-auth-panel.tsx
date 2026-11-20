@@ -18,6 +18,11 @@ interface ClientAuthPanelProps {
   /** Pre-filled from the account a valid studio invite belongs to. */
   defaultName?: string;
   defaultPhone?: string;
+  /**
+   * Where a set-password email (sent when the email already has an account) brings them back to:
+   * true for the page they're on now (a checkout). Default: their account.
+   */
+  returnHere?: boolean;
 }
 
 const inputClass =
@@ -66,6 +71,7 @@ export function ClientAuthPanel({
   defaultEmail = "",
   defaultName = "",
   defaultPhone = "",
+  returnHere = false,
 }: ClientAuthPanelProps) {
   const [mode, setMode] = useState<"register" | "login">(defaultMode);
   const [name, setName] = useState(defaultName);
@@ -106,6 +112,7 @@ export function ClientAuthPanel({
           phone,
           password,
           inviteToken: inviteToken || undefined,
+          next: returnHere ? `${window.location.pathname}${window.location.search}` : undefined,
         });
         if (!res.success) {
           if (res.error === "CHECK_EMAIL") setNotice(res.message);

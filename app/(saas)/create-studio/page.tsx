@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { toast } from "sonner";
-import { checkSlugAvailability, onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
+import { checkSignupCode, checkSlugAvailability, onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
 import type { OnboardStudioInput } from "@/lib/validations/onboarding";
 import { disciplineLabel } from "@/lib/labels";
 
@@ -137,7 +137,31 @@ export default function CreateStudioPage() {
   const isStep1Valid =
     formData.name.trim().length >= 2 &&
     formData.slug.trim().length >= 3 &&
-    slugStatus.available !== false;
+    slugStatus.available !== false &&
+    (!signup?.needsCode || (formData.signupCode ?? "").trim().length > 0);
+
+  // A wrong invite code is caught here, not after the whole form is filled in.
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeChecking, setCodeChecking] = useState(false);
+  const continueFromStep1 = async () => {
+    if (signup?.needsCode) {
+      setCodeChecking(true);
+      try {
+        const res = await checkSignupCode(formData.signupCode ?? "");
+        if (!res.valid) {
+          setCodeError(res.message ?? "That invite code isn't right.");
+          return;
+        }
+      } catch {
+        setCodeError("Couldn't check the invite code. Please try again.");
+        return;
+      } finally {
+        setCodeChecking(false);
+      }
+    }
+    setCodeError(null);
+    setCurrentStep(2);
+  };
 
   // Step 3 Validation
   const isStep3Valid =
@@ -262,10 +286,20 @@ export default function CreateStudioPage() {
                         autoComplete="off"
                         placeholder="The code we sent you"
                         value={formData.signupCode ?? ""}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, signupCode: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm font-mono focus:outline-none focus:border-amber-500 transition-colors"
+                        onChange={(e) => {
+                          setCodeError(null);
+                          setFormData((prev) => ({ ...prev, signupCode: e.target.value }));
+                        }}
+                        aria-invalid={codeError ? true : undefined}
+                        aria-describedby={codeError ? "signup-code-error" : undefined}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border bg-[#18181b] text-white text-sm font-mono focus:outline-none focus:border-amber-500 transition-colors ${codeError ? "border-red-500" : "border-zinc-700"}`}
                         required
                       />
+                      {codeError && (
+                        <p id="signup-code-error" role="alert" className="text-xs text-red-400">
+                          {codeError}
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -393,11 +427,11 @@ export default function CreateStudioPage() {
                 <div className="pt-4 flex justify-end">
                   <button
                     type="button"
-                    disabled={!isStep1Valid}
-                    onClick={() => setCurrentStep(2)}
+                    disabled={!isStep1Valid || codeChecking}
+                    onClick={continueFromStep1}
                     className={buttonVariants({ size: "lg" })}
                   >
-                    Continue to Brand
+                    {codeChecking ? "Checking…" : "Continue to Brand"}
                     <ArrowRight className="size-3.5" />
                   </button>
                 </div>

@@ -264,6 +264,7 @@ export function BookingIntakeModal({
                           toast.success("You're signed in.");
                           router.refresh();
                         }}
+                        returnHere
                       />
                     </div>
                   )}

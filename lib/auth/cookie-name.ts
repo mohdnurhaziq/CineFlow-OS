@@ -22,5 +22,5 @@ export function sessionCookieFor(host: string): { name: string; domain?: string 
 
 /** The host a request came to: the first X-Forwarded-Host, else Host. */
 export function hostFrom(get: (name: string) => string | null): string {
-  return (get("x-forwarded-host") ?? get("host") ?? "").split(",")[0]!.trim();
+  return (get("x-forwarded-host") || get("host") || "").split(",")[0]!.trim();
 }

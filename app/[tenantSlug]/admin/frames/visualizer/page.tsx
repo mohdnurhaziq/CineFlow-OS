@@ -8,6 +8,7 @@ import type { PrintSizeOption, FrameDesignOption, PhotoOption } from "@/componen
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
 
 interface AdminVisualizerPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -42,7 +43,8 @@ export default async function AdminVisualizerPage({ params }: AdminVisualizerPag
   ]);
 
   const photos: PhotoOption[] = showcase
-    .filter((item) => item.coverImageUrl)
+    // Only real photos: a placeholder isn't something to put in a frame.
+      .filter((item) => showcaseCover(item.coverImageUrl) !== SHOWCASE_PLACEHOLDER)
     .map((item) => ({ id: `showcase_${item.id}`, title: item.title, url: item.coverImageUrl }));
 
   return (

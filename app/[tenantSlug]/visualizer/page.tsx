@@ -16,6 +16,7 @@ import { ClientAccountHeader } from "@/components/account/client-account-header"
 import { getSessionClient } from "@/lib/clients";
 import type { PhotoOption } from "@/components/visualizer/configurator-panel";
 import { studioPath } from "@/lib/domain-name";
+import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
 
 interface VisualizerPageProps {
   params: Promise<{
@@ -103,7 +104,8 @@ export default async function VisualizerPage({
       take: 12,
     });
     photos = showcase
-      .filter((item) => item.coverImageUrl)
+      // Only real photos: a placeholder isn't something to put in a frame.
+      .filter((item) => showcaseCover(item.coverImageUrl) !== SHOWCASE_PLACEHOLDER)
       .map((item) => ({ id: `showcase_${item.id}`, title: item.title, url: item.coverImageUrl }));
   }
 

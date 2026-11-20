@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Camera, Aperture, Sliders, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
+import { showcaseCover } from "@/lib/showcase/cover";
 
 export interface LightboxItem {
   id: string;
@@ -21,7 +22,7 @@ interface MediaLightboxModalProps {
 }
 
 function parseGallery(item: LightboxItem): string[] {
-  const list = [item.coverImageUrl];
+  const list = [showcaseCover(item.coverImageUrl)];
   if (item.galleryImages) {
     try {
       const parsed = JSON.parse(item.galleryImages);
@@ -46,7 +47,7 @@ export function MediaLightboxModal({ item, onClose, brandColor }: MediaLightboxM
   if (!item) return null;
 
   const images = parseGallery(item);
-  const activeImage = images[currentIndex] || item.coverImageUrl;
+  const activeImage = images[currentIndex] || showcaseCover(item.coverImageUrl);
 
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation();

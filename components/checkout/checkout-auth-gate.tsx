@@ -28,7 +28,7 @@ export function CheckoutAuthGate({ tenantSlug, tenantName }: CheckoutAuthGatePro
           </p>
         </div>
 
-        <ClientAuthPanel tenantSlug={tenantSlug} onSuccess={() => router.refresh()} />
+        <ClientAuthPanel tenantSlug={tenantSlug} onSuccess={() => router.refresh()} returnHere />
 
         <div className="text-center">
           <Link

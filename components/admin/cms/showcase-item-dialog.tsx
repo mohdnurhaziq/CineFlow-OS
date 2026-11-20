@@ -20,6 +20,7 @@ import { useDialog } from "@/lib/use-dialog";
 import { disciplineLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
 import { toast } from "sonner";
+import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -191,7 +192,7 @@ export function ShowcaseItemDialog({
     if (uploadedUrls.length > 0) {
       setImages((prev) => {
         const updated = [...prev, ...uploadedUrls];
-        if (!coverImageUrl || coverImageUrl === "/uploads/showcase/default.jpg") {
+        if (showcaseCover(coverImageUrl) === SHOWCASE_PLACEHOLDER) {
           setCoverImageUrl(updated[0]!);
         }
         return updated;
@@ -253,7 +254,7 @@ export function ShowcaseItemDialog({
     setErrorMessage(null);
 
     const parsedOrder = parseInt(sortOrder, 10);
-    const finalCover = coverImageUrl || images[0] || "/uploads/showcase/default.jpg";
+    const finalCover = coverImageUrl || images[0] || SHOWCASE_PLACEHOLDER;
     const remainingGallery = images.filter((u) => u !== finalCover);
     const galleryPayload = remainingGallery.length > 0 ? JSON.stringify(remainingGallery) : null;
 

@@ -191,9 +191,11 @@ export async function applyInvoicePayment(
             event: "BOOKING_CONFIRMED",
             studioName: invoice.tenant.name,
             studioSlug: tenantSlug,
-            clientName: invoice.client.name,
-            clientEmail: invoice.client.email,
-            clientPhone: invoice.client.phone || undefined,
+            // The booking's contact, as every other confirmation and every later update (a move, a
+            // cancel) uses: the calendar event and its updates land in the same inbox.
+            clientName: linked.clientName || invoice.client.name,
+            clientEmail: linked.clientEmail || invoice.client.email,
+            clientPhone: linked.clientPhone || invoice.client.phone || undefined,
             packageName: linked.packageName || "Studio session",
             slotDate,
             startTime: slot?.startTime ?? "",
@@ -203,7 +205,7 @@ export async function applyInvoicePayment(
             trackingCode: linked.trackingCode,
             bookingUrl,
             // The session goes into the client's calendar (Gmail adds it to Google Calendar).
-            calendar: (await clientInvite(linked.id, "REQUEST", { name: invoice.client.name, email: invoice.client.email })) ?? undefined,
+            calendar: (await clientInvite(linked.id, "REQUEST")) ?? undefined,
           });
         }
       } catch (e) {

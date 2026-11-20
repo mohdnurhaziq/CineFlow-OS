@@ -7,7 +7,7 @@ import { isRateLimited } from "@/lib/rate-limit";
 import { setSessionCookie, type SessionUser } from "@/lib/auth/token";
 import { clientInvitePath, inviteMatches, issueClientInvite } from "@/lib/auth/invite";
 import { sendNotification } from "@/lib/notifications";
-import { studioPath, studioUrl } from "@/lib/domain-name";
+import { isStudioPath, studioPath, studioUrl } from "@/lib/domain-name";
 
 /**
  * Quick client account creation: Name, Email, Phone, Password.
@@ -28,6 +28,8 @@ const RegisterSchema = z.object({
     .min(8, "Password must be at least 8 characters.")
     .max(72, "Password cannot exceed 72 characters."),
   inviteToken: z.string().trim().max(100).optional(),
+  /** The page they were on (their checkout): where the set-password email brings them back. */
+  next: z.string().trim().max(500).optional(),
 });
 
 export type RegisterClientInput = z.input<typeof RegisterSchema>;
@@ -56,7 +58,7 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
     };
   }
 
-  const { tenantSlug, name, phone, password, inviteToken } = parsed.data;
+  const { tenantSlug, name, phone, password, inviteToken, next } = parsed.data;
   const rawEmail = parsed.data.email;
   const email = rawEmail.toLowerCase();
 
@@ -114,9 +116,20 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
       });
     } else {
       // Passwordless account and no valid invite: email its owner a fresh link to set the password.
-      if (!isRateLimited(`invite-email:${tenant.id}:${email}`, 3, 60 * 60 * 1000)) {
+      // Three an hour. Past that, say so rather than claim another email went out.
+      if (isRateLimited(`invite-email:${tenant.id}:${email}`, 3, 60 * 60 * 1000)) {
+        return {
+          success: false,
+          error: "CHECK_EMAIL",
+          message:
+            "This email already has an account with us, and we've already emailed you a link to set your password. Check your inbox (and spam folder). You can ask for a new link in an hour.",
+        };
+      }
+      {
         const token = await issueClientInvite(existing.id);
-        const link = clientInvitePath(existing.email, token, studioPath(tenant.slug, "/account"));
+        // Back to the page they were on (their checkout) if it's one of this studio's own; else their account.
+        const back = next && isStudioPath(tenant.slug, next) ? next : studioPath(tenant.slug, "/account");
+        const link = clientInvitePath(existing.email, token, back);
         sendNotification({
           event: "STUDIO_UPDATE",
           studioName: tenant.name,

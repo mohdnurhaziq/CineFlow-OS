@@ -7,10 +7,10 @@
 // prisma/dev.db. Then apply it to dev with `npx prisma migrate deploy`, and commit the new
 // folder under prisma/migrations with the schema change.
 
-import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { runPrisma } from "./prisma-cli.mjs";
 
 const name = process.argv[2] ?? "";
 if (!/^[a-z0-9_]+$/.test(name)) {
@@ -19,16 +19,15 @@ if (!/^[a-z0-9_]+$/.test(name)) {
 }
 
 const shadow = path.join(os.tmpdir(), `cineflow-new-migration-${process.pid}.db`);
-const r = spawnSync(
-  "npx",
+const r = runPrisma(
   [
-    "prisma", "migrate", "diff",
+    "migrate", "diff",
     "--from-migrations", "prisma/migrations",
     "--to-schema-datamodel", "prisma/schema.prisma",
     "--shadow-database-url", `file:${shadow.replace(/\\/g, "/")}`,
     "--script",
   ],
-  { encoding: "utf8", shell: process.platform === "win32" }
+  { encoding: "utf8" }
 );
 for (const suffix of ["", "-journal", "-wal", "-shm"]) rmSync(`${shadow}${suffix}`, { force: true });
 if (r.status !== 0) {

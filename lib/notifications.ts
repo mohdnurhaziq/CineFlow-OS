@@ -256,12 +256,15 @@ function esc(value: unknown): string {
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
-/** The address emails are sent from, used as a calendar invite's organiser: the SMTP sender, else the
- * address in RESEND_FROM_EMAIL, else the platform's own. */
+/** Resend's sender when RESEND_FROM_EMAIL isn't set. */
+const DEFAULT_RESEND_FROM = "CineFlow OS <onboarding@resend.dev>";
+
+/** The address emails are sent from, used as a calendar invite's organiser so the two always match:
+ * the SMTP sender, else Resend's (RESEND_FROM_EMAIL, or its default), else the platform's own. */
 export function platformSenderAddress(): string {
   const smtp = smtpConfigFromEnv();
   if (smtp) return smtp.fromAddress;
-  const from = process.env.RESEND_FROM_EMAIL?.trim() ?? "";
+  const from = process.env.RESEND_FROM_EMAIL?.trim() || DEFAULT_RESEND_FROM;
   const address = (from.match(/<([^<>\s]+@[^<>\s]+)>/)?.[1] ?? from).trim();
   return /^[^\s@<>]+@[^\s@<>]+$/.test(address) ? address : "noreply@cineflow-os.my";
 }
@@ -327,7 +330,7 @@ async function deliverViaResend(
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL?.trim() || "CineFlow OS <onboarding@resend.dev>",
+        from: process.env.RESEND_FROM_EMAIL?.trim() || DEFAULT_RESEND_FROM,
         to: [input.to],
         // Strip line breaks so a hostile name can never inject extra header lines.
         subject: input.subject.replace(/[\r\n]+/g, " ").trim(),
@@ -706,6 +709,17 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     }
   }
 
+  const calendar = "calendar" in payload ? payload.calendar : undefined;
+  // Some mail apps (Outlook among them) show an invite sent by Resend as a plain file: say how to add it.
+  if (calendar?.googleUrl) {
+    bodyHtml += `
+        <p style="font-size: 12px; color: #a1a1aa; margin-top: 24px;">
+          Not in your calendar yet? <a href="${esc(calendar.googleUrl)}" style="color: #f59e0b;">Add it to Google Calendar</a>,
+          or open the attached <strong>invite.ics</strong> (Outlook, Apple Calendar).
+        </p>`;
+    emailText += `\n\nNot in your calendar yet? Add it to Google Calendar: ${calendar.googleUrl} or open the attached invite.ics (Outlook, Apple Calendar).`;
+  }
+
   const emailHtml = wrapEmailTemplate(payload.studioName, emailSubject, bodyHtml);
   let whatsappUrl: string | undefined;
 
@@ -714,7 +728,6 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappText)}`;
   }
 
-  const calendar = "calendar" in payload ? payload.calendar : undefined;
   const wantsEmail = channel === "EMAIL" || channel === "BOTH";
   const delivery =
     wantsEmail && recipientEmail

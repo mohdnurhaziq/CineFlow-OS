@@ -23,6 +23,11 @@ export type AssignmentChange = {
   assignedByName?: string;
   /** CANCELLED: the booking as it was before the cancel (which lets go of its slot), to remove the right event. */
   before?: BookingForInvite;
+  /**
+   * UNASSIGNED by removing the member from the team: they get only the calendar cancellation (so the
+   * shoot leaves their calendar), and only when there is one to send.
+   */
+  removedMember?: boolean;
 };
 
 /** NONE: nobody needed telling (no assignees, or only the person who made the change). */
@@ -57,9 +62,9 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
       change.userIds ??
       (await db.bookingAssignment.findMany({ where: { bookingId, tenantId: booking.tenantId }, select: { userId: true } })).map((a) => a.userId);
     if (ids.length === 0) return "NONE";
-    // Only people still on this studio's team: a removed member is never emailed.
+    // Only people still on this studio's team, except the calendar cancellation for someone just removed.
     const people = await db.user.findMany({
-      where: { id: { in: ids }, tenantId: booking.tenantId, deactivatedAt: null },
+      where: { id: { in: ids }, tenantId: booking.tenantId, ...(change.removedMember ? {} : { deactivatedAt: null }) },
       select: { id: true, name: true, email: true },
     });
 
@@ -83,7 +88,7 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
             change.kind === "CANCELLED" || change.kind === "UNASSIGNED" ? "CANCEL" : "REQUEST"
           ) ?? undefined;
         // "It's in your calendar" is only true with an invite to carry.
-        if (change.kind === "CONFIRMED" && !calendar) continue;
+        if ((change.kind === "CONFIRMED" || change.removedMember) && !calendar) continue;
         const result =
           change.kind === "ASSIGNED"
             ? await sendNotification(

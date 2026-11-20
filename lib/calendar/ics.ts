@@ -7,7 +7,12 @@ import { minutesOfDay, slotDateKey, STUDIO_TIME_ZONE } from "@/lib/slot-time";
  * UID with a higher SEQUENCE), CANCEL removes it. Server code (uses Buffer to count bytes).
  */
 
-export type CalendarInvite = { method: "REQUEST" | "CANCEL"; ics: string };
+export type CalendarInvite = {
+  method: "REQUEST" | "CANCEL";
+  ics: string;
+  /** REQUEST only: adds the event by hand in Google Calendar, for mail apps that show only the file. */
+  googleUrl?: string;
+};
 
 export interface InviteEvent {
   /** One per booking and person: the same UID updates or cancels that person's event. */
@@ -25,9 +30,17 @@ export interface InviteEvent {
   url?: string;
 }
 
-/** Whole seconds since 1 Jan 2026: higher for every later change, with nothing to store. */
+let lastSequence = 0;
+
+/**
+ * Quarter-seconds since 1 Jan 2026, and always above the last one this server gave out: every later
+ * change gets a higher number, even two in the same moment, with nothing to store. Stays within a
+ * calendar's 32-bit limit until 2043.
+ */
 export function inviteSequence(now: Date = new Date()): number {
-  return Math.max(1, Math.floor((now.getTime() - Date.UTC(2026, 0, 1)) / 1000));
+  const fromClock = Math.max(1, Math.floor((now.getTime() - Date.UTC(2026, 0, 1)) / 250));
+  lastSequence = Math.max(fromClock, lastSequence + 1);
+  return lastSequence;
 }
 
 /** The UTC instant of a wall-clock time (YYYY-MM-DD, minutes of the day) in `timeZone`. */
@@ -64,19 +77,23 @@ export function slotTimes(
   if (start === null || end === null) return null;
   const day = slotDateKey(slot.date);
   const startAt = zonedToUtc(day, start, timeZone);
-  // A session that ends after midnight ends the next day.
+  // The same start and end time: an hour, not a whole day. An end before the start: past midnight.
+  if (end === start) return { start: startAt, end: new Date(startAt.getTime() + 3600 * 1000) };
   const endAt = zonedToUtc(day, end, timeZone);
   return { start: startAt, end: end > start ? endAt : new Date(endAt.getTime() + 24 * 3600 * 1000) };
 }
 
 const utcStamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 
+/** Line breaks of any kind become "\n"; other control characters, which iCalendar forbids, are dropped. */
+const clean = (value: string) => value.replace(/\r\n|\r/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "");
+
 /** TEXT values: backslash, semicolon, comma and new lines escaped. */
 const text = (value: string) =>
-  value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  clean(value).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 
 /** A parameter value (a name): quoted, with characters that can't appear removed. */
-const param = (value: string) => `"${value.replace(/["\r\n]/g, "").trim()}"`;
+const param = (value: string) => `"${clean(value).replace(/["\n]/g, "").trim()}"`;
 
 /** Lines longer than 75 bytes continue on the next line after a space (never splitting a character). */
 function fold(line: string): string {
@@ -130,5 +147,14 @@ export function buildInvite(event: InviteEvent, method: "REQUEST" | "CANCEL"): C
     "END:VEVENT",
     "END:VCALENDAR",
   ];
-  return { method, ics: `${lines.map(fold).join("\r\n")}\r\n` };
+  const ics = `${lines.map(fold).join("\r\n")}\r\n`;
+  if (cancel) return { method, ics };
+  const details = event.url && !event.description.includes(event.url) ? `${event.description}\n\n${event.url}` : event.description;
+  const google = new URLSearchParams({
+    action: "TEMPLATE",
+    text: clean(event.title),
+    dates: `${utcStamp(event.start)}/${utcStamp(event.end)}`,
+    details: clean(details),
+  });
+  return { method, ics, googleUrl: `https://calendar.google.com/calendar/render?${google.toString()}` };
 }

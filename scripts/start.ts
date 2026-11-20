@@ -25,6 +25,7 @@ import { PrismaClient } from "@prisma/client";
 import { appEnvFrom } from "@/lib/app-env";
 import { isLiveAddress, productionSettingProblems } from "@/lib/production-settings";
 import { removeDemoUploads } from "../prisma/setup-assets";
+import { runPrisma } from "./prisma-cli.mjs";
 
 const SCHEMA = "prisma/schema.prisma";
 const BASELINE = "0_init";
@@ -66,11 +67,11 @@ interface PrismaRun {
 }
 
 function prisma(args: string[], cwd: string, databaseUrl: string): PrismaRun {
-  const r = spawnSync("npx", ["prisma", ...args], {
+  // No shell: paths with spaces (a Windows temp folder) reach Prisma whole.
+  const r = runPrisma(args, {
     cwd,
     env: { ...process.env, DATABASE_URL: databaseUrl },
     encoding: "utf8",
-    shell: process.platform === "win32",
   });
   return { status: r.status ?? 1, output: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }

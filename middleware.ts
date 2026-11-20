@@ -92,7 +92,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Extract Host Header
-  const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  // The first forwarded host when proxies list several, exactly as the sign-in cookie reads it.
+  const rawHost = hostFrom((name) => request.headers.get(name));
   const hostname = (rawHost.split(":")[0] ?? "").toLowerCase();
 
   // With studio subdomains on (production), each studio lives at <slug>.<domain> and its paths
