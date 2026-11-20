@@ -329,7 +329,7 @@ export async function removeTeamMember(input: TeamMemberRefInput) {
       return { count, confirmedBookingIds: upcoming.filter((a) => a.booking.status === "CONFIRMED").map((a) => a.booking.id) };
     });
 
-    // Their confirmed shoots come out of their calendar (only the calendar cancellation is sent).
+    // Their confirmed shoots come out of their calendar: a short note per shoot carrying its cancellation.
     for (const bookingId of confirmedBookingIds) {
       void notifyAssignees(bookingId, { kind: "UNASSIGNED", userIds: [member.id], removedMember: true });
     }

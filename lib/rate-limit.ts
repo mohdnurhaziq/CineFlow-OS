@@ -26,6 +26,17 @@ export function isRateLimited(key: string, max = 10, windowMs = 10 * 60 * 1000):
   return entry.count > max;
 }
 
+/** Counts one attempt for `key` (e.g. a failed sign-in) in a window of `windowMs`, without a limit. */
+export function countAttempt(key: string, windowMs = 10 * 60 * 1000): void {
+  isRateLimited(key, Number.POSITIVE_INFINITY, windowMs);
+}
+
+/** How many attempts `key` has in its current window (0 once it has expired). Doesn't count one. */
+export function attemptCount(key: string): number {
+  const entry = buckets.get(key);
+  return entry && entry.resetAt >= Date.now() ? entry.count : 0;
+}
+
 /** How many keys the limiter holds (for tests). */
 export function rateLimiterSize(): number {
   return buckets.size;

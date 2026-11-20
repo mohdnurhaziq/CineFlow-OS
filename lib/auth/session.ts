@@ -3,7 +3,34 @@
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { isRateLimited } from "@/lib/rate-limit";
+import { attemptCount, countAttempt, isRateLimited } from "@/lib/rate-limit";
+
+/** Failed sign-ins for one email from everywhere in an hour before only fresh addresses may try. */
+const SIGN_IN_FAILURE_CEILING = 100;
+
+/**
+ * Whether this sign-in attempt is refused:
+ *   - 10 tries per email per visitor in 10 minutes (per email alone when the IP is unknown);
+ *   - after 100 failures for the email from everywhere in an hour (a guess spread over many
+ *     addresses), only addresses that haven't failed for it may try, so the real owner signing in
+ *     from their usual place still gets in.
+ * `scope` keeps studio and platform sign-in apart. Counts this attempt.
+ */
+function signInBlocked(scope: string, email: string, ip: string | null): boolean {
+  if (isRateLimited(ip ? `${scope}:${email}:${ip}` : `${scope}:${email}`, 10)) return true;
+  return (
+    !!ip &&
+    attemptCount(`${scope}-fail:${email}`) >= SIGN_IN_FAILURE_CEILING &&
+    attemptCount(`${scope}-fail:${email}:${ip}`) > 0
+  );
+}
+
+/** Records a failed sign-in for the ceiling in signInBlocked. */
+function signInFailed(scope: string, email: string, ip: string | null): void {
+  if (!ip) return;
+  countAttempt(`${scope}-fail:${email}`, 60 * 60 * 1000);
+  countAttempt(`${scope}-fail:${email}:${ip}`, 60 * 60 * 1000);
+}
 import { requestIp } from "@/lib/client-ip";
 import { decodeSessionToken, isSessionRevoked, requestHost, sessionCookieFor, setSessionCookie, type SessionUser } from "./token";
 
@@ -45,14 +72,10 @@ export async function loginWithCredentials(
     const normalizedEmail = email.trim().toLowerCase();
 
     // Per email across every studio (a per-studio key let a made-up studio name reset the count, and
-    // studio sign-in also accepts the super-admin). Counted per visitor when the IP is known, so
-    // someone failing on purpose can't lock the real owner out: 10 tries per email per visitor, and
-    // a much higher ceiling for one email from everywhere (a guess spread over many addresses).
+    // studio sign-in also accepts the super-admin), counted per visitor when the IP is known so that
+    // someone failing on purpose can't lock the real owner out.
     const ip = await requestIp();
-    if (isRateLimited(ip ? `login:${normalizedEmail}:${ip}` : `login:${normalizedEmail}`, 10)) {
-      return { success: false, error: "RATE_LIMITED" };
-    }
-    if (ip && isRateLimited(`login:${normalizedEmail}`, 100, 60 * 60 * 1000)) {
+    if (signInBlocked("login", normalizedEmail, ip)) {
       return { success: false, error: "RATE_LIMITED" };
     }
     if (ip && isRateLimited(`login-ip:${ip}`, 30)) {
@@ -70,12 +93,8 @@ export async function loginWithCredentials(
         })))
       : await db.user.findFirst({ where: { email: normalizedEmail }, include: { tenant: true } });
 
-    if (!user || !user.passwordHash) {
-      return { success: false, error: "INVALID_CREDENTIALS" };
-    }
-
-    const isValidPassword = bcrypt.compareSync(password, user.passwordHash);
-    if (!isValidPassword) {
+    if (!user || !user.passwordHash || !bcrypt.compareSync(password, user.passwordHash)) {
+      signInFailed("login", normalizedEmail, ip);
       return { success: false, error: "INVALID_CREDENTIALS" };
     }
 
@@ -120,10 +139,7 @@ export async function loginPlatformAdmin(
     const normalizedEmail = email.trim().toLowerCase();
     // As for studio sign-in: counted per visitor, so a stranger's failures can't lock the admin out.
     const ip = await requestIp();
-    if (isRateLimited(ip ? `login:platform:${normalizedEmail}:${ip}` : `login:platform:${normalizedEmail}`, 10)) {
-      return { success: false, error: "RATE_LIMITED" };
-    }
-    if (ip && isRateLimited(`login:platform:${normalizedEmail}`, 100, 60 * 60 * 1000)) {
+    if (signInBlocked("login:platform", normalizedEmail, ip)) {
       return { success: false, error: "RATE_LIMITED" };
     }
     if (ip && isRateLimited(`login-ip:${ip}`, 30)) {
@@ -132,6 +148,7 @@ export async function loginPlatformAdmin(
 
     const user = await db.user.findFirst({ where: { email: normalizedEmail, role: "SUPER_ADMIN" } });
     if (!user?.passwordHash || !bcrypt.compareSync(password, user.passwordHash)) {
+      signInFailed("login:platform", normalizedEmail, ip);
       return { success: false, error: "INVALID_CREDENTIALS" };
     }
     if (user.deactivatedAt) return { success: false, error: "ACCOUNT_REMOVED" };

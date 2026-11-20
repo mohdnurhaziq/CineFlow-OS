@@ -24,8 +24,9 @@ export type AssignmentChange = {
   /** CANCELLED: the booking as it was before the cancel (which lets go of its slot), to remove the right event. */
   before?: BookingForInvite;
   /**
-   * UNASSIGNED by removing the member from the team: they get only the calendar cancellation (so the
-   * shoot leaves their calendar), and only when there is one to send.
+   * UNASSIGNED by removing the member from the team: a short note that they've left the team, carrying
+   * the calendar cancellation (so the shoot leaves their calendar), with no link to the admin they can
+   * no longer open. Sent only when there is a cancellation to carry.
    */
   removedMember?: boolean;
 };
@@ -113,8 +114,11 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
                   ...to,
                   kind: change.kind,
                   calendar,
-                  message:
-                    change.kind === "CONFIRMED"
+                  // Someone removed from the team can't open the admin: no schedule link, and say why.
+                  ...(change.removedMember ? { scheduleUrl: undefined } : {}),
+                  message: change.removedMember
+                    ? `You're no longer on the team at ${booking.tenant.name}, so ${booking.clientName}'s session on ${date} has been taken out of your calendar.`
+                    : change.kind === "CONFIRMED"
                       ? `${booking.clientName}'s session on ${sessionText(booking.slot)} is confirmed. It's in your calendar.`
                       : change.kind === "MOVED"
                       ? `${booking.clientName}'s session moved from ${change.previous ?? "its earlier time"} to ${sessionText(booking.slot)}.`

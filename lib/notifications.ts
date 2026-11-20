@@ -202,7 +202,8 @@ export interface ShootChangedPayload {
   shootClientName: string;
   /** The plain sentence with the details. */
   message: string;
-  scheduleUrl: string;
+  /** Their schedule in the admin. Left out for someone no longer on the team (they can't open it). */
+  scheduleUrl?: string;
   /** A calendar update or cancellation for the shoot. */
   calendar?: CalendarInvite;
 }
@@ -697,27 +698,38 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
       bodyHtml = `
         <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
         <p>${esc(payload.message)}</p>
-        <div style="text-align: center; margin: 30px 0;">
+        ${
+          payload.scheduleUrl
+            ? `<div style="text-align: center; margin: 30px 0;">
           <a href="${esc(payload.scheduleUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
             Open my schedule
           </a>
-        </div>
+        </div>`
+            : ""
+        }
       `;
-      emailText = `${payload.message} Open my schedule: ${payload.scheduleUrl}`;
+      emailText = payload.scheduleUrl ? `${payload.message} Open my schedule: ${payload.scheduleUrl}` : payload.message;
       whatsappText = "";
       break;
     }
   }
 
   const calendar = "calendar" in payload ? payload.calendar : undefined;
-  // Some mail apps (Outlook among them) show an invite sent by Resend as a plain file: say how to add it.
-  if (calendar?.googleUrl) {
+  // Some mail apps (Outlook among them) show an invite sent by Resend as a plain file: say how to add
+  // it. Only in the first invite (confirmed, or put on a shoot): a copy added from the link is a
+  // separate event that later moves and cancellations can't update, so they never offer it again.
+  const firstInvite =
+    payload.event === "BOOKING_CONFIRMED" ||
+    payload.event === "SHOOT_ASSIGNED" ||
+    (payload.event === "SHOOT_CHANGED" && payload.kind === "CONFIRMED");
+  if (calendar?.googleUrl && firstInvite) {
     bodyHtml += `
         <p style="font-size: 12px; color: #a1a1aa; margin-top: 24px;">
           Not in your calendar yet? <a href="${esc(calendar.googleUrl)}" style="color: #f59e0b;">Add it to Google Calendar</a>,
           or open the attached <strong>invite.ics</strong> (Outlook, Apple Calendar).
+          A copy added from the link won&apos;t update by itself; we&apos;ll email you if anything changes.
         </p>`;
-    emailText += `\n\nNot in your calendar yet? Add it to Google Calendar: ${calendar.googleUrl} or open the attached invite.ics (Outlook, Apple Calendar).`;
+    emailText += `\n\nNot in your calendar yet? Add it to Google Calendar: ${calendar.googleUrl} or open the attached invite.ics (Outlook, Apple Calendar). A copy added from the link won't update by itself; we'll email you if anything changes.`;
   }
 
   const emailHtml = wrapEmailTemplate(payload.studioName, emailSubject, bodyHtml);

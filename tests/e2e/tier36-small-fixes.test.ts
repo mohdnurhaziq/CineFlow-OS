@@ -24,7 +24,7 @@ import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { assignTeamMember } from "@/lib/actions/admin-assignments";
 import { removeTeamMember } from "@/lib/actions/admin-team";
 import { lookupMyBooking } from "@/lib/actions/my-booking";
-import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
+import { SHOWCASE_PLACEHOLDER, editableShowcasePhotos, showcaseCover } from "@/lib/showcase/cover";
 import { runPrisma } from "../../scripts/prisma-cli.mjs";
 import { withSubdomains } from "./tier33-studio-subdomains.test";
 
@@ -331,6 +331,9 @@ export async function runTier36SmallFixesTests(harness: TestHarness) {
       const cancel = (await invitesTo(shooter.email, 2))[1];
       harness.assertEqual(cancel?.method, "CANCEL", "Their event is cancelled");
       harness.assert(unfold(cancel?.content ?? "").includes(`UID:booking-${b.bookingId}-shooter-${shooter.id}@cineflow-os`), "The right event");
+      const removalMail = mails.filter((m) => m.to === shooter.email && m.icalEvent).at(-1);
+      harness.assert(!/Open my schedule/.test(removalMail?.html ?? ""), "No link to an admin page they can no longer open", removalMail?.html.slice(-800));
+      harness.assert(/no longer on the team/i.test(removalMail?.html ?? ""), "Says they've left the team");
     } finally {
       restoreMail();
     }
@@ -408,5 +411,50 @@ export async function runTier36SmallFixesTests(harness: TestHarness) {
     harness.assertEqual(showcaseCover(null), SHOWCASE_PLACEHOLDER, "Missing cover");
     harness.assertEqual(showcaseCover("/uploads/showcase/default.jpg"), SHOWCASE_PLACEHOLDER, "The old, missing default");
     harness.assertEqual(showcaseCover("/uploads/showcase/real.jpg"), "/uploads/showcase/real.jpg", "A real cover stays");
+  });
+
+  // ── Final review fixes ──────────────────────────────────────────────────────────────────────
+
+  await harness.test("T36-R1: the Google Calendar link is only in the first invite email, with a note that it won't update", async () => {
+    const request = buildInvite(event(), "REQUEST");
+    const base = { studioName: "Lumina", studioSlug: "lumina-cine", clientName: "Farah", clientEmail: `t36-r1-${run}@example.test` };
+    const first = await sendNotification(
+      { ...base, event: "BOOKING_CONFIRMED", packageName: "A", slotDate: "x", startTime: "10:00 AM", endTime: "11:00 AM", depositAmount: 1, currency: "MYR", depositPaid: true, calendar: request },
+      "EMAIL"
+    );
+    harness.assert(first.emailHtml.includes("calendar.google.com"), "In the confirmation");
+    harness.assert(/update by itself/i.test(first.emailHtml), "With a note that a copy added by hand won't update", first.emailHtml.slice(-900));
+    const moved = await sendNotification({ ...base, event: "STUDIO_UPDATE", headline: "Moved", message: "Moved.", calendar: request }, "EMAIL");
+    harness.assert(!moved.emailHtml.includes("calendar.google.com"), "Not when the session moves (that copy wouldn't move)");
+    const shootMoved = await sendNotification(
+      { ...base, event: "SHOOT_CHANGED", kind: "MOVED", shootClientName: "Farah", message: "Moved.", scheduleUrl: "https://x/admin/schedule", calendar: request },
+      "EMAIL"
+    );
+    harness.assert(!shootMoved.emailHtml.includes("calendar.google.com"), "Nor for a shooter's moved shoot");
+  });
+
+  await harness.test("T36-R2: editing a portfolio item without a real cover never lists the placeholder as a photo", async () => {
+    const e = editableShowcasePhotos(SHOWCASE_PLACEHOLDER, JSON.stringify(["/uploads/showcase/a.jpg"]));
+    harness.assertEqual(e.cover, "", "No cover chosen yet");
+    harness.assertEqual(JSON.stringify(e.images), JSON.stringify(["/uploads/showcase/a.jpg"]), "Only real photos");
+    const legacy = editableShowcasePhotos("/uploads/showcase/default.jpg", null);
+    harness.assertEqual(legacy.cover, "", "The old missing default isn't a cover");
+    harness.assertEqual(legacy.images.length, 0, "Nor a photo");
+    const real = editableShowcasePhotos("/uploads/showcase/c.jpg", JSON.stringify(["/uploads/showcase/c.jpg", "/uploads/showcase/d.jpg"]));
+    harness.assertEqual(real.cover, "/uploads/showcase/c.jpg", "A real cover stays");
+    harness.assertEqual(JSON.stringify(real.images), JSON.stringify(["/uploads/showcase/c.jpg", "/uploads/showcase/d.jpg"]), "Cover first, no duplicates");
+  });
+
+  await harness.test("T36-R3: failures spread over many addresses can't lock the owner out from a fresh one", async () => {
+    const hash = (await import("bcryptjs")).default.hashSync("owner-pass-9", 4);
+    const victim = await db.user.create({ data: { tenantId: lumina.id, email: `t36-ceiling-${run}@example.test`, name: "Ceiling", role: "CLIENT", passwordHash: hash } });
+    const last = (Date.now() % 200) + 1;
+    for (let n = 0; n < 21; n++) {
+      for (let i = 0; i < 5; i++) await withIp(`198.18.${n}.${last}`, () => loginWithCredentials(victim.email, "wrong", "lumina-cine"));
+    }
+    const guesser = await withIp(`198.18.0.${last}`, () => loginWithCredentials(victim.email, "owner-pass-9", "lumina-cine"));
+    harness.assertEqual(guesser.error, "RATE_LIMITED", "An address that has been failing is stopped once the ceiling is reached");
+    const ownerTry = await withIp("192.0.2.200", () => loginWithCredentials(victim.email, "owner-pass-9", "lumina-cine"));
+    harness.assertEqual(ownerTry.success, true, "The owner, from an address with no failures, still gets in", JSON.stringify(ownerTry));
   });
 }

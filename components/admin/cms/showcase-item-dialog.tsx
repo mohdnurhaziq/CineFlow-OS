@@ -20,24 +20,11 @@ import { useDialog } from "@/lib/use-dialog";
 import { disciplineLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
 import { toast } from "sonner";
-import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
+import { SHOWCASE_PLACEHOLDER, editableShowcasePhotos, showcaseCover } from "@/lib/showcase/cover";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function parseGalleryImages(raw?: string | null): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((x): x is string => typeof x === "string" && Boolean(x));
-    }
-  } catch {
-    return raw.split(",").map((s) => s.trim()).filter(Boolean);
-  }
-  return [];
-}
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200 MB
@@ -103,7 +90,7 @@ export function ShowcaseItemDialog({
   const [discipline, setDiscipline] = useState<ShowcaseDiscipline>(
     (itemToEdit?.discipline as ShowcaseDiscipline | undefined) || "PHOTOGRAPHY"
   );
-  const [coverImageUrl, setCoverImageUrl] = useState(itemToEdit?.coverImageUrl || "");
+  const [coverImageUrl, setCoverImageUrl] = useState(editableShowcasePhotos(itemToEdit?.coverImageUrl, null).cover);
   const [videoEmbedUrl, setVideoEmbedUrl] = useState(itemToEdit?.videoEmbedUrl || "");
   const [images, setImages] = useState<string[]>([]);
   const [servicePackageId, setServicePackageId] = useState(itemToEdit?.servicePackageId || "");
@@ -125,15 +112,14 @@ export function ShowcaseItemDialog({
       setClientName(itemToEdit.clientName);
       setCategory(itemToEdit.category);
       setDiscipline((itemToEdit.discipline as ShowcaseDiscipline | undefined) || "PHOTOGRAPHY");
-      setCoverImageUrl(itemToEdit.coverImageUrl || "");
+      // The placeholder is never a photo or a cover: the first real photo uploaded becomes the cover.
+      const editable = editableShowcasePhotos(itemToEdit.coverImageUrl, itemToEdit.galleryImages);
+      setCoverImageUrl(editable.cover);
       setVideoEmbedUrl(itemToEdit.videoEmbedUrl || "");
       setServicePackageId(itemToEdit.servicePackageId || "");
       setIsFeatured(itemToEdit.isFeatured);
       setSortOrder(itemToEdit.sortOrder.toString());
-
-      const galleryList = parseGalleryImages(itemToEdit.galleryImages);
-      const combined = Array.from(new Set([itemToEdit.coverImageUrl, ...galleryList].filter(Boolean)));
-      setImages(combined);
+      setImages(editable.images);
     } else {
       setTitle("");
       setClientName("");
