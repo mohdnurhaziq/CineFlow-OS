@@ -150,16 +150,19 @@ export async function lookupMyBooking(input: {
     const proposals: MyBookingProposal[] = [];
 
     {
-      const [invoiceRows, projectRows] = await Promise.all([
-        db.milestoneInvoice.findMany({
-          where: { tenantId: tenant.id, bookingId: booking.id },
-          orderBy: { createdAt: "desc" },
-        }),
-        db.project.findMany({
-          where: { tenantId: tenant.id, bookingId: booking.id, ...liveProjectWhere },
-          orderBy: { createdAt: "desc" },
-        }),
-      ]);
+      const projectRows = await db.project.findMany({
+        where: { tenantId: tenant.id, bookingId: booking.id, ...liveProjectWhere },
+        orderBy: { createdAt: "desc" },
+      });
+      // The booking's own invoices (deposit, balance) and those of its own project (its gallery or
+      // production: a retainer, a final balance, a custom charge).
+      const invoiceRows = await db.milestoneInvoice.findMany({
+        where: {
+          tenantId: tenant.id,
+          OR: [{ bookingId: booking.id }, ...(projectRows.length > 0 ? [{ projectId: { in: projectRows.map((p) => p.id) } }] : [])],
+        },
+        orderBy: { createdAt: "desc" },
+      });
 
       invoices = invoiceRows.map((inv) => ({
         id: inv.id,

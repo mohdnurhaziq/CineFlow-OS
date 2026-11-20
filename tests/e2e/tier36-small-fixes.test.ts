@@ -23,6 +23,7 @@ import { processBookingCheckout } from "@/lib/actions/checkout";
 import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { assignTeamMember } from "@/lib/actions/admin-assignments";
 import { removeTeamMember } from "@/lib/actions/admin-team";
+import { lookupMyBooking } from "@/lib/actions/my-booking";
 import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
 import { runPrisma } from "../../scripts/prisma-cli.mjs";
 import { withSubdomains } from "./tier33-studio-subdomains.test";
@@ -362,6 +363,41 @@ export async function runTier36SmallFixesTests(harness: TestHarness) {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  // ── 2. Find my booking shows the booking's project invoices too ────────────────────────────
+
+  await harness.test("T36-02: Find my booking lists the invoices of the booking's own project, not just the deposit", async () => {
+    const slot = await makeSlot(52);
+    const b = await book(slot.id);
+    await approve(b.invoiceId);
+    const project = await db.project.findFirst({ where: { bookingId: b.bookingId } });
+    harness.assert(Boolean(project), "A confirmed booking has its project");
+    const booking = await db.clientBooking.findUniqueOrThrow({ where: { id: b.bookingId } });
+    const client = await db.user.findFirstOrThrow({ where: { tenantId: lumina.id, email: b.email } });
+    const extra = await db.milestoneInvoice.create({
+      data: {
+        tenantId: lumina.id,
+        invoiceNumber: `T36-${run}`,
+        projectId: project!.id,
+        clientId: client.id,
+        milestoneType: "FINAL_BALANCE_50",
+        amount: 250,
+        dueDate: new Date(Date.now() + 7 * DAY_MS),
+      },
+    });
+    const other = await db.project.findFirst({ where: { tenantId: lumina.id, NOT: { bookingId: b.bookingId } } });
+    const stranger = other
+      ? await db.milestoneInvoice.create({
+          data: { tenantId: lumina.id, invoiceNumber: `T36-X-${run}`, projectId: other.id, clientId: client.id, milestoneType: "CUSTOM", amount: 1, dueDate: new Date() },
+        })
+      : null;
+    const res = await lookupMyBooking({ tenantSlug: "lumina-cine", email: b.email, trackingCode: booking.trackingCode });
+    harness.assert(res.success === true, "Found", JSON.stringify(res).slice(0, 200));
+    const ids = res.success ? res.booking.invoices.map((i) => i.id) : [];
+    harness.assert(ids.includes(b.invoiceId), "The deposit");
+    harness.assert(ids.includes(extra.id), "The project's balance invoice");
+    if (stranger) harness.assert(!ids.includes(stranger.id), "Never another project's invoice");
   });
 
   // ── 5. Portfolio items without a cover photo ───────────────────────────────────────────────
