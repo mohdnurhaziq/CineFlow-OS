@@ -189,6 +189,9 @@ subdomain, so `lumina-cine.staging.<domain>` couldn't have HTTPS.
    self-hosted application for `staging.<domain>` with a policy that allows only your email.
 6. Set up real email for production: SMTP (for example Gmail with an app password) or
    Resend. Staging's emails go to its own test inbox at http://localhost:8125 on the 24/7 PC.
+   The same email setup sends calendar invites: once a booking is confirmed, the client and
+   everyone on the shoot get the session in their calendar (Gmail puts it in Google Calendar),
+   with reminders a day and an hour before. Moving or cancelling it updates their calendars.
 7. Deploy staging, then production (below). On the first production deploy, create your
    super-admin:
    ```
