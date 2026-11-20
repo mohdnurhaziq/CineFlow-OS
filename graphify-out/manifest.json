@@ -1062,9 +1062,9 @@
     "semantic_hash": ""
   },
   "lib/notifications.ts": {
-    "mtime": 1795148083.3302968,
-    "seen": 1795148239.232237,
-    "ast_hash": "c13bca4cf117e70187f2cdb40bd87b80",
+    "mtime": 1795149257.4100266,
+    "seen": 1795149414.8427422,
+    "ast_hash": "f36bdb9b4b0a64cc3123476d85656a24",
     "semantic_hash": ""
   },
   "lib/solar.ts": {
@@ -1458,9 +1458,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1795148216.3440082,
-    "seen": 1795148239.26829,
-    "ast_hash": "bcd2b253c6d5e94ea8aa5b7802fe3514",
+    "mtime": 1795149287.521004,
+    "seen": 1795149414.884827,
+    "ast_hash": "4616a809c9aa81557c5576a1d48f60f3",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/account/page.tsx": {
@@ -2310,9 +2310,9 @@
     "semantic_hash": ""
   },
   "lib/payments/settle.ts": {
-    "mtime": 1795148083.3347368,
-    "seen": 1795148239.2327912,
-    "ast_hash": "97488e5aef38919d84872218d261d934",
+    "mtime": 1795148684.0484042,
+    "seen": 1795149414.8433306,
+    "ast_hash": "108290e50917652900fb0a70984a4e74",
     "semantic_hash": ""
   },
   "lib/payments/toyyibpay.ts": {
@@ -3498,9 +3498,9 @@
     "semantic_hash": ""
   },
   "lib/bookings/payment-approval.ts": {
-    "mtime": 1795148083.332826,
-    "seen": 1795148239.2270186,
-    "ast_hash": "0f83d52646ad1fc793663f33a7e8040a",
+    "mtime": 1795148684.046394,
+    "seen": 1795149414.8361118,
+    "ast_hash": "73a563101a4d843248f638e7e8004b58",
     "semantic_hash": ""
   },
   "components/admin/admin-nav-items.ts": {
@@ -3594,15 +3594,15 @@
     "semantic_hash": ""
   },
   "lib/actions/admin-assignments.ts": {
-    "mtime": 1794886169.3481972,
-    "seen": 1794922899.086704,
-    "ast_hash": "721e4add009b5939abb06d2b8ea9933a",
+    "mtime": 1795149257.4100266,
+    "seen": 1795149414.8218017,
+    "ast_hash": "de589ab7c7af67950849a255c2a73f38",
     "semantic_hash": ""
   },
   "lib/bookings/assignment-emails.ts": {
-    "mtime": 1795148083.328754,
-    "seen": 1795148239.225204,
-    "ast_hash": "610efe564fe8b89152385de22ffce0a8",
+    "mtime": 1795148684.046394,
+    "seen": 1795149414.8330185,
+    "ast_hash": "2a416fd79060a0e6399e0bce5511f35a",
     "semantic_hash": ""
   },
   "tests/e2e/tier25-assignments.test.ts": {
@@ -3960,15 +3960,15 @@
     "semantic_hash": ""
   },
   "lib/calendar/ics.ts": {
-    "mtime": 1795147165.5956516,
-    "seen": 1795148239.227942,
-    "ast_hash": "46779e2e79f80deac1fc6508bbb13a27",
+    "mtime": 1795148562.3978972,
+    "seen": 1795149414.8372624,
+    "ast_hash": "73d066b843a02687ba68e61b7ae4968d",
     "semantic_hash": ""
   },
   "tests/e2e/tier35-calendar-invites.test.ts": {
-    "mtime": 1795147999.1338103,
-    "seen": 1795148239.250877,
-    "ast_hash": "6f21721c971cb5325f1cbb49eaab6e61",
+    "mtime": 1795149215.7287743,
+    "seen": 1795149414.8661332,
+    "ast_hash": "af4691c5e4bd21afeeb8d81636d331c7",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-20-calendar-invites.md": {
@@ -3978,9 +3978,9 @@
     "semantic_hash": ""
   },
   "docs/superpowers/specs/2026-11-20-calendar-invites-design.md": {
-    "mtime": 1795146808.771994,
-    "seen": 1795148239.2735965,
-    "ast_hash": "ced53919e89d66645c4610e77327bae4",
+    "mtime": 1795149287.6816578,
+    "seen": 1795149414.8900514,
+    "ast_hash": "b6946ef01ae3f334ae0ae7724de10569",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {
