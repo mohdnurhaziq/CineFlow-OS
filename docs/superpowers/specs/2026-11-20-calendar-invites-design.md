@@ -33,6 +33,8 @@ The user chose **calendar invites by email**:
   - title: "Shoot: <client name> (<package>)";
   - description: the client's name and phone, and the link to the booking in the admin.
 - **Both:** reminders **1 day before** and **1 hour before** (my call).
+  - Found in the final review: Google Calendar ignores reminders inside emailed invites and
+    uses each person's own default notifications; Apple and Outlook use the invite's.
 
 ### When things change
 

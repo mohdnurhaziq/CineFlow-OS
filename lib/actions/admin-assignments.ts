@@ -99,13 +99,20 @@ export async function unassignTeamMember(
   try {
     const data = UnassignSchema.parse(input);
     const session = await requireAccess(data.tenantId, "bookings", "MANAGE");
-    const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId }, select: { id: true } });
+    const booking = await db.clientBooking.findFirst({
+      where: { id: data.bookingId, tenantId: data.tenantId },
+      select: { id: true, status: true, slotId: true },
+    });
     if (!booking) return fail("NOT_FOUND", "Booking not found.");
 
     const removed = await db.bookingAssignment.deleteMany({ where: { bookingId: booking.id, userId: data.userId, tenantId: data.tenantId } });
     revalidate(data.tenantSlug);
+    // No email to yourself, except to take a confirmed shoot back out of your calendar.
+    const inCalendar = booking.status === "CONFIRMED" && booking.slotId !== null;
     const emailDelivery: AssigneeEmailSummary =
-      removed.count > 0 && data.userId !== session.id ? await notifyAssigneesDetailed(booking.id, { kind: "UNASSIGNED", userIds: [data.userId] }) : "NONE";
+      removed.count > 0 && (data.userId !== session.id || inCalendar)
+        ? await notifyAssigneesDetailed(booking.id, { kind: "UNASSIGNED", userIds: [data.userId] })
+        : "NONE";
     return { success: true, emailDelivery };
   } catch (err) {
     return fail("UNASSIGN_FAILED", actionErrorMessage(err, "Could not remove the assignment."));

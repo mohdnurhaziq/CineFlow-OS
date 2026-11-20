@@ -436,4 +436,56 @@ export async function runTier35CalendarInvitesTests(harness: TestHarness) {
       restoreMail();
     }
   });
+
+  // ---- Final review fixes ----
+  await harness.test("T35-FIX-01: if Resend refuses the invite, the email still goes, without it", async () => {
+    try {
+      for (const k of MAIL_KEYS) delete process.env[k];
+      process.env.RESEND_API_KEY = "re_test_key";
+      process.env.RESEND_FROM_EMAIL = "CineFlow OS <noreply@cineflow-os.app>";
+      const bodies: Record<string, unknown>[] = [];
+      globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}"));
+        bodies.push(body);
+        return body.attachments
+          ? new Response(JSON.stringify({ name: "validation_error", message: "Invalid content_type" }), { status: 422 })
+          : new Response(JSON.stringify({ id: "email_2" }), { status: 200 });
+      }) as typeof fetch;
+
+      const r = await sendNotification(confirmedPayload(buildInvite(event(), "REQUEST")), "EMAIL");
+      harness.assertEqual(r.emailDelivery, "SENT", "The confirmation is still delivered");
+      harness.assertEqual(bodies.length, 2, "Tried with the invite, then without");
+      harness.assertEqual(bodies[1]?.attachments, undefined, "The second try has no attachment");
+      harness.assertEqual(r.calendar, undefined, "The send record doesn't claim an invite went");
+
+      globalThis.fetch = (async () => new Response("nope", { status: 401 })) as typeof fetch;
+      const denied = await sendNotification(confirmedPayload(buildInvite(event(), "REQUEST")), "EMAIL");
+      harness.assertEqual(denied.emailDelivery, "FAILED", "A refusal that isn't about the email itself still fails");
+    } finally {
+      restoreMail();
+    }
+  });
+
+  await harness.test("T35-FIX-02: taking yourself off a confirmed shoot removes it from your calendar", async () => {
+    captureMail();
+    try {
+      const slot = await makeSlot(45);
+      const b = await book(slot.id);
+      const me = await mkShooter("self");
+      const meSession = { id: me.id, email: me.email, name: me.name, role: "STUDIO_OWNER", tenantId: lumina.id, tenantSlug: "lumina-cine" };
+      await db.user.update({ where: { id: me.id }, data: { role: "STUDIO_OWNER" } });
+      // Assigned while pending, by themselves: no email then; the invite comes at confirmation.
+      await withSession(meSession, () => assignTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingIds: [b.bookingId], userId: me.id }));
+      await approve(b.invoiceId);
+      const [added] = await invitesTo(me.email, 1);
+      harness.assertEqual(added?.method, "REQUEST", "In their calendar once confirmed");
+
+      await withSession(meSession, () => unassignTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: b.bookingId, userId: me.id }));
+      const removed = (await invitesTo(me.email, 2))[1];
+      harness.assertEqual(removed?.method, "CANCEL", "Taking yourself off removes it");
+      harness.assert(unfold(removed?.content ?? "").includes(shooterUid(b.bookingId, me.id)), "Their event");
+    } finally {
+      restoreMail();
+    }
+  });
 }

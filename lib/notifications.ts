@@ -302,13 +302,26 @@ async function deliverEmail(input: {
   fromName?: string;
   /** Sent as the email's calendar invite (Gmail adds it to Google Calendar). */
   calendar?: CalendarInvite;
-}): Promise<{ delivery: "SENT" | "SKIPPED" | "FAILED"; error?: string }> {
+}): Promise<{ delivery: "SENT" | "SKIPPED" | "FAILED"; error?: string; calendarDropped?: boolean }> {
   const smtp = smtpConfigFromEnv();
   if (smtp) return deliverViaSmtp(smtp, input);
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { delivery: "SKIPPED" };
 
+  const first = await deliverViaResend(apiKey, input);
+  // An invite must never cost the email itself: if Resend refuses the message as sent, send it without.
+  if (first.delivery === "FAILED" && input.calendar && (first.status === 400 || first.status === 422)) {
+    const retry = await deliverViaResend(apiKey, { ...input, calendar: undefined });
+    return { delivery: retry.delivery, error: retry.error, calendarDropped: true };
+  }
+  return { delivery: first.delivery, error: first.error };
+}
+
+async function deliverViaResend(
+  apiKey: string,
+  input: { to: string; subject: string; html: string; text: string; calendar?: CalendarInvite }
+): Promise<{ delivery: "SENT" | "FAILED"; error?: string; status?: number }> {
   try {
     const res = await fetch(RESEND_ENDPOINT, {
       method: "POST",
@@ -337,7 +350,7 @@ async function deliverEmail(input: {
     if (!res.ok) {
       const detail = (await res.text().catch(() => "")).slice(0, 300);
       console.error(`Resend rejected email (${res.status}): ${detail}`);
-      return { delivery: "FAILED", error: resendRefusalReason(res.status, detail) };
+      return { delivery: "FAILED", error: resendRefusalReason(res.status, detail), status: res.status };
     }
     return { delivery: "SENT" };
   } catch (err) {
@@ -722,7 +735,7 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     success: delivery.delivery !== "FAILED",
     emailDelivery: delivery.delivery,
     emailError: delivery.error,
-    ...(calendar && delivery.delivery !== "SKIPPED" ? { calendar } : {}),
+    ...(calendar && delivery.delivery !== "SKIPPED" && !("calendarDropped" in delivery && delivery.calendarDropped) ? { calendar } : {}),
   };
 
   // The log keeps recent sends for auditing; reset and invite links are credentials, so never keep them.
