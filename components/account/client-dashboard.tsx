@@ -729,13 +729,14 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                       {upcomingBookings.slice(0, 2).map((b) => {
                         const dateInfo = b.slot ? formatShortDate(b.slot.date) : null;
                         return (
-                          <div
+                          <Link
                             key={b.id}
-                            className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800/80 flex items-center justify-between text-xs font-mono"
+                            href={studioPath(tenant.slug, `/account/bookings/${b.id}`)}
+                            className="p-3 rounded-xl bg-zinc-900/70 border border-zinc-800/80 flex items-center justify-between text-xs font-mono hover:border-zinc-700 hover:bg-zinc-900 transition-all group"
                           >
                             <div className="flex items-center gap-3">
                               {dateInfo && (
-                                <div className="size-10 rounded-lg bg-zinc-800 border border-zinc-700 flex flex-col items-center justify-center text-center flex-shrink-0">
+                                <div className="size-10 rounded-lg bg-zinc-800 border border-zinc-700 flex flex-col items-center justify-center text-center flex-shrink-0 group-hover:border-amber-500/40 transition-colors">
                                   <span className="text-[8px] uppercase text-amber-400 font-bold leading-none">
                                     {dateInfo.month}
                                   </span>
@@ -745,8 +746,9 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 </div>
                               )}
                               <div className="space-y-0.5">
-                                <div className="font-semibold text-white">
-                                  {categoryName(categories, b.category)}
+                                <div className="font-semibold text-white group-hover:text-amber-400 transition-colors flex items-center gap-1.5">
+                                  <span>{categoryName(categories, b.category)}</span>
+                                  <ChevronRight className="size-3 text-zinc-500 group-hover:text-amber-400 transition-transform group-hover:translate-x-0.5" />
                                 </div>
                                 <div className="text-[11px] text-zinc-400">
                                   {b.slot ? `${b.slot.startTime} – ${b.slot.endTime}` : "Time confirmed"}
@@ -756,7 +758,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap", bookingBadge(b).className)}>
                               {bookingBadge(b).label}
                             </span>
-                          </div>
+                          </Link>
                         );
                       })}
                     </div>
@@ -1183,26 +1185,38 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                       {/* Left: Date badge + category */}
                       <div className="flex items-start gap-3.5">
                         {dateInfo ? (
-                          <div className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex flex-col items-center justify-center text-center flex-shrink-0 group-hover:border-zinc-700 transition-colors">
+                          <Link
+                            href={studioPath(tenant.slug, `/account/bookings/${b.id}`)}
+                            className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex flex-col items-center justify-center text-center flex-shrink-0 group-hover:border-amber-500/40 hover:scale-105 transition-all"
+                            title="View booking details"
+                          >
                             <span className="text-[9px] font-mono uppercase text-amber-400 font-bold leading-none">
                               {dateInfo.month}
                             </span>
                             <span className="text-base font-black text-white leading-tight font-mono">
                               {dateInfo.day}
                             </span>
-                          </div>
+                          </Link>
                         ) : (
-                          <div className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 flex-shrink-0">
+                          <Link
+                            href={studioPath(tenant.slug, `/account/bookings/${b.id}`)}
+                            className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 flex-shrink-0 hover:border-zinc-700 hover:text-white transition-colors"
+                            title="View booking details"
+                          >
                             <CalendarClock className="size-5" />
-                          </div>
+                          </Link>
                         )}
 
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-white text-sm">
-                              {categoryName(categories, b.category)}
-                            </span>
-                            <span className="text-[11px] font-mono text-zinc-400">
+                            <Link
+                              href={studioPath(tenant.slug, `/account/bookings/${b.id}`)}
+                              className="font-bold text-white text-sm hover:text-amber-400 transition-colors inline-flex items-center gap-1 group/title"
+                            >
+                              <span>{categoryName(categories, b.category)}</span>
+                              <ChevronRight className="size-3 text-zinc-500 group-hover/title:text-amber-400 transition-transform group-hover/title:translate-x-0.5" />
+                            </Link>
+                            <span className="text-[11px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">
                               {b.trackingCode}
                             </span>
                           </div>
@@ -1224,20 +1238,41 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             </p>
                           )}
 
-                          {b.project && (
+                          <div className="flex items-center gap-3 pt-0.5">
                             <Link
-                              href={studioPath(tenant.slug, `/vault/${b.project.id}`)}
-                              className="text-[11px] text-amber-400 hover:underline inline-flex items-center gap-1 font-mono mt-0.5"
+                              href={studioPath(tenant.slug, `/account/bookings/${b.id}`)}
+                              className="text-[11px] text-amber-400 hover:underline inline-flex items-center gap-1 font-mono"
                             >
-                              <span>Open gallery</span>
-                              <ChevronRight className="size-3" />
+                              <Eye className="size-3" />
+                              <span>View details</span>
                             </Link>
-                          )}
+
+                            {b.project && (
+                              <Link
+                                href={studioPath(tenant.slug, `/vault/${b.project.id}`)}
+                                className="text-[11px] text-zinc-400 hover:text-white inline-flex items-center gap-1 font-mono"
+                              >
+                                <span>Open gallery</span>
+                                <ChevronRight className="size-3" />
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Right: Status badge & delivery CTA */}
-                      <div className="flex items-center gap-3 self-end sm:self-center">
+                      {/* Right: Status badge & action CTAs */}
+                      <div className="flex items-center gap-2.5 self-end sm:self-center flex-wrap">
+                        <Link
+                          href={studioPath(tenant.slug, `/account/bookings/${b.id}`)}
+                          className={cn(
+                            buttonVariants({ variant: "secondary", size: "sm" }),
+                            "h-8 text-xs font-mono border-zinc-700 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 hover:text-white flex items-center gap-1.5"
+                          )}
+                        >
+                          <Eye className="size-3.5 text-amber-400" />
+                          <span>View Details</span>
+                        </Link>
+
                         {b.status === "DELIVERED" && b.deliveryUrl && (
                           <a
                             href={b.deliveryUrl}
@@ -1249,6 +1284,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             <ExternalLink className="size-3" />
                           </a>
                         )}
+
                         <span
                           className={cn(
                             "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide border uppercase",
