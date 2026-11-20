@@ -55,7 +55,7 @@ with "Accepted" emails (my call).
 ### Which email address it comes from
 
 - The invite's organiser is the studio, by name.
-- It's sent from the platform's sending address (`noreply@cineflow-os.app` in production).
+- It's sent from the platform's sending address (`noreply@cineflow-os.my` in production).
 
 ## Not in scope
 

@@ -42,7 +42,7 @@ export function normalizeDomain(input: string): string | null {
 
 // ─── Studio subdomains ───────────────────────────────────────────────────────────────────────
 // With NEXT_PUBLIC_STUDIO_SUBDOMAINS=true (production), each studio lives at <slug>.<domain> and
-// its paths carry no slug: lumina-cine.cineflow-os.app/book. Off (dev, staging), studios live at
+// its paths carry no slug: lumina-cine.cineflow-os.my/book. Off (dev, staging), studios live at
 // <domain>/<slug>/…. Every studio link goes through studioPath / studioUrl, so both work. The
 // setting is read inside each function: Next inlines it, and tests can switch it.
 

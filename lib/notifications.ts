@@ -263,7 +263,7 @@ export function platformSenderAddress(): string {
   if (smtp) return smtp.fromAddress;
   const from = process.env.RESEND_FROM_EMAIL?.trim() ?? "";
   const address = (from.match(/<([^<>\s]+@[^<>\s]+)>/)?.[1] ?? from).trim();
-  return /^[^\s@<>]+@[^\s@<>]+$/.test(address) ? address : "noreply@cineflow-os.app";
+  return /^[^\s@<>]+@[^\s@<>]+$/.test(address) ? address : "noreply@cineflow-os.my";
 }
 
 const RESEND_TIMEOUT_MS = 8000;
