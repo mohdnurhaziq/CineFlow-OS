@@ -276,6 +276,8 @@ export async function runTier35CalendarInvitesTests(harness: TestHarness) {
       harness.assert(ics.includes("SUMMARY:Photo session with Lumina"), "Titled for the studio", ics);
       harness.assert(ics.includes(`mailto:${b.email}`), "Addressed to the client");
       harness.assert(ics.includes("/account"), "Links to their account");
+      const description = ics.match(/^DESCRIPTION:(.*)$/m)?.[1] ?? "";
+      harness.assertEqual(description.split("/lumina-cine/account").length - 1, 1, "The link appears once in the description", description);
     } finally {
       restoreMail();
     }

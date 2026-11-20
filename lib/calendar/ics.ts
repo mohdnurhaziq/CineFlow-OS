@@ -120,7 +120,7 @@ export function buildInvite(event: InviteEvent, method: "REQUEST" | "CANCEL"): C
     `DTSTART:${utcStamp(event.start)}`,
     `DTEND:${utcStamp(event.end)}`,
     `SUMMARY:${text(event.title)}`,
-    `DESCRIPTION:${text(event.url ? `${event.description}\n\n${event.url}` : event.description)}`,
+    `DESCRIPTION:${text(event.url && !event.description.includes(event.url) ? `${event.description}\n\n${event.url}` : event.description)}`,
     ...(event.url ? [`URL:${event.url}`] : []),
     `ORGANIZER;CN=${param(event.organizerName)}:mailto:${event.organizerEmail}`,
     `ATTENDEE;CN=${param(event.attendeeName)};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:${event.attendeeEmail}`,
