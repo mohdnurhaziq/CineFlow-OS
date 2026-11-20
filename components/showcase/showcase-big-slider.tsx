@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,7 +26,34 @@ interface ShowcaseBigSliderProps {
   categories?: ReadonlyArray<{ slug: string; name: string; badgeIcon?: string | null }>;
 }
 
-const SLIDE_DURATION = 6000; // 6 seconds per slide
+interface SlideItem {
+  key: string;
+  imageUrl: string;
+  title: string;
+  clientName: string;
+  category: string;
+  discipline: string;
+  videoEmbedUrl?: string | null;
+  servicePackage?: ShowcasePortfolioItem["servicePackage"];
+  photoIndex: number;
+  totalProjectPhotos: number;
+  originalItem: ShowcasePortfolioItem;
+}
+
+const AUTO_SLIDE_INTERVAL = 4000; // 4 seconds per slide
+
+function parseGalleryUrls(raw?: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((x): x is string => typeof x === "string" && Boolean(x));
+    }
+  } catch {
+    return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
 
 export function ShowcaseBigSlider({
   items,
@@ -38,54 +65,64 @@ export function ShowcaseBigSlider({
   const accentColor = brandColor || "#f59e0b";
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [progress, setProgress] = useState(0);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [touchMove, setTouchMove] = useState<number | null>(null);
 
-  const total = items.length;
+  // Flatten showcase items into individual slide photos (including gallery photos if present)
+  const slides: SlideItem[] = useMemo(() => {
+    const result: SlideItem[] = [];
+
+    for (const item of items) {
+      const gallery = parseGalleryUrls(item.galleryImages);
+      const allPhotos = Array.from(new Set([item.coverImageUrl, ...gallery].filter(Boolean)));
+      const count = allPhotos.length;
+
+      allPhotos.forEach((photoUrl, idx) => {
+        result.push({
+          key: `${item.id}-${idx}`,
+          imageUrl: photoUrl,
+          title: item.title,
+          clientName: item.clientName,
+          category: item.category,
+          discipline: item.discipline,
+          videoEmbedUrl: idx === 0 ? item.videoEmbedUrl : null,
+          servicePackage: item.servicePackage,
+          photoIndex: idx + 1,
+          totalProjectPhotos: count,
+          originalItem: item,
+        });
+      });
+    }
+
+    return result;
+  }, [items]);
+
+  const total = slides.length;
 
   const nextSlide = useCallback(() => {
     if (total <= 1) return;
     setCurrentIndex((prev) => (prev + 1) % total);
-    setProgress(0);
   }, [total]);
 
   const prevSlide = useCallback(() => {
     if (total <= 1) return;
     setCurrentIndex((prev) => (prev - 1 + total) % total);
-    setProgress(0);
   }, [total]);
 
   const goToSlide = (index: number) => {
     setCurrentIndex(index);
-    setProgress(0);
   };
 
-  // Progress bar & auto-play timer
+  // Continuous auto-slide timer (every 4 seconds)
   useEffect(() => {
-    if (total <= 1 || !isPlaying || isHovered) {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-      return;
-    }
+    if (total <= 1 || !isPlaying) return;
 
-    const stepMs = 50;
-    const increment = (stepMs / SLIDE_DURATION) * 100;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % total);
+    }, AUTO_SLIDE_INTERVAL);
 
-    progressIntervalRef.current = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          nextSlide();
-          return 0;
-        }
-        return prev + increment;
-      });
-    }, stepMs);
-
-    return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    };
-  }, [total, isPlaying, isHovered, nextSlide, currentIndex]);
+    return () => clearInterval(timer);
+  }, [total, isPlaying]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -99,39 +136,55 @@ export function ShowcaseBigSlider({
 
   if (total === 0) return null;
 
-  const currentItem = items[currentIndex]!;
-  const isVideo = Boolean(currentItem.videoEmbedUrl || currentItem.discipline === "VIDEOGRAPHY");
-  const catName = categoryName(categories, currentItem.category);
-  const catObj = categories.find((c) => c.slug === currentItem.category);
+  const currentSlide = slides[currentIndex]!;
+  const isVideo = Boolean(
+    currentSlide.videoEmbedUrl || currentSlide.discipline === "VIDEOGRAPHY"
+  );
+  const catName = categoryName(categories, currentSlide.category);
+  const catObj = categories.find((c) => c.slug === currentSlide.category);
 
   // Touch swipe support
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0]!.clientX);
+    setTouchMove(null);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
-    const touchEnd = e.changedTouches[0]!.clientX;
-    const diff = touchStart - touchEnd;
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchMove(e.touches[0]!.clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStart === null || touchMove === null) return;
+    const diff = touchStart - touchMove;
     if (diff > 50) nextSlide();
     else if (diff < -50) prevSlide();
     setTouchStart(null);
+    setTouchMove(null);
   };
 
   const handleActionClick = () => {
-    if (isVideo) {
-      onOpenVideo(currentItem);
+    if (isVideo && currentSlide.originalItem.videoEmbedUrl) {
+      onOpenVideo(currentSlide.originalItem);
     } else {
-      onOpenLightbox(currentItem);
+      // Pass lightbox with the clicked photo as cover
+      onOpenLightbox({
+        id: currentSlide.originalItem.id,
+        title: currentSlide.title,
+        clientName: currentSlide.clientName,
+        category: currentSlide.category,
+        coverImageUrl: currentSlide.imageUrl,
+        discipline: currentSlide.discipline,
+        galleryImages: currentSlide.originalItem.galleryImages,
+      });
     }
   };
 
   return (
-    <section className="space-y-3" aria-label="Featured Portfolio Showcase">
+    <section className="space-y-3" aria-label="Auto-sliding Portfolio Showcase">
       {/* Slider Header Line */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-4" style={{ color: accentColor }} />
+          <Sparkles className="size-4 animate-pulse" style={{ color: accentColor }} />
           <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold">
             Featured Portfolio Showcase
           </span>
@@ -148,69 +201,70 @@ export function ShowcaseBigSlider({
             <button
               type="button"
               onClick={() => setIsPlaying((p) => !p)}
-              className="p-1 rounded text-zinc-400 hover:text-white transition-colors"
-              title={isPlaying ? "Pause autoplay" : "Resume autoplay"}
+              className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white transition-colors"
+              title={isPlaying ? "Pause auto-slide" : "Play auto-slide"}
             >
-              {isPlaying ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+              {isPlaying ? (
+                <Pause className="size-3.5 text-amber-400" />
+              ) : (
+                <Play className="size-3.5 text-amber-400 fill-amber-400" />
+              )}
             </button>
           </div>
         )}
       </div>
 
-      {/* Main Big Slider Container */}
+      {/* Main Big Slider Container with Overflow Hidden */}
       <div
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="group relative w-full h-[400px] sm:h-[500px] md:h-[580px] lg:h-[640px] rounded-3xl overflow-hidden border border-zinc-800 bg-[#0d0d10] shadow-2xl select-none"
+        className="group relative w-full h-[420px] sm:h-[520px] md:h-[600px] lg:h-[650px] rounded-3xl overflow-hidden border border-zinc-800 bg-[#0b0b0e] shadow-2xl select-none"
       >
-        {/* Background Slide Images with Crossfade */}
-        {items.map((item, index) => {
-          const isActive = index === currentIndex;
-
-          return (
+        {/* Horizontal Sliding Track: Translates -100% per slide */}
+        <div
+          className="flex h-full w-full transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {slides.map((slide, idx) => (
             <div
-              key={item.id}
-              className={`absolute inset-0 transition-opacity duration-700 ease-out ${
-                isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
-              }`}
+              key={slide.key}
+              className="relative w-full h-full shrink-0 overflow-hidden bg-zinc-950 flex items-center justify-center"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={item.coverImageUrl}
-                alt={item.title}
-                className={`size-full object-cover transition-transform duration-1000 ease-out ${
-                  isActive ? "scale-100" : "scale-105"
-                }`}
+                src={slide.imageUrl}
+                alt={slide.title}
+                className="size-full object-cover"
+                loading={idx === 0 ? "eager" : "lazy"}
               />
             </div>
-          );
-        })}
+          ))}
+        </div>
 
-        {/* Cinematic Vignette & Gradients Overlay */}
-        <div className="absolute inset-0 z-20 pointer-events-none bg-gradient-to-t from-black/90 via-black/30 to-black/40" />
+        {/* Cinematic Vignette & Shadows Overlay */}
+        <div className="absolute inset-0 z-20 pointer-events-none bg-gradient-to-t from-black/95 via-black/25 to-black/50" />
 
         {/* Ambient Brand Color Tint */}
         <div
           className="absolute inset-0 z-20 pointer-events-none opacity-20 mix-blend-overlay"
           style={{
-            background: `radial-gradient(circle at 70% 30%, ${accentColor} 0%, transparent 70%)`,
+            background: `radial-gradient(circle at 75% 25%, ${accentColor} 0%, transparent 60%)`,
           }}
         />
 
         {/* Top Badges */}
-        <div className="absolute top-5 left-5 right-5 z-30 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
+        <div className="absolute top-5 left-5 right-5 z-30 flex items-center justify-between flex-wrap gap-2 pointer-events-none">
+          <div className="flex items-center gap-2 pointer-events-auto">
             <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-black/70 backdrop-blur-md text-white border border-white/10 flex items-center gap-1.5 shadow-lg">
-              {currentItem.discipline === "VIDEOGRAPHY" ? (
+              {currentSlide.discipline === "VIDEOGRAPHY" ? (
                 <Film className="size-3.5 text-cyan-400" />
-              ) : currentItem.discipline === "PHOTOGRAPHY" ? (
+              ) : currentSlide.discipline === "PHOTOGRAPHY" ? (
                 <Camera className="size-3.5 text-amber-400" />
               ) : (
                 <Layers className="size-3.5 text-amber-400" />
               )}
-              <span>{disciplineLabel(currentItem.discipline)}</span>
+              <span>{disciplineLabel(currentSlide.discipline)}</span>
             </span>
 
             <span
@@ -224,10 +278,16 @@ export function ShowcaseBigSlider({
               {catObj?.badgeIcon ? `${catObj.badgeIcon} ` : ""}
               {catName}
             </span>
+
+            {currentSlide.totalProjectPhotos > 1 && (
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-medium bg-black/60 backdrop-blur-md text-zinc-300 border border-white/10">
+                Photo {currentSlide.photoIndex} of {currentSlide.totalProjectPhotos}
+              </span>
+            )}
           </div>
 
           {isVideo && (
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/30 backdrop-blur-md text-blue-300 border border-blue-400/40 flex items-center gap-1.5 shadow-lg">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/30 backdrop-blur-md text-blue-300 border border-blue-400/40 flex items-center gap-1.5 shadow-lg pointer-events-auto">
               <Play className="size-3 fill-current" /> Video Stream
             </span>
           )}
@@ -259,8 +319,8 @@ export function ShowcaseBigSlider({
                 e.stopPropagation();
                 prevSlide();
               }}
-              className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-30 size-11 sm:size-13 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-white border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 shadow-xl"
-              aria-label="Previous showcase slide"
+              className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-30 size-11 sm:size-13 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white border border-white/15 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 shadow-xl"
+              aria-label="Previous showcase photo"
             >
               <ChevronLeft className="size-6 text-white" />
             </button>
@@ -271,8 +331,8 @@ export function ShowcaseBigSlider({
                 e.stopPropagation();
                 nextSlide();
               }}
-              className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 size-11 sm:size-13 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-white border border-white/10 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 shadow-xl"
-              aria-label="Next showcase slide"
+              className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 size-11 sm:size-13 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-white border border-white/15 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 shadow-xl"
+              aria-label="Next showcase photo"
             >
               <ChevronRight className="size-6 text-white" />
             </button>
@@ -283,21 +343,21 @@ export function ShowcaseBigSlider({
         <div className="absolute bottom-0 inset-x-0 z-30 p-6 sm:p-8 md:p-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="space-y-2 max-w-2xl text-left">
             <span className="text-xs sm:text-sm font-mono text-zinc-300 block drop-shadow">
-              Client: <strong className="text-white">{currentItem.clientName}</strong>
+              Client: <strong className="text-white">{currentSlide.clientName}</strong>
             </span>
 
             <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-lg line-clamp-2 leading-tight">
-              {currentItem.title}
+              {currentSlide.title}
             </h2>
 
-            {currentItem.servicePackage && (
+            {currentSlide.servicePackage && (
               <div className="inline-flex items-center gap-2 text-xs font-mono text-zinc-300 pt-1">
                 <span>Featured Package:</span>
                 <span
                   className="font-bold underline decoration-amber-500/50 underline-offset-4"
                   style={{ color: accentColor }}
                 >
-                  {currentItem.servicePackage.name} (${currentItem.servicePackage.price.toLocaleString()})
+                  {currentSlide.servicePackage.name} (${currentSlide.servicePackage.price.toLocaleString()})
                 </span>
               </div>
             )}
@@ -325,36 +385,39 @@ export function ShowcaseBigSlider({
           </div>
         </div>
 
-        {/* Bottom Slide Progress Bar */}
-        {total > 1 && (
-          <div className="absolute bottom-0 inset-x-0 h-1 bg-white/10 z-40 overflow-hidden">
+        {/* Bottom Slide Progress Line */}
+        {total > 1 && isPlaying && (
+          <div
+            key={currentIndex}
+            className="absolute bottom-0 inset-x-0 h-1 bg-white/10 z-40 overflow-hidden"
+          >
             <div
-              className="h-full transition-[width] duration-75 ease-linear"
+              className="h-full origin-left"
               style={{
-                width: `${progress}%`,
                 backgroundColor: accentColor,
+                animation: "slideProgress 4s linear forwards",
               }}
             />
           </div>
         )}
       </div>
 
-      {/* Slide Thumbnails Dots Strip */}
+      {/* Slide Thumbnails Filmstrip Strip */}
       {total > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
-          {items.map((item, index) => {
+        <div className="flex items-center justify-center gap-2 pt-2 flex-wrap max-h-24 overflow-y-auto pr-1">
+          {slides.map((slide, index) => {
             const isActive = index === currentIndex;
 
             return (
               <button
-                key={item.id}
+                key={slide.key}
                 type="button"
                 onClick={() => goToSlide(index)}
-                aria-label={`Go to slide ${index + 1}: ${item.title}`}
+                aria-label={`Slide ${index + 1}: ${slide.title}`}
                 className={`group relative rounded-xl overflow-hidden transition-all duration-300 ${
                   isActive
-                    ? "w-16 sm:w-20 h-10 sm:h-12 border-2 ring-2 shadow-lg"
-                    : "w-8 sm:w-10 h-8 sm:h-10 border border-zinc-800 opacity-50 hover:opacity-100"
+                    ? "w-16 sm:w-20 h-10 sm:h-12 border-2 ring-2 shadow-lg scale-105"
+                    : "w-9 sm:w-12 h-9 sm:h-12 border border-zinc-800 opacity-50 hover:opacity-100"
                 }`}
                 style={{
                   borderColor: isActive ? accentColor : undefined,
@@ -363,7 +426,7 @@ export function ShowcaseBigSlider({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.coverImageUrl}
+                  src={slide.imageUrl}
                   alt=""
                   className="size-full object-cover transition-transform group-hover:scale-110"
                 />

@@ -129,3 +129,12 @@ body {
     page-break-inside: avoid !important;
   }
 }
+
+@keyframes slideProgress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
