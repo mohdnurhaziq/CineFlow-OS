@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Toaster } from "sonner";
 import { SignedOutNotice } from "@/components/auth/signed-out-notice";
 import { StaleVersionReload } from "@/components/stale-version-reload";
+import { NavigationNudge } from "@/components/navigation-nudge";
 import { StagingBar } from "@/components/staging-bar";
 import { APP_ENV } from "@/lib/app-env";
 import "./globals.css";
@@ -61,6 +62,8 @@ export default function RootLayout({
         </Suspense>
         {/* A page left open across an update reloads itself when its buttons stop working. */}
         <StaleVersionReload />
+        {/* A link clicked as a page opens sometimes never shows its page until the next update: nudge it. */}
+        <NavigationNudge />
         {/*
           Pop-up messages. Top centre, so a message never sits on the buttons pages keep at the
           bottom of the screen, and just below the area's sticky header when there is one: each
