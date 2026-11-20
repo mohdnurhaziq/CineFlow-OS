@@ -135,7 +135,7 @@ export async function cancelBooking(input: z.input<typeof CancelSchema>): Promis
       calendar: clientInviteFor(booking, "CANCEL"),
     });
     // The team members on the shoot hear about it too; this never blocks or fails the cancel.
-    void notifyAssignees(booking.id, { kind: "CANCELLED" });
+    void notifyAssignees(booking.id, { kind: "CANCELLED", before: booking });
     return { success: true };
   } catch (err) {
     return fail("CANCEL_FAILED", actionErrorMessage(err, "Could not cancel the booking."));

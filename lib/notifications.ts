@@ -198,7 +198,7 @@ export interface ShootChangedPayload {
   clientName: string;
   clientEmail: string;
   clientPhone?: undefined;
-  kind: "MOVED" | "CANCELLED" | "UNASSIGNED";
+  kind: "CONFIRMED" | "MOVED" | "CANCELLED" | "UNASSIGNED";
   shootClientName: string;
   /** The plain sentence with the details. */
   message: string;
@@ -671,7 +671,9 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     }
     case "SHOOT_CHANGED": {
       emailSubject =
-        payload.kind === "MOVED"
+        payload.kind === "CONFIRMED"
+          ? `Shoot confirmed: ${payload.shootClientName}`
+          : payload.kind === "MOVED"
           ? `Shoot moved: ${payload.shootClientName}`
           : payload.kind === "CANCELLED"
             ? `Shoot cancelled: ${payload.shootClientName}`

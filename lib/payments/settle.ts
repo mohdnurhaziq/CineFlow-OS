@@ -8,6 +8,7 @@ import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
 import { findSuccessfulPayment, toSen, type ToyyibpayCredentials } from "@/lib/payments/toyyibpay";
 import { clientInvite } from "@/lib/bookings/calendar-invites";
+import { notifyAssignees } from "@/lib/bookings/assignment-emails";
 
 /**
  * Settlement of online (Toyyibpay) invoices. Not a "use server" module: it must
@@ -197,6 +198,10 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
     console.error(`Toyyibpay settle: ${invoice.invoiceNumber} was paid after it was cancelled (${gatewayRef}); refund required`);
   }
 
+  if (!result.alreadySettled && result.booking && !result.refundRequired) {
+    // Those already on the shoot get it in their calendar.
+    void notifyAssignees(result.booking.id, { kind: "CONFIRMED" });
+  }
   if (!result.alreadySettled && result.booking && !result.refundRequired && result.booking.clientEmail) {
     const confirmed = result.booking;
     clientInvite(confirmed.id, "REQUEST")

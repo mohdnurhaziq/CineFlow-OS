@@ -7,6 +7,7 @@ import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { formatSlotDate } from "@/lib/slot-time";
 import { studioUrl } from "@/lib/domain-name";
 import { clientInvite } from "@/lib/bookings/calendar-invites";
+import { notifyAssignees } from "@/lib/bookings/assignment-emails";
 
 /**
  * Marks an invoice paid and applies what follows from it (booking confirmed, balance issued,
@@ -48,6 +49,8 @@ export async function applyInvoicePayment(
   }
 
   let unlockedDownloads = false;
+  // The booking this payment confirmed, if any: its shooters get the shoot in their calendar.
+  let confirmedBookingId: string | null = null;
 
   try {
     await db.$transaction(async (tx) => {
@@ -75,6 +78,7 @@ export async function applyInvoicePayment(
               depositPaid: true,
             },
           });
+          confirmedBookingId = booking.id;
           // Deposit paid: issue the balance invoice for the rest of the session price.
           await onInvoicePaid(tx, { ...invoice, bookingId: booking.id });
 
@@ -142,6 +146,8 @@ export async function applyInvoicePayment(
   if (invoice.projectId) {
     safeRevalidate(`/${tenantSlug}/vault/${invoice.projectId}`);
   }
+
+  if (confirmedBookingId) void notifyAssignees(confirmedBookingId, { kind: "CONFIRMED" });
 
   // Dispatch automated transactional notifications
   let notifResult: NotificationResult | null = null;

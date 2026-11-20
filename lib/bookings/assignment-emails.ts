@@ -2,22 +2,27 @@ import { db } from "@/lib/db";
 import { formatSlotDate } from "@/lib/slot-time";
 import { sendNotification } from "@/lib/notifications";
 import { studioUrl } from "@/lib/domain-name";
+import { shooterInviteFor, type BookingForInvite } from "@/lib/bookings/calendar-invites";
 
 /**
- * Tells team members about the shoots they are on: put on one, one moved or was cancelled, taken off one.
- * Email only; a failed or skipped email never blocks the action that caused it.
+ * Tells team members about the shoots they are on: put on one, one confirmed, moved or cancelled, taken off one.
+ * Email only; a failed or skipped email never blocks the action that caused it. For a confirmed
+ * booking with a session time, the email carries the shoot as a calendar invite (lib/bookings/calendar-invites.ts).
  *
  * Not a "use server" module.
  */
 
 export type AssignmentChange = {
-  kind: "ASSIGNED" | "MOVED" | "CANCELLED" | "UNASSIGNED";
+  /** CONFIRMED: the deposit was paid; the shoot goes into the calendars of those already on it. */
+  kind: "ASSIGNED" | "CONFIRMED" | "MOVED" | "CANCELLED" | "UNASSIGNED";
   /** MOVED: the old session, as text (e.g. "Mon, 1 Jun 2026, 10:00 AM – 11:00 AM"). */
   previous?: string;
   /** Who to tell. Default: everyone currently assigned. */
   userIds?: string[];
   /** ASSIGNED: the name of the person who made the assignment. */
   assignedByName?: string;
+  /** CANCELLED: the booking as it was before the cancel (which lets go of its slot), to remove the right event. */
+  before?: BookingForInvite;
 };
 
 /** NONE: nobody needed telling (no assignees, or only the person who made the change). */
@@ -71,6 +76,14 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
       if (!person.email) continue;
       try {
         const to = { clientName: person.name, clientEmail: person.email };
+        const calendar =
+          shooterInviteFor(
+            change.kind === "CANCELLED" ? (change.before ?? booking) : booking,
+            person,
+            change.kind === "CANCELLED" || change.kind === "UNASSIGNED" ? "CANCEL" : "REQUEST"
+          ) ?? undefined;
+        // "It's in your calendar" is only true with an invite to carry.
+        if (change.kind === "CONFIRMED" && !calendar) continue;
         const result =
           change.kind === "ASSIGNED"
             ? await sendNotification(
@@ -84,6 +97,7 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
                   endTime: booking.slot?.endTime ?? "",
                   packageName: booking.packageName ?? undefined,
                   brief: booking.creativeBrief?.trim() || undefined,
+                  calendar,
                 },
                 "EMAIL"
               )
@@ -93,8 +107,11 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
                   ...common,
                   ...to,
                   kind: change.kind,
+                  calendar,
                   message:
-                    change.kind === "MOVED"
+                    change.kind === "CONFIRMED"
+                      ? `${booking.clientName}'s session on ${sessionText(booking.slot)} is confirmed. It's in your calendar.`
+                      : change.kind === "MOVED"
                       ? `${booking.clientName}'s session moved from ${change.previous ?? "its earlier time"} to ${sessionText(booking.slot)}.`
                       : change.kind === "CANCELLED"
                         ? `${booking.clientName}'s session on ${date} was cancelled.`

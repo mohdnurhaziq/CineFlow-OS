@@ -16,6 +16,7 @@ import { approvePaymentVerification } from "@/lib/actions/admin-verification";
 import { cancelBooking, rescheduleBooking } from "@/lib/actions/admin-booking-lifecycle";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { clientInvite } from "@/lib/bookings/calendar-invites";
+import { assignTeamMember, unassignTeamMember } from "@/lib/actions/admin-assignments";
 
 /** The ics with folded lines joined back, for reading values. */
 const unfold = (ics: string) => ics.replace(/\r\n[ \t]/g, "");
@@ -325,6 +326,110 @@ export async function runTier35CalendarInvitesTests(harness: TestHarness) {
       harness.assertEqual(cancel?.method, "CANCEL", "A cancellation");
       harness.assert(unfold(cancel?.content ?? "").includes(uid), "Of the same event");
       harness.assert(seqOf(cancel?.content ?? "") > seqOf(update?.content ?? ""), "With a higher sequence still");
+    } finally {
+      restoreMail();
+    }
+  });
+
+  // ---- The shooters' invites ----
+  const mkShooter = async (label: string) =>
+    db.user.create({
+      data: { tenantId: lumina.id, email: `t35-shooter-${label}-${run}@example.test`, name: `T35 ${label}`, role: "TEAM_MEMBER", passwordHash: "x" },
+    });
+  const assign = (bookingId: string, userId: string) =>
+    withSession(owner, () => assignTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingIds: [bookingId], userId }));
+  const shooterUid = (bookingId: string, userId: string) => `UID:booking-${bookingId}-shooter-${userId}@cineflow-os`;
+
+  await harness.test("T35-SHOOT-01: a shooter put on a confirmed shoot gets it in their calendar; not on a pending one", async () => {
+    captureMail();
+    try {
+      const slot = await makeSlot(40);
+      const b = await book(slot.id);
+      await approve(b.invoiceId);
+      const s = await mkShooter("a");
+      const res = await assign(b.bookingId, s.id);
+      harness.assert(res.success === true, "Assigned", JSON.stringify(res));
+      const [invite] = await invitesTo(s.email, 1);
+      harness.assertEqual(invite?.method, "REQUEST", "The shooter gets an invite");
+      const mail = mails.find((m) => m.to === s.email && m.icalEvent);
+      harness.assert(/^New shoot: /.test(mail?.subject ?? ""), "In the assignment email", mail?.subject);
+      const ics = unfold(invite?.content ?? "");
+      harness.assert(ics.includes(shooterUid(b.bookingId, s.id)), "The shooter's own event", ics);
+      harness.assert(ics.includes("SUMMARY:Shoot: Farah\\, Calendar"), "Titled with the client", ics);
+      harness.assert(ics.includes("0123456789"), "With the client's phone");
+      harness.assert(ics.includes(`/admin/bookings/${b.bookingId}`), "Links to the booking in the admin");
+      harness.assert(ics.includes(`DTSTART:${stamp(slotTimes(slot)!.start)}`), "At the session's time");
+      harness.assert(!ics.includes(`UID:booking-${b.bookingId}-client@`), "Not the client's event");
+
+      const pendingSlot = await makeSlot(41);
+      const p = await book(pendingSlot.id);
+      const s2 = await mkShooter("b");
+      await assign(p.bookingId, s2.id);
+      const sent = await mailTo(s2.email, 1);
+      harness.assert(sent.length === 1 && !sent[0]?.icalEvent, "A pending shoot: the email, no invite", JSON.stringify(sent.map((m) => m.subject)));
+    } finally {
+      restoreMail();
+    }
+  });
+
+  await harness.test("T35-SHOOT-02: a shooter assigned before the deposit was paid gets one invite when it's confirmed", async () => {
+    captureMail();
+    try {
+      const slot = await makeSlot(42);
+      const b = await book(slot.id);
+      const s = await mkShooter("c");
+      await assign(b.bookingId, s.id);
+      await mailTo(s.email, 1);
+      harness.assertEqual((await invitesTo(s.email, 0)).length, 0, "Nothing in the calendar while pending");
+
+      await approve(b.invoiceId);
+      const invites = await invitesTo(s.email, 1);
+      await new Promise((r) => setTimeout(r, 300)); // anything extra would have arrived by now
+      const all = mails.filter((m) => m.to === s.email && m.icalEvent);
+      harness.assertEqual(all.length, 1, "Exactly one invite", JSON.stringify(all.map((m) => m.subject)));
+      harness.assertEqual(invites[0]?.method, "REQUEST", "Added to their calendar");
+      harness.assert(unfold(invites[0]?.content ?? "").includes(shooterUid(b.bookingId, s.id)), "Their event for this shoot");
+      harness.assert(/confirmed/i.test(all[0]?.subject ?? ""), "The email says the shoot is confirmed", all[0]?.subject);
+    } finally {
+      restoreMail();
+    }
+  });
+
+  await harness.test("T35-SHOOT-03: moves update the shooters' events; being taken off or a cancel removes them", async () => {
+    captureMail();
+    try {
+      const from = await makeSlot(43);
+      const to = await makeSlot(44);
+      const b = await book(from.id);
+      await approve(b.invoiceId);
+      const s1 = await mkShooter("d");
+      const s2 = await mkShooter("e");
+      await assign(b.bookingId, s1.id);
+      await assign(b.bookingId, s2.id);
+      const [first1] = await invitesTo(s1.email, 1);
+      await invitesTo(s2.email, 1);
+      await new Promise((r) => setTimeout(r, 1100)); // the sequence counts seconds
+
+      await withSession(owner, () => rescheduleBooking({ ...ids(b.bookingId), newSlotId: to.id }));
+      const moved1 = (await invitesTo(s1.email, 2))[1];
+      const moved2 = (await invitesTo(s2.email, 2))[1];
+      harness.assertEqual(moved1?.method, "REQUEST", "Shooter 1's event is updated");
+      harness.assertEqual(moved2?.method, "REQUEST", "Shooter 2's event is updated");
+      harness.assert(seqOf(moved1?.content ?? "") > seqOf(first1?.content ?? ""), "A higher sequence");
+      harness.assert(unfold(moved1?.content ?? "").includes(`DTSTART:${stamp(slotTimes(to)!.start)}`), "At the new time");
+
+      await new Promise((r) => setTimeout(r, 1100));
+      await withSession(owner, () => unassignTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId: b.bookingId, userId: s2.id }));
+      const off = (await invitesTo(s2.email, 3))[2];
+      harness.assertEqual(off?.method, "CANCEL", "Taken off: removed from their calendar");
+      harness.assert(unfold(off?.content ?? "").includes(shooterUid(b.bookingId, s2.id)), "Their event");
+
+      await withSession(owner, () => cancelBooking({ ...ids(b.bookingId), reason: "Weather" }));
+      const gone = (await invitesTo(s1.email, 3))[2];
+      harness.assertEqual(gone?.method, "CANCEL", "Cancelled: removed from the remaining shooter's calendar");
+      harness.assert(unfold(gone?.content ?? "").includes(shooterUid(b.bookingId, s1.id)), "Their event");
+      await new Promise((r) => setTimeout(r, 300));
+      harness.assertEqual(mails.filter((m) => m.to === s2.email && m.icalEvent).length, 3, "The shooter already taken off hears nothing more");
     } finally {
       restoreMail();
     }

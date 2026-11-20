@@ -109,3 +109,42 @@ export async function clientInvite(
     return null;
   }
 }
+
+/** A shooter's event: "Shoot: <client> (<package>)", with the client's phone, the brief and the booking's admin page. */
+export function shooterInviteFor(
+  b: BookingForInvite,
+  person: { id: string; name: string; email: string },
+  method: InviteMethod
+): CalendarInvite | null {
+  try {
+    const times = sessionTimes(b);
+    if (!times || !person.email) return null;
+    const bookingPage = studioUrl(b.tenant.slug, `/admin/bookings/${b.id}`);
+    return buildInvite(
+      {
+        uid: `booking-${b.id}-shooter-${person.id}@${UID_HOST}`,
+        sequence: inviteSequence(),
+        title: b.packageName ? `Shoot: ${b.clientName} (${b.packageName})` : `Shoot: ${b.clientName}`,
+        description: [
+          `Client: ${b.clientName}`,
+          b.clientPhone ? `Phone: ${b.clientPhone}` : "",
+          b.creativeBrief?.trim() ? `Brief: ${b.creativeBrief.trim()}` : "",
+          `Booking: ${bookingPage}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        start: times.start,
+        end: times.end,
+        organizerName: b.tenant.name,
+        organizerEmail: platformSenderAddress(),
+        attendeeName: person.name,
+        attendeeEmail: person.email,
+        url: bookingPage,
+      },
+      method
+    );
+  } catch (err) {
+    console.error("Shooter calendar invite failed:", err);
+    return null;
+  }
+}
