@@ -27,7 +27,19 @@ export default async function MySchedulePage({ params, searchParams }: ScheduleP
   const { past } = await searchParams;
   const viewer = await adminPageAccess(tenantSlug);
   if (!viewer) return <NoAccess tenantSlug={tenantSlug} />;
-  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } });
+  const tenant = await db.tenant.findUnique({
+    where: { slug: tenantSlug },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      brandColor: true,
+      currency: true,
+      discipline: true,
+      bio: true,
+      tagline: true,
+    },
+  });
   if (!tenant) notFound();
 
   const today = studioNow().dateKey;
@@ -44,7 +56,17 @@ export default async function MySchedulePage({ params, searchParams }: ScheduleP
   return (
     <PageShell width="detail">
       <PageHeader icon={CalendarClock} title="My schedule" description="The sessions you are assigned to." />
-      <MySchedule tenantSlug={tenantSlug} days={days} past={showPast} today={today} openableProjects={openable} />
+      <MySchedule
+        tenantSlug={tenantSlug}
+        tenantName={tenant.name}
+        tenantBio={tenant.bio}
+        currency={tenant.currency}
+        brandColor={tenant.brandColor}
+        days={days}
+        past={showPast}
+        today={today}
+        openableProjects={openable}
+      />
     </PageShell>
   );
 }

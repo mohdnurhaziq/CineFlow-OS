@@ -9,17 +9,59 @@ import { minutesOfDay } from "@/lib/slot-time";
 
 export interface ScheduleSession {
   bookingId: string;
+  trackingCode: string;
   startTime: string;
   endTime: string;
   clientName: string;
+  clientEmail: string;
   clientPhone: string;
   category: string;
+  discipline: string;
+  serviceTier: string;
   packageName: string | null;
   brief: string | null;
   projectId: string | null;
   status: string;
+  depositPaid: boolean;
+  depositAmount: number;
+  sessionPrice: number | null;
+  paymentMethod: string | null;
+  package?: {
+    id: string;
+    name: string;
+    description: string;
+    deliverables: string;
+    turnaround: string;
+    price: number;
+    depositPrice: number;
+  } | null;
+  includedPrints: Array<{
+    id: string;
+    sizeName: string;
+    frameName: string;
+    quantity: number;
+    note?: string | null;
+  }>;
+  callSheet?: {
+    id: string;
+    title: string;
+    shootDate: Date;
+    generalCallTime: string;
+    locationName: string;
+    locationAddress: string;
+    locationPinUrl?: string | null;
+    parkingNotes?: string | null;
+    notes?: string | null;
+  } | null;
+  project?: {
+    id: string;
+    projectNumber: string;
+    title: string;
+    status: string;
+  } | null;
   /** Other people on the same booking. */
   others: string[];
+  allAssignees: Array<{ id: string; name: string; roleName: string }>;
 }
 
 export interface ScheduleDay {
@@ -53,16 +95,78 @@ export async function loadSchedule(
     },
     select: {
       id: true,
+      trackingCode: true,
       clientName: true,
+      clientEmail: true,
       clientPhone: true,
       category: true,
+      discipline: true,
+      serviceTier: true,
       packageName: true,
       creativeBrief: true,
       status: true,
       targetDate: true,
+      depositPaid: true,
+      depositAmount: true,
+      sessionPrice: true,
+      paymentMethod: true,
       slot: { select: { date: true, startTime: true, endTime: true } },
-      project: { select: { id: true } },
-      assignments: { select: { userId: true, user: { select: { name: true } } } },
+      package: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          deliverables: true,
+          turnaround: true,
+          price: true,
+          depositPrice: true,
+        },
+      },
+      includedPrints: {
+        select: {
+          id: true,
+          sizeName: true,
+          frameName: true,
+          quantity: true,
+          note: true,
+        },
+      },
+      project: {
+        select: {
+          id: true,
+          projectNumber: true,
+          title: true,
+          status: true,
+          callSheets: {
+            orderBy: { shootDate: "asc" },
+            take: 1,
+            select: {
+              id: true,
+              title: true,
+              shootDate: true,
+              generalCallTime: true,
+              locationName: true,
+              locationAddress: true,
+              locationPinUrl: true,
+              parkingNotes: true,
+              notes: true,
+            },
+          },
+        },
+      },
+      assignments: {
+        select: {
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              teamRole: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -72,16 +176,33 @@ export async function loadSchedule(
       start: b.slot ? minutesOfDay(b.slot.startTime) ?? 0 : 0,
       session: {
         bookingId: b.id,
+        trackingCode: b.trackingCode,
         startTime: b.slot?.startTime ?? "",
         endTime: b.slot?.endTime ?? "",
         clientName: b.clientName,
+        clientEmail: b.clientEmail,
         clientPhone: b.clientPhone,
         category: b.category,
+        discipline: b.discipline,
+        serviceTier: b.serviceTier,
         packageName: b.packageName,
         brief: b.creativeBrief,
         projectId: b.project?.id ?? null,
         status: b.status,
+        depositPaid: b.depositPaid,
+        depositAmount: b.depositAmount,
+        sessionPrice: b.sessionPrice,
+        paymentMethod: b.paymentMethod,
+        package: b.package,
+        includedPrints: b.includedPrints,
+        callSheet: b.project?.callSheets?.[0] ?? null,
+        project: b.project ? { id: b.project.id, projectNumber: b.project.projectNumber, title: b.project.title, status: b.project.status } : null,
         others: b.assignments.filter((a) => a.userId !== userId).map((a) => a.user.name),
+        allAssignees: b.assignments.map((a) => ({
+          id: a.user.id,
+          name: a.user.name,
+          roleName: a.user.role === "STUDIO_OWNER" ? "Studio Owner" : (a.user.teamRole?.name ?? "Photographer"),
+        })),
       } satisfies ScheduleSession,
     }))
     .filter((x) => (opts.past ? x.date !== null && x.date < opts.from : x.date === null || x.date >= opts.from));
