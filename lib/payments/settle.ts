@@ -8,7 +8,7 @@ import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
 import { findSuccessfulPayment, toSen, type ToyyibpayCredentials } from "@/lib/payments/toyyibpay";
 import { clientInvite } from "@/lib/bookings/calendar-invites";
-import { notifyAssignees } from "@/lib/bookings/assignment-emails";
+import { notifyShootConfirmed } from "@/lib/bookings/assignment-emails";
 
 /**
  * Settlement of online (Toyyibpay) invoices. Not a "use server" module: it must
@@ -200,7 +200,7 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
 
   if (!result.alreadySettled && result.booking && !result.refundRequired) {
     // Those already on the shoot get it in their calendar.
-    void notifyAssignees(result.booking.id, { kind: "CONFIRMED" });
+    await notifyShootConfirmed(result.booking.id);
   }
   if (!result.alreadySettled && result.booking && !result.refundRequired && result.booking.clientEmail) {
     const confirmed = result.booking;

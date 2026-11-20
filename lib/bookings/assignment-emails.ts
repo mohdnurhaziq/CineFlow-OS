@@ -132,6 +132,20 @@ export async function notifyAssigneesDetailed(bookingId: string, change: Assignm
   }
 }
 
+/**
+ * A booking was just confirmed: those on the shoot at this moment get it in their calendar. The list is
+ * taken now, so someone assigned a moment later gets their invite from the assignment instead, not twice.
+ * The emails go out in the background. Never throws.
+ */
+export async function notifyShootConfirmed(bookingId: string): Promise<void> {
+  try {
+    const userIds = (await db.bookingAssignment.findMany({ where: { bookingId }, select: { userId: true } })).map((a) => a.userId);
+    if (userIds.length > 0) void notifyAssigneesDetailed(bookingId, { kind: "CONFIRMED", userIds });
+  } catch (e) {
+    console.error("Shoot confirmed emails failed:", e);
+  }
+}
+
 /** Tells the booking's assignees (or `change.userIds`) about the change. Never throws. */
 export async function notifyAssignees(bookingId: string, change: AssignmentChange): Promise<void> {
   await notifyAssigneesDetailed(bookingId, change);

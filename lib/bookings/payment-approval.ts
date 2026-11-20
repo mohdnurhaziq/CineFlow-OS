@@ -7,7 +7,7 @@ import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { formatSlotDate } from "@/lib/slot-time";
 import { studioUrl } from "@/lib/domain-name";
 import { clientInvite } from "@/lib/bookings/calendar-invites";
-import { notifyAssignees } from "@/lib/bookings/assignment-emails";
+import { notifyShootConfirmed } from "@/lib/bookings/assignment-emails";
 
 /**
  * Marks an invoice paid and applies what follows from it (booking confirmed, balance issued,
@@ -147,7 +147,7 @@ export async function applyInvoicePayment(
     safeRevalidate(`/${tenantSlug}/vault/${invoice.projectId}`);
   }
 
-  if (confirmedBookingId) void notifyAssignees(confirmedBookingId, { kind: "CONFIRMED" });
+  if (confirmedBookingId) await notifyShootConfirmed(confirmedBookingId);
 
   // Dispatch automated transactional notifications
   let notifResult: NotificationResult | null = null;
