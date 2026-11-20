@@ -5,7 +5,10 @@
  */
 
 import { TestHarness } from "./test-harness";
+import nodemailer, { type Transporter } from "nodemailer";
 import { buildInvite, inviteSequence, slotTimes, type InviteEvent } from "@/lib/calendar/ics";
+import { setSmtpTransportForTests } from "@/lib/email/smtp";
+import { platformSenderAddress, sendNotification, type NotificationPayload } from "@/lib/notifications";
 
 /** The ics with folded lines joined back, for reading values. */
 const unfold = (ics: string) => ics.replace(/\r\n[ \t]/g, "");
@@ -69,5 +72,95 @@ export async function runTier35CalendarInvitesTests(harness: TestHarness) {
     const a = inviteSequence(new Date("2026-11-20T00:00:00Z"));
     const b = inviteSequence(new Date("2026-11-20T00:00:05Z"));
     harness.assert(Number.isInteger(a) && b > a && a > 0, "The sequence rises with time", `${a} ${b}`);
+  });
+
+  // ---- Emails carry the invite (both email routes) ----
+  const MAIL_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM_ADDRESS", "RESEND_API_KEY", "RESEND_FROM_EMAIL"] as const;
+  const savedMail = Object.fromEntries(MAIL_KEYS.map((k) => [k, process.env[k]]));
+  const realFetch = globalThis.fetch;
+  const restoreMail = () => {
+    for (const k of MAIL_KEYS) {
+      if (savedMail[k] === undefined) delete process.env[k];
+      else process.env[k] = savedMail[k];
+    }
+    setSmtpTransportForTests(null);
+    globalThis.fetch = realFetch;
+  };
+  const confirmedPayload = (calendar?: ReturnType<typeof buildInvite>): NotificationPayload => ({
+    event: "BOOKING_CONFIRMED",
+    studioName: "Lumina CineWorks",
+    studioSlug: "lumina-cine",
+    clientName: "Farah",
+    clientEmail: "farah@example.test",
+    packageName: "Wedding",
+    slotDate: "Sat, 5 Dec 2026",
+    startTime: "10:00 AM",
+    endTime: "12:30 PM",
+    depositAmount: 300,
+    currency: "MYR",
+    depositPaid: true,
+    calendar,
+  });
+
+  await harness.test("T35-MAIL-01: over SMTP the email carries the invite as a calendar part", async () => {
+    try {
+      for (const k of MAIL_KEYS) delete process.env[k];
+      process.env.SMTP_HOST = "mailpit";
+      process.env.SMTP_PORT = "1025";
+      process.env.SMTP_FROM_ADDRESS = "bookings@studio.test";
+      type Sent = { icalEvent?: { method?: string; filename?: string; content?: string }; built: string };
+      const sent: Sent[] = [];
+      const json = nodemailer.createTransport({ jsonTransport: true });
+      setSmtpTransportForTests({
+        sendMail: async (mail: Sent) => {
+          const info = await json.sendMail(mail);
+          sent.push({ ...mail, built: String((info as { message?: unknown }).message ?? "") });
+          return info;
+        },
+      } as unknown as Transporter);
+
+      harness.assertEqual(platformSenderAddress(), "bookings@studio.test", "The organiser address is the SMTP sender");
+      const invite = buildInvite(event({ organizerEmail: platformSenderAddress() }), "REQUEST");
+      const r = await sendNotification(confirmedPayload(invite), "EMAIL");
+      harness.assertEqual(r.emailDelivery, "SENT", "Sent");
+      harness.assertEqual(sent[0]?.icalEvent?.method, "REQUEST", "Calendar part with the method");
+      harness.assertEqual(sent[0]?.icalEvent?.filename, "invite.ics", "Named invite.ics");
+      harness.assertEqual(sent[0]?.icalEvent?.content, invite.ics, "The invite itself");
+      harness.assertEqual(r.calendar?.method, "REQUEST", "The send record says an invite went with it");
+
+      await sendNotification(confirmedPayload(), "EMAIL");
+      harness.assertEqual(sent[1]?.icalEvent, undefined, "No invite, no calendar part");
+    } finally {
+      restoreMail();
+    }
+  });
+
+  await harness.test("T35-MAIL-02: through Resend the invite is an invite.ics attachment", async () => {
+    try {
+      for (const k of MAIL_KEYS) delete process.env[k];
+      process.env.RESEND_API_KEY = "re_test_key";
+      process.env.RESEND_FROM_EMAIL = "CineFlow OS <noreply@cineflow-os.app>";
+      const bodies: Record<string, unknown>[] = [];
+      globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+        bodies.push(JSON.parse(String(init?.body ?? "{}")));
+        return new Response(JSON.stringify({ id: "email_1" }), { status: 200 });
+      }) as typeof fetch;
+
+      harness.assertEqual(platformSenderAddress(), "noreply@cineflow-os.app", "The organiser address is the Resend sender");
+      const invite = buildInvite(event(), "CANCEL");
+      await sendNotification(confirmedPayload(invite), "EMAIL");
+      const att = (bodies[0]?.attachments as Array<{ filename: string; content: string; content_type: string }> | undefined)?.[0];
+      harness.assertEqual(att?.filename, "invite.ics", "Named invite.ics");
+      harness.assert(Boolean(att?.content_type?.startsWith("text/calendar; method=CANCEL")), "Calendar content type with the method", att?.content_type);
+      harness.assertEqual(Buffer.from(att?.content ?? "", "base64").toString("utf8"), invite.ics, "The invite itself, base64");
+
+      await sendNotification(confirmedPayload(), "EMAIL");
+      harness.assertEqual(bodies[1]?.attachments, undefined, "No invite, no attachment");
+
+      delete process.env.RESEND_FROM_EMAIL;
+      harness.assertEqual(platformSenderAddress(), "noreply@cineflow-os.app", "Falls back to the platform address");
+    } finally {
+      restoreMail();
+    }
   });
 }

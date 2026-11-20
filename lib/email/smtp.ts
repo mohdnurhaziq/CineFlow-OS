@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { errorMessageOf } from "@/lib/action-error";
+import type { CalendarInvite } from "@/lib/calendar/ics";
 
 /**
  * Email over SMTP (e.g. Gmail with an app password, or Mailpit in development). Used instead
@@ -111,7 +112,7 @@ function transporterFor(config: SmtpConfig): Transporter {
 
 export async function deliverViaSmtp(
   config: SmtpConfig,
-  input: { to: string; subject: string; html: string; text: string; fromName?: string }
+  input: { to: string; subject: string; html: string; text: string; fromName?: string; calendar?: CalendarInvite }
 ): Promise<{ delivery: "SENT" | "FAILED"; error?: string }> {
   try {
     await transporterFor(config).sendMail({
@@ -121,6 +122,9 @@ export async function deliverViaSmtp(
       subject: input.subject.replace(/[\r\n]+/g, " ").trim(),
       html: input.html,
       text: input.text,
+      // The invite as the message's calendar part and an invite.ics file: Gmail shows the event
+      // and adds it to Google Calendar.
+      ...(input.calendar ? { icalEvent: { method: input.calendar.method, filename: "invite.ics", content: input.calendar.ics } } : {}),
     });
     return { delivery: "SENT" };
   } catch (err) {

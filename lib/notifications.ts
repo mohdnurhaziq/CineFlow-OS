@@ -1,5 +1,6 @@
 import { errorMessageOf } from "./action-error";
 import { deliverViaSmtp, smtpConfigFromEnv } from "./email/smtp";
+import type { CalendarInvite } from "./calendar/ics";
 /**
  * CineFlow OS Multi-Channel Transactional Notification Engine
  * Supports Responsive HTML Email and WhatsApp Dispatch
@@ -41,6 +42,8 @@ export interface BookingConfirmedPayload {
   bookingLinkLabel?: string;
   /** How the unpaid deposit is to be paid (QR_CODE, CASH): the email says what to do next. */
   depositMethod?: string | null;
+  /** The session as a calendar invite (confirmed bookings only). */
+  calendar?: CalendarInvite;
 }
 
 export interface PaymentApprovedPayload {
@@ -135,6 +138,8 @@ export interface StudioUpdatePayload {
   /** Optional button: where to go next (account page, gallery). */
   linkUrl?: string;
   linkLabel?: string;
+  /** A calendar update (moved) or cancellation for the session. */
+  calendar?: CalendarInvite;
 }
 
 /** A one-time "reset your password" link. Email only: never put the link in a WhatsApp share. */
@@ -181,6 +186,8 @@ export interface ShootAssignedPayload {
   packageName?: string;
   brief?: string;
   scheduleUrl: string;
+  /** The shoot as a calendar invite (confirmed bookings only). */
+  calendar?: CalendarInvite;
 }
 
 /** A shoot the recipient is on moved, was cancelled, or they were taken off it. */
@@ -196,6 +203,8 @@ export interface ShootChangedPayload {
   /** The plain sentence with the details. */
   message: string;
   scheduleUrl: string;
+  /** A calendar update or cancellation for the shoot. */
+  calendar?: CalendarInvite;
 }
 
 export type NotificationPayload =
@@ -226,6 +235,8 @@ export interface NotificationResult {
   /** SENT: accepted by the provider (SMTP or Resend). SKIPPED: no email requested or no provider configured. FAILED: provider/network error. */
   emailDelivery: "SENT" | "SKIPPED" | "FAILED";
   emailError?: string;
+  /** The calendar invite that went with the email, if any. */
+  calendar?: CalendarInvite;
 }
 
 // In-memory audit trail for notifications
@@ -244,6 +255,17 @@ function esc(value: unknown): string {
 }
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+
+/** The address emails are sent from, used as a calendar invite's organiser: the SMTP sender, else the
+ * address in RESEND_FROM_EMAIL, else the platform's own. */
+export function platformSenderAddress(): string {
+  const smtp = smtpConfigFromEnv();
+  if (smtp) return smtp.fromAddress;
+  const from = process.env.RESEND_FROM_EMAIL?.trim() ?? "";
+  const address = (from.match(/<([^<>\s]+@[^<>\s]+)>/)?.[1] ?? from).trim();
+  return /^[^\s@<>]+@[^\s@<>]+$/.test(address) ? address : "noreply@cineflow-os.app";
+}
+
 const RESEND_TIMEOUT_MS = 8000;
 
 /**
@@ -278,6 +300,8 @@ async function deliverEmail(input: {
   text: string;
   /** Display name for the sender (the studio). Used for SMTP; Resend uses RESEND_FROM_EMAIL. */
   fromName?: string;
+  /** Sent as the email's calendar invite (Gmail adds it to Google Calendar). */
+  calendar?: CalendarInvite;
 }): Promise<{ delivery: "SENT" | "SKIPPED" | "FAILED"; error?: string }> {
   const smtp = smtpConfigFromEnv();
   if (smtp) return deliverViaSmtp(smtp, input);
@@ -296,6 +320,17 @@ async function deliverEmail(input: {
         subject: input.subject.replace(/[\r\n]+/g, " ").trim(),
         html: input.html,
         text: input.text,
+        ...(input.calendar
+          ? {
+              attachments: [
+                {
+                  filename: "invite.ics",
+                  content: Buffer.from(input.calendar.ics, "utf8").toString("base64"),
+                  content_type: `text/calendar; method=${input.calendar.method}; charset=UTF-8`,
+                },
+              ],
+            }
+          : {}),
       }),
       signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
     });
@@ -664,10 +699,11 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappText)}`;
   }
 
+  const calendar = "calendar" in payload ? payload.calendar : undefined;
   const wantsEmail = channel === "EMAIL" || channel === "BOTH";
   const delivery =
     wantsEmail && recipientEmail
-      ? await deliverEmail({ to: recipientEmail, subject: emailSubject, html: emailHtml, text: emailText, fromName: payload.studioName })
+      ? await deliverEmail({ to: recipientEmail, subject: emailSubject, html: emailHtml, text: emailText, fromName: payload.studioName, calendar })
       : { delivery: "SKIPPED" as const };
 
   const result: NotificationResult = {
@@ -684,6 +720,7 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     success: delivery.delivery !== "FAILED",
     emailDelivery: delivery.delivery,
     emailError: delivery.error,
+    ...(calendar && delivery.delivery !== "SKIPPED" ? { calendar } : {}),
   };
 
   // The log keeps recent sends for auditing; reset and invite links are credentials, so never keep them.
