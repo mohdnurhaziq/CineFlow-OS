@@ -7,6 +7,7 @@ import { studioUrl } from "@/lib/domain-name";
 import { decryptSecret } from "@/lib/crypto/secret-box";
 import { sendNotification } from "@/lib/notifications";
 import { findSuccessfulPayment, toSen, type ToyyibpayCredentials } from "@/lib/payments/toyyibpay";
+import { clientInvite } from "@/lib/bookings/calendar-invites";
 
 /**
  * Settlement of online (Toyyibpay) invoices. Not a "use server" module: it must
@@ -197,23 +198,30 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
   }
 
   if (!result.alreadySettled && result.booking && !result.refundRequired && result.booking.clientEmail) {
-    sendNotification({
-      event: "BOOKING_CONFIRMED",
-      studioName: invoice.tenant.name,
-      studioSlug: invoice.tenant.slug,
-      clientName: result.booking.clientName,
-      clientEmail: result.booking.clientEmail,
-      clientPhone: result.booking.clientPhone || undefined,
-      packageName: result.booking.packageName || "Studio Production Session",
-      slotDate: result.slot?.date ? new Date(result.slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
-      startTime: result.slot?.startTime ?? "",
-      endTime: result.slot?.endTime ?? "",
-      depositAmount: invoice.amount,
-      currency: invoice.tenant.currency || "MYR",
-      trackingCode: result.booking.trackingCode,
-      // The client's account (there is no /portal page).
-      bookingUrl: studioUrl(invoice.tenant.slug, "/account"),
-    }).catch((e) => console.error("Notification dispatch failed:", e));
+    const confirmed = result.booking;
+    clientInvite(confirmed.id, "REQUEST")
+      .then((calendar) =>
+        sendNotification({
+          event: "BOOKING_CONFIRMED",
+          studioName: invoice.tenant.name,
+          studioSlug: invoice.tenant.slug,
+          clientName: confirmed.clientName,
+          clientEmail: confirmed.clientEmail,
+          clientPhone: confirmed.clientPhone || undefined,
+          packageName: confirmed.packageName || "Studio Production Session",
+          slotDate: result.slot?.date ? new Date(result.slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
+          startTime: result.slot?.startTime ?? "",
+          endTime: result.slot?.endTime ?? "",
+          depositAmount: invoice.amount,
+          currency: invoice.tenant.currency || "MYR",
+          trackingCode: confirmed.trackingCode,
+          // The client's account (there is no /portal page).
+          bookingUrl: studioUrl(invoice.tenant.slug, "/account"),
+          // The session goes into the client's calendar.
+          calendar: calendar ?? undefined,
+        })
+      )
+      .catch((e) => console.error("Notification dispatch failed:", e));
   }
 
   return {

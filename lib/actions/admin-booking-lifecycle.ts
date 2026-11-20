@@ -13,6 +13,8 @@ import { sendNotification } from "@/lib/notifications";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { notifyAssignees, sessionText } from "@/lib/bookings/assignment-emails";
 import { studioUrl } from "@/lib/domain-name";
+import { clientInvite, clientInviteFor } from "@/lib/bookings/calendar-invites";
+import type { CalendarInvite } from "@/lib/calendar/ics";
 
 /**
  * What a studio does with a booking after it is made:
@@ -53,7 +55,7 @@ function revalidate(tenantSlug: string) {
 async function notifyClient(
   tenantId: string,
   booking: { clientName: string; clientEmail: string; clientPhone: string },
-  update: { headline: string; message: string; linkUrl?: string; linkLabel?: string }
+  update: { headline: string; message: string; linkUrl?: string; linkLabel?: string; calendar?: CalendarInvite | null }
 ) {
   if (!booking.clientEmail) return;
   const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } });
@@ -69,6 +71,7 @@ async function notifyClient(
     linkLabel: update.linkLabel ?? "View my booking",
     headline: update.headline,
     message: update.message,
+    calendar: update.calendar ?? undefined,
   }).catch((e) => console.error("Notification dispatch failed:", e));
 }
 
@@ -82,7 +85,10 @@ export async function cancelBooking(input: z.input<typeof CancelSchema>): Promis
   try {
     const data = CancelSchema.parse(input);
     const session = await requireAccess(data.tenantId, "bookings", "MANAGE");
-    const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId }, include: { slot: true } });
+    const booking = await db.clientBooking.findFirst({
+      where: { id: data.bookingId, tenantId: data.tenantId },
+      include: { slot: true, tenant: { select: { name: true, slug: true } } },
+    });
     if (!booking) return fail("NOT_FOUND", "Booking not found.");
     if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
       return fail("NOT_CANCELLABLE", "Only upcoming bookings can be cancelled.");
@@ -125,6 +131,8 @@ export async function cancelBooking(input: z.input<typeof CancelSchema>): Promis
       message: `Your session on ${sessionText(booking.slot)} has been cancelled. Reason: ${data.reason}.${
         booking.depositPaid ? " The studio will contact you about your deposit." : ""
       }`,
+      // Read before the cancel: a confirmed session comes out of their calendar.
+      calendar: clientInviteFor(booking, "CANCEL"),
     });
     // The team members on the shoot hear about it too; this never blocks or fails the cancel.
     void notifyAssignees(booking.id, { kind: "CANCELLED" });
@@ -219,6 +227,8 @@ export async function rescheduleBooking(input: z.input<typeof RescheduleSchema>)
     await notifyClient(data.tenantId, booking, {
       headline: "Your booking was moved",
       message: `Your session has moved from ${sessionText(booking.slot)} to ${sessionText(target)}.`,
+      // A confirmed session moves in their calendar too.
+      calendar: await clientInvite(booking.id, "REQUEST"),
     });
     void notifyAssignees(booking.id, { kind: "MOVED", previous: sessionText(booking.slot) });
     return { success: true };

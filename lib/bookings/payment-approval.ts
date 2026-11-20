@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { formatSlotDate } from "@/lib/slot-time";
 import { studioUrl } from "@/lib/domain-name";
+import { clientInvite } from "@/lib/bookings/calendar-invites";
 
 /**
  * Marks an invoice paid and applies what follows from it (booking confirmed, balance issued,
@@ -195,6 +196,8 @@ export async function applyInvoicePayment(
             currency: invoice.tenant.currency,
             trackingCode: linked.trackingCode,
             bookingUrl,
+            // The session goes into the client's calendar (Gmail adds it to Google Calendar).
+            calendar: (await clientInvite(linked.id, "REQUEST", { name: invoice.client.name, email: invoice.client.email })) ?? undefined,
           });
         }
       } catch (e) {

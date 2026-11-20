@@ -3,6 +3,7 @@ import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { formatSlotDate } from "@/lib/slot-time";
 import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
 import { studioPath, studioUrl } from "@/lib/domain-name";
+import { clientInviteFor } from "@/lib/bookings/calendar-invites";
 
 /**
  * Emails the customer their booking confirmation (reference, package, session, deposit).
@@ -70,6 +71,8 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
       trackingCode: booking.trackingCode,
       bookingUrl: studioUrl(slug, link),
       bookingLinkLabel: linkLabel,
+      // Confirmed (deposit paid) with a session time: the session goes into their calendar.
+      calendar: clientInviteFor(booking, "REQUEST") ?? undefined,
     });
   } catch (err) {
     console.error("Booking confirmation email failed:", err);

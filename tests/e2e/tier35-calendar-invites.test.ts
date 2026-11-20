@@ -9,6 +9,13 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { buildInvite, inviteSequence, slotTimes, type InviteEvent } from "@/lib/calendar/ics";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { platformSenderAddress, sendNotification, type NotificationPayload } from "@/lib/notifications";
+import { db } from "@/lib/db";
+import { withSession } from "./mocks/session";
+import { processBookingCheckout } from "@/lib/actions/checkout";
+import { approvePaymentVerification } from "@/lib/actions/admin-verification";
+import { cancelBooking, rescheduleBooking } from "@/lib/actions/admin-booking-lifecycle";
+import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
+import { clientInvite } from "@/lib/bookings/calendar-invites";
 
 /** The ics with folded lines joined back, for reading values. */
 const unfold = (ics: string) => ics.replace(/\r\n[ \t]/g, "");
@@ -159,6 +166,165 @@ export async function runTier35CalendarInvitesTests(harness: TestHarness) {
 
       delete process.env.RESEND_FROM_EMAIL;
       harness.assertEqual(platformSenderAddress(), "noreply@cineflow-os.app", "Falls back to the platform address");
+    } finally {
+      restoreMail();
+    }
+  });
+
+  // ---- The client's invite, from real booking actions ----
+  const DAY_MS = 86_400_000;
+  const lumina = await db.tenant.findUnique({ where: { slug: "lumina-cine" } });
+  if (!lumina) throw new Error("Seed tenant lumina-cine is required");
+  const ownerRow = await db.user.findFirst({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } });
+  if (!ownerRow) throw new Error("Seed Lumina owner is required");
+  const owner = { id: ownerRow.id, email: ownerRow.email, name: ownerRow.name, role: ownerRow.role, tenantId: ownerRow.tenantId, tenantSlug: "lumina-cine" };
+  const run = Date.now().toString(36);
+  const slotIds: string[] = [];
+  harness.registerTeardown(async () => {
+    await db.bookingAssignment.deleteMany({ where: { booking: { clientEmail: { startsWith: "t35-" } } } });
+    await db.milestoneInvoice.deleteMany({ where: { client: { email: { startsWith: "t35-" } } } });
+    await db.project.deleteMany({ where: { client: { email: { startsWith: "t35-" } } } });
+    await db.clientBooking.deleteMany({ where: { clientEmail: { startsWith: "t35-" } } });
+    await db.bookingSlot.deleteMany({ where: { id: { in: slotIds } } });
+    await db.user.deleteMany({ where: { email: { startsWith: "t35-" } } });
+  });
+
+  // Every email these tests cause goes through a capturing SMTP transport.
+  type Mail = { to: string; subject: string; icalEvent?: { method: string; content: string } };
+  const mails: Mail[] = [];
+  const captureMail = () => {
+    for (const k of MAIL_KEYS) delete process.env[k];
+    process.env.SMTP_HOST = "mailpit";
+    process.env.SMTP_PORT = "1025";
+    process.env.SMTP_FROM_ADDRESS = "noreply@cineflow-os.app";
+    setSmtpTransportForTests({
+      sendMail: async (mail: Mail) => {
+        mails.push(mail);
+        return { messageId: "t35" };
+      },
+    } as unknown as Transporter);
+  };
+  /** The emails to `to`, once `count` of them have arrived (some are sent in the background). */
+  const mailTo = async (to: string, count = 1): Promise<Mail[]> => {
+    for (let i = 0; i < 40 && mails.filter((m) => m.to === to).length < count; i++) await new Promise((r) => setTimeout(r, 50));
+    return mails.filter((m) => m.to === to);
+  };
+  const invitesTo = async (to: string, count: number) => {
+    for (let i = 0; i < 40 && mails.filter((m) => m.to === to && m.icalEvent).length < count; i++) await new Promise((r) => setTimeout(r, 50));
+    return mails.filter((m) => m.to === to && m.icalEvent).map((m) => m.icalEvent!);
+  };
+  const seqOf = (ics: string) => Number(unfold(ics).match(/SEQUENCE:(\d+)/)?.[1] ?? 0);
+  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+  let minute = 0;
+  const makeSlot = async (daysAhead: number) => {
+    minute += 1;
+    const slot = await db.bookingSlot.create({
+      data: {
+        tenantId: lumina.id,
+        category: "EDITORIAL",
+        date: new Date(`${new Date(Date.now() + daysAhead * DAY_MS).toISOString().slice(0, 10)}T00:00:00.000Z`),
+        startTime: `0${(minute % 8) + 1}:00 PM`,
+        endTime: `0${(minute % 8) + 1}:45 PM`,
+        status: "AVAILABLE",
+        price: 400,
+        depositRequired: 100,
+      },
+    });
+    slotIds.push(slot.id);
+    return slot;
+  };
+  let seq = 0;
+  /** A QR booking awaiting the studio's check of the slip. */
+  const book = async (slotId: string) => {
+    seq += 1;
+    const email = `t35-client-${run}-${seq}@example.test`;
+    const res = await withSession(null, () =>
+      processBookingCheckout({
+        tenantId: lumina.id,
+        tenantSlug: "lumina-cine",
+        slotId,
+        sessionId: `t35-${run}-${seq}`,
+        clientName: "Farah, Calendar",
+        clientEmail: email,
+        clientPhone: "0123456789",
+        paymentMethod: "QR_CODE",
+        paymentProofUrl: "/uploads/receipts/t35.jpg",
+      })
+    );
+    if (!res.success) throw new Error(`T35 booking failed: ${res.message}`);
+    return { bookingId: res.bookingId as string, invoiceId: res.invoiceId as string, email };
+  };
+  const approve = (invoiceId: string) =>
+    withSession(owner, () => approvePaymentVerification({ invoiceId, tenantId: lumina.id, tenantSlug: "lumina-cine" }));
+  const ids = (bookingId: string) => ({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingId });
+
+  await harness.test("T35-BOOK-01: approving the deposit sends the client the session as a calendar invite", async () => {
+    captureMail();
+    try {
+      const slot = await makeSlot(30);
+      const b = await book(slot.id);
+      await approve(b.invoiceId);
+      const [invite] = await invitesTo(b.email, 1);
+      harness.assertEqual(invite?.method, "REQUEST", "The client gets an invite", JSON.stringify((await mailTo(b.email)).map((m) => m.subject)));
+      const confirmed = mails.find((m) => m.to === b.email && m.icalEvent);
+      harness.assert(/confirmed/i.test(confirmed?.subject ?? ""), "In the booking-confirmed email", confirmed?.subject);
+      const ics = unfold(invite?.content ?? "");
+      harness.assert(ics.includes(`UID:booking-${b.bookingId}-client@cineflow-os`), "The client's event for this booking", ics);
+      harness.assert(ics.includes(`DTSTART:${stamp(slotTimes(slot)!.start)}`), "At the session's time");
+      harness.assert(ics.includes("SUMMARY:Photo session with Lumina"), "Titled for the studio", ics);
+      harness.assert(ics.includes(`mailto:${b.email}`), "Addressed to the client");
+      harness.assert(ics.includes("/account"), "Links to their account");
+    } finally {
+      restoreMail();
+    }
+  });
+
+  await harness.test("T35-BOOK-02: no invite for a booking that isn't confirmed, or has no session time", async () => {
+    captureMail();
+    try {
+      const slot = await makeSlot(31);
+      const b = await book(slot.id);
+      await sendBookingConfirmation(b.bookingId);
+      const sent = await mailTo(b.email, 2);
+      harness.assert(sent.length >= 1 && sent.every((m) => !m.icalEvent), "Booking-received emails carry no invite", JSON.stringify(sent.map((m) => m.subject)));
+      harness.assertEqual(await clientInvite(b.bookingId, "REQUEST"), null, "Pending: no invite");
+
+      await approve(b.invoiceId);
+      await db.clientBooking.update({ where: { id: b.bookingId }, data: { slotId: null, targetDate: "2026-12-24" } });
+      harness.assertEqual(await clientInvite(b.bookingId, "REQUEST"), null, "Confirmed but no slot: no invite, no error");
+      harness.assertEqual(await clientInvite("no-such-booking", "REQUEST"), null, "Unknown booking: no invite");
+    } finally {
+      restoreMail();
+    }
+  });
+
+  await harness.test("T35-BOOK-03: moving the booking updates the client's event; cancelling removes it", async () => {
+    captureMail();
+    try {
+      const from = await makeSlot(32);
+      const to = await makeSlot(33);
+      const b = await book(from.id);
+      await approve(b.invoiceId);
+      const [first] = await invitesTo(b.email, 1);
+      await new Promise((r) => setTimeout(r, 1100)); // the sequence counts seconds
+
+      const moved = await withSession(owner, () => rescheduleBooking({ ...ids(b.bookingId), newSlotId: to.id }));
+      harness.assert(moved.success === true, "Moved", JSON.stringify(moved));
+      const update = (await invitesTo(b.email, 2))[1];
+      const uid = `UID:booking-${b.bookingId}-client@cineflow-os`;
+      harness.assertEqual(update?.method, "REQUEST", "An update");
+      harness.assert(unfold(update?.content ?? "").includes(uid), "The same event");
+      harness.assert(seqOf(update?.content ?? "") > seqOf(first?.content ?? ""), "A higher sequence");
+      harness.assert(unfold(update?.content ?? "").includes(`DTSTART:${stamp(slotTimes(to)!.start)}`), "At the new time");
+
+      await new Promise((r) => setTimeout(r, 1100));
+      const cancelled = await withSession(owner, () => cancelBooking({ ...ids(b.bookingId), reason: "Client asked" }));
+      harness.assert(cancelled.success === true, "Cancelled", JSON.stringify(cancelled));
+      const cancel = (await invitesTo(b.email, 3))[2];
+      harness.assertEqual(cancel?.method, "CANCEL", "A cancellation");
+      harness.assert(unfold(cancel?.content ?? "").includes(uid), "Of the same event");
+      harness.assert(seqOf(cancel?.content ?? "") > seqOf(update?.content ?? ""), "With a higher sequence still");
     } finally {
       restoreMail();
     }
