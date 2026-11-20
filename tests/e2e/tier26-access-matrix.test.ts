@@ -246,6 +246,10 @@ const ACTIONS: Record<string, Row> = {
     ["area:catalog:MANAGE"],
     (c) => [{ ...c.t, id: M, title: "T26 showcase", clientName: "T26 client", category: "wedding", discipline: "PHOTOGRAPHY", coverImageUrl: "/uploads/t26.jpg", isFeatured: false }],
   ],
+  "admin-cms.ts#batchCreateShowcaseItems": [
+    ["area:catalog:MANAGE"],
+    (c) => [{ ...c.t, items: [{ title: "T26 showcase", clientName: "T26 client", category: "wedding", discipline: "PHOTOGRAPHY", coverImageUrl: "/uploads/t26.jpg", isFeatured: false, sortOrder: 0 }] }],
+  ],
   "admin-cms.ts#deleteShowcaseItem": [["area:catalog:MANAGE"], (c) => [{ ...c.t, id: M }]],
   "admin-cms.ts#toggleShowcaseFeatured": [["area:catalog:MANAGE"], (c) => [{ ...c.t, id: M, isFeatured: true }]],
   "admin-frames.ts#createFrameDesign": [
