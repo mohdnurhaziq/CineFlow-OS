@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/ui/page";
 import { buttonVariants } from "@/components/ui/button";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,6 +15,8 @@ import {
   Clock,
   Lock,
   UserCheck,
+  CalendarDays,
+  List,
 } from "lucide-react";
 import { cleanupExpiredHolds } from "@/lib/actions/admin-calendar";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -29,7 +31,9 @@ import type { BookingPackageOption } from "@/components/booking/package-picker";
 import { getBookingDetails } from "@/lib/actions/admin-bookings";
 import type { BookingDetails } from "@/lib/bookings/details";
 import type { BookingActionPowers } from "@/lib/auth/page-powers";
-import { isSlotInPast } from "@/lib/slot-time";
+import { formatSlotDate, isSlotInPast, slotDateKey, studioNow } from "@/lib/slot-time";
+import { compareSlots, daySummaries, defaultCalendarDay } from "@/lib/calendar/month-grid";
+import { MonthView } from "./month-view";
 import { studioPath } from "@/lib/domain-name";
 
 interface CalendarAdminDashboardProps {
@@ -74,6 +78,30 @@ export function CalendarAdminDashboard({
   // Slots whose start time has passed are hidden unless asked for (or a date is picked).
   const [showPast, setShowPast] = useState(false);
   const [dateFilter, setDateFilter] = useState<string>("");
+
+  // Month (a grid of days, one day's slots beside it) or List (every slot, for bulk changes).
+  const [view, setView] = useState<"month" | "list">("month");
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("cineflow.calendar.view") === "list") setView("list");
+    } catch {
+      // No storage (a private window): Month it is.
+    }
+  }, []);
+  const chooseView = (next: "month" | "list") => {
+    setView(next);
+    try {
+      window.localStorage.setItem("cineflow.calendar.view", next);
+    } catch {
+      // Remembering the choice is only a convenience.
+    }
+  };
+  const [today] = useState(() => studioNow().dateKey);
+  const [selectedDay, setSelectedDay] = useState(() => defaultCalendarDay(initialSlots, today));
+  const [shownMonth, setShownMonth] = useState(() => ({
+    year: Number(selectedDay.slice(0, 4)),
+    month: Number(selectedDay.slice(5, 7)) - 1,
+  }));
 
   // Dialogs
   const [isSingleDialogOpen, setIsSingleDialogOpen] = useState(false);
@@ -152,9 +180,8 @@ export function CalendarAdminDashboard({
   const bookedSlots = initialSlots.filter((s) => s.status === "BOOKED").length;
   const blockedSlots = initialSlots.filter((s) => s.status === "BLOCKED").length;
 
-  // Filter slots
-  const filteredSlots = initialSlots.filter((slot) => {
-    const dateStr = new Date(slot.date).toISOString().split("T")[0];
+  // Search, status and category apply to both views; the date and past-slot filters to the list.
+  const matchesBase = (slot: BookingSlotRow) => {
     const matchesSearch =
       slot.startTime.toLowerCase().includes(searchQuery.toLowerCase()) ||
       slot.endTime.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -163,11 +190,18 @@ export function CalendarAdminDashboard({
 
     const matchesStatus = selectedStatus === "ALL" || slot.status === selectedStatus;
     const matchesCategory = selectedCategory === "ALL" || slot.category === selectedCategory;
-    const matchesDate = !dateFilter || dateStr === dateFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
+  };
+  // In time order: "09:00 AM" before "02:00 PM" (the database sorts the times as text).
+  const baseSlots = initialSlots.filter(matchesBase).sort(compareSlots);
+  const filteredSlots = baseSlots.filter((slot) => {
+    const matchesDate = !dateFilter || slotDateKey(slot.date) === dateFilter;
     const matchesTime = showPast || !!dateFilter || !isSlotInPast(slot);
-
-    return matchesSearch && matchesStatus && matchesCategory && matchesDate && matchesTime;
+    return matchesDate && matchesTime;
   });
+  const summaries = useMemo(() => daySummaries(baseSlots), [baseSlots]);
+  const daySlots = baseSlots.filter((slot) => slotDateKey(slot.date) === selectedDay);
+  const selectedSummary = summaries.get(selectedDay);
 
   return (
     <div className="space-y-6">
@@ -284,6 +318,25 @@ export function CalendarAdminDashboard({
 
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
+        <div role="group" aria-label="Calendar view" className="inline-flex self-start rounded-xl border border-zinc-800 bg-zinc-900 p-0.5 shrink-0">
+          {([
+            ["month", "Month", CalendarDays],
+            ["list", "List", List],
+          ] as const).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => chooseView(id)}
+              aria-pressed={view === id}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-9 rounded-lg text-xs font-mono transition-colors ${
+                view === id ? "bg-amber-500/15 text-amber-400" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
           <input
@@ -296,6 +349,7 @@ export function CalendarAdminDashboard({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {view === "list" && (
           <div className="w-44">
             <DatePicker
               value={dateFilter}
@@ -305,6 +359,7 @@ export function CalendarAdminDashboard({
               title="Filter by exact date"
             />
           </div>
+          )}
 
           <select
             value={selectedStatus}
@@ -332,6 +387,7 @@ export function CalendarAdminDashboard({
             ))}
           </select>
 
+          {view === "list" && (
           <label className="flex items-center gap-2 text-xs text-zinc-400 px-1 min-h-11 cursor-pointer">
             <input
               type="checkbox"
@@ -341,6 +397,7 @@ export function CalendarAdminDashboard({
             />
             Show past slots
           </label>
+          )}
 
           {(searchQuery || selectedStatus !== "ALL" || selectedCategory !== "ALL" || dateFilter) && (
             <button
@@ -359,7 +416,64 @@ export function CalendarAdminDashboard({
         </div>
       </div>
 
-      {/* Filtered Slots Table */}
+      {view === "month" ? (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] items-start">
+          <MonthView
+            shown={shownMonth}
+            onShowMonth={setShownMonth}
+            summaries={summaries}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            today={today}
+          />
+          <section aria-labelledby="calendar-day-title" className="space-y-3 min-w-0">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="calendar-day-title" className="text-sm font-semibold text-white">
+                {formatSlotDate(`${selectedDay}T00:00:00.000Z`, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </h2>
+              <span className="text-xs font-mono text-zinc-400">
+                {selectedSummary
+                  ? `${selectedSummary.total} slot${selectedSummary.total === 1 ? "" : "s"} · ${selectedSummary.open} open · ${selectedSummary.booked} booked`
+                  : "No slots"}
+              </span>
+            </div>
+            {daySlots.length > 0 ? (
+              <SlotTable
+                key={selectedDay}
+                slots={daySlots}
+                tenantId={tenantId}
+                tenantSlug={tenantSlug}
+                currency={currency}
+                categories={categories}
+                canManage={canManage}
+                onEdit={(slot) => {
+                  setSlotToEdit(slot);
+                  setIsSingleDialogOpen(true);
+                }}
+                onForceRelease={(slot) => {
+                  setSlotToRelease(slot);
+                  setIsForceReleaseOpen(true);
+                }}
+                onBookForCustomer={(slot) => {
+                  setSlotToBook(slot);
+                  setIsBookDialogOpen(true);
+                }}
+                onViewBooking={handleViewBooking}
+                onSuccess={handleSuccess}
+              />
+            ) : (
+              <div className="p-8 text-center rounded-2xl border border-zinc-800 bg-[#0d0d10] space-y-1">
+                <p className="text-sm text-zinc-300">
+                  No slots on this day{selectedStatus !== "ALL" || selectedCategory !== "ALL" || searchQuery ? " that match the filters" : ""}.
+                </p>
+                {canManage && (
+                  <p className="text-xs text-zinc-400">Use &quot;New Slot&quot; or &quot;Batch Generate&quot; to open times for clients to book.</p>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      ) : (
       <SlotTable
         slots={filteredSlots}
         tenantId={tenantId}
@@ -382,6 +496,7 @@ export function CalendarAdminDashboard({
         onViewBooking={handleViewBooking}
         onSuccess={handleSuccess}
       />
+      )}
 
       <BookingDetailsDialog
         isOpen={viewBooking.open}
