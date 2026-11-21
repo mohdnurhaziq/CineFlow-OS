@@ -407,7 +407,7 @@ export async function notifyClientPhotosReady(
 ): Promise<Result<{ photoCount: number; videoCount: number; emailDelivery: string; whatsappUrl?: string }>> {
   try {
     const data = NotifyPhotosReadySchema.parse(input);
-    const user = await requireOwnOrManage(data.tenantId, "galleries");
+    const user = await requireOwnOrManage(data.tenantId, "galleries", { whilePaused: true });
     const project = await db.project.findFirst({
       where: { id: data.projectId, tenantId: data.tenantId },
       include: {

@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
     try {
-      const user = await requireOwnOrManage(project.tenantId, "galleries");
+      const user = await requireOwnOrManage(project.tenantId, "galleries", { whilePaused: true });
       await assertCanWorkOn(user, project.tenantId, "galleries", project.id);
     } catch (e) {
       if (e instanceof AuthorizationError) return NextResponse.json({ error: "Not permitted" }, { status: 403 });
