@@ -7,11 +7,12 @@
 
 import { TestHarness } from "./test-harness";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { prepareDatabase, sqlitePathFromUrl } from "../../scripts/start";
+import { runPrisma } from "../../scripts/prisma-cli.mjs";
 import { appEnvFrom } from "@/lib/app-env";
 import { productionSettingProblems } from "@/lib/production-settings";
 import { DEV_FALLBACK_AUTH_SECRET } from "@/lib/auth/dev-secret";
@@ -60,16 +61,22 @@ async function appliedMigrations(url: string): Promise<string[]> {
   }
 }
 
-/** Builds a database the old way (db push), as every existing copy was made. */
+/** Builds a database as every existing copy was made before migrations: the starting point's tables, no record of them. */
 function dbPush(url: string) {
-  const r = spawnSync("npx", ["prisma", "db", "push", "--skip-generate"], {
+  const r = runPrisma(["db", "execute", "--file", path.join(ROOT, "prisma", "migrations", "0_init", "migration.sql"), "--schema", "prisma/schema.prisma"], {
     cwd: ROOT,
     env: { ...process.env, DATABASE_URL: url },
     encoding: "utf8",
-    shell: process.platform === "win32",
   });
-  if (r.status !== 0) throw new Error(`db push failed: ${r.stderr || r.stdout}`);
+  if (r.status !== 0) throw new Error(`building the starting-point database failed: ${r.stderr || r.stdout}`);
 }
+
+/** Every recorded database change, oldest first (what a fully migrated database lists). */
+const ALL_MIGRATIONS = readdirSync(path.join(ROOT, "prisma", "migrations"), { withFileTypes: true })
+  .filter((d) => d.isDirectory())
+  .map((d) => d.name)
+  .sort()
+  .join(",");
 
 export async function runTier30EnvironmentsTests(harness: TestHarness) {
   harness.setSuite("Tier 30", "Dev, staging and production");
@@ -84,7 +91,7 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
     const result = await prepareDatabase({ databaseUrl: freshUrl, cwd: ROOT, log: quiet });
     harness.assertEqual(result, "created", "Reported as created");
     harness.assert((await tableNames(freshUrl)).includes("Proposal"), "Has the app's tables");
-    harness.assertEqual((await appliedMigrations(freshUrl)).join(","), "0_init", "Records the starting point");
+    harness.assertEqual((await appliedMigrations(freshUrl)).join(","), ALL_MIGRATIONS, "Records every change");
   });
 
   await harness.test("T30-DB-02: an existing database that matches is adopted, its data untouched", async () => {
@@ -97,7 +104,7 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
     await c.$disconnect();
     const result = await prepareDatabase({ databaseUrl: url, cwd: ROOT, log: quiet });
     harness.assertEqual(result, "adopted", "Reported as adopted");
-    harness.assertEqual((await appliedMigrations(url)).join(","), "0_init", "Starting point recorded as applied");
+    harness.assertEqual((await appliedMigrations(url)).join(","), ALL_MIGRATIONS, "Starting point recorded as applied, later changes applied after it");
     const after = clientFor(url);
     const rows = await after.$queryRawUnsafe<{ id: string }[]>(`SELECT id FROM "Tenant" WHERE id='t30_keep'`);
     await after.$disconnect();
