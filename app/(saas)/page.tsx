@@ -22,7 +22,9 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
-  openGraph: { title: TITLE, description: DESCRIPTION, images: [{ url: "/landing/og.jpg", width: 1200, height: 630 }] },
+  // Relative to metadataBase (the layout sets it), so the canonical address and the shared address are absolute.
+  alternates: { canonical: "/" },
+  openGraph: { type: "website", url: "/", siteName: "CineFlow OS", title: TITLE, description: DESCRIPTION, images: [{ url: "/landing/og.jpg", width: 1200, height: 630 }] },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: ["/landing/og.jpg"] },
 };
 
