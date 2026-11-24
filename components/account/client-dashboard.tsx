@@ -714,9 +714,9 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     </button>
                   </div>
 
-                  {upcomingBookings.length === 0 ? (
+                  {bookings.length === 0 ? (
                     <div className="py-4 text-center space-y-2">
-                      <p className="text-xs text-zinc-500">No upcoming sessions right now.</p>
+                      <p className="text-xs text-zinc-500">No sessions booked right now.</p>
                       <Link
                         href={studioPath(tenant.slug, "/book")}
                         className="inline-flex items-center gap-1 text-xs font-mono text-amber-400 hover:underline"
@@ -726,7 +726,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {upcomingBookings.slice(0, 2).map((b) => {
+                      {(upcomingBookings.length > 0 ? upcomingBookings : bookings).slice(0, 2).map((b) => {
                         const dateInfo = b.slot ? formatShortDate(b.slot.date) : null;
                         return (
                           <Link

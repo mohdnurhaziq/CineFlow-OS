@@ -10,7 +10,10 @@ import { NoAccess } from "@/components/admin/no-access";
 
 interface ClientsPageProps {
   params: Promise<{ tenantSlug: string }>;
+  searchParams?: Promise<{ filter?: string; q?: string }>;
 }
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: ClientsPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
@@ -19,8 +22,9 @@ export async function generateMetadata({ params }: ClientsPageProps): Promise<Me
 }
 
 // Clients VIEW.
-export default async function AdminClientsPage({ params }: ClientsPageProps) {
+export default async function AdminClientsPage({ params, searchParams }: ClientsPageProps) {
   const { tenantSlug } = await params;
+  const query = searchParams ? await searchParams : undefined;
   const viewer = await adminPageAccess(tenantSlug);
   if (!viewer || !levelAtLeast(viewer.access.areas.clients, "VIEW")) return <NoAccess tenantSlug={tenantSlug} />;
   const tenant = await db.tenant.findUnique({
@@ -33,9 +37,21 @@ export default async function AdminClientsPage({ params }: ClientsPageProps) {
   const showMoney = levelAtLeast(viewer.access.areas.invoices, "VIEW");
   const clients = await loadClientDirectory(tenant.id, { money: showMoney });
 
+  const rawFilter = query?.filter?.toUpperCase();
+  const validFilters = new Set(["ALL", "REGISTERED", "INVITED", "GUEST", "OWING"]);
+  const initialFilter = rawFilter && validFilters.has(rawFilter) ? (rawFilter as "ALL" | "REGISTERED" | "INVITED" | "GUEST" | "OWING") : undefined;
+
   return (
     <PageShell>
-      <ClientsDirectory tenantSlug={tenant.slug} currency={tenant.currency} clients={clients} showMoney={showMoney} />
+      <ClientsDirectory
+        tenantId={tenant.id}
+        tenantSlug={tenant.slug}
+        currency={tenant.currency}
+        clients={clients}
+        showMoney={showMoney}
+        initialFilter={initialFilter}
+        initialQuery={query?.q}
+      />
     </PageShell>
   );
 }

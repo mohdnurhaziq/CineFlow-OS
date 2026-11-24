@@ -78,11 +78,13 @@ export function BookingsConsole({
   newBooking,
 }: BookingsConsoleProps) {
   const [newBookingOpen, setNewBookingOpen] = useState(false);
-  // Open on whatever needs the owner's attention first.
-  const [filter, setFilter] = useState<FilterId>(() =>
-    initialFilter ??
-    (bookings.some((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b))) ? "verify" : "upcoming")
-  );
+  // Open on whatever needs the owner's attention first; if no upcoming, show all bookings so clients' bookings aren't hidden.
+  const [filter, setFilter] = useState<FilterId>(() => {
+    if (initialFilter) return initialFilter;
+    if (bookings.some((b) => ["VERIFYING", "BALANCE_VERIFYING"].includes(bookingStage(b)))) return "verify";
+    const hasUpcoming = bookings.some((b) => b.status !== "CANCELLED" && !!b.sessionDate && b.sessionDate >= today);
+    return hasUpcoming ? "upcoming" : "all";
+  });
   const [query, setQuery] = useState("");
   // Track the open booking by id so it shows fresh data after an action refreshes the list.
   const [selectedId, setSelectedId] = useState<string | null>(null);
