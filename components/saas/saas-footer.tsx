@@ -31,7 +31,7 @@ export function SaasFooter({ email }: { email: string }) {
           </a>
         </nav>
 
-        <p className="font-mono text-xs text-zinc-500">&copy; {new Date().getFullYear()} CineFlow OS</p>
+        <p className="font-mono text-xs text-zinc-400">&copy; {new Date().getFullYear()} CineFlow OS</p>
       </div>
     </footer>
   );

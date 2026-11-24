@@ -138,3 +138,16 @@ body {
     width: 100%;
   }
 }
+
+/*
+ * People can pinch-zoom (the viewport no longer blocks it). iPhones also zoom into any text field
+ * whose text is under 16px when it is focused, which would jump the page on every tap, so on
+ * phones every text field is at least 16px. Bigger fields (text-lg and up) keep their size.
+ */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([class*="text-lg"]):not([class*="text-xl"]):not([class*="text-2xl"]):not([class*="text-3xl"]):not([class*="text-4xl"]),
+  select:not([class*="text-lg"]):not([class*="text-xl"]):not([class*="text-2xl"]),
+  textarea:not([class*="text-lg"]):not([class*="text-xl"]):not([class*="text-2xl"]) {
+    font-size: 16px;
+  }
+}

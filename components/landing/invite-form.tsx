@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { submitInviteRequest, type InviteFormState } from "@/lib/actions/invite-requests";
 
@@ -10,11 +10,16 @@ const label = "mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-
 
 function Submit() {
   const { pending } = useFormStatus();
+  // aria-disabled, not disabled: a disabled button drops keyboard focus to the page, so after the
+  // answer comes back a keyboard user would be left at the top. Pressing it while sending does nothing.
   return (
     <button
       type="submit"
-      disabled={pending}
-      className="inline-flex min-h-12 items-center justify-center rounded-full bg-amber-500 px-8 text-sm font-semibold text-black transition-all hover:bg-amber-400 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 disabled:opacity-60"
+      aria-disabled={pending || undefined}
+      onClick={(e) => {
+        if (pending) e.preventDefault();
+      }}
+      className="inline-flex min-h-12 items-center justify-center rounded-full bg-amber-500 px-8 text-sm font-semibold text-black transition-all hover:bg-amber-400 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 aria-disabled:cursor-wait aria-disabled:opacity-60"
     >
       {pending ? "Sending…" : "Request an invite"}
     </button>
@@ -32,10 +37,16 @@ export function InviteForm() {
   const [state, action] = useActionState<InviteFormState, FormData>(submitInviteRequest, { status: "idle" });
   // After a refusal React clears the fields, so they start from what the visitor had typed.
   const typed = state.status === "error" ? state.values : undefined;
+  const thanks = useRef<HTMLDivElement>(null);
+
+  // The form is replaced by the thank-you, so keyboard focus would be lost with it: move it to the message.
+  useEffect(() => {
+    if (state.status === "done") thanks.current?.focus();
+  }, [state.status]);
 
   if (state.status === "done") {
     return (
-      <div role="status" className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-8">
+      <div ref={thanks} tabIndex={-1} role="status" className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-8 outline-none">
         <p className="font-[family-name:var(--font-display)] text-3xl text-white">Thank you.</p>
         <p className="mt-3 text-zinc-300">We&apos;ve got your request and we&apos;ll be in touch by email.</p>
       </div>

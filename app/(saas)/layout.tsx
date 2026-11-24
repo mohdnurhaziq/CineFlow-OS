@@ -17,8 +17,16 @@ export default async function SaasLayout({ children }: { children: React.ReactNo
   const mode = landingMode(await studioSignupStatus());
   return (
     <div className={`${display.variable} flex min-h-screen flex-col bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400`}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-amber-500 focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
+      >
+        Skip to main content
+      </a>
       <SaasNavbar mode={mode} />
-      <div className="flex-1">{children}</div>
+      <div id="main-content" tabIndex={-1} className="flex-1 scroll-mt-20 outline-none">
+        {children}
+      </div>
       <SaasFooter email={publicContactEmail()} />
     </div>
   );
