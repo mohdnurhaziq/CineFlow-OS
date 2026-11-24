@@ -56,7 +56,7 @@ export function Journey({ videos }: { videos: Videos }) {
                       </DeviceFrame>
                     </div>
                   )}
-                  {clip?.mp4 && <LoopVideo mp4={clip.mp4} poster={clip.poster} alt="" className="mt-8 aspect-video w-full rounded-xl border border-zinc-800" />}
+                  {clip?.mp4 && <LoopVideo mp4={clip.mp4} poster={clip.poster} alt="" className="relative mt-8 aspect-video w-full rounded-xl border border-zinc-800" />}
                 </div>
               </li>
             );

@@ -14,6 +14,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { db } from "@/lib/db";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { createElement } from "react";
 import { landingVideo } from "@/lib/landing/media";
@@ -229,17 +230,18 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
 
   // ── Task 4: video, frames, motion boundaries ────────────────────────────────────────────
   await harness.test("T39-MEDIA-01: a video is offered only when its file exists; the poster is always there", async () => {
-    const dir = path.join(process.cwd(), "public", "landing", "video");
-    const file = path.join(dir, "hero-16x9.mp4");
-    await fs.mkdir(dir, { recursive: true });
-    await fs.rm(file, { force: true });
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "t39-media-"));
     try {
-      harness.assertEqual(JSON.stringify(landingVideo("hero")), JSON.stringify({ mp4: null, mp4Portrait: null, poster: "/landing/posters/hero.jpg" }), "No files: poster only");
-      await fs.writeFile(file, "x");
-      harness.assertEqual(landingVideo("hero").mp4, "/landing/video/hero-16x9.mp4", "File present: offered");
-      harness.assertEqual(landingVideo("print").mp4, null, "Another slot without a file: still null");
+      harness.assertEqual(JSON.stringify(landingVideo("hero", root)), JSON.stringify({ mp4: null, mp4Portrait: null, poster: "/landing/posters/hero.jpg" }), "No files: poster only");
+      await fs.mkdir(path.join(root, "landing", "video"), { recursive: true });
+      await fs.writeFile(path.join(root, "landing", "video", "hero-16x9.mp4"), "x");
+      harness.assertEqual(landingVideo("hero", root).mp4, "/landing/video/hero-16x9.mp4", "File present: offered");
+      harness.assertEqual(landingVideo("hero", root).mp4Portrait, null, "No portrait file: none");
+      await fs.writeFile(path.join(root, "landing", "video", "hero-9x16.mp4"), "x");
+      harness.assertEqual(landingVideo("hero", root).mp4Portrait, "/landing/video/hero-9x16.mp4", "Portrait file: offered for phones");
+      harness.assertEqual(landingVideo("print", root).mp4, null, "Another slot without a file: still null");
     } finally {
-      await fs.rm(file, { force: true });
+      await fs.rm(root, { recursive: true, force: true });
     }
   });
 
@@ -248,6 +250,18 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     const out = renderToStaticMarkup(createElement(LoopVideo, { mp4: "/x.mp4", mp4Portrait: null, poster: "/p.jpg", alt: "a" }) as never);
     harness.assert(out.includes("<img") && out.includes("/p.jpg"), "The poster image is rendered");
     harness.assert(!out.includes("<video"), "No video element until the client decides to play");
+  });
+
+  await harness.test("T39-MEDIA-04: the video container takes its position from its caller, so the hero background fills the hero", async () => {
+    await provideReactGlobal();
+    const wrapperClass = (cls: string) => /<div class="([^"]*)"/.exec(renderToStaticMarkup(createElement(LoopVideo, { mp4: null, poster: "/p.jpg", alt: "", className: cls }) as never))?.[1] ?? "";
+    const hero = wrapperClass("absolute inset-0 -z-10");
+    const classes = hero.split(" ");
+    harness.assert(classes.includes("absolute") && !classes.includes("relative"), "A hero background is absolute only, not also relative", hero);
+    const hero2 = await fs.readFile(path.join(process.cwd(), "components/landing/hero.tsx"), "utf8");
+    harness.assert(/LoopVideo[^>]*className="absolute inset-0/.test(hero2), "The hero places its video absolutely");
+    const journey = await fs.readFile(path.join(process.cwd(), "components/landing/journey.tsx"), "utf8");
+    harness.assert(/<LoopVideo[^>]*className="relative /.test(journey), "A chapter clip positions itself relatively");
   });
 
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
