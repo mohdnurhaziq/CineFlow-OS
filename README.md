@@ -51,6 +51,24 @@ CineFlow OS is a unified, multi-tenant SaaS platform engineered specifically for
 
 ---
 
+## 💳 Studio plans
+
+Studios subscribe to one of three plans. Payment is collected by hand (no gateway): the platform owner records each payment in the super-admin console (`/super-admin`), which sets the plan and the "paid until" day.
+
+| Plan | Price | Team | Adds |
+| :--- | :--- | :--- | :--- |
+| Solo | RM 99 / month | Owner only | Bookings, clients, galleries, invoices, website |
+| Studio | RM 249 / month | Up to 5 | Team, proposals, call sheets, custom domain |
+| Production | RM 599 / month | Unlimited | Wall art (frames, print orders), gear |
+
+- New studios start with a 14-day free trial with everything unlocked.
+- State is worked out from dates (Malaysia time): trial, active, overdue (7 days of grace after the paid-until day), paused (read-only, online booking closed), closed. Super-admins are never blocked.
+- Reminder emails (7 days before, overdue, paused) go to the owner and super-admins from the health check, at most once an hour.
+- Downgrading deletes nothing; it only stops new locked items being created.
+- The catalogue lives in `lib/billing/plans.ts`, the state rules in `lib/billing/state.ts`, the checks in `lib/billing/guard.ts`.
+
+---
+
 ## 🛠️ Recommended Technology Stack
 
 | Layer | Technology |

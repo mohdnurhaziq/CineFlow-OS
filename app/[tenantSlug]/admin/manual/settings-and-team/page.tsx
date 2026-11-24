@@ -144,6 +144,32 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
           The Plan tab shows your subscription plan, its status and your <Ui>Studio ID</Ui>. Support may ask for the studio ID when
           you contact them; <Ui>Copy studio ID</Ui> copies it. Nothing on this tab can be edited.
         </ManualP>
+        <ManualTable
+          head={["Plan", "Price", "Team", "Includes"]}
+          rows={[
+            ["Solo", "RM 99 / month", "Owner only", "Bookings, clients, galleries, invoices and your website."],
+            ["Studio", "RM 249 / month", "Up to 5 team members", "Everything in Solo, plus team, proposals, call sheets and your own web address."],
+            ["Production", "RM 599 / month", "Unlimited", "Everything in Studio, plus wall art (frames and print orders) and gear."],
+          ]}
+        />
+        <ManualList
+          items={[
+            <>New studios start with a free 14-day trial where everything is unlocked.</>,
+            <>
+              Payment is arranged with us directly (bank transfer or DuitNow); we record it and your plan runs to the day we enter. We
+              email you 7 days before it ends.
+            </>,
+            <>
+              If a plan ends, everything keeps working for 7 more days with a notice at the top. After that the studio is read-only and
+              closed to new online bookings until it is renewed. Your clients can still open their galleries and pay what they owe, and
+              nothing is deleted.
+            </>,
+            <>
+              A feature that is not in your plan shows a lock in the menu and a note on its page saying which plan has it. Moving to a
+              smaller plan deletes nothing; you just cannot add new things the plan does not include.
+            </>,
+          ]}
+        />
       </ManualSection>
 
       <ManualSection id="roles" title="Your team's roles">
