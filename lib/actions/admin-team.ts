@@ -301,7 +301,7 @@ export async function updateTeamMember(input: UpdateTeamMemberInput) {
 export async function removeTeamMember(input: TeamMemberRefInput) {
   try {
     const v = TeamMemberRefSchema.parse(input);
-    await requireOwner(v.tenantId);
+    await requireOwner(v.tenantId, { whilePaused: true });
     const member = await teamAccount(v.tenantId, v.userId);
     const now = new Date();
     const today = studioNow(now).dateKey;

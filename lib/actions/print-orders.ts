@@ -260,7 +260,9 @@ export async function placePrintOrder(
     const isTeam = !!session && STAFF_ROLES.has(session.role);
     if (isTeam) await requireAccess(v.tenantId, "printOrders", "MANAGE");
     // Wall art and print orders are a Production-plan feature, for the team and for clients alike.
-    await requireFeature(v.tenantId, "wallArt", session);
+    // Prints a booking already included can always be redeemed, so a client the studio promised them to is never stranded.
+    const onlyIncluded = v.items.length > 0 && v.items.every((i) => i.kind === "INCLUDED");
+    if (!onlyIncluded) await requireFeature(v.tenantId, "wallArt", session);
 
     const placed = await db.$transaction(async (tx) => {
       // Take SQLite's write lock before reading anything, so two orders for the last included

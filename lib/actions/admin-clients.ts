@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/guard";
 import { requireAccess } from "@/lib/auth/access-guard";
+import { levelAtLeast } from "@/lib/auth/access";
+import { loadClientProfile } from "@/lib/client-directory";
 import { actionErrorMessage } from "@/lib/action-error";
 
 /**
@@ -126,5 +128,107 @@ export async function updateClientNotes(input: z.input<typeof ClientNotesSchema>
   } catch (error) {
     if (error instanceof AuthorizationError) return { success: false, error: "You are not allowed to edit this studio's clients." };
     return { success: false, error: actionErrorMessage(error, "Could not save the notes.") };
+  }
+}
+
+export type QuickClientProfile = {
+  client: {
+    id: string;
+    name: string;
+    email: string;
+    accountPhone: string | null;
+    phone: string | null;
+    accountStatus: string;
+    staffNotes: string;
+    createdAt: string;
+  };
+  bookings: Array<{
+    id: string;
+    trackingCode: string;
+    status: string;
+    packageName: string | null;
+    serviceTier: string;
+    targetDate: string | null;
+    sessionPrice: number | null;
+    depositAmount: number | null;
+    depositPaid: boolean;
+    clientEmail: string;
+    clientPhone: string;
+    createdAt: string;
+  }>;
+  projects: Array<{
+    id: string;
+    projectNumber: string;
+    title: string;
+    status: string;
+    budget: number | null;
+    shootDates: string | null;
+    updatedAt: string;
+  }>;
+  invoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    milestoneType: string;
+    description: string | null;
+    amount: number;
+    status: string;
+    dueDate: string;
+    paidAt: string | null;
+  }>;
+  proposals: Array<{
+    id: string;
+    proposalNumber: string;
+    title: string;
+    status: string;
+    totalPrice: number;
+    createdAt: string;
+  }>;
+  money: {
+    paid: number;
+    outstanding: number;
+  } | null;
+};
+
+export async function getClientQuickProfile(
+  tenantId: string,
+  clientId: string
+): Promise<{ success: true; profile: QuickClientProfile } | { success: false; error: string }> {
+  try {
+    const user = await requireAccess(tenantId, "clients", "VIEW");
+    const showMoney = levelAtLeast(user.access.areas.invoices, "VIEW");
+    const showProposals = levelAtLeast(user.access.areas.proposals, "VIEW");
+    const profile = await loadClientProfile(tenantId, clientId, { money: showMoney, proposals: showProposals });
+    if (!profile) return { success: false, error: "Client not found." };
+
+    return {
+      success: true,
+      profile: {
+        client: {
+          ...profile.client,
+          createdAt: profile.client.createdAt.toISOString(),
+        },
+        bookings: profile.bookings.map((b) => ({
+          ...b,
+          createdAt: b.createdAt.toISOString(),
+        })),
+        projects: profile.projects.map((p) => ({
+          ...p,
+          updatedAt: p.updatedAt.toISOString(),
+        })),
+        invoices: profile.invoices.map((i) => ({
+          ...i,
+          dueDate: i.dueDate.toISOString(),
+          paidAt: i.paidAt ? i.paidAt.toISOString() : null,
+        })),
+        proposals: profile.proposals.map((pr) => ({
+          ...pr,
+          createdAt: pr.createdAt.toISOString(),
+        })),
+        money: profile.money,
+      },
+    };
+  } catch (error) {
+    if (error instanceof AuthorizationError) return { success: false, error: "You are not allowed to view this studio's clients." };
+    return { success: false, error: actionErrorMessage(error, "Could not load client details.") };
   }
 }

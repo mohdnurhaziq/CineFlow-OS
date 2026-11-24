@@ -22,6 +22,21 @@ let lastRun = 0;
 const longDay = (day: string) =>
   new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
+/**
+ * Pauses a studio for lateness only if it is still exactly as the reminder run read it (not paid,
+ * not paused by hand, in the meantime). Returns whether it paused.
+ */
+export async function pauseForLateness(
+  t: { id: string; paidUntil: Date | null; trialEndsAt: Date | null },
+  at: Date
+): Promise<boolean> {
+  const { count } = await db.tenant.updateMany({
+    where: { id: t.id, pausedAt: null, paidUntil: t.paidUntil, trialEndsAt: t.trialEndsAt },
+    data: { pausedAt: at, pauseReason: "OVERDUE" },
+  });
+  return count === 1;
+}
+
 /** Runs the reminders. Called with no argument it runs at most once an hour; with a date (tests) it always runs. */
 export async function runPlanReminders(now?: Date): Promise<{ sent: number }> {
   if (!now) {
@@ -54,9 +69,7 @@ export async function runPlanReminders(now?: Date): Promise<{ sent: number }> {
       const key = `${kind}:${st.endsOn}`;
       if (t.lastPlanReminder === key) continue;
 
-      if (kind === "paused" && !t.pausedAt) {
-        await db.tenant.update({ where: { id: t.id }, data: { pausedAt: at, pauseReason: "OVERDUE" } });
-      }
+      if (kind === "paused" && !t.pausedAt && !(await pauseForLateness(t, at))) continue; // changed under us: next run decides
 
       const planName = PLANS[st.plan].name;
       const what = trial ? "free trial" : `${planName} plan`;
@@ -78,6 +91,9 @@ export async function runPlanReminders(now?: Date): Promise<{ sent: number }> {
       const owners = await db.user.findMany({ where: { tenantId: t.id, role: "STUDIO_OWNER", deactivatedAt: null }, select: { name: true, email: true } });
       const seen = new Set<string>();
       const people = [...owners, ...supers].filter((p) => p.email && !seen.has(p.email) && seen.add(p.email));
+      const ownerEmails = new Set(owners.map((o) => o.email));
+      // The owner is who must act, so the step counts as sent only once an owner's email went out
+      // (or, for a studio with no owner on file, once anyone's did).
       let delivered = people.length === 0;
       for (const p of people) {
         const res = await sendNotification(
@@ -94,9 +110,9 @@ export async function runPlanReminders(now?: Date): Promise<{ sent: number }> {
           },
           "EMAIL"
         ).catch(() => null);
-        if (res && res.emailDelivery !== "FAILED") {
-          delivered = true;
+        if (res && res.emailDelivery === "SENT") {
           sent += 1;
+          if (ownerEmails.size === 0 || ownerEmails.has(p.email)) delivered = true;
         }
       }
       // Only remember it once someone was actually told; otherwise the next check tries again.

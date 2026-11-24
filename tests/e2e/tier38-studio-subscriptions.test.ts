@@ -11,7 +11,7 @@ import { readFile } from "node:fs/promises";
 import { createElement } from "react";
 import nodemailer, { type Transporter } from "nodemailer";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
-import { runPlanReminders } from "@/lib/billing/reminders";
+import { pauseForLateness, runPlanReminders } from "@/lib/billing/reminders";
 import { renderToStaticMarkup } from "react-dom/server";
 import { provideReactGlobal } from "./react-tree";
 import { loadAccess } from "@/lib/auth/access";
@@ -23,7 +23,7 @@ import { createProposalAddOnTemplate } from "@/lib/actions/admin-proposals";
 import { createProposal, sendProposal, createCallSheet } from "@/lib/actions/admin-projects";
 import { createFrameDesign, createPrintSize } from "@/lib/actions/admin-frames";
 import { createGearItem, createKitBundle, createEquipmentReservation, updateGearItem, deleteGearItem } from "@/lib/actions/gear";
-import { createTeamRole, inviteTeamMember, restoreTeamMember } from "@/lib/actions/admin-team";
+import { createTeamRole, inviteTeamMember, removeTeamMember, restoreTeamMember } from "@/lib/actions/admin-team";
 import { assignTeamMember } from "@/lib/actions/admin-assignments";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { PlanLockedError, bookingsOpen, hasFeature, requireFeature } from "@/lib/billing/guard";
@@ -639,6 +639,88 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
         await runPlanReminders(new Date());
       }, true);
       harness.assertEqual((await tenantNow()).lastPlanReminder, null, "Mail down: not marked as sent, so it tries again");
+    } finally {
+      await restorePlan();
+      await db.tenant.update({ where: { id: lumina.id }, data: { lastPlanReminder: null } });
+    }
+  });
+
+  // ── Final review fixes ──────────────────────────────────────────────────────────────────
+  await harness.test("T38-FIX-01: a lateness pause never lands on stale data (paid in the meantime, or paused by hand)", async () => {
+    try {
+      await setDates(ymd(-20));
+      const stale = await tenantNow(); // what a reminder run read before the owner acted
+      await pay({ paidUntil: ymd(30) });
+      harness.assertEqual(await pauseForLateness(stale, new Date()), false, "Paid since the snapshot: not paused");
+      harness.assertEqual((await tenantNow()).pausedAt, null, "Still running");
+      await setDates(ymd(-20));
+      const stale2 = await tenantNow();
+      await withSession(superAdmin, () => pauseStudio({ tenantId: lumina.id, reason: "x" }));
+      harness.assertEqual(await pauseForLateness(stale2, new Date()), false, "Paused by hand since: left alone");
+      harness.assertEqual((await tenantNow()).pauseReason, "MANUAL", "Still a manual pause");
+    } finally {
+      await db.platformPayment.deleteMany({ where: { reference: "T38" } });
+      await restorePlan();
+    }
+  });
+
+  await harness.test("T38-FIX-02: a lapsed (paused) studio's owner can still remove a team member", async () => {
+    try {
+      await setPlan("PRO", "PAUSED");
+      const u = await db.user.create({ data: { tenantId: lumina.id, email: `t38-leaver-${Date.now()}@example.test`, name: "T38 Leaver", role: "TEAM_MEMBER", passwordHash: "x" } });
+      try {
+        const res = (await withSession(owner, () => removeTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", userId: u.id } as never))) as { success?: boolean };
+        harness.assert(res.success === true, "Removed while paused", JSON.stringify(res));
+        harness.assert((await db.user.findUnique({ where: { id: u.id } }))?.deactivatedAt !== null, "Their access is gone");
+      } finally {
+        await db.user.delete({ where: { id: u.id } }).catch(() => {});
+      }
+    } finally {
+      await restorePlan();
+    }
+  });
+
+  await harness.test("T38-FIX-03: a client can still redeem prints their booking included, without the Production plan", async () => {
+    try {
+      await setPlan("PRO");
+      const refused = await withSession(null, () => placePrintOrder({ ...t, projectId: M, items: [{ kind: "INCLUDED", bookingIncludedPrintId: M, deliverableItemId: M, orientation: "PORTRAIT", printSizeId: M, frameDesignId: M, matBoardType: "NONE" }], fulfilment: "PICKUP" } as never));
+      harness.assert(!locked(refused), "Not refused for the plan", JSON.stringify(refused));
+      const paid = await withSession(null, () => placePrintOrder({ ...t, projectId: M, items: [{ kind: "PAID", deliverableItemId: M, orientation: "PORTRAIT", printSizeId: M, frameDesignId: M, matBoardType: "NONE" }], fulfilment: "PICKUP" } as never));
+      harness.assert(locked(paid), "Buying new prints still needs the plan");
+    } finally {
+      await restorePlan();
+    }
+  });
+
+  await harness.test("T38-FIX-04: the reminder step is only marked sent once the owner's email went out", async () => {
+    try {
+      await setDates(ymd(2));
+      // Other tiers add owners to this studio; every one of them must fail for the step to stay unsent.
+      const ownerEmails = (await db.user.findMany({ where: { tenantId: lumina.id, role: "STUDIO_OWNER", deactivatedAt: null }, select: { email: true } })).map((u) => u.email);
+      const json = nodemailer.createTransport({ jsonTransport: true });
+      const saved = Object.fromEntries(SMTP_KEYS.map((k) => [k, process.env[k]]));
+      for (const k of SMTP_KEYS) delete process.env[k];
+      process.env.SMTP_HOST = "mailpit";
+      process.env.SMTP_PORT = "1025";
+      setSmtpTransportForTests({
+        sendMail: async (mail: Mail) => {
+          if (ownerEmails.some((e) => String(mail.to).includes(e))) throw Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+          return json.sendMail(mail);
+        },
+      } as unknown as Transporter);
+      const quiet = console.error;
+      console.error = () => undefined;
+      try {
+        await runPlanReminders(new Date());
+      } finally {
+        console.error = quiet;
+        setSmtpTransportForTests(json);
+        for (const k of SMTP_KEYS) {
+          if (saved[k] === undefined) delete process.env[k];
+          else process.env[k] = saved[k];
+        }
+      }
+      harness.assertEqual((await tenantNow()).lastPlanReminder, null, "Owner's mail failed: tries again next time");
     } finally {
       await restorePlan();
       await db.tenant.update({ where: { id: lumina.id }, data: { lastPlanReminder: null } });

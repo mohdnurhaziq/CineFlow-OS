@@ -39,10 +39,13 @@ export function requireStaff(tenantId: string | null | undefined): Promise<Sessi
 }
 
 /** The owner of `tenantId` (or the platform super-admin). For money, bank details and studio identity. */
-export async function requireOwner(tenantId: string | null | undefined): Promise<SessionUser> {
+export async function requireOwner(
+  tenantId: string | null | undefined,
+  options: { whilePaused?: boolean } = {}
+): Promise<SessionUser> {
   const session = await requireRole(tenantId, OWNER_ROLES);
-  // An owner's changes (team, settings, money) stop while the studio is paused.
-  if (tenantId) await assertNotPaused(tenantId, session);
+  // An owner's changes (team, settings, money) stop while the studio is paused, except taking access away.
+  if (tenantId && !options.whilePaused) await assertNotPaused(tenantId, session);
   return session;
 }
 
