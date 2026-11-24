@@ -338,7 +338,7 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
     try {
       await setPlan("PRO");
       harness.assertEqual(await hasFeature(lumina.id, "wallArt"), false, "Studio plan: no wall art");
-      const refused = await placePrintOrder({ ...t, projectId: M, items: [{ kind: "PAID", deliverableItemId: M, orientation: "PORTRAIT", printSizeId: M, frameDesignId: M, matBoardType: "NONE" }], fulfilment: "PICKUP" } as never);
+      const refused = await withSession(null, () => placePrintOrder({ ...t, projectId: M, items: [{ kind: "PAID", deliverableItemId: M, orientation: "PORTRAIT", printSizeId: M, frameDesignId: M, matBoardType: "NONE" }], fulfilment: "PICKUP" } as never));
       harness.assert(locked(refused), "Print orders are refused", JSON.stringify(refused));
       await setPlan("STUDIO_UNLIMITED");
       harness.assertEqual(await hasFeature(lumina.id, "wallArt"), true, "Production plan: wall art");
