@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { runPlanReminders } from "@/lib/billing/reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,8 @@ export async function GET() {
   } catch (err) {
     console.error("Health check: database error:", err);
   }
+  // Plan reminder emails ride on this call (at most once an hour, never blocking or failing it).
+  if (dbStatus === "connected") void runPlanReminders().catch(() => undefined);
   const ok = dbStatus === "connected";
   return NextResponse.json(
     { status: ok ? "ok" : "degraded", db: dbStatus, timestamp: new Date().toISOString() },

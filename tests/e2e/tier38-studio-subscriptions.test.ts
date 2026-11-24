@@ -9,6 +9,9 @@ import { type PlanCode, type PlanFeature } from "@/lib/billing/plans";
 import { countTeamSeats } from "@/lib/billing/team";
 import { readFile } from "node:fs/promises";
 import { createElement } from "react";
+import nodemailer, { type Transporter } from "nodemailer";
+import { setSmtpTransportForTests } from "@/lib/email/smtp";
+import { runPlanReminders } from "@/lib/billing/reminders";
 import { renderToStaticMarkup } from "react-dom/server";
 import { provideReactGlobal } from "./react-tree";
 import { loadAccess } from "@/lib/auth/access";
@@ -546,6 +549,99 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
       harness.assert(/Manage/.test(out), "Each studio can be managed");
     } finally {
       await restorePlan();
+    }
+  });
+
+  // ── Task 9: plan reminder emails ────────────────────────────────────────────────────────
+  type Mail = { to: string; subject: string; html: string; text: string };
+  const SMTP_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM_ADDRESS"] as const;
+  const withInbox = async (fn: (inbox: Mail[]) => Promise<void>, fail = false) => {
+    const saved = Object.fromEntries(SMTP_KEYS.map((k) => [k, process.env[k]]));
+    for (const k of SMTP_KEYS) delete process.env[k];
+    process.env.SMTP_HOST = "mailpit";
+    process.env.SMTP_PORT = "1025";
+    const inbox: Mail[] = [];
+    const json = nodemailer.createTransport({ jsonTransport: true });
+    setSmtpTransportForTests({
+      sendMail: async (mail: Mail) => {
+        if (fail) throw Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+        inbox.push(mail);
+        return json.sendMail(mail);
+      },
+    } as unknown as Transporter);
+    const quiet = console.error;
+    if (fail) console.error = () => undefined;
+    try {
+      await fn(inbox);
+    } finally {
+      console.error = quiet;
+      setSmtpTransportForTests(json);
+      for (const k of SMTP_KEYS) {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      }
+    }
+  };
+  const luminaMail = (inbox: Mail[]) => inbox.filter((m) => `${m.subject} ${m.html}`.includes("Lumina CineWorks"));
+  const setDates = (paidUntilDay: string | null) =>
+    db.tenant.update({
+      where: { id: lumina.id },
+      data: { subscriptionTier: "PRO", trialEndsAt: null, pausedAt: null, pauseReason: null, lastPlanReminder: null, paidUntil: paidUntilDay ? new Date(`${paidUntilDay}T00:00:00+08:00`) : null },
+    });
+
+  await harness.test("T38-REMIND-01: one email each at 7 days before, when overdue, and when paused; to the owner and the super-admin", async () => {
+    try {
+      await withInbox(async (inbox) => {
+        await setDates(ymd(5));
+        await runPlanReminders(new Date());
+        let mail = luminaMail(inbox);
+        harness.assert(mail.length >= 2, "Owner and super-admin are both told", String(mail.length));
+        harness.assert(mail.some((m) => m.to === ownerRow.email) && mail.some((m) => m.to === superRow.email), "To the owner and the super-admin");
+        harness.assertEqual((await tenantNow()).lastPlanReminder, `due:${ymd(5)}`, "Remembered");
+        const first = mail.length;
+        await runPlanReminders(new Date());
+        harness.assertEqual(luminaMail(inbox).length, first, "The same reminder is never sent twice");
+
+        await setDates(ymd(-3));
+        await db.tenant.update({ where: { id: lumina.id }, data: { lastPlanReminder: `due:${ymd(-3)}` } });
+        await runPlanReminders(new Date());
+        mail = luminaMail(inbox);
+        harness.assert(mail.length > first, "Overdue: a new email");
+        harness.assertEqual((await tenantNow()).lastPlanReminder, `overdue:${ymd(-3)}`, "Overdue key stored");
+
+        await setDates(ymd(-20));
+        const before = luminaMail(inbox).length;
+        await runPlanReminders(new Date());
+        const row = await tenantNow();
+        harness.assert(luminaMail(inbox).length > before, "Paused: a new email");
+        harness.assert(row.pausedAt !== null && row.pauseReason === "OVERDUE", "The studio is paused for lateness");
+        harness.assertEqual(row.lastPlanReminder, `paused:${ymd(-20)}`, "Paused key stored");
+      });
+    } finally {
+      await restorePlan();
+      await db.tenant.update({ where: { id: lumina.id }, data: { lastPlanReminder: null } });
+    }
+  });
+
+  await harness.test("T38-REMIND-02: nothing for a studio that is fine or paused by hand; a mail failure neither throws nor loses the reminder", async () => {
+    try {
+      await withInbox(async (inbox) => {
+        await setDates(ymd(30));
+        await runPlanReminders(new Date());
+        harness.assertEqual(luminaMail(inbox).length, 0, "Plenty of time left: no email");
+        await setDates(ymd(-20));
+        await db.tenant.update({ where: { id: lumina.id }, data: { pausedAt: new Date(), pauseReason: "MANUAL" } });
+        await runPlanReminders(new Date());
+        harness.assertEqual(luminaMail(inbox).length, 0, "Paused by hand: no email");
+      });
+      await setDates(ymd(2));
+      await withInbox(async () => {
+        await runPlanReminders(new Date());
+      }, true);
+      harness.assertEqual((await tenantNow()).lastPlanReminder, null, "Mail down: not marked as sent, so it tries again");
+    } finally {
+      await restorePlan();
+      await db.tenant.update({ where: { id: lumina.id }, data: { lastPlanReminder: null } });
     }
   });
 }
