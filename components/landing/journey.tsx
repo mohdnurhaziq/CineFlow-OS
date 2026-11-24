@@ -6,6 +6,9 @@ import { SplitHeading } from "@/components/landing/split-heading";
 
 type Videos = Partial<Record<"shoot" | "deliver" | "print", LandingVideo>>;
 
+/** The print clip ends differently from how it starts (a hand nudges the frame), so its end dissolves into its start. */
+const PRINT_CROSSFADE_SECONDS = 1;
+
 /** One client's path through a studio, in six steps, each with the real screen it happens on. */
 export function Journey({ videos }: { videos: Videos }) {
   return (
@@ -60,7 +63,7 @@ export function Journey({ videos }: { videos: Videos }) {
                       </div>
                     )}
                   </div>
-                  {clip?.mp4 && <LoopVideo mp4={clip.mp4} poster={clip.poster} alt="" className="relative mt-8 aspect-video w-full rounded-xl border border-zinc-800" />}
+                  {clip?.mp4 && <LoopVideo mp4={clip.mp4} poster={clip.poster} alt="" className="relative mt-8 aspect-video w-full rounded-xl border border-zinc-800" crossfade={c.video === "print" ? PRINT_CROSSFADE_SECONDS : 0} />}
                 </div>
               </li>
             );

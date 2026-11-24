@@ -18,6 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { createElement } from "react";
 import { landingVideo } from "@/lib/landing/media";
+import { crossfadeOpacity } from "@/lib/landing/crossfade";
 import { LoopVideo } from "@/components/landing/loop-video";
 import { renderToStaticMarkup } from "react-dom/server";
 import { provideReactGlobal } from "./react-tree";
@@ -266,6 +267,26 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert(/LoopVideo[^>]*className="absolute inset-0/.test(hero2), "The hero places its video absolutely");
     const journey = await fs.readFile(path.join(process.cwd(), "components/landing/journey.tsx"), "utf8");
     harness.assert(/<LoopVideo[^>]*className="relative /.test(journey), "A chapter clip positions itself relatively");
+  });
+
+  await harness.test("T39-MEDIA-05: the print clip's end dissolves into its start; no other clip does", async () => {
+    // The second copy shows nothing until the last second, then fades in evenly to all of it at the end.
+    harness.assertEqual(crossfadeOpacity(5, 1), 0, "Mid-clip: only the first copy shows");
+    harness.assertEqual(crossfadeOpacity(1, 1), 0, "With exactly the fade length left: not started");
+    harness.assertEqual(crossfadeOpacity(0.5, 1), 0.5, "Half way through the fade");
+    harness.assertEqual(crossfadeOpacity(0, 1), 1, "At the end: the second copy has fully taken over");
+    harness.assertEqual(crossfadeOpacity(-0.2, 1), 1, "Past the end never goes above 1");
+    harness.assertEqual(crossfadeOpacity(0.3, 0), 0, "A fade of 0 is a plain loop");
+
+    await provideReactGlobal();
+    const out = renderToStaticMarkup(createElement(LoopVideo, { mp4: "/x.mp4", poster: "/p.jpg", alt: "", crossfade: 1 }) as never);
+    harness.assert(out.includes("/p.jpg") && !out.includes("<video"), "With a crossfade the server markup is still only the poster");
+
+    const journey = await fs.readFile(path.join(process.cwd(), "components/landing/journey.tsx"), "utf8");
+    harness.assert(/crossfade=\{c\.video === "print" \? PRINT_CROSSFADE_SECONDS : 0\}/.test(journey), "Only the print clip is given a crossfade");
+    harness.assert(/const PRINT_CROSSFADE_SECONDS = 1;/.test(journey), "The fade is one second");
+    const hero = await fs.readFile(path.join(process.cwd(), "components/landing/hero.tsx"), "utf8");
+    harness.assert(!/crossfade/.test(hero), "The hero is a plain loop");
   });
 
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
