@@ -22,9 +22,11 @@ interface ShowcaseNavProps {
   client?: { name: string; email: string } | null;
   /** Signed-in staff/owner of this studio, if any. */
   staff?: { name: string; email?: string; role?: string } | null;
+  /** The wall-art visualizer is on the studio's plan; the link is hidden when it isn't. */
+  showWallArt?: boolean;
 }
 
-export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }: ShowcaseNavProps) {
+export function ShowcaseNav({ tenant, studioLead, client = null, staff = null, showWallArt = true }: ShowcaseNavProps) {
   const brandColor = tenant.brandColor || "#f59e0b";
   const whatsappNumber = studioLead?.phone ? studioLead.phone.replace(/[^0-9]/g, "") : "60123456789";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
@@ -76,6 +78,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
 
         {/* Action CTAs */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {showWallArt && (
           <Link
             href={studioPath(tenant.slug, "/visualizer")}
             className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-[#121215] text-xs font-mono text-zinc-300 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
@@ -83,6 +86,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null }:
             <Aperture className="size-3.5 text-amber-400" />
             <span>Wall Art</span>
           </Link>
+          )}
 
           <a
             href={whatsappUrl}

@@ -18,7 +18,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
@@ -124,14 +124,19 @@ export async function prepareDatabase(opts: {
     return "migrated";
   }
 
-  // Made before migrations existed: adopt it only if it is exactly the starting point.
+  // Made before migrations existed: adopt it only if it is exactly the starting point (0_init alone:
+  // later changes are applied by the deploy that follows).
+  const baseline = mkdtempSync(path.join(os.tmpdir(), `cineflow-baseline-${process.pid}-`));
+  mkdirSync(path.join(baseline, BASELINE));
+  cpSync(path.join(cwd, "prisma", "migrations", BASELINE), path.join(baseline, BASELINE), { recursive: true });
+  cpSync(path.join(cwd, "prisma", "migrations", "migration_lock.toml"), path.join(baseline, "migration_lock.toml"));
   const shadow = path.join(os.tmpdir(), `cineflow-shadow-${process.pid}-${Date.now()}.db`);
   try {
     const diff = prisma(
       [
         "migrate", "diff",
         "--from-url", databaseUrl,
-        "--to-migrations", "prisma/migrations",
+        "--to-migrations", baseline,
         "--shadow-database-url", `file:${shadow.replace(/\\/g, "/")}`,
         "--exit-code",
       ],
@@ -148,6 +153,7 @@ export async function prepareDatabase(opts: {
     if (diff.status !== 0) throw new Error(`Couldn't compare the database with the recorded changes:\n${diff.output}`);
   } finally {
     for (const suffix of ["", "-journal", "-wal", "-shm"]) rmSync(`${shadow}${suffix}`, { force: true });
+    rmSync(baseline, { recursive: true, force: true });
   }
 
   mustPrisma(["migrate", "resolve", "--applied", BASELINE, "--schema", SCHEMA], cwd, databaseUrl);

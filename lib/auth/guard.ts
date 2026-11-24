@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { STAFF_ROLES } from "@/lib/auth/roles";
 import { getCurrentUser, type SessionUser } from "@/lib/auth/session";
+import { assertNotPaused } from "@/lib/billing/guard";
 
 /**
  * Authorization guards for server actions.
@@ -38,8 +39,14 @@ export function requireStaff(tenantId: string | null | undefined): Promise<Sessi
 }
 
 /** The owner of `tenantId` (or the platform super-admin). For money, bank details and studio identity. */
-export function requireOwner(tenantId: string | null | undefined): Promise<SessionUser> {
-  return requireRole(tenantId, OWNER_ROLES);
+export async function requireOwner(
+  tenantId: string | null | undefined,
+  options: { whilePaused?: boolean } = {}
+): Promise<SessionUser> {
+  const session = await requireRole(tenantId, OWNER_ROLES);
+  // An owner's changes (team, settings, money) stop while the studio is paused, except taking access away.
+  if (tenantId && !options.whilePaused) await assertNotPaused(tenantId, session);
+  return session;
 }
 
 export async function requireSuperAdmin(): Promise<SessionUser> {

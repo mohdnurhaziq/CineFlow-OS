@@ -27,6 +27,7 @@ import { errorMessageOf } from "@/lib/action-error";
 import { isRateLimited } from "@/lib/rate-limit";
 import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
 import { studioUrl } from "@/lib/domain-name";
+import { BOOKINGS_CLOSED_MESSAGE, bookingsOpen } from "@/lib/billing/guard";
 
 function safeRevalidate(path: string) {
   try {
@@ -39,6 +40,7 @@ function safeRevalidate(path: string) {
 export async function processBookingCheckout(input: ProcessBookingCheckoutInput) {
   try {
     const validated = ProcessBookingCheckoutSchema.parse(input);
+    if (!(await bookingsOpen(validated.tenantId))) return { success: false, error: "BOOKINGS_CLOSED", message: BOOKINGS_CLOSED_MESSAGE };
     // One visitor can't book every slot (or send booking emails to any address) in a loop. Counted
     // once per real attempt (after the input is valid), here only: the booking pop-up comes through
     // here too. 20 an hour leaves room for a family on one mobile network.

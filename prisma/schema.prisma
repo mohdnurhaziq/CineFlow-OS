@@ -31,6 +31,11 @@ model Tenant {
   invoiceSeqYear     Int?                // Year invoiceSeq counts in; a new year starts again from 1
   subscriptionTier  String              @default("PRO") // STARTER, PRO, STUDIO_UNLIMITED
   subscriptionStatus String              @default("ACTIVE") // ACTIVE, TRIALING, CANCELLED
+  trialEndsAt        DateTime?           // End of the free trial (sign-up + 14 days)
+  paidUntil          DateTime?           // Last day the paid plan covers (Malaysia time); set by recorded payments
+  pausedAt           DateTime?           // Set when the studio is paused (by lateness or by hand)
+  pauseReason        String?             // OVERDUE or MANUAL
+  lastPlanReminder   String?             // Key of the last plan reminder email sent, e.g. "due:2026-12-01"
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -53,6 +58,26 @@ model Tenant {
   servicePackages        ServicePackage[]
   campaignCategories     CampaignCategory[]
   showcaseItems          ShowcaseItem[]
+  platformPayments       PlatformPayment[]
+}
+
+/// A payment the platform owner recorded for a studio's plan (collected by hand).
+model PlatformPayment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  amount       Float
+  method       String   // BANK_TRANSFER, DUITNOW, CASH, OTHER
+  reference    String?
+  plan         String   // STARTER, PRO, STUDIO_UNLIMITED
+  paidUntil    DateTime
+  note         String?
+  recordedById String
+  createdAt    DateTime @default(now())
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([createdAt])
 }
 
 model CampaignCategory {

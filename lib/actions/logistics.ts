@@ -18,6 +18,7 @@ import {
   type SubmitDigitalReleaseInput,
 } from "@/lib/validations/logistics";
 import { errorMessageOf } from "@/lib/action-error";
+import { requireFeature } from "@/lib/billing/guard";
 
 function safeRevalidate(path: string) {
   try {
@@ -142,7 +143,7 @@ export async function createShotItem(input: CreateShotItemInput) {
       };
     }
 
-    await requireAccess(project.tenantId, "production", "MANAGE");
+    await requireFeature(project.tenantId, "callSheets", await requireAccess(project.tenantId, "production", "MANAGE"));
 
     // 2. Determine sortOrder if not provided
     let sortOrder = validated.sortOrder;

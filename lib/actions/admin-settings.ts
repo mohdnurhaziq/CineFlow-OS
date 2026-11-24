@@ -10,6 +10,7 @@ import {
   type UpdateStudioSettingsInput,
 } from "@/lib/validations/admin-settings";
 import { RESERVED_SLUGS } from "@/lib/validations/onboarding";
+import { requireFeature } from "@/lib/billing/guard";
 
 function safeRevalidate(path: string) {
   try {
@@ -22,7 +23,7 @@ function safeRevalidate(path: string) {
 export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
   try {
     const validated = UpdateStudioSettingsSchema.parse(input);
-    await requireOwner(validated.tenantId);
+    const owner = await requireOwner(validated.tenantId);
     const { tenantId, tenantSlug, newSlug, customDomain } = validated;
 
     // Check tenant exists
@@ -32,6 +33,8 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
     if (!currentTenant) {
       return { success: false, error: "TENANT_NOT_FOUND", message: "Studio tenant not found." };
     }
+    // A custom domain is a plan feature: one already set stays, but a new one needs the plan.
+    if (customDomain && customDomain !== currentTenant.customDomain) await requireFeature(tenantId, "customDomain", owner);
 
     // A reserved name would clash with the platform's own pages or addresses (super-admin, www, book…).
     if (newSlug !== undefined && newSlug !== currentTenant.slug && RESERVED_SLUGS.has(newSlug.toLowerCase())) {

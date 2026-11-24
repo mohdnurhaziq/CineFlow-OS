@@ -9,6 +9,7 @@ import { NewProposalButton } from "@/components/admin/proposals/new-proposal-dia
 import { ProposalAdminDashboard } from "@/components/admin/proposals/proposal-admin-dashboard";
 import type { ProposalAddOnTemplateRow } from "@/components/admin/proposals/addon-template-dialog";
 import type { ProposalRow } from "@/components/admin/proposals/proposals-list";
+import { PlanPanel } from "@/components/billing/plan-panel";
 
 interface ProposalsPageProps {
   params: Promise<{
@@ -84,6 +85,7 @@ export default async function AdminProposalsPage({ params }: ProposalsPageProps)
 
   return (
     <PageShell>
+      <PlanPanel tenantId={tenant.id} feature="proposals" role={viewer.user.role} />
       <ProposalAdminDashboard
         newProposal={
           canSetPrices ? (

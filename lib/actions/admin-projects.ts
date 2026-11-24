@@ -12,6 +12,7 @@ import { sendNotification } from "@/lib/notifications";
 import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
 import { PROJECT_STAGES } from "@/lib/projects/constants";
 import { studioPath, studioUrl } from "@/lib/domain-name";
+import { requireFeature } from "@/lib/billing/guard";
 
 /**
  * Studio-side management of proposals and the projects they turn into: create a proposal
@@ -107,6 +108,7 @@ export async function createProposal(
   try {
     const data = CreateProposalSchema.parse(input);
     const session = await requireTick(data.tenantId, "setPrices");
+    await requireFeature(data.tenantId, "proposals", session);
     const tenant = await db.tenant.findUnique({ where: { id: data.tenantId }, select: { name: true, slug: true } });
     if (!tenant) return fail("TENANT_NOT_FOUND", "Studio not found.");
 
@@ -194,7 +196,7 @@ const SendProposalSchema = ProposalRefSchema.extend({ notifyClient: z.boolean().
 export async function sendProposal(input: z.input<typeof SendProposalSchema>): Promise<Result<{ shareUrl: string }>> {
   try {
     const data = SendProposalSchema.parse(input);
-    await requireTick(data.tenantId, "setPrices");
+    await requireFeature(data.tenantId, "proposals", await requireTick(data.tenantId, "setPrices"));
     const proposal = await db.proposal.findFirst({
       where: { id: data.proposalId, tenantId: data.tenantId },
       include: { tenant: { select: { name: true, slug: true } }, client: true },
@@ -312,7 +314,7 @@ const CallSheetSchema = z.object({
 export async function createCallSheet(input: z.input<typeof CallSheetSchema>): Promise<Result<{ callSheetId: string }>> {
   try {
     const data = CallSheetSchema.parse(input);
-    await requireAccess(data.tenantId, "production", "MANAGE");
+    await requireFeature(data.tenantId, "callSheets", await requireAccess(data.tenantId, "production", "MANAGE"));
     const project = await projectOf(data.tenantId, data.projectId);
     if (!project) return fail("NOT_FOUND", "Project not found.");
     const sheet = await db.callSheet.create({
@@ -407,7 +409,7 @@ export async function notifyClientPhotosReady(
 ): Promise<Result<{ photoCount: number; videoCount: number; emailDelivery: string; whatsappUrl?: string }>> {
   try {
     const data = NotifyPhotosReadySchema.parse(input);
-    const user = await requireOwnOrManage(data.tenantId, "galleries");
+    const user = await requireOwnOrManage(data.tenantId, "galleries", { whilePaused: true });
     const project = await db.project.findFirst({
       where: { id: data.projectId, tenantId: data.tenantId },
       include: {

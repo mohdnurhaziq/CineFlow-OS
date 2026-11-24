@@ -25,6 +25,7 @@ import {
   type UpdateMatBoardPriceInput,
 } from "@/lib/validations/admin-frames";
 import { errorMessageOf } from "@/lib/action-error";
+import { requireFeature } from "@/lib/billing/guard";
 
 function safeRevalidate(path: string) {
   try {
@@ -67,7 +68,7 @@ async function frameInUse(id: string): Promise<boolean> {
 export async function createFrameDesign(input: CreateFrameDesignInput) {
   try {
     const validated = CreateFrameDesignSchema.parse(input);
-    await requireAccess(validated.tenantId, "catalog", "MANAGE");
+    await requireFeature(validated.tenantId, "wallArt", await requireAccess(validated.tenantId, "catalog", "MANAGE"));
     const { tenantId, tenantSlug, name, material, moldingWidth, frameColor, previewAsset, priceOffset, isAvailable } = validated;
 
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
@@ -210,7 +211,7 @@ export async function toggleFrameAvailability(input: ToggleFrameAvailabilityInpu
 export async function createPrintSize(input: CreatePrintSizeInput) {
   try {
     const validated = CreatePrintSizeSchema.parse(input);
-    await requireAccess(validated.tenantId, "catalog", "MANAGE");
+    await requireFeature(validated.tenantId, "wallArt", await requireAccess(validated.tenantId, "catalog", "MANAGE"));
     const { tenantId, tenantSlug, code, name, widthInches, heightInches, basePrice } = validated;
 
     const normalizedCode = code.toUpperCase().trim();

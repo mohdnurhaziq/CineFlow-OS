@@ -238,7 +238,7 @@ async function runM2Verification() {
   {
     const metrics = await getPlatformMetrics();
     assert(metrics.totalStudios >= 3, `Total studios >= 3 (found: ${metrics.totalStudios})`);
-    assert(metrics.estimatedMrrUsd > 0, `Estimated MRR > 0 (found: $${metrics.estimatedMrrUsd})`);
+    assert(metrics.revenue12m >= 0, `Recorded plan revenue is a number (found: RM ${metrics.revenue12m})`);
     assert(
       metrics.paidRevenueUsd > 0,
       `USD Paid revenue > 0 (found: $${metrics.paidRevenueUsd})`

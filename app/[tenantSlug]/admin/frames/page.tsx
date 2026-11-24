@@ -10,6 +10,7 @@ import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { parseZoneStates } from "@/lib/prints/zones";
 import type { FramesTab } from "@/components/admin/frames/frames-manager";
+import { PlanPanel } from "@/components/billing/plan-panel";
 
 interface FramesPageProps {
   params: Promise<{
@@ -71,6 +72,7 @@ export default async function AdminFramesPage({ params, searchParams }: FramesPa
 
   return (
     <PageShell>
+      <PlanPanel tenantId={tenant.id} feature="wallArt" role={viewer.user.role} />
       <FramesManager
         tenantId={tenant.id}
         tenantSlug={tenant.slug}

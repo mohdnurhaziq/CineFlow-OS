@@ -17,6 +17,7 @@ import {
   type ToggleTemplateDefaultInput,
 } from "@/lib/validations/proposal-templates";
 import { errorMessageOf } from "@/lib/action-error";
+import { requireFeature } from "@/lib/billing/guard";
 
 function safeRevalidate(path: string) {
   try {
@@ -29,7 +30,7 @@ function safeRevalidate(path: string) {
 export async function createProposalAddOnTemplate(input: CreateProposalAddOnTemplateInput) {
   try {
     const validated = CreateProposalAddOnTemplateSchema.parse(input);
-    await requireAccess(validated.tenantId, "proposals", "MANAGE");
+    await requireFeature(validated.tenantId, "proposals", await requireAccess(validated.tenantId, "proposals", "MANAGE"));
     const { tenantId, tenantSlug, name, description, price, unit, isDefault, isActive } = validated;
 
     const tenant = await db.tenant.findUnique({ where: { id: tenantId } });

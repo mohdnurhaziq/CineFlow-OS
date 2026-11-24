@@ -19,6 +19,7 @@ import {
 import type { ComponentType } from "react";
 import { levelAtLeast, type AccessArea, type AccessLevel, type AccessMap } from "@/lib/auth/access";
 import { studioPath } from "@/lib/domain-name";
+import type { PlanFeature } from "@/lib/billing/plans";
 
 /**
  * The admin menu, filtered to what this person can open. It mirrors the page checks
@@ -38,6 +39,8 @@ export interface NavSubItem {
   description: string;
   icon: Icon;
   badge?: NavBadge;
+  /** The plan feature this item needs; the menu marks it with a lock when the studio's plan lacks it. */
+  feature?: PlanFeature;
 }
 
 export type AdminNavEntry =
@@ -90,6 +93,7 @@ export function visibleNavItems(tenantSlug: string, access: AccessMap, isOwner: 
           description: "Framed prints to produce, ship or hand over",
           icon: Frame,
           badge: "printOrders",
+          feature: "wallArt",
         }),
         ...item({ area: "bookings", level: "VIEW" }, {
           href: `${base}/calendar`,
@@ -102,6 +106,7 @@ export function visibleNavItems(tenantSlug: string, access: AccessMap, isOwner: 
           label: "Gear & Fleet",
           description: "Equipment inventory, kit bundles & barcode scans",
           icon: Layers,
+          feature: "gear",
         }),
       ],
     }),
@@ -129,6 +134,7 @@ export function visibleNavItems(tenantSlug: string, access: AccessMap, isOwner: 
           label: "Proposals",
           description: "Client quotes, custom scopes & digital contracts",
           icon: FileText,
+          feature: "proposals",
         }),
       ],
     }),
@@ -149,6 +155,7 @@ export function visibleNavItems(tenantSlug: string, access: AccessMap, isOwner: 
           label: "Frames & Prints",
           description: "Fine art sizes, frame finishes & print labs",
           icon: Frame,
+          feature: "wallArt",
         }),
         ...item({ area: "catalog", level: "VIEW" }, {
           href: `${base}/cms`,

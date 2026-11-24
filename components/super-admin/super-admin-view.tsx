@@ -2,33 +2,33 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  ShieldCheck,
-  Building2,
-  DollarSign,
-  Calendar,
-  Users,
-  Search,
-  ExternalLink,
-  Settings,
-  HardDrive,
-  ArrowLeft,
-} from "lucide-react";
+import { ShieldCheck, Building2, Banknote, CalendarClock, ExternalLink, Settings, Search, ArrowLeft, SlidersHorizontal } from "lucide-react";
 import type { PlatformMetrics } from "@/lib/actions/super-admin";
+import type { PlanState } from "@/lib/billing/state";
+import { PLANS, asPlanCode } from "@/lib/billing/plans";
 import { studioLink } from "@/lib/domain-name";
+import { ManageStudioPanel } from "@/components/super-admin/manage-studio-panel";
 
-interface TenantSummaryItem {
+export interface TenantSummaryItem {
   id: string;
   name: string;
   slug: string;
   customDomain: string | null;
   discipline: string;
-  tagline: string | null;
-  brandColor: string | null;
   currency: string;
   subscriptionTier: string;
   subscriptionStatus: string;
-  createdAt: Date;
+  state: PlanState;
+  endsOn: string | null;
+  graceEndsOn: string | null;
+  trialEndsAt: Date | string | null;
+  paidUntil: Date | string | null;
+  pausedAt: Date | string | null;
+  pauseReason: string | null;
+  teamUsed: number;
+  teamLimit: number | null;
+  lastActive: Date | string | null;
+  createdAt: Date | string;
   userCount: number;
   bookingCount: number;
   projectCount: number;
@@ -41,324 +41,241 @@ interface SuperAdminViewProps {
   tenants: TenantSummaryItem[];
 }
 
+const STATE_STYLE: Record<PlanState, { label: string; chip: string }> = {
+  TRIAL: { label: "Trial", chip: "bg-sky-500/10 text-sky-300 border-sky-500/30" },
+  ACTIVE: { label: "Active", chip: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30" },
+  OVERDUE: { label: "Overdue", chip: "bg-amber-500/10 text-amber-300 border-amber-500/30" },
+  PAUSED: { label: "Paused", chip: "bg-red-500/10 text-red-300 border-red-500/30" },
+  CLOSED: { label: "Closed", chip: "bg-zinc-800 text-zinc-400 border-zinc-700" },
+};
+
+const money = (n: number) => `RM ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const day = (key: string | null) =>
+  key ? new Date(`${key}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
+const when = (d: Date | string | null) =>
+  d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kuala_Lumpur" }) : "Never";
+
+/** The date that matters for a studio, with its words: "Trial ends 8 Dec 2026", "Paid until …", "Paused". */
+function dateLine(t: TenantSummaryItem): string {
+  if (t.state === "CLOSED") return "Closed";
+  if (t.state === "PAUSED") return t.pauseReason === "MANUAL" ? "Paused by you" : t.endsOn ? `Ended ${day(t.endsOn)}` : "Paused";
+  if (t.state === "TRIAL") return `Trial ends ${day(t.endsOn)}`;
+  if (t.state === "OVERDUE") return `Ended ${day(t.endsOn)} · grace to ${day(t.graceEndsOn)}`;
+  return t.endsOn ? `Paid until ${day(t.endsOn)}` : "No end date";
+}
+
 export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [disciplineFilter, setDisciplineFilter] = useState("ALL");
+  const [stateFilter, setStateFilter] = useState<"ALL" | PlanState>("ALL");
+  const [managingId, setManagingId] = useState<string | null>(null);
+  // Read the live row, so the panel reflects a pause/payment as soon as the list refreshes.
+  const managing = tenants.find((t) => t.id === managingId) ?? null;
 
-  const filteredTenants = tenants.filter((tenant) => {
-    const matchesSearch =
-      tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tenant.slug.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDiscipline =
-      disciplineFilter === "ALL" || tenant.discipline === disciplineFilter;
-    return matchesSearch && matchesDiscipline;
+  const filtered = tenants.filter((t) => {
+    const q = searchQuery.trim().toLowerCase();
+    return (!q || t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q)) && (stateFilter === "ALL" || t.state === stateFilter);
   });
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa] py-10 px-4 sm:px-6 lg:px-8 space-y-10">
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa] py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Link
-                href="/"
-                className="text-xs font-mono text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
-              >
-                <ArrowLeft className="size-3.5" />
-                Platform
-              </Link>
-              <span className="text-zinc-600">/</span>
-              <span className="text-xs font-mono text-amber-400 uppercase tracking-wider">
-                SUPER-ADMIN CONSOLE
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <ShieldCheck className="size-5" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                Platform Operations &amp; Macro Telemetry
-              </h1>
-            </div>
+        <header className="space-y-1.5 border-b border-zinc-800 pb-6">
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <Link href="/" className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1">
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              Platform
+            </Link>
+            <span className="text-zinc-600">/</span>
+            <span className="text-amber-400 uppercase tracking-wider">Super-admin</span>
           </div>
-
-          <div className="flex items-center gap-3 font-mono text-xs">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-              SYSTEM HEALTH: 100%
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <ShieldCheck className="size-5" aria-hidden="true" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Studios &amp; plans</h1>
           </div>
-        </div>
+        </header>
 
-        {/* 4 Macro KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* KPI 1: Total Studios */}
-          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] flex flex-col justify-between">
+        <section aria-label="Totals" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] space-y-3">
             <div className="flex items-center justify-between text-zinc-400">
-              <span className="text-xs font-mono uppercase tracking-wider">Active Studios</span>
-              <Building2 className="size-4 text-amber-400" />
+              <span className="text-xs font-mono uppercase tracking-wider">Studios</span>
+              <Building2 className="size-4 text-amber-400" aria-hidden="true" />
             </div>
-            <div className="pt-3">
-              <div className="font-mono text-3xl font-bold text-white tabular-nums">
-                {metrics.totalStudios}
-              </div>
-              <p className="text-xs text-zinc-400 mt-1 font-mono">
-                {metrics.studiosByStatus["ACTIVE"] || 0} active • {metrics.studiosByTier["PRO"] || 0} pro tiers
-              </p>
-            </div>
-          </div>
-
-          {/* KPI 2: Estimated MRR */}
-          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400">
-              <span className="text-xs font-mono uppercase tracking-wider">Estimated MRR</span>
-              <DollarSign className="size-4 text-emerald-400" />
-            </div>
-            <div className="pt-3">
-              <div className="font-mono text-3xl font-bold text-emerald-400 tabular-nums">
-                ${metrics.estimatedMrrUsd.toLocaleString()}
-              </div>
-              <p className="text-xs text-zinc-400 mt-1 font-mono">
-                USD SaaS recurring revenue
-              </p>
-            </div>
-          </div>
-
-          {/* KPI 3: Platform Bookings */}
-          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400">
-              <span className="text-xs font-mono uppercase tracking-wider">Total Bookings</span>
-              <Calendar className="size-4 text-cyan-400" />
-            </div>
-            <div className="pt-3">
-              <div className="font-mono text-3xl font-bold text-white tabular-nums">
-                {metrics.totalBookings}
-              </div>
-              <p className="text-xs text-zinc-400 mt-1 font-mono">
-                {metrics.bookingsByStatus["CONFIRMED"] || 0} confirmed • {metrics.bookingsByStatus["PENDING"] || 0} pending
-              </p>
-            </div>
-          </div>
-
-          {/* KPI 4: Users & Projects */}
-          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-zinc-400">
-              <span className="text-xs font-mono uppercase tracking-wider">Users &amp; Projects</span>
-              <Users className="size-4 text-violet-400" />
-            </div>
-            <div className="pt-3">
-              <div className="font-mono text-3xl font-bold text-white tabular-nums">
-                {metrics.totalUsers}
-              </div>
-              <p className="text-xs text-zinc-400 mt-1 font-mono">
-                {metrics.activeProjects} active production projects
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Currency GPV & Payment Verification Queue Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] space-y-2">
-            <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-              Settled GPV (USD Volume)
-            </span>
-            <div className="font-mono text-2xl font-bold text-amber-400 tabular-nums">
-              ${metrics.paidRevenueUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-zinc-400 font-mono">Processed via Card &amp; Online</p>
-          </div>
-
-          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] space-y-2">
-            <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-              Settled GPV (MYR Volume)
-            </span>
-            <div className="font-mono text-2xl font-bold text-cyan-400 tabular-nums">
-              RM {metrics.paidRevenueMyr.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-zinc-400 font-mono">Processed via Malaysian QR &amp; DuitNow</p>
-          </div>
-
-          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] space-y-2">
-            <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-              Pending Manual Verification Queue
-            </span>
-            <div className="font-mono text-2xl font-bold text-amber-300 tabular-nums">
-              {metrics.pendingVerificationCount} Invoices
-            </div>
+            <div className="font-mono text-3xl font-bold text-white tabular-nums">{metrics.totalStudios}</div>
             <p className="text-xs text-zinc-400 font-mono">
-              Pending QR slips &amp; Cash counter approvals
+              {metrics.byState.ACTIVE} active · {metrics.byState.TRIAL} trial · {metrics.byState.OVERDUE} overdue · {metrics.byState.PAUSED} paused
             </p>
           </div>
-        </div>
-
-        {/* Studio Directory Table */}
-        <div className="rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden space-y-4 p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Registered Studio Tenants</h2>
-              <p className="text-xs text-zinc-400">
-                Direct access to public showcases, admin consoles, and tenant-level configurations.
-              </p>
+          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] space-y-3">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-mono uppercase tracking-wider">Recorded this month</span>
+              <Banknote className="size-4 text-emerald-400" aria-hidden="true" />
             </div>
-
-            {/* Filter and Search */}
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 size-3.5 text-zinc-500" />
-                <input
-                  type="text"
-                  placeholder="Search studio or slug..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 w-48 sm:w-60 font-mono"
-                />
-              </div>
-
-              <select
-                value={disciplineFilter}
-                onChange={(e) => setDisciplineFilter(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs font-mono focus:outline-none focus:border-amber-500"
-              >
-                <option value="ALL">All Disciplines</option>
-                <option value="PHOTOGRAPHY">Photography</option>
-                <option value="VIDEOGRAPHY">Videography</option>
-                <option value="HYBRID">Hybrid</option>
-              </select>
+            <div className="font-mono text-3xl font-bold text-emerald-400 tabular-nums">{money(metrics.revenueThisMonth)}</div>
+            <p className="text-xs text-zinc-400 font-mono">Plan payments you recorded</p>
+          </div>
+          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] space-y-3">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-mono uppercase tracking-wider">Last 12 months</span>
+              <Banknote className="size-4 text-emerald-400" aria-hidden="true" />
             </div>
+            <div className="font-mono text-3xl font-bold text-white tabular-nums">{money(metrics.revenue12m)}</div>
+            <p className="text-xs text-zinc-400 font-mono">Plan payments you recorded</p>
+          </div>
+          <div className="p-5 rounded-xl border border-zinc-800 bg-[#121215] space-y-3">
+            <div className="flex items-center justify-between text-zinc-400">
+              <span className="text-xs font-mono uppercase tracking-wider">Ending in 7 days</span>
+              <CalendarClock className="size-4 text-amber-400" aria-hidden="true" />
+            </div>
+            <div className="font-mono text-3xl font-bold text-white tabular-nums">{metrics.endingSoon.length}</div>
+            <p className="text-xs text-zinc-400 font-mono">
+              {metrics.endingSoon.length ? metrics.endingSoon.map((e) => `${e.name} (${day(e.endsOn)})`).join(", ") : "None"}
+            </p>
+          </div>
+        </section>
+
+        <section aria-label="Studios" className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" aria-hidden="true" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search studios by name or address"
+                aria-label="Search studios"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <select
+              value={stateFilter}
+              onChange={(e) => setStateFilter(e.target.value as "ALL" | PlanState)}
+              aria-label="Filter by status"
+              className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 focus:outline-none focus:border-amber-500"
+            >
+              <option value="ALL">All statuses</option>
+              {(Object.keys(STATE_STYLE) as PlanState[]).map((s) => (
+                <option key={s} value={s}>
+                  {STATE_STYLE[s].label}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#18181b] text-zinc-400 font-mono uppercase tracking-wider border-y border-zinc-800">
+          {/* Phone: one card per studio. */}
+          <ul className="space-y-3 md:hidden">
+            {filtered.map((t) => (
+              <li key={t.id} className="rounded-xl border border-zinc-800 bg-[#121215] p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-white truncate">{t.name}</div>
+                    <div className="text-xs text-zinc-400 font-mono truncate">{t.customDomain ?? t.slug}</div>
+                  </div>
+                  <StateChip state={t.state} />
+                </div>
+                <div className="text-xs font-mono text-zinc-300 space-y-0.5">
+                  <div>
+                    {PLANS[asPlanCode(t.subscriptionTier)].name} plan · {dateLine(t)}
+                  </div>
+                  <div className="text-zinc-400">
+                    Team {t.teamUsed}/{t.teamLimit ?? "∞"} · {t.bookingCount} bookings · last active {when(t.lastActive)}
+                  </div>
+                </div>
+                <RowActions t={t} onManage={() => setManagingId(t.id)} />
+              </li>
+            ))}
+          </ul>
+
+          {/* Computer: a table. */}
+          <div className="hidden md:block rounded-2xl border border-zinc-800 bg-[#121215] overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-[11px] font-mono uppercase text-zinc-400 border-b border-zinc-800 bg-zinc-900/60">
                 <tr>
-                  <th className="py-3 px-4">Studio / Slug</th>
-                  <th className="py-3 px-4">Discipline</th>
-                  <th className="py-3 px-4">Tier &amp; Status</th>
-                  <th className="py-3 px-4 text-center">Bookings</th>
-                  <th className="py-3 px-4 text-center">Projects</th>
-                  <th className="py-3 px-4 text-center">Slots</th>
-                  <th className="py-3 px-4 text-right">Settled Revenue</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th scope="col" className="px-4 py-3">Studio</th>
+                  <th scope="col" className="px-4 py-3">Plan</th>
+                  <th scope="col" className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3 text-right">Team</th>
+                  <th scope="col" className="px-4 py-3 text-right">Bookings</th>
+                  <th scope="col" className="px-4 py-3 text-right">Client revenue</th>
+                  <th scope="col" className="px-4 py-3">Last active</th>
+                  <th scope="col" className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/60 font-mono">
-                {filteredTenants.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-8 text-center text-zinc-400">
-                      No studio tenants match the specified criteria.
+              <tbody className="divide-y divide-zinc-800/80">
+                {filtered.map((t) => (
+                  <tr key={t.id} className="hover:bg-zinc-900/40">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-white">{t.name}</div>
+                      <div className="text-xs text-zinc-400 font-mono">{t.customDomain ?? t.slug}</div>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-zinc-300">{PLANS[asPlanCode(t.subscriptionTier)].name}</td>
+                    <td className="px-4 py-3">
+                      <StateChip state={t.state} />
+                      <div className="text-[11px] text-zinc-400 font-mono mt-1">{dateLine(t)}</div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-300">
+                      {t.teamUsed}/{t.teamLimit ?? "∞"}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-300">{t.bookingCount}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-amber-400 font-semibold">
+                      {t.currency === "MYR" ? "RM " : "$"}
+                      {t.totalPaidRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-zinc-400">{when(t.lastActive)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <RowActions t={t} onManage={() => setManagingId(t.id)} />
                     </td>
                   </tr>
-                ) : (
-                  filteredTenants.map((t) => (
-                    <tr key={t.id} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className="size-7 rounded-md flex items-center justify-center font-bold text-black text-xs shrink-0"
-                            style={{ backgroundColor: t.brandColor || "#f59e0b" }}
-                          >
-                            {t.name.slice(0, 1)}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-white font-sans">{t.name}</div>
-                            <div className="text-[11px] text-zinc-400">/{t.slug}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                          {t.discipline}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                              t.subscriptionTier === "PRO"
-                                ? "bg-amber-500/20 text-amber-300"
-                                : t.subscriptionTier === "STUDIO_UNLIMITED"
-                                ? "bg-violet-500/20 text-violet-300"
-                                : "bg-zinc-800 text-zinc-300"
-                            }`}
-                          >
-                            {t.subscriptionTier}
-                          </span>
-                          <span className="text-[10px] text-emerald-400">● ACTIVE</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-center tabular-nums text-zinc-200">
-                        {t.bookingCount}
-                      </td>
-                      <td className="py-3 px-4 text-center tabular-nums text-zinc-200">
-                        {t.projectCount}
-                      </td>
-                      <td className="py-3 px-4 text-center tabular-nums text-zinc-200">
-                        {t.slotCount}
-                      </td>
-                      <td className="py-3 px-4 text-right tabular-nums font-bold text-amber-400">
-                        {t.currency === "MYR" ? "RM " : "$"}
-                        {t.totalPaidRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <Link
-                            href={studioLink(t.slug, "/")}
-                            className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-                            title="View studio website"
-                            aria-label="View studio website"
-                          >
-                            <ExternalLink className="size-3.5" />
-                          </Link>
-                          <Link
-                            href={studioLink(t.slug, "/admin")}
-                            className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-amber-400 transition-colors"
-                            title="Studio Admin"
-                          >
-                            <Settings className="size-3.5" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
 
-        {/* System Health Card */}
-        <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] space-y-4">
-          <div className="flex items-center gap-2">
-            <HardDrive className="size-4 text-amber-400" />
-            <h3 className="text-sm font-bold text-white tracking-tight">
-              Self-Contained Local Infrastructure Telemetry
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono text-zinc-300">
-            <div className="p-3 rounded-lg bg-[#18181b] border border-zinc-800 space-y-1">
-              <span className="text-[10px] uppercase text-zinc-400">Database Engine</span>
-              <div className="text-white font-semibold">SQLite dev.db (24 Models)</div>
-              <div className="text-emerald-400 text-[11px]">● Connected &amp; Seeded</div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-[#18181b] border border-zinc-800 space-y-1">
-              <span className="text-[10px] uppercase text-zinc-400">Media Storage</span>
-              <div className="text-white font-semibold">public/uploads/ (Local Self-Contained)</div>
-              <div className="text-cyan-400 text-[11px]">● 0 Cloud Dependencies</div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-[#18181b] border border-zinc-800 space-y-1">
-              <span className="text-[10px] uppercase text-zinc-400">Payment Modes</span>
-              <div className="text-white font-semibold">Card (Simulated) + QR Scan + Cash</div>
-              <div className="text-amber-400 text-[11px]">● Studio Queue Active</div>
-            </div>
-          </div>
-        </div>
+          {filtered.length === 0 && <p className="py-10 text-center text-sm text-zinc-400">No studios match.</p>}
+        </section>
       </div>
+
+      {managing && <ManageStudioPanel key={managing.id} studio={managing} onClose={() => setManagingId(null)} />}
+    </div>
+  );
+}
+
+function StateChip({ state }: { state: PlanState }) {
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-mono shrink-0 ${STATE_STYLE[state].chip}`}>
+      {STATE_STYLE[state].label}
+    </span>
+  );
+}
+
+function RowActions({ t, onManage }: { t: TenantSummaryItem; onManage: () => void }) {
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <Link
+        href={studioLink(t.slug, "/")}
+        className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+        title="Open the studio's website"
+        aria-label={`Open ${t.name}'s website`}
+      >
+        <ExternalLink className="size-3.5" />
+      </Link>
+      <Link
+        href={studioLink(t.slug, "/admin")}
+        className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-amber-400 transition-colors"
+        title="Open the studio's admin"
+        aria-label={`Open ${t.name}'s admin`}
+      >
+        <Settings className="size-3.5" />
+      </Link>
+      <button
+        type="button"
+        onClick={onManage}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors min-h-9"
+      >
+        <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+        Manage
+      </button>
     </div>
   );
 }

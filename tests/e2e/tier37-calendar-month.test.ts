@@ -36,7 +36,8 @@ export async function runTier37CalendarMonthTests(harness: TestHarness) {
   });
 
   await harness.test("T37-03: each day says how many slots are open, booked, waiting or blocked", async () => {
-    const s = daySummaries([
+    const s = daySummaries(
+      [
       slot("2026-11-21", "09:00 AM", "BOOKED"),
       slot("2026-11-21", "10:00 AM"),
       slot("2026-11-21", "11:00 AM"),
@@ -44,7 +45,9 @@ export async function runTier37CalendarMonthTests(harness: TestHarness) {
       slot("2026-11-21", "01:00 PM", "PENDING_VERIFICATION"),
       slot("2026-11-21", "02:00 PM", "BLOCKED"),
       slot("2026-11-22", "09:00 AM"),
-    ]);
+      ],
+      new Date("2026-11-10T00:00:00Z") // all of them still to come
+    );
     harness.assertEqual(JSON.stringify(s.get("2026-11-21")), JSON.stringify({ total: 6, open: 2, booked: 1, waiting: 2, blocked: 1 }), "Sat 21");
     harness.assertEqual(s.get("2026-11-22")?.open, 1, "Sun 22");
     harness.assertEqual(s.get("2026-11-23"), undefined, "A day without slots has no entry");

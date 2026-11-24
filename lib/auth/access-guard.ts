@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { AuthorizationError, requireStaff } from "@/lib/auth/guard";
 import type { SessionUser } from "@/lib/auth/session";
+import { assertNotPaused } from "@/lib/billing/guard";
 import { loadAccess, levelAtLeast, type AccessArea, type AccessLevel, type AccessMap, type AccessTick } from "@/lib/auth/access";
 
 /**
@@ -18,9 +19,16 @@ async function staffWithAccess(tenantId: string): Promise<WithAccess> {
 }
 
 /** Staff of `tenantId` with at least `need` on `area`. */
-export async function requireAccess(tenantId: string, area: AccessArea, need: AccessLevel): Promise<WithAccess> {
+export async function requireAccess(
+  tenantId: string,
+  area: AccessArea,
+  need: AccessLevel,
+  options: { whilePaused?: boolean } = {}
+): Promise<WithAccess> {
   const user = await staffWithAccess(tenantId);
   if (!levelAtLeast(user.access.areas[area], need)) throw new AuthorizationError("FORBIDDEN: You don't have access to this.");
+  // A paused studio can't change things (reading is fine); a few actions stay open for clients' sake.
+  if (need === "MANAGE" && !options.whilePaused) await assertNotPaused(tenantId, user);
   return user;
 }
 
@@ -28,6 +36,8 @@ export async function requireAccess(tenantId: string, area: AccessArea, need: Ac
 export async function requireTick(tenantId: string, tick: AccessTick): Promise<WithAccess> {
   const user = await staffWithAccess(tenantId);
   if (!user.access.ticks[tick]) throw new AuthorizationError("FORBIDDEN: You don't have permission to do this.");
+  // Settling what clients paid stays open while paused; other permissions (prices) are changes.
+  if (tick !== "approvePayments" && tick !== "recordPayments") await assertNotPaused(tenantId, user);
   return user;
 }
 
@@ -82,10 +92,15 @@ const WORK_REFUSED = "FORBIDDEN: You can only change your own work here.";
  * OWN for their own records. VIEW is refused: it ranks above OWN for reading, but it is read-only.
  * Follow it with `canWorkOn` for the record itself.
  */
-export async function requireOwnOrManage(tenantId: string, area: WorkArea): Promise<WithAccess> {
+export async function requireOwnOrManage(
+  tenantId: string,
+  area: WorkArea,
+  options: { whilePaused?: boolean } = {}
+): Promise<WithAccess> {
   const user = await staffWithAccess(tenantId);
   const level = user.access.areas[area];
   if (level !== "OWN" && level !== "MANAGE") throw new AuthorizationError(WORK_REFUSED);
+  if (!options.whilePaused) await assertNotPaused(tenantId, user);
   return user;
 }
 
