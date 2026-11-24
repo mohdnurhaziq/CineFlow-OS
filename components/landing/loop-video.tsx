@@ -9,6 +9,7 @@ interface LoopVideoProps {
   alt: string;
   /** The hero: its poster is the page's largest image, so load it first. */
   priority?: boolean;
+  /** Must position the box (absolute or relative): the poster and video fill it. */
   className?: string;
 }
 
@@ -42,7 +43,7 @@ export function LoopVideo({ mp4, mp4Portrait = null, poster, alt, priority = fal
   }, [allowed]);
 
   return (
-    <div ref={wrap} className={`relative overflow-hidden ${className}`}>
+    <div ref={wrap} className={`overflow-hidden ${className}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={poster} alt={alt} className="absolute inset-0 size-full object-cover" fetchPriority={priority ? "high" : "auto"} loading={priority ? "eager" : "lazy"} decoding="async" />
       {allowed && mp4 && (

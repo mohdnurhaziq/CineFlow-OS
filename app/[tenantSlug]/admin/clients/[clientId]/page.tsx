@@ -21,6 +21,8 @@ interface ClientPageProps {
   params: Promise<{ tenantSlug: string; clientId: string }>;
 }
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: ClientPageProps): Promise<Metadata> {
   const { tenantSlug, clientId } = await params;
   const client = await db.user.findFirst({

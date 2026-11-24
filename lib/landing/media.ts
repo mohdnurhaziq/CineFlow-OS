@@ -11,10 +11,9 @@ export interface LandingVideo {
   poster: string;
 }
 
-const exists = (file: string) => fs.existsSync(path.join(process.cwd(), "public", file));
-
-/** Where a slot's clip and poster are. Server only: it looks at the files in public/landing. */
-export function landingVideo(slot: VideoSlot): LandingVideo {
+/** Where a slot's clip and poster are. Server only: it looks at the files in public/landing (`publicDir` is for tests). */
+export function landingVideo(slot: VideoSlot, publicDir: string = path.join(process.cwd(), "public")): LandingVideo {
+  const exists = (file: string) => fs.existsSync(path.join(publicDir, file));
   const mp4 = `/landing/video/${slot}-16x9.mp4`;
   const portrait = `/landing/video/${slot}-9x16.mp4`;
   return {

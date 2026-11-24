@@ -42,21 +42,25 @@ export function Journey({ videos }: { videos: Videos }) {
                 </div>
 
                 <div className={`lg:col-span-7 ${flip ? "lg:order-1" : ""}`}>
-                  <div data-parallax="24">
-                    <DeviceFrame kind="browser">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={c.shot.desktop} alt={c.shot.alt} loading="lazy" decoding="async" className="aspect-[16/10] w-full object-cover object-top" />
-                    </DeviceFrame>
-                  </div>
-                  {c.shot.phone && (
-                    <div className="mt-8 flex justify-end sm:-mt-24 sm:mr-6">
-                      <DeviceFrame kind="phone" className="relative z-10 w-[min(55%,200px)]">
+                  {/* Computers: the browser window with the phone beside it, never over it and never cropped.
+                      Phones get only the phone screen, which is readable at that size. */}
+                  <div className="sm:flex sm:items-center sm:gap-5">
+                    <div className="hidden sm:block sm:min-w-0 sm:flex-1" data-parallax="24">
+                      <DeviceFrame kind="browser">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={c.shot.phone} alt={`${c.shot.alt}, on a phone`} loading="lazy" decoding="async" className="aspect-[9/19] w-full object-cover object-top" />
+                        <img src={c.shot.desktop} alt={c.shot.alt} loading="lazy" decoding="async" className="aspect-[16/10] w-full object-cover object-top" />
                       </DeviceFrame>
                     </div>
-                  )}
-                  {clip?.mp4 && <LoopVideo mp4={clip.mp4} poster={clip.poster} alt="" className="mt-8 aspect-video w-full rounded-xl border border-zinc-800" />}
+                    {c.shot.phone && (
+                      <div className="flex justify-center sm:block sm:w-[30%] sm:max-w-[220px] sm:shrink-0">
+                        <DeviceFrame kind="phone" className="w-[min(72%,260px)] sm:w-full">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={c.shot.phone} alt={`${c.shot.alt}, on a phone`} loading="lazy" decoding="async" className="aspect-[9/19] w-full object-cover object-top" />
+                        </DeviceFrame>
+                      </div>
+                    )}
+                  </div>
+                  {clip?.mp4 && <LoopVideo mp4={clip.mp4} poster={clip.poster} alt="" className="relative mt-8 aspect-video w-full rounded-xl border border-zinc-800" />}
                 </div>
               </li>
             );
