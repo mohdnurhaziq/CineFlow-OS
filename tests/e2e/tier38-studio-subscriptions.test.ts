@@ -23,6 +23,7 @@ import { assignTeamMember } from "@/lib/actions/admin-assignments";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { PlanLockedError, bookingsOpen, hasFeature, requireFeature } from "@/lib/billing/guard";
 import { holdBookingSlot } from "@/lib/actions/booking";
+import { onboardStudio } from "@/lib/actions/onboarding";
 import { processInvoicePayment } from "@/lib/actions/checkout";
 import { placePrintOrder } from "@/lib/actions/print-orders";
 import { db } from "@/lib/db";
@@ -396,5 +397,33 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
     const entries = visibleNavItems("lumina-cine", await loadAccess({ id: owner.id, role: "STUDIO_OWNER", tenantId: lumina.id }), true);
     const feats = entries.flatMap((e) => (e.kind === "group" ? e.items.map((i) => i.feature) : [])).filter(Boolean);
     harness.assert(feats.includes("gear") && feats.includes("wallArt") && feats.includes("proposals"), "Menu items carry the feature they need", JSON.stringify(feats));
+  });
+
+  // ── Task 6: sign-up starts the trial ────────────────────────────────────────────────────
+  await harness.test("T38-SIGNUP-01: a new studio starts a 14-day trial on the plan it chose", async () => {
+    const saved = process.env.STUDIO_SIGNUP_CODE;
+    const slug = `t38-new-${Date.now().toString(36)}`;
+    try {
+      delete process.env.STUDIO_SIGNUP_CODE;
+      const res = await withSession(null, () =>
+        onboardStudio({ name: "T38 New Studio", slug, discipline: "HYBRID", currency: "MYR", ownerName: "T38 Owner", ownerEmail: `${slug}@studio.test`, ownerPhone: "+60123456789", password: "StrongPassword123!", subscriptionTier: "STARTER" } as never)
+      );
+      harness.assert((res as { success?: boolean }).success === true, "Created", JSON.stringify(res));
+      const row = await db.tenant.findUnique({ where: { slug } });
+      const st = planStatus(row!);
+      harness.assertEqual(st.state, "TRIAL", "In a trial");
+      harness.assertEqual(row?.subscriptionTier, "STARTER", "Keeps the chosen plan for after the trial");
+      const days = Math.round(((row!.trialEndsAt?.getTime() ?? 0) - Date.now()) / DAY_MS);
+      harness.assert(days >= 13 && days <= 14, "About 14 days", String(days));
+      harness.assert(st.features.has("gear"), "Everything is open during the trial");
+    } finally {
+      if (saved === undefined) delete process.env.STUDIO_SIGNUP_CODE;
+      else process.env.STUDIO_SIGNUP_CODE = saved;
+      const t = await db.tenant.findUnique({ where: { slug } });
+      if (t) {
+        await db.user.deleteMany({ where: { tenantId: t.id } });
+        await db.tenant.delete({ where: { id: t.id } }).catch(() => {});
+      }
+    }
   });
 }

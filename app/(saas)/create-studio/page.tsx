@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { checkSignupCode, checkSlugAvailability, onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
 import type { OnboardStudioInput } from "@/lib/validations/onboarding";
 import { disciplineLabel } from "@/lib/labels";
+import { PLANS } from "@/lib/billing/plans";
 
 const COLOR_PRESETS = [
   { name: "Warm Amber", hex: "#f59e0b" },
@@ -687,14 +688,14 @@ export default function CreateStudioPage() {
               <div className="space-y-6 animate-fadeIn">
                 <div className="space-y-1">
                   <h2 className="text-xl font-bold text-white tracking-tight">Select Launch Plan &amp; Review</h2>
-                  <p className="text-xs text-zinc-400">Confirm your subscription plan to deploy your workspace.</p>
+                  <p className="text-xs text-zinc-400">Every studio starts with a free 14-day trial with everything included. Pick the plan you want after it.</p>
                 </div>
 
                 <div className="space-y-3">
                   {[
-                    { id: "STARTER", name: "Starter", price: "$29/mo", detail: "Solo lead, branded showcase, online booking" },
-                    { id: "PRO", name: "Pro Studio", price: "$79/mo", detail: "Up to 5 crew, custom domain, proposals, solar HUD" },
-                    { id: "STUDIO_UNLIMITED", name: "Studio Unlimited", price: "$199/mo", detail: "Unlimited crew, living room wall visualizer, print orders" },
+                    { id: "STARTER", name: PLANS.STARTER.name, price: `RM ${PLANS.STARTER.priceMyr}/mo`, detail: "Just you: your studio website, online booking, deposits and client galleries" },
+                    { id: "PRO", name: PLANS.PRO.name, price: `RM ${PLANS.PRO.priceMyr}/mo`, detail: "Up to 5 team members, proposals, call sheets, your own domain" },
+                    { id: "STUDIO_UNLIMITED", name: PLANS.STUDIO_UNLIMITED.name, price: `RM ${PLANS.STUDIO_UNLIMITED.priceMyr}/mo`, detail: "Unlimited team, wall-art visualizer and print orders, gear inventory" },
                   ].map((tier) => (
                     <button
                       type="button"
@@ -842,7 +843,7 @@ export default function CreateStudioPage() {
                     Currency: {formData.currency}
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
-                    Tier: {formData.subscriptionTier}
+                    Plan after the trial: {PLANS[formData.subscriptionTier as keyof typeof PLANS]?.name ?? formData.subscriptionTier}
                   </span>
                 </div>
 

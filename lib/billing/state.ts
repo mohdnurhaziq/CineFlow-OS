@@ -14,6 +14,8 @@ import { ALL_FEATURES, PLANS, asPlanCode, type PlanCode, type PlanFeature } from
 export type PlanState = "TRIAL" | "ACTIVE" | "OVERDUE" | "PAUSED" | "CLOSED";
 
 export const GRACE_DAYS = 7;
+/** The free trial a new studio starts with. */
+export const TRIAL_DAYS = 14;
 
 export interface TenantPlanFields {
   subscriptionTier: string;

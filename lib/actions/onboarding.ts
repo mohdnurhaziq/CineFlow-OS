@@ -15,6 +15,7 @@ import { appEnvFrom } from "@/lib/app-env";
 import { requestIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
 import { studioUrl } from "@/lib/domain-name";
+import { TRIAL_DAYS } from "@/lib/billing/state";
 
 export async function checkSlugAvailability(rawSlug: string): Promise<{ available: boolean; error?: string }> {
   const parsed = CheckSlugSchema.safeParse({ slug: rawSlug });
@@ -138,6 +139,8 @@ export async function onboardStudio(formData: OnboardStudioInput) {
           logoUrl: data.logoUrl || null,
           subscriptionTier: data.subscriptionTier,
           subscriptionStatus: "ACTIVE",
+          // A free trial with everything open; the chosen plan applies after it.
+          trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86_400_000),
         },
       });
 
