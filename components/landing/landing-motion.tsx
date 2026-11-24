@@ -53,7 +53,6 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     });
 
     // In-page links glide to their section, below the sticky nav. Links to another page are left alone.
-    const nav = document.querySelector<HTMLElement>("header");
     const onClick = (e: MouseEvent) => {
       const a = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>("a[href]");
       if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -62,7 +61,8 @@ export function LandingMotion({ children }: { children: ReactNode }) {
       const target = document.querySelector<HTMLElement>(url.hash);
       if (!target) return;
       e.preventDefault();
-      lenis.scrollTo(target, { offset: -((nav?.offsetHeight ?? 64) + 8), duration: 1.2 });
+      // Sections carry scroll-mt-20, which Lenis honours, so the offset is already the nav's height.
+      lenis.scrollTo(target, { duration: 1.2 });
       history.replaceState(null, "", url.hash);
       target.setAttribute("tabindex", "-1");
       target.focus({ preventScroll: true });

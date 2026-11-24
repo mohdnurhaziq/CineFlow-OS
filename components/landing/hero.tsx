@@ -13,6 +13,8 @@ export function Hero({ mode, video }: { mode: LandingMode; video: LandingVideo }
       {/* Keeps the headline readable over any clip, and the edges deep black. */}
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-[#09090b] via-[#09090b]/55 to-[#09090b]/20" />
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#09090b]/80 via-transparent to-transparent" />
+      {/* A warm key light, so the first screen has depth even before a video is added. */}
+      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(55%_55%_at_78%_38%,rgba(245,158,11,0.20),transparent_70%)]" />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <p className="mb-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.25em] text-amber-400">

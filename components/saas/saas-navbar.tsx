@@ -19,7 +19,7 @@ export function SaasNavbar({ mode }: { mode: LandingMode }) {
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800/60 bg-[#09090b]/75 backdrop-blur-md">
       <ToastAnchor />
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="group flex items-center gap-2.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 rounded">
+        <Link href="/" className="group flex min-h-11 items-center gap-2.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 rounded">
           <span className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black transition-transform group-hover:scale-105">
             <Aperture className="size-5" aria-hidden="true" />
           </span>

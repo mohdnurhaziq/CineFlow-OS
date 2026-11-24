@@ -21,7 +21,7 @@ export function SplitHeading({ as: Tag = "h2", text, accent, className = "" }: S
       </span>
     ));
   return (
-    <Tag aria-label={accent ? `${text} ${accent}` : text} data-split className={`font-[family-name:var(--font-display)] font-normal tracking-tight leading-[1.02] text-white ${className}`}>
+    <Tag aria-label={accent ? `${text} ${accent}` : text} data-split className={`font-[family-name:var(--font-display)] font-normal tracking-tight leading-[1.02] text-balance text-white ${className}`}>
       <span aria-hidden="true">
         {words(text)}
         {accent && words(accent, "italic text-amber-400")}

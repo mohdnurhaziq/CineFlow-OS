@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Aperture } from "lucide-react";
 
-const link = "text-zinc-400 hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 rounded";
+const link = "inline-flex min-h-11 items-center text-zinc-400 hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 rounded";
 
 /** The platform footer: where to go, and how to reach us. */
 export function SaasFooter({ email }: { email: string }) {

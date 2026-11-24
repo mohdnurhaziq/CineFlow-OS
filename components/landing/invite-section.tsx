@@ -32,7 +32,7 @@ export function InviteSection({ mode }: { mode: LandingMode }) {
           </p>
           {mode === "INVITE_WITH_CODE" && (
             <p data-reveal data-reveal-delay="0.1" className="mt-6">
-              <Link href="/create-studio" className="text-amber-300 underline underline-offset-4 hover:text-amber-200">
+              <Link href="/create-studio" className="inline-flex min-h-11 items-center text-amber-300 underline underline-offset-4 hover:text-amber-200">
                 Have an invite code? Create your studio
               </Link>
             </p>
