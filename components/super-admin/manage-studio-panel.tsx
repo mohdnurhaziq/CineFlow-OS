@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import {
@@ -31,7 +31,8 @@ const btn = "px-3 py-2 rounded-lg text-xs font-mono font-semibold min-h-10 trans
 /** One studio's plan: change it, record a payment, extend the trial, pause, or close. A panel over the console. */
 export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryItem; onClose: () => void }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
+  // A plain flag, not useTransition: the refresh below would keep a transition "pending" (buttons stuck off).
+  const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [payments, setPayments] = useState<Payment[] | null>(null);
 
@@ -55,8 +56,9 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const run = (job: () => Promise<{ success: boolean; message?: string }>, done?: () => void) =>
-    start(async () => {
+  const run = async (job: () => Promise<{ success: boolean; message?: string }>, done?: () => void) => {
+    setPending(true);
+    try {
       const res = await job();
       setNotice({ ok: res.success, text: res.message ?? (res.success ? "Saved." : "That didn't work.") });
       if (res.success) {
@@ -64,7 +66,12 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
         void loadPayments();
         router.refresh();
       }
-    });
+    } catch {
+      setNotice({ ok: false, text: "That didn't work. Please try again." });
+    } finally {
+      setPending(false);
+    }
+  };
 
   const paused = studio.state === "PAUSED";
   const manuallyPaused = !!studio.pausedAt && studio.pauseReason === "MANUAL";

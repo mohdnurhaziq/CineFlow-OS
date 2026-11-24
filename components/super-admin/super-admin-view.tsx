@@ -67,7 +67,9 @@ function dateLine(t: TenantSummaryItem): string {
 export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<"ALL" | PlanState>("ALL");
-  const [managing, setManaging] = useState<TenantSummaryItem | null>(null);
+  const [managingId, setManagingId] = useState<string | null>(null);
+  // Read the live row, so the panel reflects a pause/payment as soon as the list refreshes.
+  const managing = tenants.find((t) => t.id === managingId) ?? null;
 
   const filtered = tenants.filter((t) => {
     const q = searchQuery.trim().toLowerCase();
@@ -180,7 +182,7 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
                     Team {t.teamUsed}/{t.teamLimit ?? "∞"} · {t.bookingCount} bookings · last active {when(t.lastActive)}
                   </div>
                 </div>
-                <RowActions t={t} onManage={() => setManaging(t)} />
+                <RowActions t={t} onManage={() => setManagingId(t.id)} />
               </li>
             ))}
           </ul>
@@ -222,7 +224,7 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-zinc-400">{when(t.lastActive)}</td>
                     <td className="px-4 py-3 text-right">
-                      <RowActions t={t} onManage={() => setManaging(t)} />
+                      <RowActions t={t} onManage={() => setManagingId(t.id)} />
                     </td>
                   </tr>
                 ))}
@@ -234,7 +236,7 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
         </section>
       </div>
 
-      {managing && <ManageStudioPanel key={managing.id} studio={managing} onClose={() => setManaging(null)} />}
+      {managing && <ManageStudioPanel key={managing.id} studio={managing} onClose={() => setManagingId(null)} />}
     </div>
   );
 }
