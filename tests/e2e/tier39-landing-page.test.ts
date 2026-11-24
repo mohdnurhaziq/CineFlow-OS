@@ -407,6 +407,42 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert((out.match(/-phone\.webp/g) ?? []).length >= CHAPTERS.length + 1, "Every chapter and the website section show a phone screen");
   });
 
+  await harness.test("T39-A11Y-01: pinch-zoom is allowed, phones keep fields at 16px, the footer line is readable, and the page has share tags and icons", async () => {
+    const read = (f: string) => fs.readFile(path.join(process.cwd(), f), "utf8");
+    harness.assert(!/maximumScale|maximum-scale|userScalable/.test(await read("app/layout.tsx")), "The viewport doesn't block pinch-zoom");
+    harness.assert(/@media \(max-width: 767px\)[\s\S]{0,1200}font-size: 16px/.test(await read("app/globals.css")), "On phones text fields are at least 16px, so iPhones don't zoom into them");
+    harness.assert(/text-zinc-400">&copy;/.test(await read("components/saas/saas-footer.tsx")), "The footer's copyright line is light enough to read (4.5:1)");
+
+    const page = await read("app/(saas)/page.tsx");
+    harness.assert(/alternates: \{ canonical: "\/" \}/.test(page), "The page names its canonical address");
+    harness.assert(/openGraph: \{ type: "website", url: "\/", siteName: "CineFlow OS"/.test(page), "A shared link has a type, an address and a site name");
+
+    const ico = await fs.readFile(path.join(process.cwd(), "app/favicon.ico"));
+    harness.assertEqual([...ico.subarray(0, 6)].join(","), "0,0,1,0,1,0", "favicon.ico is an icon file with one image");
+    harness.assertEqual(ico.subarray(22, 26).toString("hex"), "89504e47", "…that image is a PNG");
+    const apple = await fs.readFile(path.join(process.cwd(), "app/apple-icon.png"));
+    harness.assertEqual(apple.subarray(0, 4).toString("hex"), "89504e47", "apple-icon.png is a PNG");
+    harness.assertEqual(`${apple.readUInt32BE(16)}x${apple.readUInt32BE(20)}`, "180x180", "…180 by 180");
+    const svg = await read("app/icon.svg");
+    harness.assert(svg.includes("<svg") && svg.includes("circle"), "icon.svg is the aperture mark");
+  });
+
+  await harness.test("T39-A11Y-02: a skip link comes before the navigation and leads to the content", async () => {
+    for (const [mode, env] of SETUPS) {
+      const out = await renderSite(env);
+      const skip = out.indexOf("Skip to main content");
+      harness.assert(skip >= 0 && skip < out.indexOf("<nav"), `${mode}: the skip link is before the navigation`);
+      harness.assert(out.includes('href="#main-content"') && /id="main-content"[^>]*tabindex="-1"/i.test(out), `${mode}: it leads to a focusable content area`);
+    }
+  });
+
+  await harness.test("T39-A11Y-03: the invite form keeps keyboard focus after an answer", async () => {
+    const form = await fs.readFile(path.join(process.cwd(), "components/landing/invite-form.tsx"), "utf8");
+    harness.assert(!/disabled=\{pending\}/.test(form) && /aria-disabled=\{pending \|\| undefined\}/.test(form), "The button is aria-disabled while sending (a disabled button drops focus to the page)");
+    harness.assert(/if \(pending\) e\.preventDefault\(\)/.test(form), "…and does nothing if pressed while sending");
+    harness.assert(/state\.status === "done"\) thanks\.current\?\.focus\(\)/.test(form) && /tabIndex=\{-1\} role="status"/.test(form), "The thank-you takes focus when it replaces the form");
+  });
+
   await harness.test("T39-PAGE-06: every image the page uses exists", async () => {
     const out = await renderSite({});
     const files = new Set<string>(["/landing/og.jpg"]);
