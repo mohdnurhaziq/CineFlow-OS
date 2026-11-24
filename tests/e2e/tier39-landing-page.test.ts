@@ -10,7 +10,11 @@ import { BANNED_PHRASES, CHAPTERS, EXTRAS, faqItems, planBadge } from "@/lib/lan
 import nodemailer, { type Transporter } from "nodemailer";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { db } from "@/lib/db";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { createElement } from "react";
+import { landingVideo } from "@/lib/landing/media";
+import { LoopVideo } from "@/components/landing/loop-video";
 import { renderToStaticMarkup } from "react-dom/server";
 import { provideReactGlobal } from "./react-tree";
 import { getAllTenantsSummary, getPlatformMetrics } from "@/lib/actions/super-admin";
@@ -216,5 +220,45 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert(out.includes("Mark handled") && out.includes("Reopen"), "Toggle for each state");
     const empty = renderToStaticMarkup(createElement(SuperAdminView, { metrics, tenants: tenants as never, invites: [] }) as never);
     harness.assert(empty.includes("No invite requests yet."), "Empty state");
+  });
+
+  // ── Task 4: video, frames, motion boundaries ────────────────────────────────────────────
+  await harness.test("T39-MEDIA-01: a video is offered only when its file exists; the poster is always there", async () => {
+    const dir = path.join(process.cwd(), "public", "landing", "video");
+    const file = path.join(dir, "hero-16x9.mp4");
+    await fs.mkdir(dir, { recursive: true });
+    await fs.rm(file, { force: true });
+    try {
+      harness.assertEqual(JSON.stringify(landingVideo("hero")), JSON.stringify({ mp4: null, mp4Portrait: null, poster: "/landing/posters/hero.jpg" }), "No files: poster only");
+      await fs.writeFile(file, "x");
+      harness.assertEqual(landingVideo("hero").mp4, "/landing/video/hero-16x9.mp4", "File present: offered");
+      harness.assertEqual(landingVideo("print").mp4, null, "Another slot without a file: still null");
+    } finally {
+      await fs.rm(file, { force: true });
+    }
+  });
+
+  await harness.test("T39-MEDIA-02: the server markup of a looping video is only its poster (the video mounts on the client)", async () => {
+    await provideReactGlobal();
+    const out = renderToStaticMarkup(createElement(LoopVideo, { mp4: "/x.mp4", mp4Portrait: null, poster: "/p.jpg", alt: "a" }) as never);
+    harness.assert(out.includes("<img") && out.includes("/p.jpg"), "The poster image is rendered");
+    harness.assert(!out.includes("<video"), "No video element until the client decides to play");
+  });
+
+  await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
+    const offenders: string[] = [];
+    const walk = async (dir: string) => {
+      for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+        if (["node_modules", ".next", ".git", "tests", ".superpowers", "graphify-out"].includes(e.name)) continue;
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) await walk(full);
+        else if (/\.(ts|tsx)$/.test(e.name)) {
+          const text = await fs.readFile(full, "utf8");
+          if (/from ["'](gsap|gsap\/[^"']*|lenis|lenis\/[^"']*)["']/.test(text) && !full.replace(/\\/g, "/").includes("/components/landing/")) offenders.push(full);
+        }
+      }
+    };
+    for (const d of ["app", "components", "lib"]) await walk(path.join(process.cwd(), d));
+    harness.assertEqual(offenders.join(", "), "", "Only the landing components import gsap or lenis");
   });
 }
