@@ -12,6 +12,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { bundleWithRates, seesGearRates, withRate } from "@/lib/gear/rates";
+import { PlanPanel } from "@/components/billing/plan-panel";
 
 interface InventoryPageProps {
   params: Promise<{
@@ -83,6 +84,7 @@ export default async function InventoryPage({ params }: InventoryPageProps) {
 
   return (
     <PageShell>
+      <PlanPanel tenantId={tenant.id} feature="gear" role={viewer.user.role} />
       <GearDashboard
         tenantId={tenant.id}
         tenantSlug={tenant.slug}

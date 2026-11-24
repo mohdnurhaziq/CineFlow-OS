@@ -4,6 +4,8 @@ import { AdminHeader } from "@/components/admin/admin-header";
 import { getCurrentUser } from "@/lib/auth/session";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { studioPath } from "@/lib/domain-name";
+import { PlanBanner } from "@/components/billing/plan-banner";
+import { loadPlanStatus, platformContactEmail } from "@/lib/billing/guard";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -44,6 +46,10 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col selection:bg-amber-500/20 selection:text-amber-400 print:bg-white print:min-h-0">
       <AdminHeader tenant={tenant} user={currentUser} />
+      {/* The studio's plan: a heads-up when it is ending, the stop notice when paused (never for platform staff). */}
+      {currentUser.role !== "SUPER_ADMIN" && (
+        <PlanBanner status={await loadPlanStatus(tenant.id)} contactEmail={await platformContactEmail()} />
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1">{children}</main>

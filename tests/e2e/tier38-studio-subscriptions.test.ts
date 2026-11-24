@@ -8,6 +8,12 @@ import { planStatus } from "@/lib/billing/state";
 import { type PlanCode, type PlanFeature } from "@/lib/billing/plans";
 import { countTeamSeats } from "@/lib/billing/team";
 import { readFile } from "node:fs/promises";
+import { renderToStaticMarkup } from "react-dom/server";
+import { provideReactGlobal } from "./react-tree";
+import { loadAccess } from "@/lib/auth/access";
+import { visibleNavItems } from "@/components/admin/admin-nav-items";
+import { PlanBanner } from "@/components/billing/plan-banner";
+import { PlanPanel } from "@/components/billing/plan-panel";
 import { createProposalAddOnTemplate } from "@/lib/actions/admin-proposals";
 import { createProposal, sendProposal, createCallSheet } from "@/lib/actions/admin-projects";
 import { createFrameDesign, createPrintSize } from "@/lib/actions/admin-frames";
@@ -29,6 +35,7 @@ const myt = (day: string, time = "00:00:00") => new Date(`${day}T${time}+08:00`)
 
 export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
   harness.setSuite("Tier 38", "Studio subscriptions");
+  await provideReactGlobal();
 
   const base = { subscriptionTier: "STARTER", subscriptionStatus: "ACTIVE", trialEndsAt: null as Date | null, paidUntil: null as Date | null, pausedAt: null as Date | null };
 
@@ -349,5 +356,45 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
     } finally {
       await restorePlan();
     }
+  });
+
+  // ── Task 5: upgrade panels, menu locks and the plan banner ──────────────────────────────
+  const html = (el: unknown) => renderToStaticMarkup(el as Parameters<typeof renderToStaticMarkup>[0]);
+
+  await harness.test("T38-UI-01: locked pages carry the upgrade panel; plans with the feature, and super-admins, don't see it", async () => {
+    try {
+      // Each locked page renders <PlanPanel> for its feature (the pages' own client parts can't render here).
+      const pages: Array<[string, PlanFeature, PlanCode]> = [
+        ["proposals", "proposals", "STARTER"],
+        ["inventory", "gear", "PRO"],
+        ["frames", "wallArt", "PRO"],
+        ["print-orders", "wallArt", "PRO"],
+      ];
+      for (const [page, feature, lockedOn] of pages) {
+        const src = await readFile(`app/[tenantSlug]/admin/${page}/page.tsx`, "utf8");
+        harness.assert(src.includes(`<PlanPanel tenantId={tenant.id} feature="${feature}"`), `${page}: the page renders the panel for ${feature}`);
+        await setPlan(lockedOn);
+        harness.assert(/Contact us to upgrade/.test(html(await PlanPanel({ tenantId: lumina.id, feature, role: "STUDIO_OWNER" }))), `${page}: the panel shows on ${lockedOn}`);
+        harness.assertEqual(await PlanPanel({ tenantId: lumina.id, feature, role: "SUPER_ADMIN" }), null, `${page}: a super-admin sees no panel`);
+        await setPlan("STUDIO_UNLIMITED");
+        harness.assertEqual(await PlanPanel({ tenantId: lumina.id, feature, role: "STUDIO_OWNER" }), null, `${page}: no panel on Production`);
+      }
+    } finally {
+      await restorePlan();
+    }
+  });
+
+  await harness.test("T38-UI-02: the banner says what the studio needs to know, and the menu marks locked items", async () => {
+    const day = (n: number) => new Date(Date.now() + n * DAY_MS);
+    const mk = (over: Partial<Parameters<typeof planStatus>[0]>) => planStatus({ subscriptionTier: "PRO", subscriptionStatus: "ACTIVE", trialEndsAt: null, paidUntil: day(30), pausedAt: null, ...over });
+    harness.assertEqual(html(PlanBanner({ status: mk({}), contactEmail: "a@b.test" })), "", "Nothing to say while paid up");
+    harness.assert(/Your trial ends on/.test(html(PlanBanner({ status: mk({ paidUntil: null, trialEndsAt: day(3) }), contactEmail: null }))), "Last week of a trial");
+    harness.assertEqual(html(PlanBanner({ status: mk({ paidUntil: null, trialEndsAt: day(10) }), contactEmail: null })), "", "Early in a trial: nothing");
+    harness.assert(/Pay by/.test(html(PlanBanner({ status: mk({ paidUntil: day(-2) }), contactEmail: "a@b.test" }))), "Overdue: pay by the grace date");
+    const paused = html(PlanBanner({ status: mk({ pausedAt: day(-1) }), contactEmail: "owner@cineflow.test" }));
+    harness.assert(/Contact us to renew/.test(paused) && /owner@cineflow\.test/.test(paused), "Paused: renew, with the contact");
+    const entries = visibleNavItems("lumina-cine", await loadAccess({ id: owner.id, role: "STUDIO_OWNER", tenantId: lumina.id }), true);
+    const feats = entries.flatMap((e) => (e.kind === "group" ? e.items.map((i) => i.feature) : [])).filter(Boolean);
+    harness.assert(feats.includes("gear") && feats.includes("wallArt") && feats.includes("proposals"), "Menu items carry the feature they need", JSON.stringify(feats));
   });
 }

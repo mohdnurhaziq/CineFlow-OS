@@ -9,6 +9,8 @@ import type { SessionUser } from "@/lib/auth/session";
 import { levelAtLeast, loadAccess } from "@/lib/auth/access";
 import { isStudioOwner } from "@/lib/auth/admin-page";
 import { studioPath } from "@/lib/domain-name";
+import { loadPlanStatus } from "@/lib/billing/guard";
+import { ALL_FEATURES } from "@/lib/billing/plans";
 
 interface AdminHeaderProps {
   tenant: { id: string; name: string; slug: string; discipline: string };
@@ -29,6 +31,9 @@ export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
     db.user.findUnique({ where: { id: user.id }, select: { teamRole: { select: { name: true } } } }),
   ]);
   const isOwner = isStudioOwner(user, tenant.id);
+  // Menu items for features the studio's plan lacks get a lock; a super-admin has everything.
+  const planStatusNow = await loadPlanStatus(tenant.id);
+  const lockedFeatures = user.role === "SUPER_ADMIN" ? [] : ALL_FEATURES.filter((f) => !planStatusNow.features.has(f));
   // Under their name: the owner is the studio owner; a team member shows their role ("Front desk").
   const roleLabel =
     user.role === "STUDIO_OWNER" ? "Studio owner" : (member?.teamRole?.name ?? user.role.replace(/_/g, " "));
@@ -92,6 +97,7 @@ export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
             isOwner={isOwner}
             pendingVerificationCount={pendingCount}
             newPrintOrderCount={newPrintOrderCount}
+            lockedFeatures={lockedFeatures}
           />
         </div>
       </div>

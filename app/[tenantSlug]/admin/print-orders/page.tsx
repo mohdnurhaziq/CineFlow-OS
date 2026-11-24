@@ -7,6 +7,7 @@ import { PrintOrdersConsole, type PrintOrderRow } from "@/components/admin/print
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { PlanPanel } from "@/components/billing/plan-panel";
 
 interface PrintOrdersPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -56,6 +57,7 @@ export default async function AdminPrintOrdersPage({ params }: PrintOrdersPagePr
 
   return (
     <PageShell>
+      <PlanPanel tenantId={tenant.id} feature="wallArt" role={viewer.user.role} />
       <PrintOrdersConsole tenantSlug={tenant.slug} currency={tenant.currency} orders={rows} />
     </PageShell>
   );

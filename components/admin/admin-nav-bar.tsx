@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AccessMap } from "@/lib/auth/access";
+import type { PlanFeature } from "@/lib/billing/plans";
 import { visibleNavItems, type AdminNavEntry, type NavBadge } from "@/components/admin/admin-nav-items";
 
 interface AdminNavBarProps {
@@ -18,6 +19,8 @@ interface AdminNavBarProps {
   pendingVerificationCount: number;
   /** Print orders paid (or free) and waiting for the studio to start. */
   newPrintOrderCount?: number;
+  /** Features the studio's plan lacks: their menu items get a lock (they still open, to show how to upgrade). */
+  lockedFeatures?: PlanFeature[];
 }
 
 type NavGroup = Extract<AdminNavEntry, { kind: "group" }>;
@@ -30,7 +33,8 @@ const topLinkClass = (active: boolean) =>
       : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-transparent"
   );
 
-export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCount, newPrintOrderCount = 0 }: AdminNavBarProps) {
+export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCount, newPrintOrderCount = 0, lockedFeatures = [] }: AdminNavBarProps) {
+  const isLocked = (feature?: PlanFeature) => !!feature && lockedFeatures.includes(feature);
   const pathname = usePathname();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -150,6 +154,7 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-semibold text-white tracking-tight">{sub.label}</span>
+                                {isLocked(sub.feature) && <Lock className="size-3 text-zinc-500 inline ml-1.5" aria-label="Not on your plan" />}
                                 {subBadge !== null && (
                                   <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-black">
                                     {subBadge}
@@ -197,6 +202,7 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
                 >
                   <SubIcon className={cn("size-3", isSubActive ? "text-amber-400" : "text-zinc-500")} />
                   <span>{sub.label}</span>
+                  {isLocked(sub.feature) && <Lock className="size-3 text-zinc-500" aria-label="Not on your plan" />}
                   {subBadge !== null && (
                     <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500 text-black">
                       {subBadge}
