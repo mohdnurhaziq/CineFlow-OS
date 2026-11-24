@@ -6,6 +6,7 @@ import { StudioPageHeader } from "@/components/layout/studio-page-header";
 import { getSessionClient } from "@/lib/clients";
 import { isSlotInPast, studioNow } from "@/lib/slot-time";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
+import { BOOKINGS_CLOSED_MESSAGE, bookingsOpen } from "@/lib/billing/guard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -105,12 +106,19 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
 
   // 5. The signed-in client of this studio, if any: they book as themselves.
   const client = await getSessionClient(tenant.id);
+  const open = await bookingsOpen(tenant.id);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] selection:bg-amber-500/20 selection:text-amber-400">
       {/* A client keeps their account's bar while booking; visitors and the team see the website's. */}
       <StudioPageHeader tenantSlug={tenant.slug} staffView="website" />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {!open ? (
+          <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-8 text-center space-y-2">
+            <h1 className="text-lg font-semibold text-white">{tenant.name}</h1>
+            <p className="text-sm text-zinc-400">{BOOKINGS_CLOSED_MESSAGE}</p>
+          </div>
+        ) : (
         <CinemaBookingShell
           clientAccount={client ? { name: client.name, email: client.email, phone: client.phone ?? "" } : null}
           tenant={tenant}
@@ -120,6 +128,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
           initialPackageId={initialPackageId}
           packages={packages}
         />
+        )}
       </main>
     </div>
   );

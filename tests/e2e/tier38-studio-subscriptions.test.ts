@@ -15,7 +15,10 @@ import { createGearItem, createKitBundle, createEquipmentReservation, updateGear
 import { createTeamRole, inviteTeamMember, restoreTeamMember } from "@/lib/actions/admin-team";
 import { assignTeamMember } from "@/lib/actions/admin-assignments";
 import { updateStudioSettings } from "@/lib/actions/admin-settings";
-import { PlanLockedError, requireFeature } from "@/lib/billing/guard";
+import { PlanLockedError, bookingsOpen, hasFeature, requireFeature } from "@/lib/billing/guard";
+import { holdBookingSlot } from "@/lib/actions/booking";
+import { processInvoicePayment } from "@/lib/actions/checkout";
+import { placePrintOrder } from "@/lib/actions/print-orders";
 import { db } from "@/lib/db";
 import { withSession } from "./mocks/session";
 import { processBookingCheckout } from "@/lib/actions/checkout";
@@ -280,6 +283,71 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
     } finally {
       await restorePlan();
       await db.tenant.update({ where: { id: lumina.id }, data: { customDomain: before } });
+    }
+  });
+
+  // ── Task 4: paused studios close online booking; locked public pages ────────────────────
+  await harness.test("T38-PUBLIC-01: a paused studio takes no new online bookings, but a client can still pay one they have", async () => {
+    const slots: string[] = [];
+    const email = `t38-pub-${Date.now().toString(36)}@example.test`;
+    try {
+      const mk = async (hour: string, days: number) => {
+        const sl = await db.bookingSlot.create({
+          data: { tenantId: lumina.id, category: "EDITORIAL", date: new Date(`${new Date(Date.now() + days * DAY_MS).toISOString().slice(0, 10)}T00:00:00.000Z`), startTime: hour, endTime: "11:59 PM", status: "AVAILABLE", price: 400, depositRequired: 100 },
+        });
+        slots.push(sl.id);
+        return sl;
+      };
+      const first = await mk("09:05 AM", 41);
+      const second = await mk("09:10 AM", 42);
+      await setPlan("PRO");
+      const book = (slotId: string, who: string) =>
+        withSession(null, () =>
+          processBookingCheckout({ tenantId: lumina.id, tenantSlug: "lumina-cine", slotId, sessionId: `t38-${Date.now()}-${who}`, clientName: "Pub Test", clientEmail: email, clientPhone: "0123456789", paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t38.jpg" })
+        );
+      const made = await book(first.id, "a");
+      harness.assert(made.success === true, "A booking made before the pause", JSON.stringify(made));
+
+      await setPlan("PRO", "PAUSED");
+      const hold = await withSession(null, () => holdBookingSlot({ tenantId: lumina.id, slotId: second.id, sessionId: `t38-hold-${Date.now()}` } as never));
+      harness.assertEqual((hold as { error?: string }).error, "BOOKINGS_CLOSED", "Holding a slot is refused");
+      harness.assertEqual((hold as { message?: string }).message, "This studio isn't taking bookings online right now.", "With the copy");
+      const refused = await book(second.id, "b");
+      harness.assertEqual((refused as { error?: string }).error, "BOOKINGS_CLOSED", "A new booking is refused");
+      harness.assertEqual((await db.bookingSlot.findUnique({ where: { id: second.id } }))?.status, "AVAILABLE", "The slot stays open");
+
+      // The client's slip upload for the invoice they already have still works (invoice payment isn't a new booking).
+      harness.assertEqual(await bookingsOpen(lumina.id), false, "bookingsOpen is false while paused");
+      const inv = await db.milestoneInvoice.findFirst({ where: { client: { email } } });
+      const pay = await withSession(
+        { id: inv!.clientId, email, name: "Pub Test", role: "CLIENT", tenantId: lumina.id, tenantSlug: "lumina-cine" },
+        () => processInvoicePayment({ invoiceId: inv!.id, tenantId: lumina.id, tenantSlug: "lumina-cine", paymentMethod: "QR_CODE", paymentProofUrl: "/uploads/receipts/t38b.jpg" } as never)
+      );
+      harness.assert(!/isn't taking bookings/.test(JSON.stringify(pay)), "Paying an existing invoice isn't closed", JSON.stringify(pay));
+    } finally {
+      await restorePlan();
+      await db.milestoneInvoice.deleteMany({ where: { client: { email } } });
+      await db.project.deleteMany({ where: { client: { email } } });
+      await db.clientBooking.deleteMany({ where: { clientEmail: email } });
+      await db.bookingSlot.deleteMany({ where: { id: { in: slots } } });
+      await db.user.deleteMany({ where: { email } });
+    }
+  });
+
+  await harness.test("T38-PUBLIC-02: without the Production plan the visualizer isn't offered and print orders are refused", async () => {
+    try {
+      await setPlan("PRO");
+      harness.assertEqual(await hasFeature(lumina.id, "wallArt"), false, "Studio plan: no wall art");
+      const refused = await placePrintOrder({ ...t, projectId: M, items: [{ kind: "PAID", deliverableItemId: M, orientation: "PORTRAIT", printSizeId: M, frameDesignId: M, matBoardType: "NONE" }], fulfilment: "PICKUP" } as never);
+      harness.assert(locked(refused), "Print orders are refused", JSON.stringify(refused));
+      await setPlan("STUDIO_UNLIMITED");
+      harness.assertEqual(await hasFeature(lumina.id, "wallArt"), true, "Production plan: wall art");
+      const page = await readFile("app/[tenantSlug]/visualizer/page.tsx", "utf8");
+      harness.assert(/hasFeature\(.*"wallArt"\)/.test(page), "The visualizer page checks the plan");
+      const nav = await readFile("components/showcase/showcase-nav.tsx", "utf8");
+      harness.assert(/showWallArt|wallArt/.test(nav), "The website bar hides the link without it");
+    } finally {
+      await restorePlan();
     }
   });
 }

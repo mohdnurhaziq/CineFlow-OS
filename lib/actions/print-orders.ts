@@ -27,7 +27,7 @@ import {
   type PlaceOrderValues,
 } from "@/lib/validations/print-orders";
 import { studioPath } from "@/lib/domain-name";
-import { requireFeature } from "@/lib/billing/guard";
+import { PlanLockedError, requireFeature } from "@/lib/billing/guard";
 
 type Tx = Prisma.TransactionClient;
 
@@ -65,6 +65,8 @@ function failFrom(err: unknown, fallback: string): Fail {
     };
   }
   if (err instanceof ZodError) return { success: false, error: "INVALID", message: actionErrorMessage(err, fallback) };
+  // The studio's plan said no: shown as written (it says how to upgrade).
+  if (err instanceof PlanLockedError) return { success: false, error: err.code, message: err.message };
   console.error("print order error:", err);
   return { success: false, error: "ORDER_FAILED", message: fallback };
 }

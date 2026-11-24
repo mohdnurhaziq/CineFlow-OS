@@ -8,6 +8,7 @@ import { SLOT_HOLD_MINUTES } from "@/lib/bookings/hold";
 import { errorMessageOf } from "@/lib/action-error";
 import { requestIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
+import { BOOKINGS_CLOSED_MESSAGE, bookingsOpen } from "@/lib/billing/guard";
 
 const HoldSlotSchema = z.object({
   tenantId: z.string().min(1, "Tenant ID is required"),
@@ -49,6 +50,7 @@ export async function holdBookingSlot(input: z.infer<typeof HoldSlotSchema>) {
   try {
     const validated = HoldSlotSchema.parse(input);
     const { tenantId, slotId, sessionId, previousSlotId } = validated;
+    if (!(await bookingsOpen(tenantId))) return { success: false, error: "BOOKINGS_CLOSED", message: BOOKINGS_CLOSED_MESSAGE };
 
     const now = new Date();
     const holdDurationMs = SLOT_HOLD_MINUTES * 60_000;
@@ -189,6 +191,7 @@ export async function createClientBooking(input: CreateBookingInput) {
     if (!tenant) {
       return { success: false, error: "Studio not found" };
     }
+    if (!(await bookingsOpen(validated.tenantId))) return { success: false, error: "BOOKINGS_CLOSED", message: BOOKINGS_CLOSED_MESSAGE };
 
     const result = await processBookingCheckout({
       tenantId: validated.tenantId,
