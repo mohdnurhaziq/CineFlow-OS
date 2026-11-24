@@ -192,9 +192,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/layout.tsx": {
-    "mtime": 1795517773.2018697,
-    "seen": 1795544287.5019646,
-    "ast_hash": "f7089df6c64bd8fec52fa894d3419523",
+    "mtime": 1795560435.1837013,
+    "seen": 1795561331.6368792,
+    "ast_hash": "dbd6da6c5d8d15a6906f7afa62991a1b",
     "semantic_hash": ""
   },
   "app/(saas)/loading.tsx": {
@@ -204,9 +204,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/page.tsx": {
-    "mtime": 1795517773.2031314,
-    "seen": 1795544287.5023067,
-    "ast_hash": "c3017a7333b9ffacb9b13dfc0235b371",
+    "mtime": 1795560435.1821766,
+    "seen": 1795561331.6373408,
+    "ast_hash": "1c94d6b9e5085eb148db53ae08f90412",
     "semantic_hash": ""
   },
   "app/(saas)/super-admin/page.tsx": {
@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "app/layout.tsx": {
-    "mtime": 1795210146.686445,
-    "seen": 1795233149.1488483,
-    "ast_hash": "47895dfda6e55284b8591f7e1ee9b505",
+    "mtime": 1795560435.1783125,
+    "seen": 1795561331.665912,
+    "ast_hash": "fbdc100bd39a08f41b76f00d366758c6",
     "semantic_hash": ""
   },
   "app/not-found.tsx": {
@@ -738,9 +738,9 @@
     "semantic_hash": ""
   },
   "components/saas/saas-footer.tsx": {
-    "mtime": 1795517773.2272456,
-    "seen": 1795544287.5763783,
-    "ast_hash": "9652f61874a3c4dd03e00fc0aea4deac",
+    "mtime": 1795560435.1799352,
+    "seen": 1795561331.7265775,
+    "ast_hash": "fd4fba51615b7b677d79ca1f9d58e180",
     "semantic_hash": ""
   },
   "components/saas/saas-navbar.tsx": {
@@ -4134,9 +4134,9 @@
     "semantic_hash": ""
   },
   "components/landing/invite-form.tsx": {
-    "mtime": 1795517773.2157235,
-    "seen": 1795544287.5724664,
-    "ast_hash": "f4b972112f9412acbdcd622ca5477d4c",
+    "mtime": 1795560448.214224,
+    "seen": 1795561331.7156305,
+    "ast_hash": "33182961e85e16af537f14948a7dd883",
     "semantic_hash": ""
   },
   "components/landing/invite-section.tsx": {
@@ -4224,9 +4224,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier39-landing-page.test.ts": {
-    "mtime": 1795556139.919038,
-    "seen": 1795558348.9926534,
-    "ast_hash": "52b5c7fa3b25c7a5c8c8154566e3d17e",
+    "mtime": 1795560475.262792,
+    "seen": 1795561331.862201,
+    "ast_hash": "bfd83b0f44d02f44e8a2a6f3a8ac53fb",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-24-landing-page-redesign.md": {
@@ -4521,6 +4521,18 @@
     "mtime": 1795554733.213,
     "seen": 1795558349.0276136,
     "ast_hash": "39d8ebb3145d177fc325a0a098e33e71",
+    "semantic_hash": ""
+  },
+  "app/apple-icon.png": {
+    "mtime": 1795560448.034,
+    "seen": 1795561331.9300406,
+    "ast_hash": "8040041113eea0dff7e358fa9e13b8d0",
+    "semantic_hash": ""
+  },
+  "app/icon.svg": {
+    "mtime": 1795560447.6805763,
+    "seen": 1795561331.9300458,
+    "ast_hash": "24d0afb9d25fcc60a86f428834f424f0",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {
