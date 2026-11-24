@@ -1,3 +1,5 @@
+/* Plain <a> on purpose: these jump to a section of the landing page, and LandingMotion's click handler (smooth scroll, focus the form) only sees links next/link has not already handled. */
+/* eslint-disable @next/next/no-html-link-for-pages */
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { LandingMode } from "@/lib/landing/mode";
@@ -15,10 +17,10 @@ export function PrimaryCta({ mode }: { mode: LandingMode }) {
       <ArrowRight className="size-4" aria-hidden="true" />
     </Link>
   ) : (
-    <Link href="/#invite" className={primary}>
+    <a href="/#invite" className={primary}>
       Request an invite
       <ArrowRight className="size-4" aria-hidden="true" />
-    </Link>
+    </a>
   );
 }
 
@@ -31,8 +33,8 @@ export function SecondaryCta({ mode }: { mode: LandingMode }) {
     );
   }
   return (
-    <Link href="/#how" className={secondary}>
+    <a href="/#how" className={secondary}>
       See how it works
-    </Link>
+    </a>
   );
 }

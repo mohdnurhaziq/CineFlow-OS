@@ -6,7 +6,7 @@ import { requireSuperAdmin } from "@/lib/auth/guard";
 import { requestIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
 import { sendNotification } from "@/lib/notifications";
-import { platformUrl } from "@/lib/domain-name";
+import { appUrl } from "@/lib/domain-name";
 import { actionErrorMessage } from "@/lib/action-error";
 
 /**
@@ -15,6 +15,8 @@ import { actionErrorMessage } from "@/lib/action-error";
  */
 
 const DAY_MS = 86_400_000;
+/** Invite-request emails the platform sends in an hour, across all visitors. */
+const MAX_EMAILS_PER_HOUR = 20;
 const KINDS = { PHOTO: "photo", VIDEO: "video", BOTH: "photo and video" } as const;
 
 const RequestSchema = z.object({
@@ -54,6 +56,11 @@ export async function requestInvite(input: z.input<typeof RequestSchema>): Promi
       data: { name: v.name, studioName: v.studioName, email: v.email, phone: v.phone || null, kind: v.kind, message: v.message || null },
     });
 
+    // However many addresses the requests come from, only so many emails go out an hour, so a flood can't
+    // use up the platform's mail quota (booking confirmations and password resets share it). The request
+    // is saved either way and shows in the console.
+    if (isRateLimited("invite:all", MAX_EMAILS_PER_HOUR, 60 * 60 * 1000)) return { success: true };
+
     // Tell every active super-admin. Each send is on its own; a failure is logged and never loses the request.
     const admins = await db.user.findMany({ where: { role: "SUPER_ADMIN", deactivatedAt: null }, select: { name: true, email: true } });
     for (const admin of admins) {
@@ -67,7 +74,7 @@ export async function requestInvite(input: z.input<typeof RequestSchema>): Promi
             clientEmail: admin.email,
             headline: `New invite request: ${row.studioName}`,
             message: `${row.name} (${row.email}${row.phone ? `, ${row.phone}` : ""}) runs ${row.studioName}, a ${KINDS[v.kind]} studio.${row.message ? ` They wrote: ${row.message}` : ""}`,
-            linkUrl: platformUrl("/super-admin"),
+            linkUrl: new URL("/super-admin", appUrl()).href, // an email needs the full address
             linkLabel: "Open invite requests",
           },
           "EMAIL"
@@ -84,13 +91,24 @@ export async function requestInvite(input: z.input<typeof RequestSchema>): Promi
   }
 }
 
-export type InviteFormState = { status: "idle" } | { status: "done" } | { status: "error"; message: string };
+/** What the visitor typed, handed back with an error so the form can show it again instead of coming back empty. */
+export type InviteFormValues = { name: string; studioName: string; email: string; phone: string; kind: string; message: string };
+
+export type InviteFormState = { status: "idle" } | { status: "done" } | { status: "error"; message: string; values: InviteFormValues };
 
 /** The landing page's form posts here (a React form action), so it also works before the page's JavaScript loads. */
 export async function submitInviteRequest(_previous: InviteFormState, formData: FormData): Promise<InviteFormState> {
   const text = (key: string) => {
     const v = formData.get(key);
     return typeof v === "string" ? v : "";
+  };
+  const values: InviteFormValues = {
+    name: text("name"),
+    studioName: text("studioName"),
+    email: text("email"),
+    phone: text("phone"),
+    kind: text("kind"),
+    message: text("message"),
   };
   const res = await requestInvite({
     name: text("name"),
@@ -101,7 +119,7 @@ export async function submitInviteRequest(_previous: InviteFormState, formData: 
     message: text("message") || undefined,
     website: text("website"),
   });
-  return res.success ? { status: "done" } : { status: "error", message: res.message };
+  return res.success ? { status: "done" } : { status: "error", message: res.message, values };
 }
 
 export interface InviteRequestRow {

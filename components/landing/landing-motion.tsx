@@ -58,14 +58,19 @@ export function LandingMotion({ children }: { children: ReactNode }) {
       if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
       const url = new URL(a.href, window.location.href);
       if (url.origin !== window.location.origin || url.pathname !== window.location.pathname || !url.hash) return;
-      const target = document.querySelector<HTMLElement>(url.hash);
+      const target = document.getElementById(decodeURIComponent(url.hash.slice(1)));
       if (!target) return;
       e.preventDefault();
       // Sections carry scroll-mt-20, which Lenis honours, so the offset is already the nav's height.
       lenis.scrollTo(target, { duration: 1.2 });
       history.replaceState(null, "", url.hash);
-      target.setAttribute("tabindex", "-1");
-      target.focus({ preventScroll: true });
+      // The invite section hands focus to its first field; any other section takes focus itself.
+      const first = target.id === "invite" ? document.getElementById("inv-name") : null;
+      if (first) first.focus({ preventScroll: true });
+      else {
+        target.setAttribute("tabindex", "-1");
+        target.focus({ preventScroll: true });
+      }
     };
     document.addEventListener("click", onClick);
 

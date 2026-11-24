@@ -23,7 +23,8 @@ import { provideReactGlobal } from "./react-tree";
 import { getAllTenantsSummary, getPlatformMetrics } from "@/lib/actions/super-admin";
 import { SuperAdminView } from "@/components/super-admin/super-admin-view";
 import { withIp, withSession } from "./mocks/session";
-import { listInviteRequests, requestInvite, setInviteRequestHandled } from "@/lib/actions/invite-requests";
+import { listInviteRequests, requestInvite, setInviteRequestHandled, submitInviteRequest } from "@/lib/actions/invite-requests";
+import { appUrl } from "@/lib/domain-name";
 
 const MODES: LandingMode[] = ["TRIAL", "INVITE_WITH_CODE", "INVITE_ONLY"];
 const EMAIL = "hello@cineflow-os.my";
@@ -126,6 +127,7 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
       const mails = inbox.filter((m) => `${m.subject} ${m.html}`.includes(r.studioName));
       harness.assertEqual(mails.length, admins, "One mail per active super-admin");
       harness.assert(mails.some((m) => String(m.to).includes(superRow.email)), "To the super-admin");
+      harness.assert(mails.every((m) => m.html.includes(`href="${appUrl().origin}/super-admin"`)), "The button opens the console by its full address");
     });
     await cleanUp();
   });
@@ -362,5 +364,53 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
       const ok = await fs.access(path.join(process.cwd(), "public", f)).then(() => true, () => false);
       harness.assert(ok, `Exists: ${f}`);
     }
+  });
+
+  // ── Final review fixes ──────────────────────────────────────────────────────────────────
+  await harness.test("T39-FIX-01: a refused form keeps what the visitor typed", async () => {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries({ name: "Aina Binti", studioName: "Aina Studio", email: "aina@gmail", phone: "012", kind: "VIDEO", message: "Hello\nthere", website: "" })) fd.set(k, v);
+    const res = await withIp("198.51.100.20", () => submitInviteRequest({ status: "idle" }, fd));
+    harness.assert(res.status === "error", "A malformed email is refused", JSON.stringify(res));
+    const values = (res as { values?: Record<string, string> }).values;
+    harness.assertEqual(values?.name, "Aina Binti", "Name kept");
+    harness.assertEqual(values?.studioName, "Aina Studio", "Studio kept");
+    harness.assertEqual(values?.email, "aina@gmail", "Email kept so it can be fixed");
+    harness.assertEqual(values?.kind, "VIDEO", "Choice kept");
+    harness.assertEqual(values?.message, "Hello\nthere", "Message kept");
+  });
+
+  await harness.test("T39-FIX-02: a flood from many addresses is saved but cannot flood the platform owner's mailbox", async () => {
+    await withInbox(async (inbox) => {
+      const admins = await db.user.count({ where: { role: "SUPER_ADMIN", deactivatedAt: null } });
+      let saved = 0;
+      for (let i = 0; i < 40; i++) {
+        const r = await withIp(`203.0.113.${i + 1}`, () => requestInvite(req({ studioName: `T39 Flood ${i}` }) as never));
+        if (r.success) saved += 1;
+      }
+      harness.assertEqual(saved, 40, "Every request is still saved");
+      harness.assertEqual(await db.inviteRequest.count({ where: { studioName: { startsWith: "T39 Flood" } } }), 40, "…and kept");
+      const floodMails = inbox.filter((m) => `${m.subject} ${m.html}`.includes("T39 Flood")).length;
+      harness.assert(floodMails < 40 * admins, `Not every request sent an email (${floodMails} of ${40 * admins})`);
+      harness.assert(floodMails <= 20 * admins, "No more than the hourly cap goes out", String(floodMails));
+    });
+    await cleanUp();
+  });
+
+  await harness.test("T39-FIX-03: the share image has an absolute address", async () => {
+    const mod = await import("@/app/(saas)/layout");
+    const base = (mod as { metadata?: { metadataBase?: URL } }).metadata?.metadataBase;
+    harness.assert(base instanceof URL, "The layout sets metadataBase");
+    harness.assertEqual(base?.href, appUrl().href, "It is the site's own address");
+  });
+
+  await harness.test("T39-FIX-04: hash links are plain anchors the glide handler can see, and it moves focus to the form", async () => {
+    const cta = await fs.readFile(path.join(process.cwd(), "components/landing/cta-buttons.tsx"), "utf8");
+    const footer = await fs.readFile(path.join(process.cwd(), "components/saas/saas-footer.tsx"), "utf8");
+    harness.assert(!/<Link[^>]*href="\/#/.test(cta), "CTA buttons don't use next/link for #links");
+    harness.assert(!/<Link[^>]*href="\/#/.test(footer), "Footer doesn't use next/link for #links");
+    const motion = await fs.readFile(path.join(process.cwd(), "components/landing/landing-motion.tsx"), "utf8");
+    harness.assert(motion.includes("inv-name"), "After gliding to the invite section, focus moves to its first field");
+    harness.assert(!motion.includes("querySelector<HTMLElement>(url.hash)"), "No selector built from the URL hash");
   });
 }

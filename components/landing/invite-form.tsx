@@ -30,6 +30,8 @@ const KINDS = [
 /** The invite request form. A real form, so it works before the page's JavaScript has loaded. */
 export function InviteForm() {
   const [state, action] = useActionState<InviteFormState, FormData>(submitInviteRequest, { status: "idle" });
+  // After a refusal React clears the fields, so they start from what the visitor had typed.
+  const typed = state.status === "error" ? state.values : undefined;
 
   if (state.status === "done") {
     return (
@@ -46,25 +48,25 @@ export function InviteForm() {
         <label htmlFor="inv-name" className={label}>
           Your name
         </label>
-        <input id="inv-name" name="name" required maxLength={100} autoComplete="name" className={field} />
+        <input id="inv-name" name="name" required maxLength={100} autoComplete="name" defaultValue={typed?.name} className={field} />
       </div>
       <div>
         <label htmlFor="inv-studio" className={label}>
           Studio name
         </label>
-        <input id="inv-studio" name="studioName" required maxLength={100} autoComplete="organization" className={field} />
+        <input id="inv-studio" name="studioName" required maxLength={100} autoComplete="organization" defaultValue={typed?.studioName} className={field} />
       </div>
       <div>
         <label htmlFor="inv-email" className={label}>
           Email
         </label>
-        <input id="inv-email" name="email" type="email" required maxLength={200} autoComplete="email" className={field} />
+        <input id="inv-email" name="email" type="email" required maxLength={200} autoComplete="email" defaultValue={typed?.email} className={field} />
       </div>
       <div>
         <label htmlFor="inv-phone" className={label}>
           Phone (optional)
         </label>
-        <input id="inv-phone" name="phone" type="tel" maxLength={30} autoComplete="tel" className={field} />
+        <input id="inv-phone" name="phone" type="tel" maxLength={30} autoComplete="tel" defaultValue={typed?.phone} className={field} />
       </div>
       <fieldset className="sm:col-span-2">
         <legend className={label}>What do you shoot?</legend>
@@ -74,7 +76,7 @@ export function InviteForm() {
               key={value}
               className="inline-flex min-h-12 cursor-pointer items-center gap-2.5 rounded-full border border-zinc-700 px-5 text-sm text-zinc-200 has-[:checked]:border-amber-400 has-[:checked]:text-amber-300 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-amber-400/40"
             >
-              <input type="radio" name="kind" value={value} defaultChecked={i === 2} className="accent-amber-500" />
+              <input type="radio" name="kind" value={value} defaultChecked={typed?.kind ? typed.kind === value : i === 2} className="accent-amber-500" />
               {text}
             </label>
           ))}
@@ -84,7 +86,7 @@ export function InviteForm() {
         <label htmlFor="inv-message" className={label}>
           Anything we should know? (optional)
         </label>
-        <textarea id="inv-message" name="message" rows={4} maxLength={1000} className={field} />
+        <textarea id="inv-message" name="message" rows={4} maxLength={1000} defaultValue={typed?.message} className={field} />
       </div>
       {/* A trap for bots: people never see or fill it. */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
