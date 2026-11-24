@@ -10,6 +10,11 @@ import { BANNED_PHRASES, CHAPTERS, EXTRAS, faqItems, planBadge } from "@/lib/lan
 import nodemailer, { type Transporter } from "nodemailer";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { db } from "@/lib/db";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { provideReactGlobal } from "./react-tree";
+import { getAllTenantsSummary, getPlatformMetrics } from "@/lib/actions/super-admin";
+import { SuperAdminView } from "@/components/super-admin/super-admin-view";
 import { withIp, withSession } from "./mocks/session";
 import { listInviteRequests, requestInvite, setInviteRequestHandled } from "@/lib/actions/invite-requests";
 
@@ -190,5 +195,26 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     await withSession(superAdmin, () => setInviteRequestHandled({ id: row.id, handled: false }));
     harness.assertEqual((await db.inviteRequest.findUnique({ where: { id: row.id } }))?.handledAt, null, "Reopened");
     await cleanUp();
+  });
+
+  // ── Task 3: the inbox in the super-admin console ────────────────────────────────────────
+  await harness.test("T39-INBOX-01: the console lists invite requests with contact links and a handled toggle", async () => {
+    await provideReactGlobal();
+    const metrics = await withSession(superAdmin, () => getPlatformMetrics());
+    const tenants = await withSession(superAdmin, () => getAllTenantsSummary());
+    const row = (over: Record<string, unknown>) => ({ id: "i1", name: "Aina", studioName: "T39 Open Studio", email: "aina@example.test", phone: "+60123456789", kind: "PHOTO", message: "Hi!", createdAt: new Date().toISOString(), handledAt: null, ...over });
+    const out = renderToStaticMarkup(
+      createElement(SuperAdminView, {
+        metrics,
+        tenants: tenants as never,
+        invites: [row({}), row({ id: "i2", studioName: "T39 Done Studio", handledAt: new Date().toISOString() })] as never,
+      }) as never
+    );
+    harness.assert(out.includes("Invite requests"), "Heading");
+    harness.assert(out.includes("T39 Open Studio") && out.includes("T39 Done Studio"), "Both listed");
+    harness.assert(out.includes("mailto:aina@example.test") && out.includes("tel:+60123456789"), "Contact links");
+    harness.assert(out.includes("Mark handled") && out.includes("Reopen"), "Toggle for each state");
+    const empty = renderToStaticMarkup(createElement(SuperAdminView, { metrics, tenants: tenants as never, invites: [] }) as never);
+    harness.assert(empty.includes("No invite requests yet."), "Empty state");
   });
 }
