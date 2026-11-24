@@ -7,6 +7,8 @@ interface LoopVideoProps {
   mp4: string | null;
   mp4Portrait?: string | null;
   poster: string;
+  /** A still for phones (up to 640px wide), when the phone clip is a different shot from the wide one. */
+  posterPortrait?: string | null;
   alt: string;
   /** The hero: its poster is the page's largest image, so load it first. */
   priority?: boolean;
@@ -30,14 +32,17 @@ const FETCH_MARGIN = "800px 0px";
  * The clip is fetched late on purpose, so it never competes with the page for a slow connection: the
  * hero waits until the page has finished loading, and a chapter clip until it is near the screen.
  */
-export function LoopVideo({ mp4, mp4Portrait = null, poster, alt, priority = false, className = "", crossfade = 0 }: LoopVideoProps) {
+export function LoopVideo({ mp4, mp4Portrait = null, poster, posterPortrait = null, alt, priority = false, className = "", crossfade = 0 }: LoopVideoProps) {
   const wrap = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const twin = useRef<HTMLVideoElement>(null);
   const [allowed, setAllowed] = useState(false);
   const [near, setNear] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [phone, setPhone] = useState(false);
   const blend = crossfade > 0;
+  // The <video>'s own still follows the same screen size as its source and the poster image.
+  const videoPoster = phone && posterPortrait ? posterPortrait : poster;
 
   // The device allows motion; the hero then waits for the page to finish loading.
   useEffect(() => {
@@ -45,6 +50,7 @@ export function LoopVideo({ mp4, mp4Portrait = null, poster, alt, priority = fal
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
     if (reduced || conn?.saveData) return;
+    setPhone(window.matchMedia("(max-width: 640px)").matches);
     if (!priority || document.readyState === "complete") {
       setAllowed(true);
       return;
@@ -182,15 +188,17 @@ export function LoopVideo({ mp4, mp4Portrait = null, poster, alt, priority = fal
 
   return (
     <div ref={wrap} className={`overflow-hidden ${className}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={poster} alt={alt} className="absolute inset-0 size-full object-cover" fetchPriority={priority ? "high" : "auto"} loading={priority ? "eager" : "lazy"} decoding="async" />
+      <picture>
+        {posterPortrait && <source media="(max-width: 640px)" srcSet={posterPortrait} />}
+        <img src={poster} alt={alt} className="absolute inset-0 size-full object-cover" fetchPriority={priority ? "high" : "auto"} loading={priority ? "eager" : "lazy"} decoding="async" />
+      </picture>
       {ready && (
         <>
-          <video ref={video} className="absolute inset-0 size-full object-cover" src={blend ? (blobUrl ?? undefined) : undefined} muted loop={!blend} playsInline preload={blend ? "auto" : "metadata"} poster={poster} aria-hidden="true">
+          <video ref={video} className="absolute inset-0 size-full object-cover" src={blend ? (blobUrl ?? undefined) : undefined} muted loop={!blend} playsInline preload={blend ? "auto" : "metadata"} poster={videoPoster} aria-hidden="true">
             {!blend && sources}
           </video>
           {blend && (
-            <video ref={twin} className="absolute inset-0 size-full object-cover" src={blobUrl ?? undefined} style={{ opacity: 0 }} muted playsInline preload="auto" poster={poster} aria-hidden="true" />
+            <video ref={twin} className="absolute inset-0 size-full object-cover" src={blobUrl ?? undefined} style={{ opacity: 0 }} muted playsInline preload="auto" poster={videoPoster} aria-hidden="true" />
           )}
         </>
       )}

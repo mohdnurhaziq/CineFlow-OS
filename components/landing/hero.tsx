@@ -9,7 +9,7 @@ import { PrimaryCta, SecondaryCta } from "@/components/landing/cta-buttons";
 export function Hero({ mode, video }: { mode: LandingMode; video: LandingVideo }) {
   return (
     <section className="relative isolate flex min-h-[100svh] items-end overflow-hidden pt-24 pb-14 sm:pb-20">
-      <LoopVideo mp4={video.mp4} mp4Portrait={video.mp4Portrait} poster={video.poster} alt="" priority className="absolute inset-0 -z-10" />
+      <LoopVideo mp4={video.mp4} mp4Portrait={video.mp4Portrait} poster={video.poster} posterPortrait={video.posterPortrait} alt="" priority className="absolute inset-0 -z-10" />
       {/* Keeps the headline readable over any clip, and the edges deep black. */}
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-[#09090b] via-[#09090b]/55 to-[#09090b]/20" />
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#09090b]/80 via-transparent to-transparent" />

@@ -237,7 +237,7 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
   await harness.test("T39-MEDIA-01: a video is offered only when its file exists; the poster is always there", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "t39-media-"));
     try {
-      harness.assertEqual(JSON.stringify(landingVideo("hero", root)), JSON.stringify({ mp4: null, mp4Portrait: null, poster: "/landing/posters/hero.jpg" }), "No files: poster only");
+      harness.assertEqual(JSON.stringify(landingVideo("hero", root)), JSON.stringify({ mp4: null, mp4Portrait: null, poster: "/landing/posters/hero.jpg", posterPortrait: null }), "No files: poster only");
       await fs.mkdir(path.join(root, "landing", "video"), { recursive: true });
       await fs.writeFile(path.join(root, "landing", "video", "hero-16x9.mp4"), "x");
       harness.assertEqual(landingVideo("hero", root).mp4, "/landing/video/hero-16x9.mp4", "File present: offered");
@@ -245,6 +245,11 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
       await fs.writeFile(path.join(root, "landing", "video", "hero-9x16.mp4"), "x");
       harness.assertEqual(landingVideo("hero", root).mp4Portrait, "/landing/video/hero-9x16.mp4", "Portrait file: offered for phones");
       harness.assertEqual(landingVideo("print", root).mp4, null, "Another slot without a file: still null");
+      harness.assertEqual(landingVideo("hero", root).posterPortrait, null, "No phone still: none");
+      await fs.mkdir(path.join(root, "landing", "posters"), { recursive: true });
+      await fs.writeFile(path.join(root, "landing", "posters", "hero-9x16.jpg"), "x");
+      harness.assertEqual(landingVideo("hero", root).posterPortrait, "/landing/posters/hero-9x16.jpg", "Phone still present: offered");
+      harness.assertEqual(landingVideo("shoot", root).posterPortrait, null, "Only the hero has a phone still");
     } finally {
       await fs.rm(root, { recursive: true, force: true });
     }
@@ -296,6 +301,20 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert(/const FETCH_MARGIN = "\d+px 0px"/.test(src), "...with a margin set in one place");
     harness.assert(/fetch\(mp4\)[\s\S]{0,300}createObjectURL/.test(src) && /URL\.revokeObjectURL/.test(src), "A dissolved clip is fetched once and both copies share it");
     harness.assert(!/preload=\{blend \? "auto" : "metadata"\}[^>]*<source/.test(src), "The clip's file is not named in two <video> sources when dissolving");
+  });
+
+  await harness.test("T39-MEDIA-07: phones get their own still, taken from the phone clip, so it matches the video that follows", async () => {
+    await provideReactGlobal();
+    const withPhone = renderToStaticMarkup(createElement(LoopVideo, { mp4: "/x.mp4", mp4Portrait: "/x-9x16.mp4", poster: "/wide.jpg", posterPortrait: "/tall.jpg", alt: "" }) as never);
+    harness.assert(/<source media="\(max-width: 640px\)" srcSet="\/tall\.jpg"\/>/.test(withPhone), "A phone-width source points at the portrait still");
+    harness.assert(/<img src="\/wide\.jpg"/.test(withPhone), "The wide still is the default");
+    harness.assert(withPhone.indexOf("<source") < withPhone.indexOf("<img"), "The source comes before the image, as <picture> needs");
+    harness.assert(!withPhone.includes("<video"), "Still no video in the server markup");
+    const without = renderToStaticMarkup(createElement(LoopVideo, { mp4: "/x.mp4", poster: "/wide.jpg", alt: "" }) as never);
+    harness.assert(!without.includes("<source") && without.includes("/wide.jpg"), "Without a phone still, no source is added");
+    const hero = await fs.readFile(path.join(process.cwd(), "components/landing/hero.tsx"), "utf8");
+    harness.assert(/posterPortrait=\{video\.posterPortrait\}/.test(hero), "The hero passes the phone still");
+    harness.assert((await fs.stat(path.join(process.cwd(), "public/landing/posters/hero-9x16.jpg"))).size > 1000, "The phone still exists");
   });
 
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
