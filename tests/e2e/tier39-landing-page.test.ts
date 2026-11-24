@@ -3,7 +3,10 @@
  */
 
 import { TestHarness } from "./test-harness";
-import { PLANS, cheapestPlanWith, type PlanFeature } from "@/lib/billing/plans";
+import { PLANS, PLAN_CODES, cheapestPlanWith, type PlanFeature } from "@/lib/billing/plans";
+import SaasLandingPage from "@/app/(saas)/page";
+import SaasLayout from "@/app/(saas)/layout";
+import { SaasNavbar } from "@/components/saas/saas-navbar";
 import { landingMode, type LandingMode } from "@/lib/landing/mode";
 import { publicContactEmail } from "@/lib/landing/contact";
 import { BANNED_PHRASES, CHAPTERS, EXTRAS, faqItems, planBadge } from "@/lib/landing/content";
@@ -260,5 +263,104 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     };
     for (const d of ["app", "components", "lib"]) await walk(path.join(process.cwd(), d));
     harness.assertEqual(offenders.join(", "), "", "Only the landing components import gsap or lenis");
+  });
+
+  // ── Task 5: the page ────────────────────────────────────────────────────────────────────
+  await provideReactGlobal();
+  const withEnv = async <T,>(env: { APP_ENV?: string; STUDIO_SIGNUP_CODE?: string }, fn: () => Promise<T>): Promise<T> => {
+    const saved = { APP_ENV: process.env.APP_ENV, STUDIO_SIGNUP_CODE: process.env.STUDIO_SIGNUP_CODE };
+    for (const k of ["APP_ENV", "STUDIO_SIGNUP_CODE"] as const) {
+      if (env[k] === undefined) delete process.env[k];
+      else process.env[k] = env[k];
+    }
+    try {
+      return await fn();
+    } finally {
+      for (const k of ["APP_ENV", "STUDIO_SIGNUP_CODE"] as const) {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      }
+    }
+  };
+  const SETUPS: [LandingMode, { APP_ENV?: string; STUDIO_SIGNUP_CODE?: string }][] = [
+    ["TRIAL", {}],
+    ["INVITE_WITH_CODE", { APP_ENV: "production", STUDIO_SIGNUP_CODE: "beta-code" }],
+    ["INVITE_ONLY", { APP_ENV: "production" }],
+  ];
+  const renderSite = (env: { APP_ENV?: string; STUDIO_SIGNUP_CODE?: string }) =>
+    withEnv(env, async () => renderToStaticMarkup((await SaasLayout({ children: await SaasLandingPage() })) as never));
+  const hrefsOf = (markup: string) => [...markup.matchAll(/href="([^"]*)"/g)].map((m) => m[1]!);
+  const textOf = (markup: string) => markup.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]*>/g, " ");
+
+  await harness.test("T39-PAGE-01: real prices and plan names, one h1, the sections and the invite form", async () => {
+    for (const [mode, env] of SETUPS) {
+      const out = await renderSite(env);
+      for (const code of PLAN_CODES) {
+        harness.assert(out.includes(PLANS[code].name) && out.includes(`RM ${PLANS[code].priceMyr}`), `${mode}: ${PLANS[code].name} at RM ${PLANS[code].priceMyr}`);
+      }
+      harness.assertEqual((out.match(/<h1[\s>]/g) ?? []).length, 1, `${mode}: exactly one h1`);
+      for (const id of ["how", "pricing", "faq"]) harness.assert(out.includes(`id="${id}"`), `${mode}: #${id}`);
+      harness.assertEqual(out.includes('id="invite"') && out.includes('name="website"'), mode !== "TRIAL", `${mode}: the invite form is there only when needed`);
+    }
+  });
+
+  await harness.test("T39-PAGE-02: no invented claims, old prices, console links or (in production) demo links", async () => {
+    for (const [mode, env] of SETUPS) {
+      const out = await renderSite(env);
+      const text = textOf(out);
+      for (const p of BANNED_PHRASES) {
+        const hit = typeof p === "string" ? text.toLowerCase().includes(p.toLowerCase()) : p.test(text);
+        harness.assert(!hit, `${mode}: banned phrase absent: ${String(p)}`);
+      }
+      const links = hrefsOf(out);
+      harness.assert(!links.some((h) => h.startsWith("/super-admin")), `${mode}: no console link`);
+      if (env.APP_ENV === "production") {
+        harness.assert(!links.some((h) => h.includes("lumina-cine") || h.includes("apex-media")), `${mode}: no demo studio links`);
+      }
+    }
+  });
+
+  await harness.test("T39-PAGE-03: the main action follows how sign-up works, and a closed sign-up is never linked", async () => {
+    const trial = await renderSite({});
+    harness.assert(textOf(trial).includes("Start your 14-day free trial") && hrefsOf(trial).includes("/create-studio"), "Open: start the trial");
+    harness.assert(!textOf(trial).includes("Request an invite"), "Open: no invite button");
+    const withCode = await renderSite({ APP_ENV: "production", STUDIO_SIGNUP_CODE: "beta-code" });
+    harness.assert(textOf(withCode).includes("Request an invite") && textOf(withCode).includes("Have an invite code?"), "Needs a code: request, plus the code link");
+    harness.assert(hrefsOf(withCode).includes("/create-studio"), "…which goes to sign-up");
+    const closed = await renderSite({ APP_ENV: "production" });
+    harness.assert(textOf(closed).includes("Request an invite"), "Closed: request an invite");
+    harness.assert(!hrefsOf(closed).includes("/create-studio"), "Closed: nothing links to the closed sign-up page");
+  });
+
+  await harness.test("T39-PAGE-04: usable without JavaScript: nothing hidden by CSS, a real form, the contact address", async () => {
+    const out = await renderSite({ APP_ENV: "production" });
+    const hiddenReveal = [...out.matchAll(/<[^>]*data-reveal[^>]*>/g)].filter((m) => /opacity-0|invisible|opacity:\s*0/.test(m[0]));
+    harness.assertEqual(hiddenReveal.length, 0, "No revealed element starts hidden in the markup");
+    harness.assert(/<form[^>]*action=/.test(out), "The invite form has an action");
+    harness.assert(out.includes(`mailto:${publicContactEmail()}`), "The contact address is a link in the footer");
+  });
+
+  await harness.test("T39-PAGE-05: nav links work from every page, and the nav has no console or demo links", async () => {
+    await provideReactGlobal();
+    for (const mode of MODES) {
+      const links = hrefsOf(renderToStaticMarkup(createElement(SaasNavbar, { mode }) as never));
+      for (const l of ["/#how", "/#pricing", "/#faq"]) harness.assert(links.includes(l), `${mode}: ${l}`);
+      harness.assert(!links.some((h) => h.startsWith("/super-admin")), `${mode}: no console link`);
+      harness.assert(links.includes(mode === "TRIAL" ? "/create-studio" : "/#invite"), `${mode}: the main button`);
+    }
+  });
+
+  await harness.test("T39-PAGE-06: every image the page uses exists", async () => {
+    const out = await renderSite({});
+    const files = new Set<string>(["/landing/og.jpg"]);
+    for (const m of out.matchAll(/(?:src|srcSet)="(\/landing\/[^"]+)"/g)) files.add(m[1]!);
+    for (const c of CHAPTERS) {
+      files.add(c.shot.desktop);
+      if (c.shot.phone) files.add(c.shot.phone);
+    }
+    for (const f of files) {
+      const ok = await fs.access(path.join(process.cwd(), "public", f)).then(() => true, () => false);
+      harness.assert(ok, `Exists: ${f}`);
+    }
   });
 }

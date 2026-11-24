@@ -11,6 +11,7 @@ import Lenis from "lenis";
  * on this running. With "reduce motion" on, it does nothing at all (the browser's own scrolling and
  * anchor jumps apply).
  *
+ *   data-split             a SplitHeading: its words rise in one by one
  *   data-reveal            fades up when it scrolls into view (data-reveal-delay="0.15" to stagger)
  *   data-parallax="40"     drifts by that many pixels over its time on screen
  */
@@ -26,6 +27,15 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     gsap.ticker.lagSmoothing(0);
 
     const ctx = gsap.context(() => {
+      gsap.utils.toArray<HTMLElement>("[data-split]").forEach((heading) => {
+        gsap.from(heading.querySelectorAll(".w"), {
+          yPercent: 110,
+          duration: 0.9,
+          ease: "power4.out",
+          stagger: 0.07,
+          scrollTrigger: { trigger: heading, start: "top 90%", once: true },
+        });
+      });
       gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
         gsap.from(el, {
           y: 36,

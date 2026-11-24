@@ -11,6 +11,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import nodemailer, { type Transporter } from "nodemailer";
+import { renderToStaticMarkup } from "react-dom/server";
+import { showsDemoStudios } from "@/lib/demo-studios";
 import { TestHarness } from "./test-harness";
 import { provideReactGlobal, findProp } from "./react-tree";
 import { withRequest, withSession, COOKIE_NAME } from "./mocks/session";
@@ -20,10 +22,6 @@ import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { createOrResetSuperAdmin } from "../../scripts/create-super-admin";
 import SaasLandingPage from "@/app/(saas)/page";
 import SaasLayout from "@/app/(saas)/layout";
-import { SaasNavbar } from "@/components/saas/saas-navbar";
-import { SaasFooter } from "@/components/saas/saas-footer";
-import { SaasHero } from "@/components/saas/saas-hero";
-import { StudioSwitcher } from "@/components/saas/studio-switcher";
 import StudioLoginPage from "@/app/[tenantSlug]/login/page";
 import PlatformLoginPage from "@/app/(saas)/super-admin/login/page";
 import { PlatformLoginForm } from "@/components/auth/platform-login-form";
@@ -94,30 +92,13 @@ export async function runTier31GoLiveTests(harness: TestHarness) {
       ["production", "production", false],
     ] as const) {
       await withAppEnv(appEnv, async () => {
-        const landing = SaasLandingPage();
-        harness.assertEqual(hasElement(landing, StudioSwitcher), shown, `${label}: the demo studio showcase`);
-        harness.assertEqual(findProp(landing, "showDemoStudios"), shown, `${label}: the hero's demo button`);
-        const layout = SaasLayout({ children: null });
-        harness.assertEqual(findProp(layout, "showDemo"), shown, `${label}: header and footer`);
+        const out = renderToStaticMarkup((await SaasLayout({ children: await SaasLandingPage() })) as never);
+        const links = [...out.matchAll(/href="([^"]*)"/g)].map((m) => m[1]!);
+        harness.assert(!links.some((h) => h.startsWith("/super-admin")), `${label}: no link to the console`);
+        harness.assertEqual(links.some((h) => h.includes("lumina-cine") || h.includes("apex-media")), false, `${label}: the landing page doesn't link demo studios`);
+        harness.assertEqual(showsDemoStudios(), shown, `${label}: demo studios exist only outside production`);
       });
     }
-
-    const navOn = hrefs(SaasNavbar({ showDemo: true }));
-    const navOff = hrefs(SaasNavbar({ showDemo: false }));
-    harness.assert(navOn.includes("#studios") && navOn.includes("/super-admin/login"), "Header with demos: studios and console", navOn.join(" "));
-    harness.assert(!navOff.includes("#studios") && !navOff.some((h) => h.startsWith("/super-admin")), "Header without: neither", navOff.join(" "));
-    harness.assert(navOff.includes("/create-studio"), "Header without demos still offers studio sign-up");
-
-    const footOn = hrefs(SaasFooter({ showDemo: true }));
-    const footOff = hrefs(SaasFooter({ showDemo: false }));
-    for (const link of ["/lumina-cine", "/apex-media", "/super-admin/login"]) {
-      harness.assert(footOn.includes(link), `Footer with demos links ${link}`);
-      harness.assert(!footOff.includes(link), `Footer without demos doesn't link ${link}`);
-    }
-    harness.assert(footOff.includes("/create-studio"), "Footer without demos still offers studio sign-up");
-
-    harness.assert(hrefs(SaasHero({ showDemoStudios: true })).includes("#studios"), "Hero with demos: explore button");
-    harness.assert(!hrefs(SaasHero({ showDemoStudios: false })).includes("#studios"), "Hero without: no explore button");
   });
 
   await harness.test("T31-DEMO-02: demo sign-in shortcuts appear only on the demo studios, never in production", async () => {

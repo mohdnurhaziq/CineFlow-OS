@@ -84,6 +84,26 @@ export async function requestInvite(input: z.input<typeof RequestSchema>): Promi
   }
 }
 
+export type InviteFormState = { status: "idle" } | { status: "done" } | { status: "error"; message: string };
+
+/** The landing page's form posts here (a React form action), so it also works before the page's JavaScript loads. */
+export async function submitInviteRequest(_previous: InviteFormState, formData: FormData): Promise<InviteFormState> {
+  const text = (key: string) => {
+    const v = formData.get(key);
+    return typeof v === "string" ? v : "";
+  };
+  const res = await requestInvite({
+    name: text("name"),
+    studioName: text("studioName"),
+    email: text("email"),
+    phone: text("phone") || undefined,
+    kind: text("kind") as "PHOTO" | "VIDEO" | "BOTH",
+    message: text("message") || undefined,
+    website: text("website"),
+  });
+  return res.success ? { status: "done" } : { status: "error", message: res.message };
+}
+
 export interface InviteRequestRow {
   id: string;
   name: string;
