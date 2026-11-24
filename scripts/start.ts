@@ -24,7 +24,7 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { appEnvFrom } from "@/lib/app-env";
 import { isLiveAddress, productionSettingProblems } from "@/lib/production-settings";
-import { removeDemoUploads } from "../prisma/setup-assets";
+import { removeDemoUploads, upgradeDemoUploads } from "../prisma/setup-assets";
 import { runPrisma } from "./prisma-cli.mjs";
 
 const SCHEMA = "prisma/schema.prisma";
@@ -181,6 +181,12 @@ async function main() {
       shell: process.platform === "win32",
     });
     if (r.status !== 0) throw new Error("Demo data couldn't be added.");
+  }
+
+  if (appEnv !== "production") {
+    // A demo copy made before the sample photos existed still has placeholders: give it the photos.
+    const upgraded = await upgradeDemoUploads(path.join(cwd, "public", "uploads"));
+    if (upgraded.length > 0) console.log(`Gave ${upgraded.length} demo files their sample photos.`);
   }
 
   if (appEnv === "production") {

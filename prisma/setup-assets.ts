@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -6,6 +7,10 @@ import path from "node:path";
  * data points at. They are made here when the demo data is loaded (prisma/seed.ts), never kept in
  * git or the Docker image, so production, which never loads demo data, has none. A production
  * started by an older version that still shipped them removes them (scripts/start.ts).
+ *
+ * The showcase and delivered photos are real sample photos, kept in prisma/demo-images (same paths
+ * as public/uploads) so the demo studios' websites and galleries aren't empty. They are used only
+ * when that folder is there; otherwise the tiny placeholder is written instead.
  */
 
 // 1x1 valid PNG buffer
@@ -42,10 +47,33 @@ const APEX_LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" 
     <text x="115" y="36" fill="#06b6d4" font-family="sans-serif" font-weight="400" font-size="14">MOTION</text>
   </svg>`;
 
-const files = (folder: string, names: string[], bytes: Buffer) => names.map((n) => ({ file: `${folder}/${n}`, bytes }));
+type DemoUpload = {
+  file: string;
+  /** Exactly what the demo writes: the sample photo when there is one, else the placeholder. */
+  bytes: Buffer;
+  /** The tiny placeholder an older version wrote in place of the photo (set only when `bytes` is a photo). */
+  stub?: Buffer;
+};
+
+const files = (folder: string, names: string[], bytes: Buffer): DemoUpload[] => names.map((n) => ({ file: `${folder}/${n}`, bytes }));
+
+/** A sample photo from prisma/demo-images, or null when this copy has none. */
+function demoPhoto(file: string): Buffer | null {
+  try {
+    return readFileSync(path.join(process.cwd(), "prisma", "demo-images", ...file.split("/")));
+  } catch {
+    return null;
+  }
+}
+
+const withPhotos = (entries: DemoUpload[]): DemoUpload[] =>
+  entries.map((e) => {
+    const photo = e.file.endsWith(".jpg") ? demoPhoto(e.file) : null;
+    return photo ? { file: e.file, bytes: photo, stub: e.bytes } : e;
+  });
 
 /** Every demo file: its path inside public/uploads and its exact content. */
-export const DEMO_UPLOADS: ReadonlyArray<{ file: string; bytes: Buffer }> = [
+export const DEMO_UPLOADS: ReadonlyArray<DemoUpload> = withPhotos([
   { file: "logos/lumina-logo.svg", bytes: Buffer.from(LUMINA_LOGO) },
   { file: "logos/apex-logo.svg", bytes: Buffer.from(APEX_LOGO) },
   ...files("qrcodes", ["lumina_qr.png", "apex_duitnow_qr.png"], PNG_BUFFER),
@@ -74,7 +102,7 @@ export const DEMO_UPLOADS: ReadonlyArray<{ file: string; bytes: Buffer }> = [
     ],
     JPEG_BUFFER
   ),
-];
+]);
 
 /** Writes every demo file into `uploadsRoot` (public/uploads), with the upload folders. */
 export async function writeDemoUploads(uploadsRoot: string): Promise<void> {
@@ -99,15 +127,34 @@ function sameContent(a: Buffer, b: Buffer): boolean {
  */
 export async function removeDemoUploads(uploadsRoot: string): Promise<string[]> {
   const removed: string[] = [];
-  for (const { file, bytes } of DEMO_UPLOADS) {
+  for (const { file, bytes, stub } of DEMO_UPLOADS) {
     const target = path.join(uploadsRoot, ...file.split("/"));
     const current = await fs.readFile(target).catch(() => null);
-    if (current && sameContent(current, bytes)) {
+    if (current && (sameContent(current, bytes) || (stub && sameContent(current, stub)))) {
       await fs.rm(target, { force: true });
       removed.push(file);
     }
   }
   return removed;
+}
+
+/**
+ * Swaps a demo file that is still the tiny placeholder for its sample photo, so a demo copy created
+ * before the photos existed gets them on its next start. A file a studio has replaced (anything but
+ * the exact placeholder) is left alone. Returns what it replaced.
+ */
+export async function upgradeDemoUploads(uploadsRoot: string): Promise<string[]> {
+  const upgraded: string[] = [];
+  for (const { file, bytes, stub } of DEMO_UPLOADS) {
+    if (!stub) continue;
+    const target = path.join(uploadsRoot, ...file.split("/"));
+    const current = await fs.readFile(target).catch(() => null);
+    if (current && current.equals(stub)) {
+      await fs.writeFile(target, bytes);
+      upgraded.push(file);
+    }
+  }
+  return upgraded;
 }
 
 /** For prisma/seed.ts: the demo files in this project's public/uploads. */

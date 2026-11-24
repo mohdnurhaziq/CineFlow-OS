@@ -13,7 +13,7 @@ import { mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { TestHarness } from "./test-harness";
-import { DEMO_UPLOADS, removeDemoUploads, writeDemoUploads } from "../../prisma/setup-assets";
+import { DEMO_UPLOADS, removeDemoUploads, upgradeDemoUploads, writeDemoUploads } from "../../prisma/setup-assets";
 import { settingsRefusal } from "../../scripts/start";
 import { ALERT_KINDS, alertEmail } from "@/lib/ops-alert";
 
@@ -99,6 +99,46 @@ export async function runTier32Running247Tests(harness: TestHarness) {
     const main = start.slice(start.indexOf("async function main"));
     harness.assert(/appEnv === "production"[\s\S]{0,200}removeDemoUploads\(/.test(main), "start.ts removes them in production");
     harness.assert(/result === "created" && appEnv !== "production"/.test(main), "The demo data (and its files) is never loaded in production");
+  });
+
+  await harness.test("T32-UPL-04: the demo studios get sample photos; an older copy's placeholders are swapped, a studio's own file never is", async () => {
+    const photos = DEMO_UPLOADS.filter((u) => u.stub);
+    harness.assert(photos.length >= 20, "The showcase and delivered photos have sample photos", String(photos.length));
+    harness.assert(photos.every((u) => u.bytes.length > 2000 && u.file.endsWith(".jpg")), "Each one is a real image, not the 1x1 placeholder");
+    for (const f of ["showcase/lumina_showcase_01.jpg", "showcase/lumina_showcase_02.jpg", "showcase/apex_raya_showcase.jpg"]) {
+      harness.assert(photos.some((u) => u.file === f), `${f} has a sample photo`);
+    }
+    harness.assert(DEMO_UPLOADS.filter((u) => u.file.startsWith("receipts/")).every((u) => !u.stub), "Receipts stay placeholders");
+
+    const dir = mkdtempSync(path.join(os.tmpdir(), "cineflow-demo-photos-"));
+    try {
+      // A copy made before the photos existed: every file is still the placeholder.
+      await writeDemoUploads(dir);
+      for (const u of photos) writeFileSync(path.join(dir, u.file), u.stub!);
+      // One of them is a studio's own picture under a demo name.
+      const own = Buffer.from([0xff, 0xd8, 0xff, 0x02, 0x03]);
+      writeFileSync(path.join(dir, "showcase", "lumina_01_a.jpg"), own);
+
+      const upgraded = await upgradeDemoUploads(dir);
+      harness.assertEqual(upgraded.length, photos.length - 1, "Every placeholder but the studio's own is swapped", upgraded.join(", "));
+      harness.assert(readFileSync(path.join(dir, "showcase", "lumina_showcase_01.jpg")).equals(photos.find((u) => u.file === "showcase/lumina_showcase_01.jpg")!.bytes), "A swapped file is the sample photo");
+      harness.assert(readFileSync(path.join(dir, "showcase", "lumina_01_a.jpg")).equals(own), "A studio's own file is left alone");
+      harness.assertDeepEqual(await upgradeDemoUploads(dir), [], "Running it again changes nothing");
+      harness.assertDeepEqual(await upgradeDemoUploads(path.join(dir, "missing")), [], "A missing folder is fine");
+
+      // Production's cleanup removes a placeholder an older version left AND a sample photo, but not the studio's own file.
+      writeFileSync(path.join(dir, "showcase", "lumina_01_b.jpg"), photos.find((u) => u.file === "showcase/lumina_01_b.jpg")!.stub!);
+      const removed = await removeDemoUploads(dir);
+      harness.assert(removed.includes("showcase/lumina_01_b.jpg"), "An old placeholder is removed");
+      harness.assert(removed.includes("showcase/lumina_showcase_01.jpg"), "A sample photo is removed");
+      harness.assert(!removed.includes("showcase/lumina_01_a.jpg"), "A studio's own file is kept");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+
+    const start = read("scripts/start.ts");
+    const main = start.slice(start.indexOf("async function main"));
+    harness.assert(/appEnv !== "production"[\s\S]{0,200}upgradeDemoUploads\(/.test(main), "start.ts gives demo copies their photos, never production");
   });
 
   // ── A refused start ─────────────────────────────────────────────────────────
