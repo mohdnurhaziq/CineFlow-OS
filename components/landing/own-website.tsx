@@ -21,17 +21,31 @@ export function OwnWebsite() {
             On the {PLANS[cheapestPlanWith("customDomain")].name} plan and above, it lives on your own web address.
           </p>
         </div>
-        <div className="lg:col-span-7" data-parallax="20">
-          <DeviceFrame kind="browser" url="yourstudio.com">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/landing/shots/website-desktop.webp"
-              alt="A studio's public website with its portfolio and packages"
-              loading="lazy"
-              decoding="async"
-              className="aspect-[16/10] w-full object-cover object-top"
-            />
-          </DeviceFrame>
+        <div className="sm:flex sm:items-center sm:gap-5 lg:col-span-7">
+          <div className="hidden sm:block sm:min-w-0 sm:flex-1" data-parallax="20">
+            <DeviceFrame kind="browser" url="yourstudio.com">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/landing/shots/website-desktop.webp"
+                alt="A studio's public website with its portfolio and packages"
+                loading="lazy"
+                decoding="async"
+                className="aspect-[16/10] w-full object-cover object-top"
+              />
+            </DeviceFrame>
+          </div>
+          <div className="flex justify-center sm:block sm:w-[30%] sm:max-w-[220px] sm:shrink-0">
+            <DeviceFrame kind="phone" className="w-[min(72%,260px)] sm:w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/landing/shots/website-phone.webp"
+                alt="A studio's public website on a phone"
+                loading="lazy"
+                decoding="async"
+                className="aspect-[9/19] w-full object-cover object-top"
+              />
+            </DeviceFrame>
+          </div>
         </div>
       </div>
     </section>

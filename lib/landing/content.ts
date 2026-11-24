@@ -34,7 +34,7 @@ export const CHAPTERS: Chapter[] = [
     title: "They pay the way they already do",
     body: "Invoices for a deposit and the balance. Clients pay by bank transfer or DuitNow and upload their slip; you approve it in one tap.",
     feature: null,
-    shot: { desktop: "/landing/shots/pay-desktop.webp", alt: "The studio's list of payment slips waiting for approval" },
+    shot: { desktop: "/landing/shots/pay-desktop.webp", phone: "/landing/shots/pay-phone.webp", alt: "The studio's list of payment slips waiting for approval" },
   },
   {
     n: "03",
@@ -42,7 +42,7 @@ export const CHAPTERS: Chapter[] = [
     title: "Proposals they sign online",
     body: "Send a proposal with add-ons the client can pick. They review it, sign it on their phone, and the project and invoice are created for you.",
     feature: "proposals",
-    shot: { desktop: "/landing/shots/sign-desktop.webp", alt: "A proposal with add-ons ready for the client to sign" },
+    shot: { desktop: "/landing/shots/sign-desktop.webp", phone: "/landing/shots/sign-phone.webp", alt: "A proposal with add-ons ready for the client to sign" },
   },
   {
     n: "04",
@@ -50,7 +50,7 @@ export const CHAPTERS: Chapter[] = [
     title: "A crew that knows the plan",
     body: "Assign your team to each shoot, share call sheets, and send calendar invites so everyone turns up at the right place and time.",
     feature: "callSheets",
-    shot: { desktop: "/landing/shots/shoot-desktop.webp", alt: "A call sheet with the crew, times and shot list" },
+    shot: { desktop: "/landing/shots/shoot-desktop.webp", phone: "/landing/shots/shoot-phone.webp", alt: "A call sheet and shot list for a shoot day" },
     video: "shoot",
   },
   {
@@ -68,7 +68,7 @@ export const CHAPTERS: Chapter[] = [
     title: "Prints on their wall",
     body: "Clients see your frames on their own photos, pick a size and frame, and order prints from you, all inside the gallery.",
     feature: "wallArt",
-    shot: { desktop: "/landing/shots/print-desktop.webp", alt: "The wall-art visualizer showing a framed photo" },
+    shot: { desktop: "/landing/shots/print-desktop.webp", phone: "/landing/shots/print-phone.webp", alt: "The wall-art visualizer showing a framed photo" },
     video: "print",
   },
 ];

@@ -54,6 +54,10 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assertEqual(planBadge(null), null, "No badge when none is needed");
   });
 
+  await harness.test("T39-CONTENT-04: every chapter has a phone screen, so phones never get a squeezed desktop screenshot", async () => {
+    for (const c of CHAPTERS) harness.assert(!!c.shot.phone, `${c.key} has a phone screen`);
+  });
+
   await harness.test("T39-CONTENT-02: none of the banned phrases appear in the copy", async () => {
     const text = JSON.stringify([CHAPTERS, EXTRAS, ...MODES.map((m) => faqItems(m, EMAIL))]);
     for (const p of BANNED_PHRASES) {
@@ -364,6 +368,13 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
       harness.assert(!links.some((h) => h.startsWith("/super-admin")), `${mode}: no console link`);
       harness.assert(links.includes(mode === "TRIAL" ? "/create-studio" : "/#invite"), `${mode}: the main button`);
     }
+  });
+
+  await harness.test("T39-PAGE-07: on small screens the journey shows the phone screen, not the desktop browser window", async () => {
+    const out = await renderSite({});
+    const hiddenOnPhone = out.split("hidden sm:block").length - 1;
+    harness.assert(hiddenOnPhone >= CHAPTERS.length, `Each chapter's browser window is hidden below sm (${hiddenOnPhone})`);
+    harness.assert((out.match(/-phone\.webp/g) ?? []).length >= CHAPTERS.length + 1, "Every chapter and the website section show a phone screen");
   });
 
   await harness.test("T39-PAGE-06: every image the page uses exists", async () => {
