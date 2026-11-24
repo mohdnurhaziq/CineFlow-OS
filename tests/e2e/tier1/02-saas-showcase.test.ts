@@ -246,10 +246,11 @@ export async function runSaaSShowcaseTests(harness: TestHarness) {
     harness.assertEqual(metrics.totalStudios, dbCount, "metrics.totalStudios matches db.tenant.count()");
   });
 
-  await harness.test("T1-F09-02: getPlatformMetrics computes estimated MRR based on active subscriptions", async () => {
+  await harness.test("T1-F09-02: getPlatformMetrics reports studios by plan state and recorded revenue", async () => {
     const metrics = await getPlatformMetrics();
-    harness.assert(typeof metrics.estimatedMrrUsd === "number", "estimatedMrrUsd is a number");
-    harness.assert(metrics.estimatedMrrUsd >= 0, "estimatedMrrUsd is non-negative");
+    const states = Object.values(metrics.byState).reduce((a, b) => a + b, 0);
+    harness.assertEqual(states, metrics.totalStudios, "Every studio is in exactly one state");
+    harness.assert(metrics.revenueThisMonth >= 0 && metrics.revenue12m >= metrics.revenueThisMonth, "Recorded revenue adds up");
   });
 
   await harness.test("T1-F09-03: getPlatformMetrics separates settled revenue and pending amounts by currency", async () => {

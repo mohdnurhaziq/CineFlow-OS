@@ -24,6 +24,7 @@ import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { PlanLockedError, bookingsOpen, hasFeature, requireFeature } from "@/lib/billing/guard";
 import { holdBookingSlot } from "@/lib/actions/booking";
 import { onboardStudio } from "@/lib/actions/onboarding";
+import { changeStudioPlan, closeStudio, extendTrial, getPlatformMetrics, getStudioPayments, pauseStudio, recordPlatformPayment, resumeStudio } from "@/lib/actions/super-admin";
 import { processInvoicePayment } from "@/lib/actions/checkout";
 import { placePrintOrder } from "@/lib/actions/print-orders";
 import { db } from "@/lib/db";
@@ -424,6 +425,108 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
         await db.user.deleteMany({ where: { tenantId: t.id } });
         await db.tenant.delete({ where: { id: t.id } }).catch(() => {});
       }
+    }
+  });
+
+  // ── Task 7: super-admin actions ─────────────────────────────────────────────────────────
+  const ymd = (n: number) => new Date(Date.now() + n * DAY_MS + 8 * 3_600_000).toISOString().slice(0, 10); // Malaysia date
+  const pay = (over: Record<string, unknown> = {}) =>
+    withSession(superAdmin, () =>
+      recordPlatformPayment({ tenantId: lumina.id, amount: 249, method: "BANK_TRANSFER", plan: "PRO", paidUntil: ymd(30), reference: "T38", ...over } as never)
+    );
+  const tenantNow = () => db.tenant.findUniqueOrThrow({ where: { id: lumina.id } });
+
+  await harness.test("T38-ADMIN-01: recording a payment sets the plan and the paid-until day, and never shortens it", async () => {
+    try {
+      await db.tenant.update({ where: { id: lumina.id }, data: { subscriptionTier: "STARTER", paidUntil: null, trialEndsAt: null, pausedAt: null, pauseReason: null } });
+      const before = (await withSession(superAdmin, () => getStudioPayments(lumina.id))).length;
+      const r = await pay({ plan: "PRO", paidUntil: ymd(40) });
+      harness.assert((r as { success?: boolean }).success === true, "Recorded", JSON.stringify(r));
+      let row = await tenantNow();
+      harness.assertEqual(row.subscriptionTier, "PRO", "The payment's plan applies");
+      harness.assertEqual(planStatus(row).endsOn, ymd(40), "Paid until the entered day");
+      await pay({ paidUntil: ymd(10) });
+      row = await tenantNow();
+      harness.assertEqual(planStatus(row).endsOn, ymd(40), "A back-dated payment doesn't shorten it");
+      harness.assertEqual((await withSession(superAdmin, () => getStudioPayments(lumina.id))).length, before + 2, "Both payments are on record");
+      const bad = await pay({ amount: -5 });
+      harness.assert((bad as { success?: boolean }).success === false, "A negative amount is refused");
+    } finally {
+      await db.platformPayment.deleteMany({ where: { reference: "T38" } });
+      await restorePlan();
+    }
+  });
+
+  await harness.test("T38-ADMIN-02: a payment resumes a studio paused for lateness only if it covers it; a manual pause stays", async () => {
+    try {
+      await db.tenant.update({ where: { id: lumina.id }, data: { subscriptionTier: "PRO", paidUntil: new Date(`${ymd(-30)}T00:00:00+08:00`), trialEndsAt: null, pausedAt: new Date(), pauseReason: "OVERDUE" } });
+      await pay({ paidUntil: ymd(-20) });
+      let row = await tenantNow();
+      harness.assert(row.pausedAt !== null, "Still past the grace period: stays paused");
+      await pay({ paidUntil: ymd(30) });
+      row = await tenantNow();
+      harness.assertEqual(row.pausedAt, null, "Covered: resumed");
+      harness.assertEqual(planStatus(row).state, "ACTIVE", "Active again");
+      await withSession(superAdmin, () => pauseStudio({ tenantId: lumina.id, reason: "Asked to pause" }));
+      await pay({ paidUntil: ymd(60) });
+      row = await tenantNow();
+      harness.assert(row.pausedAt !== null && row.pauseReason === "MANUAL", "A manual pause stays through a payment");
+      const resumed = await withSession(superAdmin, () => resumeStudio({ tenantId: lumina.id }));
+      harness.assert((resumed as { success?: boolean }).success === true, "Resume");
+      harness.assertEqual((await tenantNow()).pausedAt, null, "…clears it");
+    } finally {
+      await db.platformPayment.deleteMany({ where: { reference: "T38" } });
+      await restorePlan();
+    }
+  });
+
+  await harness.test("T38-ADMIN-03: closing a studio needs its address typed; a closed studio's pages are gone", async () => {
+    const slug = `t38-close-${Date.now().toString(36)}`;
+    const t = await db.tenant.create({ data: { name: "T38 Close", slug } });
+    try {
+      const wrong = await withSession(superAdmin, () => closeStudio({ tenantId: t.id, confirmSlug: "nope" }));
+      harness.assert((wrong as { success?: boolean }).success === false, "Wrong confirmation: refused");
+      harness.assertEqual((await db.tenant.findUnique({ where: { id: t.id } }))?.subscriptionStatus, "ACTIVE", "Still there");
+      const ok = await withSession(superAdmin, () => closeStudio({ tenantId: t.id, confirmSlug: slug }));
+      harness.assert((ok as { success?: boolean }).success === true, "Right confirmation: closed");
+      harness.assertEqual(planStatus((await db.tenant.findUnique({ where: { id: t.id } }))!).state, "CLOSED", "State is closed");
+    } finally {
+      await db.tenant.delete({ where: { id: t.id } }).catch(() => {});
+    }
+  });
+
+  await harness.test("T38-ADMIN-04: only a super-admin can do any of it; revenue is what was recorded", async () => {
+    try {
+      const attempts: Array<[string, () => Promise<unknown>]> = [
+        ["recordPlatformPayment", () => withSession(owner, () => recordPlatformPayment({ tenantId: lumina.id, amount: 1, method: "CASH", plan: "PRO", paidUntil: ymd(5) } as never))],
+        ["changeStudioPlan", () => withSession(owner, () => changeStudioPlan({ tenantId: lumina.id, plan: "STUDIO_UNLIMITED" }))],
+        ["extendTrial", () => withSession(owner, () => extendTrial({ tenantId: lumina.id, until: ymd(5) }))],
+        ["pauseStudio", () => withSession(owner, () => pauseStudio({ tenantId: lumina.id, reason: "x" }))],
+        ["resumeStudio", () => withSession(owner, () => resumeStudio({ tenantId: lumina.id }))],
+        ["closeStudio", () => withSession(owner, () => closeStudio({ tenantId: lumina.id, confirmSlug: "lumina-cine" }))],
+      ];
+      for (const [name, call] of attempts) {
+        let refused = false;
+        try {
+          const res = (await call()) as { success?: boolean } | undefined;
+          refused = res?.success === false;
+        } catch {
+          refused = true;
+        }
+        harness.assert(refused, `${name}: refused for a studio owner`);
+      }
+      harness.assertEqual((await db.tenant.findUnique({ where: { id: lumina.id } }))?.subscriptionStatus, "ACTIVE", "Nothing was changed");
+
+      const m0 = await withSession(superAdmin, () => getPlatformMetrics());
+      await pay({ amount: 300 });
+      await pay({ amount: 99.5, plan: "STARTER", paidUntil: ymd(35) });
+      const m1 = await withSession(superAdmin, () => getPlatformMetrics());
+      harness.assertEqual(Math.round((m1.revenueThisMonth - m0.revenueThisMonth) * 100), 39950, "Revenue this month grows by what was recorded");
+      harness.assertEqual(Math.round((m1.revenue12m - m0.revenue12m) * 100), 39950, "…and in the last 12 months");
+      harness.assert(!("estimatedMrrUsd" in m1), "The list-price estimate is gone");
+    } finally {
+      await db.platformPayment.deleteMany({ where: { reference: "T38" } });
+      await restorePlan();
     }
   });
 }

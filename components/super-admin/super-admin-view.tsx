@@ -117,10 +117,10 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
             </div>
             <div className="pt-3">
               <div className="font-mono text-3xl font-bold text-emerald-400 tabular-nums">
-                ${metrics.estimatedMrrUsd.toLocaleString()}
+                RM {metrics.revenueThisMonth.toLocaleString()}
               </div>
               <p className="text-xs text-zinc-400 mt-1 font-mono">
-                USD SaaS recurring revenue
+                Plan payments recorded this month
               </p>
             </div>
           </div>
