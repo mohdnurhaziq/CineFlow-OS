@@ -8,11 +8,13 @@ import { planStatus } from "@/lib/billing/state";
 import { type PlanCode, type PlanFeature } from "@/lib/billing/plans";
 import { countTeamSeats } from "@/lib/billing/team";
 import { readFile } from "node:fs/promises";
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { provideReactGlobal } from "./react-tree";
 import { loadAccess } from "@/lib/auth/access";
 import { visibleNavItems } from "@/components/admin/admin-nav-items";
 import { PlanBanner } from "@/components/billing/plan-banner";
+import { SuperAdminView } from "@/components/super-admin/super-admin-view";
 import { PlanPanel } from "@/components/billing/plan-panel";
 import { createProposalAddOnTemplate } from "@/lib/actions/admin-proposals";
 import { createProposal, sendProposal, createCallSheet } from "@/lib/actions/admin-projects";
@@ -24,7 +26,7 @@ import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { PlanLockedError, bookingsOpen, hasFeature, requireFeature } from "@/lib/billing/guard";
 import { holdBookingSlot } from "@/lib/actions/booking";
 import { onboardStudio } from "@/lib/actions/onboarding";
-import { changeStudioPlan, closeStudio, extendTrial, getPlatformMetrics, getStudioPayments, pauseStudio, recordPlatformPayment, resumeStudio } from "@/lib/actions/super-admin";
+import { changeStudioPlan, closeStudio, extendTrial, getAllTenantsSummary, getPlatformMetrics, getStudioPayments, pauseStudio, recordPlatformPayment, resumeStudio } from "@/lib/actions/super-admin";
 import { processInvoicePayment } from "@/lib/actions/checkout";
 import { placePrintOrder } from "@/lib/actions/print-orders";
 import { db } from "@/lib/db";
@@ -526,6 +528,23 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
       harness.assert(!("estimatedMrrUsd" in m1), "The list-price estimate is gone");
     } finally {
       await db.platformPayment.deleteMany({ where: { reference: "T38" } });
+      await restorePlan();
+    }
+  });
+
+  // ── Task 8: the super-admin console ─────────────────────────────────────────────────────
+  await harness.test("T38-CONSOLE-01: the console shows each studio's plan state and dates, with no invented infrastructure text", async () => {
+    try {
+      await db.tenant.update({ where: { id: lumina.id }, data: { subscriptionTier: "PRO", paidUntil: new Date(`${ymd(20)}T00:00:00+08:00`), trialEndsAt: null, pausedAt: null, pauseReason: null } });
+      const metrics = await withSession(superAdmin, () => getPlatformMetrics());
+      const tenants = await withSession(superAdmin, () => getAllTenantsSummary());
+      const out = html(createElement(SuperAdminView, { metrics, tenants: tenants as never }));
+      harness.assert(out.includes("Lumina CineWorks"), "Lists the studio");
+      harness.assert(/Paid until/.test(out) && /Studio plan|Studio</.test(out), "Shows its plan and paid-until", out.slice(0, 200));
+      harness.assert(/Recorded this month/i.test(out) && /Last 12 months/i.test(out), "Shows recorded revenue");
+      harness.assert(!/SQLite|Simulated|Zero Hardcoded|SYSTEM HEALTH/.test(out), "No invented infrastructure text");
+      harness.assert(/Manage/.test(out), "Each studio can be managed");
+    } finally {
       await restorePlan();
     }
   });
