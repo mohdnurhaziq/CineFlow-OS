@@ -8,6 +8,7 @@ import { STAFF_ROLES } from "@/lib/auth/guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { teamMemberStatus } from "@/lib/team/status";
 import { notifyAssigneesDetailed, summariseDelivery, type AssigneeEmailSummary } from "@/lib/bookings/assignment-emails";
+import { requireFeature } from "@/lib/billing/guard";
 
 /**
  * Who shoots which booking. Needs Bookings: Manage. The people assigned are told by email;
@@ -51,6 +52,7 @@ export async function assignTeamMember(
   try {
     const data = AssignSchema.parse(input);
     const session = await requireAccess(data.tenantId, "bookings", "MANAGE");
+    await requireFeature(data.tenantId, "team", session);
     if (!(await findAssignable(data.tenantId, data.userId))) return fail("NOT_ON_TEAM", "Only active members of your team can be assigned.");
 
     const ids = [...new Set(data.bookingIds)];

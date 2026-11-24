@@ -5,7 +5,16 @@
 import { TestHarness } from "./test-harness";
 import { PLANS, cheapestPlanWith } from "@/lib/billing/plans";
 import { planStatus } from "@/lib/billing/state";
-import type { PlanCode } from "@/lib/billing/plans";
+import { type PlanCode, type PlanFeature } from "@/lib/billing/plans";
+import { countTeamSeats } from "@/lib/billing/team";
+import { readFile } from "node:fs/promises";
+import { createProposalAddOnTemplate } from "@/lib/actions/admin-proposals";
+import { createProposal, sendProposal, createCallSheet } from "@/lib/actions/admin-projects";
+import { createFrameDesign, createPrintSize } from "@/lib/actions/admin-frames";
+import { createGearItem, createKitBundle, createEquipmentReservation, updateGearItem, deleteGearItem } from "@/lib/actions/gear";
+import { createTeamRole, inviteTeamMember, restoreTeamMember } from "@/lib/actions/admin-team";
+import { assignTeamMember } from "@/lib/actions/admin-assignments";
+import { updateStudioSettings } from "@/lib/actions/admin-settings";
 import { PlanLockedError, requireFeature } from "@/lib/billing/guard";
 import { db } from "@/lib/db";
 import { withSession } from "./mocks/session";
@@ -155,6 +164,122 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
       harness.assert(/Contact us to renew/.test(`${res.message ?? ""}${res.error ?? ""}`), "Says how to renew", JSON.stringify(res));
     } finally {
       await restorePlan();
+    }
+  });
+
+  // ── Task 3: feature locks and the team limit ────────────────────────────────────────────
+  const M = "t38-missing-id";
+  const t = { tenantId: lumina.id, tenantSlug: "lumina-cine" };
+  const msgOf = (r: unknown) => {
+    const x = r as { message?: string; error?: string } | null;
+    return `${x?.message ?? ""} ${x?.error ?? ""}`;
+  };
+  const locked = (r: unknown) => /Contact us to upgrade|plan includes|owner only/.test(msgOf(r));
+  /** [what, the feature it needs, how to call it]. The ids are made up: a plan check comes first, so an allowed call fails later, for another reason. */
+  const LOCKS: Array<[string, PlanFeature, () => Promise<unknown>]> = [
+    ["createProposalAddOnTemplate", "proposals", () => createProposalAddOnTemplate({ ...t, name: "T38 add-on", description: "T38 add-on text", price: 1, unit: "fixed", isDefault: false, isActive: true })],
+    ["createProposal", "proposals", () => createProposal({ ...t, clientId: M, title: "T38", category: "wedding", discipline: "PHOTOGRAPHY", basePrice: 100, depositPercentage: 50, contractTerms: "T38 terms, long enough to pass the check.", notifyClient: false } as never)],
+    ["sendProposal", "proposals", () => sendProposal({ tenantId: lumina.id, proposalId: M, notifyClient: false })],
+    ["createCallSheet", "callSheets", () => createCallSheet({ tenantId: lumina.id, projectId: M, title: "T38", shootDate: "2099-01-01", generalCallTime: "07:00 AM", locationName: "Studio", locationAddress: "1 Test Street" })],
+    ["createFrameDesign", "wallArt", () => createFrameDesign({ ...t, name: "T38 frame", material: "Oak", moldingWidth: 1, frameColor: "Black", previewAsset: "/uploads/t38.png", priceOffset: 0, isAvailable: true })],
+    ["createPrintSize", "wallArt", () => createPrintSize({ ...t, code: "T38", name: "T38 size", widthInches: 1, heightInches: 1, basePrice: 1 })],
+    ["createGearItem", "gear", () => createGearItem({ ...t, name: "T38 lens", sku: "T38-SKU", category: "LENS" } as never)],
+    ["createKitBundle", "gear", () => createKitBundle({ ...t, name: "T38 kit", description: "T38", discipline: "PHOTOGRAPHY", items: [{ itemId: M, quantity: 1 }] } as never)],
+    ["createEquipmentReservation", "gear", () => createEquipmentReservation({ ...t, projectId: M, itemId: M, startDate: "2099-01-01", endDate: "2099-01-02" } as never)],
+    ["createTeamRole", "team", () => createTeamRole({ ...t, name: "T38 role", access: { areas: {}, ticks: {} } } as never)],
+    ["assignTeamMember", "team", () => assignTeamMember({ ...t, bookingIds: [M], userId: M })],
+  ];
+
+  await harness.test("T38-LOCK-01: each creating action is refused without its feature and allowed with it", async () => {
+    try {
+      for (const [name, feature, call] of LOCKS) {
+        const needed = cheapestPlanWith(feature);
+        const without: PlanCode = needed === "PRO" ? "STARTER" : "PRO";
+        await setPlan(without);
+        harness.assert(locked(await withSession(owner, call)), `${name}: refused on ${without}`);
+        await setPlan(needed);
+        harness.assert(!locked(await withSession(owner, call)), `${name}: not a plan refusal on ${needed}`);
+        await setPlan("STARTER", "TRIAL");
+        harness.assert(!locked(await withSession(owner, call)), `${name}: open during a trial`);
+        await setPlan(without);
+        harness.assert(!locked(await withSession(superAdmin, call)), `${name}: a super-admin is never locked`);
+      }
+    } finally {
+      await restorePlan();
+    }
+  });
+
+  await harness.test("T38-LOCK-02: a downgrade deletes nothing: existing gear can still be changed, signing isn't plan-checked", async () => {
+    try {
+      const gear = await db.inventoryItem.create({ data: { tenantId: lumina.id, name: "T38 old lens", sku: `T38-${Date.now()}`, category: "LENS" } as never });
+      await setPlan("STARTER");
+      const res = await withSession(owner, () => updateGearItem({ ...t, id: gear.id, name: "T38 renamed" } as never));
+      harness.assert(!locked(res), "An existing gear item can still be edited", JSON.stringify(res));
+      const del = await withSession(owner, () => deleteGearItem({ ...t, id: gear.id }));
+      harness.assert(!locked(del), "…and deleted", JSON.stringify(del));
+      const sign = await readFile("lib/actions/proposals.ts", "utf8");
+      harness.assert(!/requireFeature/.test(sign), "A client can still sign a proposal already sent (no plan check there)");
+    } finally {
+      await restorePlan();
+      await db.inventoryItem.deleteMany({ where: { sku: { startsWith: "T38-" } } });
+    }
+  });
+
+  await harness.test("T38-LOCK-03: the team limit stops invitations and restores; existing members keep access", async () => {
+    // Its own studio, so other tiers' team members don't count.
+    const slug = `t38-team-${Date.now().toString(36)}`;
+    const studio = await db.tenant.create({
+      data: { name: "T38 Team Studio", slug, subscriptionTier: "PRO", paidUntil: new Date(Date.now() + 30 * DAY_MS) },
+    });
+    try {
+      const boss = await db.user.create({ data: { tenantId: studio.id, email: `t38-boss-${slug}@example.test`, name: "T38 Boss", role: "STUDIO_OWNER", passwordHash: "x" } });
+      const bossSession = { id: boss.id, email: boss.email, name: boss.name, role: boss.role, tenantId: studio.id, tenantSlug: slug };
+      const tt = { tenantId: studio.id, tenantSlug: slug };
+      const members: string[] = [];
+      const fill = async (n: number) => {
+        while ((await countTeamSeats(studio.id)) < n) {
+          const u = await db.user.create({ data: { tenantId: studio.id, email: `t38-seat-${slug}-${members.length}@example.test`, name: "T38 Seat", role: "TEAM_MEMBER", passwordHash: "x" } });
+          members.push(u.id);
+        }
+      };
+      const setTier = (tier: PlanCode) => db.tenant.update({ where: { id: studio.id }, data: { subscriptionTier: tier } });
+      const invite = () => withSession(bossSession, () => inviteTeamMember({ ...tt, name: "T38 Invitee", email: `t38-invitee-${Date.now()}@example.test`, roleId: M } as never));
+      await setTier("STARTER");
+      harness.assert(/owner only/.test(msgOf(await invite())), "Solo: the owner only");
+      await setTier("PRO");
+      await fill(4);
+      harness.assert(!locked(await invite()), "Studio with 4 of 5: may invite");
+      await fill(5);
+      harness.assert(/plan includes 5 team members/.test(msgOf(await invite())), "Studio with 5 of 5: refused");
+      await setTier("STUDIO_UNLIMITED");
+      harness.assert(!locked(await invite()), "Production: no limit");
+      await setTier("STARTER");
+      const stillThere = await db.user.count({ where: { id: { in: members }, deactivatedAt: null } });
+      harness.assertEqual(stillThere, members.length, "Members over the limit after a downgrade keep their access");
+      await setTier("PRO");
+      await db.user.update({ where: { id: members[0]! }, data: { deactivatedAt: new Date() } });
+      await fill(5);
+      harness.assert(/plan includes 5 team members/.test(msgOf(await withSession(bossSession, () => restoreTeamMember({ ...tt, userId: members[0]! })))), "Restoring past the limit is refused");
+    } finally {
+      await db.user.deleteMany({ where: { tenantId: studio.id } });
+      await db.tenant.delete({ where: { id: studio.id } });
+    }
+  });
+
+  await harness.test("T38-LOCK-04: a custom domain already set stays; a new one needs the plan", async () => {
+    const before = lumina.customDomain;
+    try {
+      await setPlan("STARTER");
+      const res = await withSession(owner, () => updateStudioSettings({ ...t } as never));
+      harness.assert(!locked(res), "Saving other settings on Solo works", JSON.stringify(res));
+      const set = await withSession(owner, () => updateStudioSettings({ ...t, customDomain: "t38-new.example.test" } as never));
+      harness.assert(locked(set), "Setting a new domain on Solo is refused", JSON.stringify(set));
+      await setPlan("PRO");
+      const ok = await withSession(owner, () => updateStudioSettings({ ...t, customDomain: "t38-new.example.test" } as never));
+      harness.assert(!locked(ok), "…and allowed on Studio", JSON.stringify(ok));
+    } finally {
+      await restorePlan();
+      await db.tenant.update({ where: { id: lumina.id }, data: { customDomain: before } });
     }
   });
 }

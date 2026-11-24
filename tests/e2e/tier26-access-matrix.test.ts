@@ -404,7 +404,7 @@ const RE_EXPORTS = new Set(["admin-crud.ts"]);
 function needsInSource(body: string): Need[] {
   const found = new Set<Need>();
   for (const m of body.matchAll(/\brequireAccess\([^)]*?"(\w+)",\s*"(\w+)"\)/g)) found.add(`area:${m[1]}:${m[2]}`);
-  for (const m of body.matchAll(/\brequireOwnOrManage\([^)]*?"(\w+)"\)/g)) found.add(`work:${m[1]}`);
+  for (const m of body.matchAll(/\brequireOwnOrManage\([^)]*?"(\w+)"(?:,\s*\{[^}]*\})?\)/g)) found.add(`work:${m[1]}`);
   for (const m of body.matchAll(/\brequireTick\([^)]*?"(\w+)"\)/g)) found.add(`tick:${m[1]}`);
   for (const m of body.matchAll(/\brequireRecordAccess\([^)]*\{\s*area:\s*"(\w+)"(?:[^}]*level:\s*"(\w+)")?[^}]*\}\s*\)/g)) {
     found.add(`record:${m[1]}:${m[2] ?? "VIEW"}`);

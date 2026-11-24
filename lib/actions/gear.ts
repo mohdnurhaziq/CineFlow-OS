@@ -24,6 +24,7 @@ import {
 import { checkoutWindow } from "@/lib/gear/checkout-window";
 import { errorMessageOf } from "@/lib/action-error";
 import { seesGearRates, withRate } from "@/lib/gear/rates";
+import { requireFeature } from "@/lib/billing/guard";
 
 function safeRevalidate(path: string) {
   try {
@@ -41,6 +42,7 @@ export async function createGearItem(input: CreateGearItemInput) {
   try {
     const validated = CreateGearItemSchema.parse(input);
     const user = await requireAccess(validated.tenantId, "production", "MANAGE");
+    await requireFeature(validated.tenantId, "gear", user);
     const sees = seesGearRates(user.access);
     const { tenantId, tenantSlug, sku, dailyRate, ...data } = validated;
 
@@ -323,6 +325,7 @@ export async function createKitBundle(input: CreateKitBundleInput) {
   try {
     const validated = CreateKitBundleSchema.parse(input);
     const user = await requireAccess(validated.tenantId, "production", "MANAGE");
+    await requireFeature(validated.tenantId, "gear", user);
     const sees = seesGearRates(user.access);
     const { tenantId, tenantSlug, name, description, discipline, dailyRate, items } =
       validated;
@@ -585,7 +588,7 @@ export async function checkBundleAvailability(bundleId: string, tenantId: string
 export async function createEquipmentReservation(input: CreateReservationInput) {
   try {
     const validated = CreateReservationSchema.parse(input);
-    await requireAccess(validated.tenantId, "production", "MANAGE");
+    await requireFeature(validated.tenantId, "gear", await requireAccess(validated.tenantId, "production", "MANAGE"));
     const { tenantId, tenantSlug, projectId, itemId, startDate, endDate } = validated;
 
     // Verify Project and Item belong to tenant

@@ -27,6 +27,7 @@ import {
   type PlaceOrderValues,
 } from "@/lib/validations/print-orders";
 import { studioPath } from "@/lib/domain-name";
+import { requireFeature } from "@/lib/billing/guard";
 
 type Tx = Prisma.TransactionClient;
 
@@ -228,6 +229,8 @@ export async function quotePrintOrder(
     // The team orders for a client with Print orders access.
     const isTeam = !!session && STAFF_ROLES.has(session.role);
     if (isTeam) await requireAccess(v.tenantId, "printOrders", "MANAGE");
+    // Wall art and print orders are a Production-plan feature, for the team and for clients alike.
+    await requireFeature(v.tenantId, "wallArt", session);
     const project = await loadOrderProject(db, session, v, isTeam);
     const priced = await priceOrder(db, v, project);
     return {
@@ -254,6 +257,8 @@ export async function placePrintOrder(
     // The team orders for a client with Print orders access.
     const isTeam = !!session && STAFF_ROLES.has(session.role);
     if (isTeam) await requireAccess(v.tenantId, "printOrders", "MANAGE");
+    // Wall art and print orders are a Production-plan feature, for the team and for clients alike.
+    await requireFeature(v.tenantId, "wallArt", session);
 
     const placed = await db.$transaction(async (tx) => {
       // Take SQLite's write lock before reading anything, so two orders for the last included

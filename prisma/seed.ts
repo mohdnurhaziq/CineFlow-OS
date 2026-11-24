@@ -72,7 +72,7 @@ async function main() {
       currency: "USD",
       qrCodeUrl: "/uploads/qrcodes/lumina_qr.png",
       bankDetails: "JPMorgan Chase / Lumina CineWorks LLC / Routing: 021000021 / Account: 8492019482",
-      subscriptionTier: "PRO",
+      subscriptionTier: "STUDIO_UNLIMITED",
       subscriptionStatus: "ACTIVE",
     },
   });

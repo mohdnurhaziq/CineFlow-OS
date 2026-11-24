@@ -24,6 +24,8 @@ import {
 } from "@/lib/validations/admin-team";
 import { studioUrl } from "@/lib/domain-name";
 import { notifyAssignees } from "@/lib/bookings/assignment-emails";
+import { requireFeature } from "@/lib/billing/guard";
+import { assertTeamSeat } from "@/lib/billing/team";
 
 function safeRevalidate(path: string) {
   try {
@@ -61,7 +63,7 @@ function isUniqueViolation(e: unknown): boolean {
 export async function createTeamRole(input: CreateTeamRoleInput) {
   try {
     const v = CreateTeamRoleSchema.parse(input);
-    await requireOwner(v.tenantId);
+    await requireFeature(v.tenantId, "team", await requireOwner(v.tenantId));
     await assertNameFree(v.tenantId, v.name);
     const last = await db.teamRole.aggregate({ where: { tenantId: v.tenantId }, _max: { sortOrder: true } });
     try {
@@ -211,6 +213,7 @@ export async function inviteTeamMember(input: InviteTeamMemberInput) {
   try {
     const v = InviteTeamMemberSchema.parse(input);
     const owner = await requireOwner(v.tenantId);
+    await assertTeamSeat(v.tenantId, owner);
     const tenant = await studioOf(v.tenantId);
     const role = await studioRole(v.tenantId, v.roleId);
 
@@ -346,8 +349,9 @@ export async function removeTeamMember(input: TeamMemberRefInput) {
 export async function restoreTeamMember(input: TeamMemberRefInput) {
   try {
     const v = TeamMemberRefSchema.parse(input);
-    await requireOwner(v.tenantId);
+    const restorer = await requireOwner(v.tenantId);
     const member = await teamAccount(v.tenantId, v.userId);
+    if (member.deactivatedAt) await assertTeamSeat(v.tenantId, restorer);
     await db.user.update({ where: { id: member.id }, data: { deactivatedAt: null } });
     safeRevalidate(`/${v.tenantSlug}/admin/settings`);
     return { success: true as const };
