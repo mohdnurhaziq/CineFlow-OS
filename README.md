@@ -51,6 +51,18 @@ CineFlow OS is a unified, multi-tenant SaaS platform engineered specifically for
 
 ---
 
+## 🎞️ The platform landing page
+
+`cineflow-os.my` (the `app/(saas)` pages) is a cinematic landing page: a video hero, a six-step client journey with real screens, pricing taken from `lib/billing/plans.ts`, an FAQ and an invite form. Every claim on it is data in `lib/landing/content.ts`, and Tier 39 fails if a banned phrase (old prices, invented claims, console or demo links) appears.
+
+- **Main button** follows `studioSignupStatus()`: open sign-up shows "Start your 14-day free trial"; a closed or invite-code beta shows "Request an invite" (the form on the page).
+- **Invite requests** are saved, emailed to every active super-admin and listed in the super-admin console (Invite requests), where you can mark them handled.
+- **Contact address** shown in the footer and FAQ: env `PLATFORM_CONTACT_EMAIL` (default `hello@cineflow-os.my`).
+- **Videos** are optional: drop the clips named in `public/landing/video/README.md` into that folder and rebuild; until then the page shows the poster images in `public/landing/posters/`.
+- **Screens** in `public/landing/shots/` are captured from the Lumina demo studio.
+
+---
+
 ## 💳 Studio plans
 
 Studios subscribe to one of three plans. Payment is collected by hand (no gateway): the platform owner records each payment in the super-admin console (`/super-admin`), which sets the plan and the "paid until" day.

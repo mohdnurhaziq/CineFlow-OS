@@ -34,6 +34,8 @@ import type { UpdateStudioSettingsInput } from "@/lib/validations/admin-settings
 /** Actions that are intentionally callable by clients or the public, with the reason. */
 const PUBLIC_ACTIONS: Record<string, string> = {
   "client-auth.registerClient": "client sign-up",
+  "invite-requests.submitInviteRequest": "the landing page form's action (calls requestInvite)",
+  "invite-requests.requestInvite": "the landing page's invite request form (rate limited, honeypot)",
   "booking.holdBookingSlot": "public booking flow",
   "booking.releaseBookingSlot": "public booking flow (session-scoped)",
   "booking.createClientBooking": "public booking flow",

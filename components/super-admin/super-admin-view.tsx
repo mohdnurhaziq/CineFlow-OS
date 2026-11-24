@@ -8,6 +8,8 @@ import type { PlanState } from "@/lib/billing/state";
 import { PLANS, asPlanCode } from "@/lib/billing/plans";
 import { studioLink } from "@/lib/domain-name";
 import { ManageStudioPanel } from "@/components/super-admin/manage-studio-panel";
+import { InviteRequestsPanel } from "@/components/super-admin/invite-requests-panel";
+import type { InviteRequestRow } from "@/lib/actions/invite-requests";
 
 export interface TenantSummaryItem {
   id: string;
@@ -39,6 +41,7 @@ export interface TenantSummaryItem {
 interface SuperAdminViewProps {
   metrics: PlatformMetrics;
   tenants: TenantSummaryItem[];
+  invites?: InviteRequestRow[];
 }
 
 const STATE_STYLE: Record<PlanState, { label: string; chip: string }> = {
@@ -64,7 +67,7 @@ function dateLine(t: TenantSummaryItem): string {
   return t.endsOn ? `Paid until ${day(t.endsOn)}` : "No end date";
 }
 
-export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
+export function SuperAdminView({ metrics, tenants, invites = [] }: SuperAdminViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<"ALL" | PlanState>("ALL");
   const [managingId, setManagingId] = useState<string | null>(null);
@@ -234,6 +237,8 @@ export function SuperAdminView({ metrics, tenants }: SuperAdminViewProps) {
 
           {filtered.length === 0 && <p className="py-10 text-center text-sm text-zinc-400">No studios match.</p>}
         </section>
+
+        <InviteRequestsPanel invites={invites} />
       </div>
 
       {managing && <ManageStudioPanel key={managing.id} studio={managing} onClose={() => setManagingId(null)} />}

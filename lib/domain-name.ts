@@ -51,7 +51,8 @@ export function studioSubdomainsOn(): boolean {
   return process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS === "true";
 }
 
-function appUrl(): URL {
+/** The site's own address (NEXT_PUBLIC_APP_URL), always absolute. */
+export function appUrl(): URL {
   return new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
 }
 

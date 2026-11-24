@@ -813,3 +813,19 @@ model ShippingZone {
 
   @@index([tenantId])
 }
+
+/// A studio owner asking the platform owner for an invite (from the public landing page). Not tied to a studio.
+model InviteRequest {
+  id         String    @id @default(cuid())
+  name       String
+  studioName String
+  email      String
+  phone      String?
+  kind       String    // PHOTO, VIDEO, BOTH
+  message    String?
+  createdAt  DateTime  @default(now())
+  handledAt  DateTime?
+
+  @@index([createdAt])
+  @@index([email])
+}

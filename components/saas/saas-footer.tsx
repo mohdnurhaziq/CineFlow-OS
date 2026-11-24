@@ -1,49 +1,37 @@
-import Link from "next/link";
+/* Plain <a> on purpose: these jump to a section of the landing page, and LandingMotion's click handler (smooth scroll, focus the form) only sees links next/link has not already handled. */
+/* eslint-disable @next/next/no-html-link-for-pages */
 import { Aperture } from "lucide-react";
-import { studioLink } from "@/lib/domain-name";
 
-interface SaasFooterProps {
-  /** Dev and staging: link the demo studios and the super-admin sign-in. Never in production. */
-  showDemo: boolean;
-}
+const link = "inline-flex min-h-11 items-center text-zinc-400 hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 rounded";
 
-export function SaasFooter({ showDemo }: SaasFooterProps) {
+/** The platform footer: where to go, and how to reach us. */
+export function SaasFooter({ email }: { email: string }) {
   return (
-    <footer className="border-t border-zinc-800 bg-[#09090b] text-zinc-400 text-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+    <footer className="border-t border-zinc-800 bg-[#09090b] text-sm text-zinc-400">
+      <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-14 sm:px-6 md:flex-row md:items-start md:justify-between lg:px-8">
         <div className="flex items-center gap-3">
-          <div className="size-7 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <Aperture className="size-4" />
-          </div>
-          <div>
-            <span className="font-bold text-white tracking-tight">CineFlow OS</span>
-            <span className="text-zinc-400 ml-1.5 font-mono">v2.4 Production</span>
-          </div>
+          <span className="flex size-9 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400">
+            <Aperture className="size-5" aria-hidden="true" />
+          </span>
+          <span className="font-bold tracking-tight text-white">CineFlow OS</span>
         </div>
 
-        <div className="flex items-center gap-6">
-          {showDemo && (
-            <>
-              <Link href={studioLink("lumina-cine", "/")} className="hover:text-white transition-colors">
-                Lumina CineWorks Demo
-              </Link>
-              <Link href={studioLink("apex-media", "/")} className="hover:text-white transition-colors">
-                Apex Photo &amp; Motion Demo
-              </Link>
-              <Link href="/super-admin/login" className="hover:text-white transition-colors">
-                Super-Admin Console
-              </Link>
-            </>
-          )}
-          <Link href="/create-studio" className="hover:text-amber-400 transition-colors">
-            Launch Studio
-          </Link>
-        </div>
+        <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3">
+          <a href="/#how" className={link}>
+            How it works
+          </a>
+          <a href="/#pricing" className={link}>
+            Pricing
+          </a>
+          <a href="/#faq" className={link}>
+            FAQ
+          </a>
+          <a href={`mailto:${email}`} className={link}>
+            {email}
+          </a>
+        </nav>
 
-        <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-400">
-          <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>ALL SYSTEMS OPERATIONAL</span>
-        </div>
+        <p className="font-mono text-xs text-zinc-500">&copy; {new Date().getFullYear()} CineFlow OS</p>
       </div>
     </footer>
   );
