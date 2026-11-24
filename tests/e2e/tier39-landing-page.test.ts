@@ -289,6 +289,15 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert(!/crossfade/.test(hero), "The hero is a plain loop");
   });
 
+  await harness.test("T39-MEDIA-06: clips are fetched late (hero after the page loads, a chapter clip near the screen) and a dissolved clip is downloaded once", async () => {
+    const src = await fs.readFile(path.join(process.cwd(), "components/landing/loop-video.tsx"), "utf8");
+    harness.assert(/addEventListener\("load"/.test(src), "The hero clip waits for the page to finish loading");
+    harness.assert(/new IntersectionObserver[\s\S]{0,400}rootMargin: FETCH_MARGIN/.test(src), "A chapter clip is fetched only when near the screen");
+    harness.assert(/const FETCH_MARGIN = "\d+px 0px"/.test(src), "...with a margin set in one place");
+    harness.assert(/fetch\(mp4\)[\s\S]{0,300}createObjectURL/.test(src) && /URL\.revokeObjectURL/.test(src), "A dissolved clip is fetched once and both copies share it");
+    harness.assert(!/preload=\{blend \? "auto" : "metadata"\}[^>]*<source/.test(src), "The clip's file is not named in two <video> sources when dissolving");
+  });
+
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
     const offenders: string[] = [];
     const walk = async (dir: string) => {
