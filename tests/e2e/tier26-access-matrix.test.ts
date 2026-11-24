@@ -79,6 +79,7 @@ import ProjectPage from "@/app/[tenantSlug]/admin/projects/[projectId]/page";
 import ProjectPrintsPage from "@/app/[tenantSlug]/admin/projects/[projectId]/prints/page";
 import ProposalsPage from "@/app/[tenantSlug]/admin/proposals/page";
 import SchedulePage from "@/app/[tenantSlug]/admin/schedule/page";
+import ShootPage from "@/app/[tenantSlug]/admin/schedule/[bookingId]/page";
 import ServicesPage from "@/app/[tenantSlug]/admin/services/page";
 import SettingsPage from "@/app/[tenantSlug]/admin/settings/page";
 import VerificationPage from "@/app/[tenantSlug]/admin/verification/page";
@@ -231,6 +232,8 @@ const ACTIONS: Record<string, Row> = {
   "admin-included-prints.ts#removeIncludedPrint": [["area:bookings:MANAGE"], (c) => [{ ...c.t, lineId: M }]],
 
   // Clients
+  // The details dialog's quick profile. Money and proposals in it follow the Invoices and Proposals areas.
+  "admin-clients.ts#getClientQuickProfile": [["area:clients:VIEW"], (c) => [c.t.tenantId, M]],
   "admin-clients.ts#updateClientDetails": [
     ["area:clients:MANAGE"],
     (c) => [{ ...c.t, clientId: M, name: "T26 Client", email: "t26-client@example.test", phone: "" }],
@@ -438,6 +441,12 @@ const sp = <T extends object>(v: T) => Promise.resolve(v);
 const PAGES: Record<string, PageRow> = {
   "page.tsx": { needs: ["staff"], render: (c) => OverviewPage({ params: sp({ tenantSlug: c.tenantSlug }) }) },
   "schedule/page.tsx": { needs: ["staff"], render: (c) => SchedulePage({ params: sp({ tenantSlug: c.tenantSlug }), searchParams: sp({}) }) },
+  // Any team member reaches the page; the shoot then opens for who is assigned to it, the owner, or Bookings View
+  // (the probe booking is assigned to the probe member, so "only staff" opens it; T26-SHOOT-01 covers the rest).
+  "schedule/[bookingId]/page.tsx": {
+    needs: ["staff"],
+    render: (c) => ShootPage({ params: sp({ tenantSlug: c.tenantSlug, bookingId: c.bookingId }) }),
+  },
   "bookings/page.tsx": { needs: ["area:bookings:OWN"], render: (c) => BookingsPage({ params: sp({ tenantSlug: c.tenantSlug }), searchParams: sp({}) }) },
   "bookings/[bookingId]/page.tsx": {
     needs: ["area:bookings:OWN"],
@@ -946,6 +955,28 @@ async function runTable(harness: TestHarness, f: { lumina: { id: string; slug: s
         }
         harness.assert(!error && !isNoAccess(shown), `${p}: opens with ${label}`, error || "showed No access");
       }
+    }
+  });
+
+  await harness.test("T26-SHOOT-01: a shoot page opens for who is assigned, the owner, or Bookings View; not for another member", async () => {
+    const isNoAccess = (el: unknown) => !!el && typeof el === "object" && (el as { type?: unknown }).type === NoAccess;
+    // A booking nobody is assigned to.
+    const others = await db.clientBooking.create({
+      data: {
+        tenantId: lumina.id, trackingCode: `T26-${run}-shoot`, clientName: client.name, clientEmail: client.email, clientPhone: "000",
+        discipline: "PHOTOGRAPHY", serviceTier: "T26",
+      },
+    });
+    try {
+      const open = async (who: Who, bookingId: string) => isNoAccess(await as(who, () => ShootPage({ params: sp({ tenantSlug: lumina.slug, bookingId }) }))) === false;
+      harness.assert(await open(access({}), pageCtx.bookingId), "assigned, with no area access: opens");
+      harness.assert(!(await open(access({}), others.id)), "not assigned, with no area access: No access");
+      harness.assert(!(await open(access({ bookings: "OWN" }), others.id)), "not assigned, Bookings Only their own: No access");
+      harness.assert(await open(access({ bookings: "VIEW" }), others.id), "not assigned, Bookings View: opens");
+      harness.assert(await open("owner", others.id), "the studio owner: opens");
+      harness.assert(!(await open("client", others.id)), "a client: No access");
+    } finally {
+      await db.clientBooking.delete({ where: { id: others.id } }).catch(() => undefined);
     }
   });
 }
