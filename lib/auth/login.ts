@@ -2,6 +2,9 @@ import bcrypt from "bcryptjs";
 import type { Login } from "@prisma/client";
 import { db } from "@/lib/db";
 import { hasSetUp } from "@/lib/auth/set-up";
+import { signInBlocked, signInFailed } from "@/lib/auth/sign-in-limits";
+import { requestIp } from "@/lib/client-ip";
+import { isRateLimited } from "@/lib/rate-limit";
 import { escapeEmailHtml, sendPlatformEmail } from "@/lib/notifications";
 
 /**
@@ -17,6 +20,28 @@ export function normalizeEmail(email: string): string {
 
 export function findLogin(email: string): Promise<Login | null> {
   return db.login.findUnique({ where: { email: normalizeEmail(email) } });
+}
+
+/**
+ * Whether `password` is the login's password for `email`, for the places that ask for it to join
+ * another studio's account (registering, starting a studio, accepting a team invite). Every wrong
+ * try counts against the same limit as signing in, so these can't be used to guess a password
+ * 8 times at every studio. No login for the email is reported as "NO_LOGIN" and counts for nothing.
+ */
+export async function verifyLoginPassword(
+  email: string,
+  password: string
+): Promise<{ ok: true; login: Login } | { ok: false; reason: "NO_LOGIN" | "WRONG" | "RATE_LIMITED" }> {
+  const normalized = normalizeEmail(email);
+  const login = await findLogin(normalized);
+  if (!login) return { ok: false, reason: "NO_LOGIN" };
+  const ip = await requestIp();
+  if (signInBlocked("login", normalized, ip) || (ip && isRateLimited(`login-ip:${ip}`, 30))) return { ok: false, reason: "RATE_LIMITED" };
+  if (!login.passwordHash || !bcrypt.compareSync(password, login.passwordHash)) {
+    signInFailed("login", normalized, ip);
+    return { ok: false, reason: "WRONG" };
+  }
+  return { ok: true, login };
 }
 
 export interface JoinedAccount {
@@ -75,12 +100,11 @@ export async function linkAccountToLogin(userId: string, loginId: string): Promi
 }
 
 /**
- * Sets the login's password after the person proved their email (a reset, invite or confirm link).
- * The same password again changes nothing. A different one ends the login's sessions everywhere.
+ * Sets the login's password after the person proved their email by a link only their inbox saw (a
+ * reset, a client invite or the confirm link). It always ends the login's sessions everywhere, even
+ * for the same password: someone who thinks another person is in their account resets to be sure.
  */
 export async function setLoginPassword(loginId: string, password: string): Promise<void> {
-  const login = await db.login.findUniqueOrThrow({ where: { id: loginId } });
-  if (login.passwordHash && bcrypt.compareSync(password, login.passwordHash)) return;
   await db.login.update({ where: { id: loginId }, data: { passwordHash: await bcrypt.hash(password, 10), sessionsValidAfter: new Date() } });
 }
 

@@ -7,7 +7,7 @@ import { isRateLimited } from "@/lib/rate-limit";
 import { setLoginSessionCookie, setSessionCookie, type SessionUser } from "@/lib/auth/token";
 import { clientInvitePath, inviteMatches, issueClientInvite } from "@/lib/auth/invite";
 import { hasSetUp } from "@/lib/auth/set-up";
-import { findLogin, proveEmailAndJoin } from "@/lib/auth/login";
+import { proveEmailAndJoin, verifyLoginPassword } from "@/lib/auth/login";
 import { emailOneLoginLink } from "@/lib/auth/one-login-link";
 import { sendNotification } from "@/lib/notifications";
 import { isStudioPath, studioPath, studioUrl } from "@/lib/domain-name";
@@ -104,16 +104,14 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
 
     if (!existing) {
       // An email that already has a CineFlow sign-in joins it: the login's password is the proof.
-      const theirs = await findLogin(email);
-      if (theirs) {
-        if (!theirs.passwordHash || !bcrypt.compareSync(password, theirs.passwordHash)) {
-          return {
-            success: false,
-            error: "EMAIL_EXISTS",
-            message: "This email already has a CineFlow sign-in. Use its password, or reset it.",
-          };
+      const theirs = await verifyLoginPassword(email, password);
+      if (theirs.ok || theirs.reason !== "NO_LOGIN") {
+        if (!theirs.ok) {
+          return theirs.reason === "RATE_LIMITED"
+            ? { success: false, error: "RATE_LIMITED", message: "Too many attempts. Please wait a few minutes and try again." }
+            : { success: false, error: "EMAIL_EXISTS", message: "This email already has a CineFlow sign-in. Use its password, or reset it." };
         }
-        user = await db.user.create({ data: { tenantId: tenant.id, name, email, phone, role: "CLIENT", loginId: theirs.id } });
+        user = await db.user.create({ data: { tenantId: tenant.id, name, email, phone, role: "CLIENT", loginId: theirs.login.id } });
       } else {
         user = await db.user.create({
           data: { tenantId: tenant.id, name, email, phone, role: "CLIENT", passwordHash },

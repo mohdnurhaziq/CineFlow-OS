@@ -762,4 +762,127 @@ export async function runTier41OneLoginTests(harness: TestHarness) {
       await cleanUp();
     }
   });
+
+  // ── Final review fixes ──────────────────────────────────────────────────────────────────
+  /** A studio with an owner who can invite people, for tests where the studio "sees" the invite link. */
+  const makeStudioWithOwner = async (label: string) => {
+    const studio = await makeStudio(label);
+    await ensureStudioRoles(studio.id);
+    const roleId = (await db.teamRole.findFirstOrThrow({ where: { tenantId: studio.id } })).id;
+    const o = await makeUser(studio.id, emailFor(`${label}-owner`), "STUDIO_OWNER", { password: "owner-pass-1" });
+    const owner = { id: o.id, email: o.email, name: o.name, role: "STUDIO_OWNER", tenantId: studio.id, tenantSlug: studio.slug };
+    const invite = async (email: string) => {
+      const res = (await withSession(owner, () => inviteTeamMember({ tenantId: studio.id, tenantSlug: studio.slug, name: "T41 Invitee", email, roleId }))) as { success: boolean; inviteUrl?: string };
+      createdEmails.add(email.toLowerCase());
+      if (!res.success || !res.inviteUrl) throw new Error(`invite failed: ${JSON.stringify(res)}`);
+      return tokenOf(res.inviteUrl);
+    };
+    return { studio, owner, invite };
+  };
+
+  await harness.test("T41-FIX-01: a studio that can see a team invite link can't use it to take over the person's login", async () => {
+    try {
+      const { email, login } = await makeLoginWithTwoAccounts("fix1");
+      const { studio, invite } = await makeStudioWithOwner("fix1");
+      const token = await invite(email);
+      // The owner has the link. Choosing a password on it must not touch the person's login.
+      const grab = await resetPassword({ tenantSlug: studio.slug, email, token, password: "owner-chosen-1" });
+      harness.assert(grab.success === false, "Without the login's password the link does nothing", JSON.stringify(grab));
+      const after = await db.login.findUniqueOrThrow({ where: { id: login.id } });
+      harness.assert(bcrypt.compareSync("new-pass-123", after.passwordHash ?? "") && !bcrypt.compareSync("owner-chosen-1", after.passwordHash ?? ""), "The person's login password is unchanged");
+      const account = await db.user.findFirstOrThrow({ where: { tenantId: studio.id, email } });
+      harness.assert(account.loginId === null && account.passwordHash === null, "Nothing was linked or set");
+      // The real person, with their login password, accepts: the wrong guess didn't burn the link.
+      const real = await resetPassword({ tenantSlug: studio.slug, email, token, password: "new-pass-123" });
+      harness.assert(real.success === true, "With the login's password the invite is accepted", JSON.stringify(real));
+      const joined = await db.user.findUniqueOrThrow({ where: { id: account.id } });
+      harness.assert(joined.loginId === login.id && joined.passwordHash === null, "…and the account joins their login");
+      harness.assertEqual((await db.login.findUniqueOrThrow({ where: { id: login.id } })).sessionsValidAfter, null, "Accepting an invite signs nobody out");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-FIX-02: an invite link the studio can see doesn't create a login or join the person's other studios", async () => {
+    try {
+      const email = emailFor("fix2");
+      const elsewhere = await makeUser(lumina.id, email, "CLIENT", { password: "victim-old-1" });
+      const { studio, invite } = await makeStudioWithOwner("fix2");
+      const token = await invite(email);
+      await withInbox(async (inbox) => {
+        const res = await resetPassword({ tenantSlug: studio.slug, email, token, password: "owner-chosen-1" });
+        harness.assert(res.success === true, "The invite is accepted as a studio account", JSON.stringify(res));
+        harness.assertEqual(await loginRow(email), null, "No login was created from a link the studio saw");
+        const theirs = await db.user.findUniqueOrThrow({ where: { id: elsewhere.id } });
+        harness.assert(theirs.loginId === null && bcrypt.compareSync("victim-old-1", theirs.passwordHash ?? ""), "The person's account at another studio is untouched");
+        const account = await db.user.findFirstOrThrow({ where: { tenantId: studio.id, email } });
+        harness.assert(account.loginId === null && bcrypt.compareSync("owner-chosen-1", account.passwordHash ?? ""), "The new account is stand-alone, with the chosen password");
+        harness.assertEqual(teamMemberStatus(account), "ACTIVE", "…and Active");
+        const mail = inbox.find((m) => m.to === email && /one sign-in/i.test(m.subject));
+        harness.assert(!!mail && /join=1/.test(mail.html), "The person is emailed the confirm link, which only their inbox sees", inbox.map((m) => m.subject).join(" | "));
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-FIX-03: guessing a login's password at registration or sign-up counts against the same limit as signing in", async () => {
+    const saved = process.env.STUDIO_SIGNUP_CODE;
+    delete process.env.STUDIO_SIGNUP_CODE;
+    try {
+      const { email } = await makeLoginWithTwoAccounts("fix3");
+      const studios = [await makeStudio("fix3a"), await makeStudio("fix3b"), await makeStudio("fix3c")];
+      for (let i = 0; i < 10; i++) {
+        const s = studios[i % studios.length]!;
+        const guess = await registerClient({ tenantSlug: s.slug, name: "T41 Guess", email, phone: "0123456789", password: `wrong-guess-${i}-xx` });
+        harness.assert(guess.success === false, `Guess ${i + 1} is refused`);
+      }
+      const fresh = await makeStudio("fix3d");
+      const blocked = await registerClient({ tenantSlug: fresh.slug, name: "T41 Real", email, phone: "0123456789", password: "new-pass-123" });
+      harness.assert(blocked.success === false && blocked.error === "RATE_LIMITED", "After ten wrong guesses even the right password waits", JSON.stringify(blocked));
+      const signIn = await withRequest(() => loginWithCredentials(email, "new-pass-123", "lumina-cine"));
+      harness.assertEqual(signIn.error, "RATE_LIMITED", "…and so does signing in (one shared limit)");
+      const slug = `t41-fix3-${STAMP}`;
+      const owner = (await withRequest(() => onboardStudio({ name: "T41 fix3", slug, discipline: "HYBRID", currency: "MYR", ownerName: "T41 Owner", ownerEmail: email, password: "new-pass-123" } as never))) as { success?: boolean; error?: string };
+      harness.assert(owner.success !== true && /too many/i.test(owner.error ?? ""), "Studio sign-up with that email waits too", JSON.stringify(owner));
+    } finally {
+      if (saved === undefined) delete process.env.STUDIO_SIGNUP_CODE;
+      else process.env.STUDIO_SIGNUP_CODE = saved;
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-FIX-04: a client account the studio made for the email can be taken up with the login, a pending staff invite can't", async () => {
+    try {
+      const { email } = await makeLoginWithTwoAccounts("fix4");
+      const clientStudio = await makeStudio("fix4c");
+      const quick = await makeUser(clientStudio.id, email, "CLIENT", { inviteToken: `pending-client-${STAMP}` });
+      const staffStudio = await makeStudio("fix4s");
+      await makeUser(staffStudio.id, email, "TEAM_MEMBER", { inviteToken: `pending-staff-${STAMP}` });
+      await withRequest(async () => {
+        const res = await loginWithCredentials(email, "new-pass-123", clientStudio.slug);
+        harness.assert(res.success === false && res.error === "NO_ACCOUNT_HERE", "A pending client account counts as 'no account yet'", JSON.stringify(res));
+        const cont = await continueAsClient(clientStudio.slug);
+        harness.assert(cont.success === true, "Continue takes it up", JSON.stringify(cont));
+      });
+      harness.assertEqual((await db.user.findUniqueOrThrow({ where: { id: quick.id } })).loginId !== null, true, "The studio's client account is now theirs");
+      const staff = await withRequest(() => loginWithCredentials(email, "new-pass-123", staffStudio.slug));
+      harness.assertEqual(staff.error, "INVALID_CREDENTIALS", "A pending staff invite is never taken up by signing in");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-FIX-05: a reset always signs the login out everywhere, even to the same password", async () => {
+    try {
+      const { team, email } = await makeLoginWithTwoAccounts("fix5");
+      harness.assertEqual((await loginRow(email))?.sessionsValidAfter, null, "No sign-out yet");
+      const token = await issuePasswordReset(team.id);
+      const res = await resetPassword({ tenantSlug: "lumina-cine", email, token, password: "new-pass-123" });
+      harness.assert(res.success === true, "Reset", JSON.stringify(res));
+      harness.assert((await loginRow(email))?.sessionsValidAfter !== null, "Sessions everywhere were ended");
+    } finally {
+      await cleanUp();
+    }
+  });
 }

@@ -4,7 +4,9 @@ import { z } from "zod";
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { proveEmailAndJoin } from "@/lib/auth/login";
+import bcrypt from "bcryptjs";
+import { linkAccountToLogin, proveEmailAndJoin, verifyLoginPassword } from "@/lib/auth/login";
+import { hasSetUp } from "@/lib/auth/set-up";
 import { emailOneLoginLink } from "@/lib/auth/one-login-link";
 import { isRateLimited } from "@/lib/rate-limit";
 import { sendNotification } from "@/lib/notifications";
@@ -122,10 +124,29 @@ export async function resetPassword(
     return { success: false, error: "RATE_LIMITED", message: "Too many attempts. Please wait a few minutes and try again." };
   }
 
-  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } });
+  const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, name: true, slug: true } });
   if (!tenant) return INVALID_LINK;
   const account = await findStudioAccount(tenant.id, email);
   if (!account || account.deactivatedAt || !resetTokenMatches(account, token)) return INVALID_LINK;
+
+  // A team invite's link is shown to the studio that sent it (to copy), so it is not proof that the
+  // person owns the email: a studio must never be able to use it to set someone's login password or
+  // pull their other studios in. Accepting one joins an existing login only with the login's own
+  // password; with no login it makes a stand-alone studio account, and the person is emailed a
+  // separate link (only their inbox sees it) to confirm the email and get one sign-in.
+  const studioSeen = !hasSetUp(account) && account.role !== "CLIENT" && account.role !== "SUPER_ADMIN";
+  let joinTo: { id: string } | null = null;
+  if (studioSeen) {
+    // Checked before the link is used up, so a wrong guess doesn't burn the invite.
+    const theirs = await verifyLoginPassword(account.email, password);
+    if (!theirs.ok && theirs.reason === "RATE_LIMITED") {
+      return { success: false, error: "RATE_LIMITED", message: "Too many attempts. Please wait a few minutes and try again." };
+    }
+    if (!theirs.ok && theirs.reason === "WRONG") {
+      return { success: false, error: "LOGIN_PASSWORD_NEEDED", message: "This email already has a CineFlow sign-in. Enter its password to accept this invite." };
+    }
+    joinTo = theirs.ok ? theirs.login : null;
+  }
 
   // Single use: only succeeds while the stored token is still the one that was checked. The link
   // proves the email, so the password typed here becomes the person's one login password. The
@@ -141,7 +162,14 @@ export async function resetPassword(
     },
   });
   if (count === 0) return INVALID_LINK;
-  await proveEmailAndJoin(account, password);
+  if (!studioSeen) {
+    await proveEmailAndJoin(account, password);
+  } else if (joinTo) {
+    await linkAccountToLogin(account.id, joinTo.id);
+  } else {
+    await db.user.update({ where: { id: account.id }, data: { passwordHash: await bcrypt.hash(password, 10), sessionsValidAfter: new Date() } });
+    await emailOneLoginLink(account, tenant);
+  }
   return { success: true };
 }
 

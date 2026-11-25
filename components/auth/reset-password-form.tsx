@@ -77,7 +77,11 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
           </>
         )}
         <p className="text-xs text-zinc-400 break-all">for {email}</p>
-        {hasLogin && !join && <p className="text-xs text-amber-300/90">You already have a CineFlow sign-in. Enter its password, or choose a new one.</p>}
+        {hasLogin && !join && (
+          <p className="text-xs text-amber-300/90">
+            {welcome ? "You already have a CineFlow sign-in. Enter its password to join this studio." : "You already have a CineFlow sign-in. Enter its password, or choose a new one."}
+          </p>
+        )}
       </div>
 
       <form onSubmit={submit} className="space-y-4">

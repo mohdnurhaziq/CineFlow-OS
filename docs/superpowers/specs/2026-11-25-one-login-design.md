@@ -92,8 +92,11 @@ The product owner chose **A**.
 whoever proved it.** The ways to prove an email are:
 
 - signing in with Google (Google says the email is verified);
-- clicking a link we emailed to that address: a team invite, a client invite, a password reset,
-  or a "confirm your email" link. The page the link opens asks the person to **set the login's
+- clicking a link we emailed to that address: a client invite, a password reset, or a "confirm
+  your email" link. **A team invite link is not proof**: the studio is shown it (to copy), so a
+  studio could use it. Accepting a team invite joins an existing login only with that login's own
+  password; with no login it makes a stand-alone studio account, and the person is emailed a
+  separate confirm link (found in review, 2026-11-25). The page the link opens asks the person to **set the login's
   password** (it can be the same one they use today) or to continue with Google. A password set on
   an unproven account is never carried over. Otherwise someone could register with another
   person's email, wait for the real owner to click the link, and end up holding the login.
@@ -195,8 +198,9 @@ open in two tabs would share one cookie and keep pushing each other out.
   has a sign-in is in line with today, where registration already says "An account with this email
   already exists". It reveals nothing about which studios. Otherwise, create the stand-alone account
   as today and send a "confirm your email" message. The account works straight away either way.
-- **Team invite:** the link proves the email. Accepting while signed in to that login links the new
-  team account. Otherwise the person sets the login's password or continues with Google.
+- **Team invite:** the link does not prove the email (the studio sees it). With a login, the person
+  enters that login's password and the new team account joins it; Google is the same in part 3.
+  With no login, the account is a stand-alone studio account and the person is emailed a confirm link.
 - **Studio sign-up (owner):** as for client registration. If a login exists, sign in with it, and the
   new owner account is linked.
 

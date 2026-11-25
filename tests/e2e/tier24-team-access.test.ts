@@ -1373,7 +1373,8 @@ export async function runTier24TeamAccessTests(harness: TestHarness) {
         harness.assert(set.success, "the link sets the password", JSON.stringify(set));
         const after = await db.user.findUniqueOrThrow({ where: { id: inv.userId } });
         harness.assertEqual(teamMemberStatus(after, new Date()), "ACTIVE", "status is Active");
-        harness.assertEqual(after.passwordResetToken, null, "the link works once");
+        const reuse = await resetPassword({ tenantSlug: "lumina-cine", email, token: tokenOf(inv.inviteUrl), password: "Another-pass-1234" });
+        harness.assert(!reuse.success && reuse.error === "INVALID_LINK", "the invite link works once (the token that replaced it is the emailed confirm link)", JSON.stringify(reuse));
 
         const login = await loginWithCredentials(email, PASSWORD, "lumina-cine");
         harness.assert(login.success && !!login.user, "they sign in", JSON.stringify(login));

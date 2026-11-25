@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { findLogin } from "@/lib/auth/login";
+import { verifyLoginPassword } from "@/lib/auth/login";
 import { setLoginSessionCookie, setSessionCookie } from "@/lib/auth/token";
 import {
   OnboardStudioSchema,
@@ -105,10 +105,14 @@ export async function onboardStudio(formData: OnboardStudioInput) {
 
   // An email that already has a CineFlow sign-in starts a studio with that sign-in: its password is the
   // proof, so the new owner account joins it. Otherwise it is a stand-alone account, as ever.
-  const login = await findLogin(data.ownerEmail);
-  if (login && (!login.passwordHash || !bcrypt.compareSync(data.password, login.passwordHash))) {
+  const check = await verifyLoginPassword(data.ownerEmail, data.password);
+  if (!check.ok && check.reason === "RATE_LIMITED") {
+    return { success: false, error: "Too many attempts. Please wait a few minutes and try again." };
+  }
+  if (!check.ok && check.reason === "WRONG") {
     return { success: false, error: "This email already has a CineFlow sign-in. Use its password." };
   }
+  const login = check.ok ? check.login : null;
 
   try {
     const result = await db.$transaction(async (tx) => {
