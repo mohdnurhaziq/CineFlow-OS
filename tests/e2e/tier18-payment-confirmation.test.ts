@@ -148,9 +148,9 @@ export async function runTier18PaymentConfirmationTests(harness: TestHarness) {
     const own = await withSession(as(cash.client), () => accountPage(cash.res.trackingCode));
     harness.assertEqual(bannerOf(own)?.state, "PAY_AT_STUDIO", "Own booking: banner with its state");
     const other = await withSession(as(cash.client), () => accountPage(card.res.trackingCode));
-    harness.assertEqual(bannerOf(other), null, "Someone else's code: no confirmation banner");
+    harness.assertEqual(bannerOf(other) ?? null, null, "Someone else's code: no confirmation banner");
     const plain = await withSession(as(cash.client), () => accountPage());
-    harness.assertEqual(bannerOf(plain), null, "No code: no confirmation banner");
+    harness.assertEqual(bannerOf(plain) ?? null, null, "No code: no confirmation banner");
   });
 
   const invoicePage = (invoiceId: string, paid: boolean) =>
