@@ -3018,9 +3018,9 @@
     "semantic_hash": ""
   },
   "components/admin/settings/payments-tab.tsx": {
-    "mtime": 1794704773.5670733,
-    "seen": 1794708143.8242667,
-    "ast_hash": "f0790830d8bca76a758e5f469e4b56ad",
+    "mtime": 1795566573.4720705,
+    "seen": 1795568660.7243793,
+    "ast_hash": "9e0b0442c5c8122773d0b6fc9fc57416",
     "semantic_hash": ""
   },
   "components/admin/settings/plan-tab.tsx": {
@@ -3402,9 +3402,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/manual/settings-and-team/page.tsx": {
-    "mtime": 1795510886.097819,
-    "seen": 1795544287.5109499,
-    "ast_hash": "88c00761c7217a4abe80047991635455",
+    "mtime": 1795566581.4072354,
+    "seen": 1795568660.6918225,
+    "ast_hash": "0f36ec063469fc24c77473920fe19378",
     "semantic_hash": ""
   },
   "components/ui/toast-anchor.tsx": {
@@ -4224,9 +4224,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier39-landing-page.test.ts": {
-    "mtime": 1795565588.1363902,
-    "seen": 1795566207.0069015,
-    "ast_hash": "b27f811d79e611d36709ad4f5e9141f9",
+    "mtime": 1795566601.5187924,
+    "seen": 1795568660.8156085,
+    "ast_hash": "cf160e706b273037becd249beb0bdf6a",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-24-landing-page-redesign.md": {
