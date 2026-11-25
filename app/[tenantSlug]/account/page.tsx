@@ -5,6 +5,7 @@ import { liveProjectWhere } from "@/lib/projects/list";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ClientDashboard } from "@/components/account/client-dashboard";
+import { ClientTour } from "@/components/account/client-tour";
 import { OneLoginInvite } from "@/components/auth/one-login-invite";
 import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
 import { loadBookingConfirmation } from "@/lib/payments/confirmation";
@@ -45,7 +46,7 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
 
   const client = await db.user.findFirst({
     where: { id: session.id, tenantId: tenant.id, role: "CLIENT" },
-    select: { id: true, name: true, email: true, phone: true },
+    select: { id: true, name: true, email: true, phone: true, onboardingTourSeenAt: true },
   });
   if (!client) redirect(studioPath(tenant.slug, "/login"));
 
@@ -168,6 +169,9 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
               dismissHref={studioPath(tenant.slug, "/account?tab=bookings")}
             />
           ) : null}
+          {/* First visit: a short tour of the portal, once. Not over a booking just confirmed at checkout:
+              that visit shows the confirmation, and the tour starts on the next one. */}
+          <ClientTour tenantSlug={tenant.slug} autoStart={!client.onboardingTourSeenAt && !confirmation} />
           {/* A stand-alone account (no login yet) is invited to use one sign-in for all its studios. */}
           {session.loginId ? null : <OneLoginInvite />}
         </>

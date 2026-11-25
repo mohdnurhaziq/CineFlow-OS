@@ -10,6 +10,7 @@ import { withSession } from "./mocks/session";
 import { getSetupChecklist } from "@/lib/onboarding/checklist";
 import { dismissSetupChecklist, markTourSeen } from "@/lib/actions/onboarding-guide";
 import { readFileSync } from "node:fs";
+import { markClientTourSeen } from "@/lib/actions/client-tour";
 
 type Row = { id: string; email: string; name: string; role: string; tenantId: string | null };
 const as = (u: Row, tenantSlug: string | null) => ({
@@ -152,5 +153,49 @@ export async function runTier16OnboardingGuideTests(harness: TestHarness) {
     harness.assert(/Switch between your studios/.test(tour) && /sign out/i.test(tour), "The account stop says you can switch studios and sign out");
     harness.assert(!/Sign out here\./.test(tour), "The old 'Sign out here' wording is gone");
     harness.assert(/frames and prints, if you offer them/.test(tour), "The catalog stop says frames and prints are optional");
+  });
+
+  // ── The customer's tour ─────────────────────────────────────────────────────
+  await harness.test("T16-CLIENTTOUR-01: a client marks the tour seen on their own account, in their own studio only", async () => {
+    const clientRow = await db.user.create({
+      data: { tenantId: tenant.id, email: `t16-client-${run}@example.test`, name: "T16 Client", role: "CLIENT" },
+    });
+    const otherClientRow = await db.user.create({
+      data: { tenantId: tenant.id, email: `t16-client2-${run}@example.test`, name: "T16 Client Two", role: "CLIENT" },
+    });
+    const client = as(clientRow, slug);
+
+    const byNobody = await withSession(null, () => markClientTourSeen(slug));
+    harness.assertEqual(byNobody.success, false, "Signed-out caller refused");
+    const byStaff = await withSession(crew, () => markClientTourSeen(slug));
+    harness.assertEqual(byStaff.success, false, "Staff have their own tour: refused here");
+    const apexClientRow = await db.user.findFirst({ where: { tenant: { slug: "apex-media" }, role: "CLIENT" } });
+    if (apexClientRow) {
+      const elsewhere = await withSession(as(apexClientRow, "apex-media"), () => markClientTourSeen(slug));
+      harness.assertEqual(elsewhere.success, false, "A client of another studio refused");
+    }
+
+    const ok = await withSession(client, () => markClientTourSeen(slug));
+    harness.assertEqual(ok.success, true, "The client can mark it seen");
+    const after = await db.user.findUnique({ where: { id: clientRow.id } });
+    harness.assert(after?.onboardingTourSeenAt instanceof Date, "Their row records the tour");
+    const otherAfter = await db.user.findUnique({ where: { id: otherClientRow.id } });
+    harness.assertEqual(otherAfter?.onboardingTourSeenAt ?? null, null, "Another client's row is untouched");
+  });
+
+  await harness.test("T16-CLIENTTOUR-02: the customer tour is wired into the client portal", async () => {
+    const tour = readFileSync("components/account/client-tour.tsx", "utf8");
+    for (const anchor of ["client-kpis", "client-tab-projects", "client-tab-bookings", "client-tab-invoices", "client-book", "client-account"]) {
+      harness.assert(tour.includes(`"${anchor}"`), `The tour has a stop for ${anchor}`);
+    }
+    harness.assert(/markClientTourSeen/.test(tour) && /tour/.test(tour), "It records that the client has seen the tour");
+    harness.assert(/data-tour=\{`client-tab-\$\{tab\.id\}`\}/.test(readFileSync("components/account/client-nav-bar.tsx", "utf8")), "Every portal tab carries its tour anchor");
+    const header = readFileSync("components/account/client-account-header.tsx", "utf8");
+    harness.assert(/data-tour="client-book"/.test(header) && /data-tour="client-account"/.test(header), "The Book button and the account menu carry their anchors");
+    harness.assert(/data-tour="client-kpis"/.test(readFileSync("components/account/client-dashboard.tsx", "utf8")), "The overview's summary cards carry their anchor");
+    const page = readFileSync("app/[tenantSlug]/account/page.tsx", "utf8");
+    harness.assert(/<ClientTour\b/.test(page) && /onboardingTourSeenAt/.test(page), "The account page starts it for a client who hasn't seen it");
+    harness.assert(/confirmed/.test(page.slice(page.indexOf("<ClientTour"))) || /!confirmation/.test(page), "…but not over a booking confirmation");
+    harness.assert(/tour=1/.test(readFileSync("components/account/client-user-nav.tsx", "utf8")), "The account menu can replay it");
   });
 }

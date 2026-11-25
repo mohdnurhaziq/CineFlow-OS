@@ -522,7 +522,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
         ) : null}
 
         {/* Top 3 Quick Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div data-tour="client-kpis" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Card 1: Upcoming Sessions */}
           <button
             type="button"

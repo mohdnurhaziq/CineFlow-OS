@@ -92,6 +92,7 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
           <Link
             key={tab.id}
             href={tab.href}
+            data-tour={`client-tab-${tab.id}`}
             aria-current={isActive ? "page" : undefined}
             className={cn(
               "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono transition-all border whitespace-nowrap",

@@ -76,6 +76,7 @@ export function ClientAccountHeader({ tenant, client, badges, switcher = [] }: C
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Link
               href={studioPath(tenant.slug, "/book")}
+              data-tour="client-book"
               className={buttonVariants({ size: "sm" })}
             >
               <CalendarPlus className="size-3.5" />
@@ -83,7 +84,9 @@ export function ClientAccountHeader({ tenant, client, badges, switcher = [] }: C
               <span className="sm:hidden">Book</span>
             </Link>
 
-            <ClientUserNav tenantSlug={tenant.slug} client={client} switcher={switcher} />
+            <div data-tour="client-account">
+              <ClientUserNav tenantSlug={tenant.slug} client={client} switcher={switcher} />
+            </div>
           </div>
         </div>
 

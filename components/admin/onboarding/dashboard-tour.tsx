@@ -1,10 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { driver, type DriveStep } from "driver.js";
-import "driver.js/dist/driver.css";
-import "./tour-theme.css";
+import { useCallback } from "react";
+import { GuidedTour, type TourStop } from "@/components/onboarding/guided-tour";
 import { markTourSeen } from "@/lib/actions/onboarding-guide";
 
 interface DashboardTourProps {
@@ -14,7 +11,7 @@ interface DashboardTourProps {
 }
 
 /** Stops of the dashboard tour. A stop whose element isn't on the page (e.g. the checklist for staff) is skipped. */
-const STOPS: { anchor: string | null; title: string; description: string; readyTitle?: string; readyDescription?: string }[] = [
+const STOPS: TourStop[] = [
   {
     anchor: null,
     title: "Welcome to your studio admin",
@@ -61,85 +58,6 @@ const STOPS: { anchor: string | null; title: string; description: string; readyT
 ];
 
 export function DashboardTour({ tenantSlug, autoStart }: DashboardTourProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const running = useRef(false);
-  const autoStarted = useRef(false);
-  // Whether the account already records the tour as seen. Saved as soon as the tour starts (not only
-  // when it closes), so leaving the page mid-tour can't make it start on its own again.
-  const seenSaved = useRef(!autoStart);
-
-  const saveSeen = useCallback(async () => {
-    if (seenSaved.current) return;
-    seenSaved.current = true;
-    const res = await markTourSeen(tenantSlug);
-    if (!res.success) seenSaved.current = false; // try again when the tour closes
-  }, [tenantSlug]);
-
-  const start = useCallback(() => {
-    if (running.current) return;
-    void saveSeen();
-    const steps: DriveStep[] = STOPS.flatMap((stop) => {
-      const el = stop.anchor ? document.querySelector<HTMLElement>(`[data-tour="${stop.anchor}"]`) : null;
-      if (stop.anchor && !el) return [];
-      const ready = el?.dataset.state === "ready";
-      return [
-        {
-          element: stop.anchor ? `[data-tour="${stop.anchor}"]` : undefined,
-          popover: {
-            title: (ready && stop.readyTitle) || stop.title,
-            description: (ready && stop.readyDescription) || stop.description,
-          },
-        },
-      ];
-    });
-
-    running.current = true;
-    const tour = driver({
-      steps,
-      showProgress: true,
-      progressText: "{{current}} of {{total}}",
-      nextBtnText: "Next",
-      prevBtnText: "Back",
-      doneBtnText: "Done",
-      popoverClass: "cineflow-tour",
-      overlayOpacity: 0.65,
-      stagePadding: 6,
-      onHighlighted: (element, _step, { driver: tourDriver }) => {
-        // driver.js centres a target against the whole screen, so on a phone a tall target (the
-        // KPI cards, the checklist) ends up under the sticky admin header. Pull its top down to
-        // just below the header, then let driver.js redraw the highlight and popover.
-        const header = document.querySelector("header");
-        if (!(element instanceof HTMLElement) || !header || header.contains(element)) return;
-        const clearOfHeader = header.getBoundingClientRect().bottom + 8;
-        const top = element.getBoundingClientRect().top;
-        if (top < clearOfHeader) {
-          window.scrollBy({ top: top - clearOfHeader, behavior: "instant" });
-          tourDriver.refresh();
-        }
-      },
-      onDestroyed: () => {
-        running.current = false;
-        // Normally saved already when the tour started; this retries if that save failed.
-        void saveSeen();
-      },
-    });
-    tour.drive();
-  }, [saveSeen]);
-
-  // "Take the tour" links land here with ?tour=1; first-time users get it once on their own.
-  const requested = searchParams.get("tour") === "1";
-  useEffect(() => {
-    if (requested) {
-      autoStarted.current = true;
-      router.replace(pathname, { scroll: false });
-      start();
-    } else if (autoStart && !autoStarted.current) {
-      autoStarted.current = true;
-      start();
-    }
-  }, [requested, autoStart, pathname, router, start]);
-
-  return null;
+  const markSeen = useCallback(() => markTourSeen(tenantSlug), [tenantSlug]);
+  return <GuidedTour stops={STOPS} autoStart={autoStart} markSeen={markSeen} />;
 }

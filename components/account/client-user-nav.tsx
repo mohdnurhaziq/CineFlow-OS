@@ -12,6 +12,7 @@ import {
   CalendarClock,
   Receipt,
   Globe,
+  PlayCircle,
   UserCheck,
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
@@ -165,6 +166,18 @@ export function ClientUserNav({ tenantSlug, client, switcher = [] }: ClientUserN
                   <span>Studio website</span>
                 </span>
                 <span className="text-[10px] font-mono text-zinc-500">Public</span>
+              </Link>
+            </DropdownMenu.Item>
+
+            {/* Replays the first-time tour of the portal */}
+            <DropdownMenu.Item asChild>
+              <Link
+                href={studioPath(tenantSlug, "/account?tour=1")}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer outline-none transition-colors"
+              >
+                <PlayCircle className="size-3.5 text-zinc-400" />
+                <span>Take the tour</span>
               </Link>
             </DropdownMenu.Item>
 
