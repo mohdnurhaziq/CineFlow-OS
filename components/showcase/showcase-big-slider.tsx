@@ -10,13 +10,13 @@ import {
   Camera,
   Film,
   Layers,
-  Sparkles,
 } from "lucide-react";
 import type { ShowcasePortfolioItem } from "./portfolio-grid";
 import type { LightboxItem } from "./media-lightbox-modal";
 import type { VideoItem } from "./video-reel-modal";
 import { categoryName } from "@/lib/bookings/category-name";
 import { disciplineLabel } from "@/lib/labels";
+import { formatMoney } from "@/lib/money";
 import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
 
 interface ShowcaseBigSliderProps {
@@ -25,6 +25,8 @@ interface ShowcaseBigSliderProps {
   onOpenVideo: (item: VideoItem) => void;
   brandColor?: string | null;
   categories?: ReadonlyArray<{ slug: string; name: string; badgeIcon?: string | null }>;
+  /** The studio's currency, for the featured package's price. */
+  currency: string;
 }
 
 interface SlideItem {
@@ -56,12 +58,16 @@ function parseGalleryUrls(raw?: string | null): string[] {
   return [];
 }
 
+/** Slide text and badges start where the page's content starts, however wide the screen. */
+const EDGE = "px-5 sm:px-8 lg:px-[max(2rem,calc((100%-80rem)/2+2rem))]";
+
 export function ShowcaseBigSlider({
   items,
   onOpenLightbox,
   onOpenVideo,
   brandColor = "#f59e0b",
   categories = [],
+  currency,
 }: ShowcaseBigSliderProps) {
   const accentColor = brandColor || "#f59e0b";
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -184,46 +190,13 @@ export function ShowcaseBigSlider({
   };
 
   return (
-    <section className="space-y-3" aria-label="Auto-sliding Portfolio Showcase">
-      {/* Slider Header Line */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-4 animate-pulse" style={{ color: accentColor }} />
-          <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold">
-            Featured Portfolio Showcase
-          </span>
-        </div>
-
-        {total > 1 && (
-          <div className="flex items-center gap-3 text-xs font-mono text-zinc-400">
-            <span>
-              <strong className="text-white">
-                {String(currentIndex + 1).padStart(2, "0")}
-              </strong>{" "}
-              / {String(total).padStart(2, "0")}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsPlaying((p) => !p)}
-              className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white transition-colors"
-              title={isPlaying ? "Pause auto-slide" : "Play auto-slide"}
-            >
-              {isPlaying ? (
-                <Pause className="size-3.5 text-amber-400" />
-              ) : (
-                <Play className="size-3.5 text-amber-400 fill-amber-400" />
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-
+    <section aria-label="Auto-sliding Portfolio Showcase" className="border-b border-zinc-800/60">
       {/* Main Big Slider Container with Overflow Hidden */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="group relative w-full h-[420px] sm:h-[520px] md:h-[600px] lg:h-[650px] rounded-3xl overflow-hidden border border-zinc-800 bg-[#0b0b0e] shadow-2xl select-none"
+        className="group relative w-full h-[calc(100svh-8rem)] min-h-[420px] max-h-[75svh] sm:max-h-[900px] overflow-hidden bg-[#0b0b0e] select-none"
       >
         {/* Horizontal Sliding Track: Translates -100% per slide */}
         <div
@@ -258,7 +231,7 @@ export function ShowcaseBigSlider({
         />
 
         {/* Top Badges */}
-        <div className="absolute top-5 left-5 right-5 z-30 flex items-center justify-between flex-wrap gap-2 pointer-events-none">
+        <div className={`absolute top-5 inset-x-0 z-30 flex items-center justify-between flex-wrap gap-2 pointer-events-none ${EDGE}`}>
           <div className="flex items-center gap-2 pointer-events-auto">
             <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-black/70 backdrop-blur-md text-white border border-white/10 flex items-center gap-1.5 shadow-lg">
               {currentSlide.discipline === "VIDEOGRAPHY" ? (
@@ -290,11 +263,29 @@ export function ShowcaseBigSlider({
             )}
           </div>
 
-          {isVideo && (
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/30 backdrop-blur-md text-blue-300 border border-blue-400/40 flex items-center gap-1.5 shadow-lg pointer-events-auto">
-              <Play className="size-3 fill-current" /> Video Stream
-            </span>
-          )}
+          <div className="flex items-center gap-2 pointer-events-auto">
+            {isVideo && (
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/30 backdrop-blur-md text-blue-300 border border-blue-400/40 flex items-center gap-1.5 shadow-lg">
+                <Play className="size-3 fill-current" /> Video Stream
+              </span>
+            )}
+            {total > 1 && (
+              <span className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 py-1 pl-3 pr-1 text-xs font-mono text-zinc-300 backdrop-blur-md">
+                <span>
+                  <strong className="text-white">{String(currentIndex + 1).padStart(2, "0")}</strong> / {String(total).padStart(2, "0")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsPlaying((p) => !p)}
+                  className="rounded-full p-1.5 text-zinc-300 transition-colors hover:text-white"
+                  title={isPlaying ? "Pause auto-slide" : "Play auto-slide"}
+                  aria-label={isPlaying ? "Pause auto-slide" : "Play auto-slide"}
+                >
+                  {isPlaying ? <Pause className="size-3.5 text-amber-400" /> : <Play className="size-3.5 fill-amber-400 text-amber-400" />}
+                </button>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Center Hover Action Button (Click to Open) */}
@@ -344,7 +335,7 @@ export function ShowcaseBigSlider({
         )}
 
         {/* Bottom Slide Info & Call-To-Action */}
-        <div className="absolute bottom-0 inset-x-0 z-30 p-6 sm:p-8 md:p-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className={`absolute bottom-0 inset-x-0 z-30 py-6 sm:py-8 md:py-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4 ${EDGE}`}>
           <div className="space-y-2 max-w-2xl text-left">
             <span className="text-xs sm:text-sm font-mono text-zinc-300 block drop-shadow">
               Client: <strong className="text-white">{currentSlide.clientName}</strong>
@@ -361,7 +352,7 @@ export function ShowcaseBigSlider({
                   className="font-bold underline decoration-amber-500/50 underline-offset-4"
                   style={{ color: accentColor }}
                 >
-                  {currentSlide.servicePackage.name} (${currentSlide.servicePackage.price.toLocaleString()})
+                  {currentSlide.servicePackage.name} ({formatMoney(currency, currentSlide.servicePackage.price)})
                 </span>
               </div>
             )}
@@ -408,7 +399,7 @@ export function ShowcaseBigSlider({
 
       {/* Slide Thumbnails Filmstrip Strip */}
       {total > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-2 flex-wrap max-h-24 overflow-y-auto pr-1">
+        <div className="flex h-16 items-center justify-center gap-2 overflow-x-auto px-4">
           {slides.map((slide, index) => {
             const isActive = index === currentIndex;
 

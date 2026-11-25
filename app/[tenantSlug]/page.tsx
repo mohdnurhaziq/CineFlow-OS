@@ -6,7 +6,7 @@ import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { getSessionClient } from "@/lib/clients";
 import { getCurrentUser } from "@/lib/auth/session";
 import { STAFF_ROLES } from "@/lib/auth/guard";
-import { ShowcaseHero } from "@/components/showcase/showcase-hero";
+import { ShowcaseIntro } from "@/components/showcase/showcase-intro";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 import { studioPath } from "@/lib/domain-name";
@@ -180,17 +180,15 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
         showWallArt={await hasFeature(tenant.id, "wallArt")}
       />
 
-      {/* Cinematic Studio Hero */}
-      <ShowcaseHero tenant={tenant} />
-
-      {/* Interactive Showcase Shell (Categories, Gallery, Lightbox & Packages) */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-24">
+      {/* The portfolio slider comes first, the full width of the page under the bar; the studio's intro follows it. */}
+      <main>
         <ShowcaseShell
           tenant={tenant}
           categories={categories}
           packages={packages}
           showcaseItems={showcaseItems}
           initialCategory={initialCategory || "all"}
+          intro={<ShowcaseIntro tenant={tenant} />}
         />
 
         {/* The equipment ("pedigree") and testimonials sections are hidden until studios can enter

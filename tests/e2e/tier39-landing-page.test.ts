@@ -345,6 +345,25 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     }
   });
 
+  await harness.test("T39-SITE-01: a studio's website opens on its portfolio slider, with the studio's intro and the one h1 right below it", async () => {
+    const root = process.cwd();
+    const page = await fs.readFile(path.join(root, "app/[tenantSlug]/page.tsx"), "utf8");
+    harness.assert(!/ShowcaseHero|showcase-hero/.test(page), "The big centred text block is gone from the top of the page");
+    harness.assert(/intro=\{<ShowcaseIntro tenant=\{tenant\} \/>\}/.test(page), "The intro is handed to the portfolio");
+    const shell = await fs.readFile(path.join(root, "components/showcase/showcase-shell.tsx"), "utf8");
+    harness.assert(shell.indexOf("<ShowcaseBigSlider") < shell.indexOf("{intro}") && shell.indexOf("{intro}") < shell.indexOf("<CategoryFilterBar"), "Order: slider, then the intro, then the categories");
+    harness.assert(shell.indexOf("<ShowcaseBigSlider") < shell.indexOf("max-w-7xl"), "The slider is not inside the centred column: it spans the whole page");
+    harness.assert(!/<main[^>]*max-w/.test(page), "The page's main area doesn't narrow the slider");
+    harness.assert(/hasSlider \? "pt-12" : "pt-12 sm:pt-16"/.test(shell), "With no portfolio yet, the intro gets its own room at the top");
+    const slider = await fs.readFile(path.join(root, "components/showcase/showcase-big-slider.tsx"), "utf8");
+    harness.assert(!/rounded-3xl|max-w-7xl/.test(slider) && /h-\[calc\(100svh-8rem\)\]/.test(slider), "The slider is edge to edge and fills the first screen under the bar");
+    const intro = await fs.readFile(path.join(root, "components/showcase/showcase-intro.tsx"), "utf8");
+    harness.assertEqual((intro.match(/<h1[\s>]/g) ?? []).length, 1, "The intro holds the page's one h1");
+    harness.assert(!/currency/i.test(intro), "The intro doesn't show a currency");
+    const grid = await fs.readFile(path.join(root, "components/showcase/portfolio-grid.tsx"), "utf8");
+    harness.assert(!/\$\{[^}]*price/.test(slider + grid) && /formatMoney\(currency/.test(slider) && /formatMoney\(currency/.test(grid), "Slider and portfolio prices follow the studio's currency, not a fixed dollar sign");
+  });
+
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
     const offenders: string[] = [];
     const walk = async (dir: string) => {

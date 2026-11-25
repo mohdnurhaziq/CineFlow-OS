@@ -6,6 +6,7 @@ import type { LightboxItem } from "./media-lightbox-modal";
 import type { VideoItem } from "./video-reel-modal";
 import { categoryName } from "@/lib/bookings/category-name";
 import { showcaseCover } from "@/lib/showcase/cover";
+import { formatMoney } from "@/lib/money";
 
 export interface ShowcasePortfolioItem {
   id: string;
@@ -32,6 +33,8 @@ interface PortfolioGridProps {
   brandColor?: string | null;
   /** The studio's categories, to label each card by name rather than its code. */
   categories?: ReadonlyArray<{ slug: string; name: string }>;
+  /** The studio's currency, for the attached package's price. */
+  currency: string;
 }
 
 /**
@@ -86,6 +89,7 @@ export function PortfolioGrid({
   onOpenVideo,
   brandColor,
   categories = [],
+  currency,
 }: PortfolioGridProps) {
   if (items.length === 0) {
     return (
@@ -160,7 +164,7 @@ export function PortfolioGrid({
               <div className="p-3 border-t border-zinc-800/80 bg-[#15151a] flex items-center justify-between text-[11px] font-mono text-zinc-400">
                 <span className="line-clamp-1">{item.servicePackage.name}</span>
                 <span className="text-amber-400 font-bold tabular-nums shrink-0">
-                  ${item.servicePackage.price.toLocaleString()}
+                  {formatMoney(currency, item.servicePackage.price)}
                 </span>
               </div>
             )}
