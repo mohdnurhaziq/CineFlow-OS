@@ -874,6 +874,31 @@ export async function runAdminVerificationTests(harness: TestHarness) {
     });
   });
 
+  await harness.test("T1-F45-04c: a logo must be an uploaded file; a link to another site is refused, an unchanged one is kept", async () => {
+    const before = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
+    const ids = { tenantId: luminaTenant!.id, tenantSlug: "lumina-cine" };
+    try {
+      for (const bad of ["https://tracker.example.com/pixel.png", "//evil.example.com/x.png", "/uploads/logos/../../.env", "/uploads/deliverables/secret.jpg", "javascript:alert(1)"]) {
+        const res = await updateStudioSettings({ ...ids, logoUrl: bad });
+        harness.assert(res.success === false, `Refused: ${bad}`);
+      }
+      let row = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
+      harness.assertEqual(row?.logoUrl, before?.logoUrl, "A refused logo changes nothing");
+      const good = await updateStudioSettings({ ...ids, logoUrl: "/uploads/logos/new-logo.png" });
+      harness.assert(good.success === true, "An uploaded logo is accepted", JSON.stringify(good));
+      // A studio whose saved logo is an older pasted link can still save, as long as it doesn't change it.
+      await db.tenant.update({ where: { id: luminaTenant!.id }, data: { logoUrl: "https://old.example.com/logo.png" } });
+      const same = await updateStudioSettings({ ...ids, logoUrl: "https://old.example.com/logo.png", tagline: "Same logo, new tagline" });
+      harness.assert(same.success === true, "An unchanged older logo does not block saving", JSON.stringify(same));
+      const cleared = await updateStudioSettings({ ...ids, logoUrl: "" });
+      harness.assert(cleared.success === true, "A logo can be removed");
+      row = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
+      harness.assertEqual(row?.logoUrl, null, "Removed logo is cleared");
+    } finally {
+      await db.tenant.update({ where: { id: luminaTenant!.id }, data: { logoUrl: before?.logoUrl ?? null, tagline: before?.tagline ?? null } });
+    }
+  });
+
   await harness.test("T1-F45-04b: each settings tab saves only its own fields; the rest stay as they are", async () => {
     const before = await db.tenant.findUnique({ where: { id: luminaTenant!.id } });
     const ids = { tenantId: luminaTenant!.id, tenantSlug: "lumina-cine" };

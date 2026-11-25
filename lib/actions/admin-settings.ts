@@ -11,6 +11,7 @@ import {
 } from "@/lib/validations/admin-settings";
 import { RESERVED_SLUGS } from "@/lib/validations/onboarding";
 import { requireFeature } from "@/lib/billing/guard";
+import { LOGO_URL_MESSAGE, isOwnLogoPath } from "@/lib/validations/logo-url";
 
 function safeRevalidate(path: string) {
   try {
@@ -32,6 +33,11 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
     });
     if (!currentTenant) {
       return { success: false, error: "TENANT_NOT_FOUND", message: "Studio tenant not found." };
+    }
+    // A logo is an uploaded file. One already saved stays, so an older studio can still save other settings.
+    const logo = validated.logoUrl?.trim();
+    if (logo && logo !== currentTenant.logoUrl && !isOwnLogoPath(logo)) {
+      return { success: false, error: "LOGO_INVALID", message: LOGO_URL_MESSAGE };
     }
     // A custom domain is a plan feature: one already set stays, but a new one needs the plan.
     if (customDomain && customDomain !== currentTenant.customDomain) await requireFeature(tenantId, "customDomain", owner);

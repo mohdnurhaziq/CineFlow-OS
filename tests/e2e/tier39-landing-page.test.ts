@@ -334,6 +334,17 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert(!/<Ui key="c">Currency<\/Ui>|Set your currency to ringgit/.test(manual), "The manual no longer tells owners to set a currency");
   });
 
+  await harness.test("T39-SIGNUP-03: sign-up takes a logo only as an uploaded file; the paste-a-URL box is gone", async () => {
+    const page = await fs.readFile(path.join(process.cwd(), "app/(saas)/create-studio/page.tsx"), "utf8");
+    harness.assert(!/paste a URL|my-studio\.png/.test(page), "The create-studio page has no logo URL box");
+    const base = { name: "Logo Studio", slug: "logo-studio", ownerName: "Maya Lin", ownerEmail: "maya@example.com", password: "password123" };
+    harness.assert(OnboardStudioSchema.safeParse({ ...base, logoUrl: "/uploads/logos/1700000000000-ab12cd34ef56.png" }).success, "An uploaded logo is accepted");
+    harness.assert(OnboardStudioSchema.safeParse({ ...base, logoUrl: "" }).success && OnboardStudioSchema.safeParse(base).success, "No logo is fine");
+    for (const bad of ["https://tracker.example.com/pixel.png", "http://x.example.com/a.png", "//x.example.com/a.png", "/uploads/logos/../../x.png", "/uploads/deliverables/secret.jpg", "/uploads/branding/lumina-logo.svg", "data:image/png;base64,AAAA", "javascript:alert(1)"]) {
+      harness.assert(!OnboardStudioSchema.safeParse({ ...base, logoUrl: bad }).success, `Refused at sign-up: ${bad}`);
+    }
+  });
+
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
     const offenders: string[] = [];
     const walk = async (dir: string) => {

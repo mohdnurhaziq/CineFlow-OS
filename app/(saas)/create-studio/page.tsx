@@ -530,14 +530,7 @@ export default function CreateStudioPage() {
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-500">PNG, JPG or WebP, up to 5MB. Or paste a URL below.</p>
-                    <input
-                      type="text"
-                      placeholder="e.g. /uploads/logos/my-studio.png"
-                      value={formData.logoUrl}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, logoUrl: e.target.value }))}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm font-mono focus:outline-none focus:border-amber-500"
-                    />
+                    <p className="text-[11px] text-zinc-500">PNG, JPG or WebP, up to 5MB.</p>
                   </div>
                 </div>
 

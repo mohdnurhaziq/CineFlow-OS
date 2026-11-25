@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LOGO_URL_MESSAGE, isOwnLogoPath } from "@/lib/validations/logo-url";
 
 export const StudioDisciplineEnum = z.enum(["PHOTOGRAPHY", "VIDEOGRAPHY", "HYBRID"]);
 export const CurrencyEnum = z.enum(["USD", "MYR", "EUR", "GBP"]);
@@ -59,7 +60,12 @@ export const OnboardStudioSchema = z.object({
     .string()
     .regex(/^#([0-9a-fA-F]{3}){1,2}$/, "Invalid hex color format")
     .default("#f59e0b"),
-  logoUrl: z.string().optional(),
+  // Only a logo uploaded during sign-up (/uploads/logos/…): never a link to another site.
+  logoUrl: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || isOwnLogoPath(v, ["logos"]), LOGO_URL_MESSAGE)
+    .optional(),
 
   // Step 3: Studio Owner Credentials
   ownerName: z.string().min(2, "Owner name must be at least 2 characters"),
