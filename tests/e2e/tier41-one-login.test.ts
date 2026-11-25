@@ -15,6 +15,13 @@ import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
 import { COOKIE_NAME, createSessionToken, liveAccounts } from "@/lib/auth/token";
 import { getCurrentLogin, getCurrentUser } from "@/lib/auth/session";
+import { readFile } from "node:fs/promises";
+import { teamMemberStatus } from "@/lib/team/status";
+import { loadTeamMembers } from "@/lib/team/members";
+import { clientAccountStatus } from "@/lib/client-directory";
+import { ensureStudioRoles } from "@/lib/auth/access";
+import { assignTeamMember } from "@/lib/actions/admin-assignments";
+import { inviteTeamMember, resendTeamInvite } from "@/lib/actions/admin-team";
 import { withLoginSession, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
@@ -301,6 +308,96 @@ export async function runTier41OneLoginTests(harness: TestHarness) {
       harness.assertEqual(await withSession(old, getCurrentLogin), null, "…and is not a login session");
     } finally {
       await cleanUp();
+    }
+  });
+
+  // ── Task 3: "set up" means a password or a login ────────────────────────────────────────
+  const luminaOwnerRow = await db.user.findFirstOrThrow({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } });
+  const luminaOwner = { id: luminaOwnerRow.id, email: luminaOwnerRow.email, name: luminaOwnerRow.name, role: luminaOwnerRow.role, tenantId: luminaOwnerRow.tenantId, tenantSlug: "lumina-cine" };
+  const roleIdAtLumina = async () => {
+    await ensureStudioRoles(lumina.id);
+    return (await db.teamRole.findFirstOrThrow({ where: { tenantId: lumina.id }, orderBy: { sortOrder: "asc" } })).id;
+  };
+  const bookingIds: string[] = [];
+  const makeBooking = async () => {
+    const b = await db.clientBooking.create({
+      data: {
+        tenantId: lumina.id,
+        trackingCode: `T41-${STAMP}-${++counter}`,
+        clientName: "T41 Client",
+        clientEmail: "t41-client@example.test",
+        clientPhone: "000",
+        discipline: "PHOTOGRAPHY",
+        serviceTier: "T41",
+        status: "CONFIRMED",
+        packageName: "Family Portrait",
+        creativeBrief: "Golden hour",
+      },
+    });
+    bookingIds.push(b.id);
+    return b;
+  };
+  harness.registerTeardown(async () => {
+    await db.bookingAssignment.deleteMany({ where: { bookingId: { in: bookingIds } } });
+    await db.clientBooking.deleteMany({ where: { id: { in: bookingIds } } });
+  });
+
+  await harness.test("T41-SETUP-01: a joined team member stays Active and assignable, and can't be re-invited", async () => {
+    try {
+      const email = emailFor("setup1");
+      const member = await makeUser(lumina.id, email, "TEAM_MEMBER", { password: "old-pass-1" });
+      await db.user.update({ where: { id: member.id }, data: { teamRoleId: await roleIdAtLumina() } });
+      await makeUser(apex.id, email, "CLIENT", { password: "old-pass-2" });
+      await createLoginFromProof(email, await bcrypt.hash("new-pass-123", 4));
+      const row = await db.user.findUniqueOrThrow({ where: { id: member.id } });
+      harness.assert(row.passwordHash === null && row.loginId !== null, "Joined: no password of its own, a login");
+      harness.assertEqual(teamMemberStatus(row), "ACTIVE", "The status is Active");
+      const listed = (await loadTeamMembers(lumina.id)).find((m) => m.id === member.id);
+      harness.assertEqual(listed?.status, "ACTIVE", "The Team screen shows Active");
+      const booking = await makeBooking();
+      const assigned = (await withSession(luminaOwner, () => assignTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingIds: [booking.id], userId: member.id }))) as { success: boolean; error?: string };
+      harness.assert(assigned.success === true, "They can be assigned to a shoot", JSON.stringify(assigned));
+      const resend = (await withSession(luminaOwner, () => resendTeamInvite({ tenantId: lumina.id, tenantSlug: "lumina-cine", userId: member.id }))) as { success: boolean; error?: string };
+      harness.assert(resend.success === false && resend.error === "ALREADY_ACTIVE", "Resending an invite is refused: already active", JSON.stringify(resend));
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SETUP-02: a pending invite to an email that has a login still looks like any invite", async () => {
+    try {
+      const email = emailFor("setup2");
+      await makeUser(apex.id, email, "CLIENT", { password: "old-pass-2" });
+      await createLoginFromProof(email, await bcrypt.hash("new-pass-123", 4));
+      const roleId = await roleIdAtLumina();
+      const invited = (await withSession(luminaOwner, () => inviteTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", name: "T41 Invitee", email, roleId }))) as { success: boolean; error?: string };
+      harness.assert(invited.success === true, "The studio can invite them", JSON.stringify(invited));
+      createdEmails.add(email);
+      const account = await db.user.findFirstOrThrow({ where: { tenantId: lumina.id, email } });
+      harness.assert(account.loginId === null && account.passwordHash === null, "Not linked until the person accepts");
+      const listed = (await loadTeamMembers(lumina.id)).find((m) => m.id === account.id);
+      harness.assertEqual(listed?.status, "INVITED", "The studio sees Invited, like for anyone");
+      const booking = await makeBooking();
+      const assigned = (await withSession(luminaOwner, () => assignTeamMember({ tenantId: lumina.id, tenantSlug: "lumina-cine", bookingIds: [booking.id], userId: account.id }))) as { success: boolean };
+      harness.assertEqual(assigned.success, false, "They can't be assigned yet");
+      const resend = (await withSession(luminaOwner, () => resendTeamInvite({ tenantId: lumina.id, tenantSlug: "lumina-cine", userId: account.id }))) as { success: boolean };
+      harness.assertEqual(resend.success, true, "The studio can resend the invite");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SETUP-03: a joined client is Registered, and the emails treat them as signed up", async () => {
+    harness.assertEqual(clientAccountStatus({ passwordHash: null, inviteToken: null, loginId: "x" }), "REGISTERED", "Joined: Registered");
+    harness.assertEqual(clientAccountStatus({ passwordHash: null, inviteToken: "t", loginId: null }), "INVITED", "Pending invite: Invited");
+    harness.assertEqual(clientAccountStatus({ passwordHash: null, inviteToken: null }), "GUEST", "Nothing: Guest");
+    const confirmation = await readFile("lib/bookings/confirmation-email.ts", "utf8");
+    harness.assert(/hasSetUp\(account\)/.test(confirmation) && /loginId: true/.test(confirmation), "The booking email checks 'set up', not just a password");
+    const projects = await readFile("lib/actions/admin-projects.ts", "utf8");
+    harness.assert(/hasSetUp\(client\)/.test(projects), "The proposal email does too");
+    const noPasswordChecks = ["lib/bookings/confirmation-email.ts", "lib/actions/admin-projects.ts", "lib/actions/admin-team.ts", "lib/client-directory.ts", "lib/team/status.ts"];
+    for (const f of noPasswordChecks) {
+      harness.assert(!/(?:if \(|\? |&& |! ?)(?:member|account|client|user)\.passwordHash\b/.test(await readFile(f, "utf8")), `${f} no longer reads a bare passwordHash as 'set up'`);
     }
   });
 }

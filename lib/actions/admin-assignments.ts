@@ -39,7 +39,7 @@ const AssignSchema = z.object({
 async function findAssignable(tenantId: string, userId: string) {
   const user = await db.user.findFirst({
     where: { id: userId, tenantId },
-    select: { id: true, role: true, deactivatedAt: true, passwordHash: true, passwordResetExpires: true },
+    select: { id: true, role: true, deactivatedAt: true, passwordHash: true, loginId: true, passwordResetExpires: true },
   });
   if (!user || !STAFF_ROLES.has(user.role) || user.role === "SUPER_ADMIN") return null;
   if (user.role === "STUDIO_OWNER") return user.deactivatedAt ? null : user;

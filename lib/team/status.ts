@@ -1,3 +1,5 @@
+import { hasSetUp } from "@/lib/auth/set-up";
+
 /**
  * Where a team member stands, for the Team screen. Plain module: safe in server and client code.
  */
@@ -12,15 +14,15 @@ export const TEAM_MEMBER_STATUS_LABELS: Record<TeamMemberStatus, string> = {
 };
 
 /**
- * REMOVED once the studio removed them (wins over everything); ACTIVE once they set a password;
+ * REMOVED once the studio removed them (wins over everything); ACTIVE once they set a password or joined their one login;
  * INVITED while their set-password link is still valid; LINK_EXPIRED otherwise.
  */
 export function teamMemberStatus(
-  user: { deactivatedAt: Date | null; passwordHash: string | null; passwordResetExpires: Date | null },
+  user: { deactivatedAt: Date | null; passwordHash: string | null; loginId?: string | null; passwordResetExpires: Date | null },
   now: Date = new Date()
 ): TeamMemberStatus {
   if (user.deactivatedAt) return "REMOVED";
-  if (user.passwordHash) return "ACTIVE";
+  if (hasSetUp(user)) return "ACTIVE";
   if (user.passwordResetExpires && user.passwordResetExpires.getTime() > now.getTime()) return "INVITED";
   return "LINK_EXPIRED";
 }

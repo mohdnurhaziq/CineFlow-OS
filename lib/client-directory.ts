@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { STUDIO_TIME_ZONE, formatStudioDate } from "@/lib/slot-time";
 import type { ClientAccountStatus } from "@/lib/client-directory-labels";
+import { hasSetUp } from "@/lib/auth/set-up";
 
 export type { ClientAccountStatus } from "@/lib/client-directory-labels";
 
@@ -15,8 +16,8 @@ export type { ClientAccountStatus } from "@/lib/client-directory-labels";
 /** Statuses that still count towards what a client owes. VOID (cancelled) and PAID do not. */
 const OUTSTANDING_INVOICE_STATUSES = new Set(["PENDING", "OVERDUE", "PENDING_VERIFICATION", "REJECTED"]);
 
-export function clientAccountStatus(user: { passwordHash: string | null; inviteToken: string | null }): ClientAccountStatus {
-  if (user.passwordHash) return "REGISTERED";
+export function clientAccountStatus(user: { passwordHash: string | null; loginId?: string | null; inviteToken: string | null }): ClientAccountStatus {
+  if (hasSetUp(user)) return "REGISTERED";
   if (user.inviteToken) return "INVITED";
   return "GUEST";
 }
@@ -81,6 +82,7 @@ export async function loadClientDirectory(tenantId: string, show: { money: boole
         email: true,
         phone: true,
         passwordHash: true,
+        loginId: true,
         inviteToken: true,
         createdAt: true,
         // Without Invoices access only the dates are read (for "last active"), never the amounts.
@@ -150,6 +152,7 @@ export async function loadClientProfile(tenantId: string, clientId: string, show
       email: true,
       phone: true,
       passwordHash: true,
+      loginId: true,
       inviteToken: true,
       isQuickCreated: true,
       staffNotes: true,

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { hasSetUp } from "@/lib/auth/set-up";
 import { assertCanWorkOn, requireAccess, requireOwnOrManage, requireTick } from "@/lib/auth/access-guard";
 import { actionErrorMessage } from "@/lib/action-error";
 import { deleteDeliverableFiles } from "@/lib/deliverables/storage";
@@ -70,11 +71,11 @@ const CreateProposalSchema = z
 /** Emails the client a link to review and sign. One without a password sets one first. */
 async function emailProposalToClient(
   tenant: { name: string; slug: string },
-  client: { id: string; name: string; email: string; phone: string | null; passwordHash: string | null },
+  client: { id: string; name: string; email: string; phone: string | null; passwordHash: string | null; loginId?: string | null },
   proposal: { id: string; title: string }
 ) {
   const shareRel = `/proposals/${proposal.id}`;
-  const link = client.passwordHash
+  const link = hasSetUp(client)
     ? shareRel
     : clientInvitePath(client.email, await issueClientInvite(client.id), studioPath(tenant.slug, shareRel));
   sendNotification({
@@ -87,7 +88,7 @@ async function emailProposalToClient(
     headline: `Your proposal: ${proposal.title}`,
     message: `${tenant.name} has sent you a proposal. Review the details, choose any extras, and sign it online to book.`,
     linkUrl: studioUrl(tenant.slug, link),
-    linkLabel: client.passwordHash ? "Sign in to review and sign" : "Set your password, then review and sign",
+    linkLabel: hasSetUp(client) ? "Sign in to review and sign" : "Set your password, then review and sign",
   }).catch((e) => console.error("Notification dispatch failed:", e));
 }
 

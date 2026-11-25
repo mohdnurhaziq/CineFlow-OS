@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { hasSetUp } from "@/lib/auth/set-up";
 import { revalidatePath } from "next/cache";
 import { requireOwner } from "@/lib/auth/guard";
 import { TEAM_ACCOUNT_ROLES, parseAccess, serializeAccess } from "@/lib/auth/access";
@@ -160,7 +161,7 @@ async function studioOf(tenantId: string) {
 async function teamAccount(tenantId: string, userId: string) {
   const user = await db.user.findFirst({
     where: { id: userId, tenantId },
-    select: { id: true, name: true, email: true, role: true, passwordHash: true, deactivatedAt: true, teamRole: { select: { name: true } } },
+    select: { id: true, name: true, email: true, role: true, passwordHash: true, loginId: true, deactivatedAt: true, teamRole: { select: { name: true } } },
   });
   if (user?.role === "STUDIO_OWNER") throw new RoleError("CANNOT_CHANGE_OWNER", "The studio owner's own account can't be changed here.");
   if (!user || !TEAM_ACCOUNT_ROLES.includes(user.role)) throw new RoleError("NOT_FOUND", "That team member no longer exists.");
@@ -263,8 +264,8 @@ export async function resendTeamInvite(input: TeamMemberRefInput) {
     const owner = await requireOwner(v.tenantId);
     const member = await teamAccount(v.tenantId, v.userId);
     if (member.deactivatedAt) throw new RoleError("REMOVED_MEMBER", `${member.name} was removed. Bring them back from the list instead.`);
-    if (member.passwordHash) {
-      throw new RoleError("ALREADY_ACTIVE", `${member.name} has already set a password. They can use "Forgot password" if they need a new one.`);
+    if (hasSetUp(member)) {
+      throw new RoleError("ALREADY_ACTIVE", `${member.name} has already set up their account. They can use "Forgot password" if they need a new one.`);
     }
     const tenant = await studioOf(v.tenantId);
     const sent = await sendInvite(tenant, member, member.teamRole?.name ?? "a team member", owner.name);

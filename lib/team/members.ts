@@ -31,6 +31,7 @@ export async function loadTeamMembers(tenantId: string, now: Date = new Date()):
       teamRoleId: true,
       extraAccess: true,
       passwordHash: true,
+      loginId: true,
       passwordResetExpires: true,
       deactivatedAt: true,
       teamRole: { select: { name: true } },

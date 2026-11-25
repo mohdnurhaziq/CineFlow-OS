@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { hasSetUp } from "@/lib/auth/set-up";
 import { sendNotification, type NotificationResult } from "@/lib/notifications";
 import { formatSlotDate } from "@/lib/slot-time";
 import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
@@ -25,11 +26,11 @@ export async function sendBookingConfirmation(bookingId: string): Promise<Notifi
     // Where "view my booking" goes. A customer account the studio created has no password yet:
     // the link carries a one-time invite to set one, then opens the account (as proposals do).
     const account = booking.userId
-      ? await db.user.findUnique({ where: { id: booking.userId }, select: { id: true, email: true, passwordHash: true } })
+      ? await db.user.findUnique({ where: { id: booking.userId }, select: { id: true, email: true, passwordHash: true, loginId: true } })
       : null;
     let link: string;
     let linkLabel: string;
-    if (account && !account.passwordHash) {
+    if (account && !hasSetUp(account)) {
       link = clientInvitePath(account.email, await issueClientInvite(account.id), studioPath(slug, "/account"));
       linkLabel = "Set your password & view booking";
     } else if (account) {
