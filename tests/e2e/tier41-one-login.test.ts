@@ -31,6 +31,7 @@ import { decodeSessionToken } from "@/lib/auth/token";
 import { withRequest } from "./mocks/session";
 import { continueAsClient } from "@/lib/actions/one-login";
 import { onboardStudio } from "@/lib/actions/onboarding";
+import { updateClientDetails } from "@/lib/actions/admin-clients";
 import { withLoginSession, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
@@ -733,5 +734,32 @@ export async function runTier41OneLoginTests(harness: TestHarness) {
       harness.assert(/NO_ACCOUNT_HERE/.test(src) && /continueAsClient/.test(src), `${f} offers "Continue as a client"`);
     }
     harness.assert(/sendOneLoginLink/.test(await readFile("components/auth/one-login-invite.tsx", "utf8")), "The card sends the confirm link");
+  });
+
+  // ── Task 6: a studio changing a linked client's email unlinks it ────────────────────────
+  await harness.test("T41-EMAIL-01: a studio editing a linked client's email unlinks that account, and a name edit leaves it", async () => {
+    try {
+      const { client, login, email } = await makeLoginWithTwoAccounts("email1");
+      const apexOwnerRow = await db.user.findFirstOrThrow({ where: { tenantId: apex.id, role: "STUDIO_OWNER" } });
+      const apexOwner = { id: apexOwnerRow.id, email: apexOwnerRow.email, name: apexOwnerRow.name, role: apexOwnerRow.role, tenantId: apex.id, tenantSlug: "apex-media" };
+      const base = { tenantId: apex.id, tenantSlug: "apex-media", clientId: client.id, phone: "0123456789" };
+
+      const renamed = await withSession(apexOwner, () => updateClientDetails({ ...base, name: "T41 Renamed", email }));
+      harness.assert(renamed.success === true, "A name edit saves", JSON.stringify(renamed));
+      harness.assertEqual((await db.user.findUniqueOrThrow({ where: { id: client.id } })).loginId, login.id, "…and the account stays joined");
+
+      const newEmail = emailFor("email1-new");
+      createdEmails.add(newEmail);
+      const changed = await withSession(apexOwner, () => updateClientDetails({ ...base, name: "T41 Renamed", email: newEmail }));
+      harness.assert(changed.success === true, "An email edit saves", JSON.stringify(changed));
+      const after = await db.user.findUniqueOrThrow({ where: { id: client.id } });
+      harness.assert(after.loginId === null && after.passwordHash === null, "The account is unlinked and has no password of its own");
+      harness.assert(after.sessionsValidAfter !== null, "Its sessions were ended");
+      harness.assertEqual(after.email, newEmail, "It has the new email");
+      harness.assertEqual((await liveAccounts(login.id)).some((a) => a.tenantSlug === "apex-media"), false, "The person's login no longer lists that studio");
+      harness.assertEqual(hasSetUp(after), false, "The studio sees an account nobody has taken up yet");
+    } finally {
+      await cleanUp();
+    }
   });
 }

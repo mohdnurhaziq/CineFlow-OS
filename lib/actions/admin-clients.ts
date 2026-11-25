@@ -49,7 +49,7 @@ export async function updateClientDetails(input: z.input<typeof ClientDetailsSch
 
     const client = await db.user.findFirst({
       where: { id: data.clientId, tenantId: data.tenantId, role: "CLIENT" },
-      select: { id: true, email: true },
+      select: { id: true, email: true, loginId: true },
     });
     if (!client) return { success: false, error: "Client not found." };
 
@@ -68,7 +68,14 @@ export async function updateClientDetails(input: z.input<typeof ClientDetailsSch
     await db.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: client.id },
-        data: { name: data.name, email: data.email, phone },
+        data: {
+          name: data.name,
+          email: data.email,
+          phone,
+          // The person's one login belongs to the old email. A studio can't push this account into
+          // another person's sign-in, so it becomes a client nobody has taken up yet.
+          ...(client.loginId && data.email !== oldEmail ? { loginId: null, sessionsValidAfter: new Date() } : {}),
+        },
       });
 
       if (data.syncBookings) {
