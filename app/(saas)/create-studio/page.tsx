@@ -819,6 +819,18 @@ export default function CreateStudioPage() {
                   </div>
                 </div>
 
+                <p className="pt-2 text-xs text-zinc-400">
+                  By deploying your studio you agree to the{" "}
+                  <Link href="/terms" target="_blank" className="text-amber-400 underline-offset-2 hover:underline">
+                    Terms of Service
+                  </Link>{" "}
+                  and the{" "}
+                  <Link href="/privacy" target="_blank" className="text-amber-400 underline-offset-2 hover:underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+
                 <div className="pt-4 flex items-center justify-between">
                   <button
                     type="button"

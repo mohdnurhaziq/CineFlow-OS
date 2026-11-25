@@ -9,6 +9,8 @@ export const RESERVED_SLUGS = new Set([
   "super-admin",
   "create-studio",
   "studios",
+  "privacy",
+  "terms",
   "api",
   "admin",
   "login",

@@ -30,6 +30,12 @@ export function SaasFooter({ email }: { email: string }) {
           <Link href="/login" className={link}>
             Sign in
           </Link>
+          <Link href="/privacy" className={link}>
+            Privacy
+          </Link>
+          <Link href="/terms" className={link}>
+            Terms
+          </Link>
           <a href={`mailto:${email}`} className={link}>
             {email}
           </a>

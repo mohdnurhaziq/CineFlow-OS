@@ -174,15 +174,15 @@
     "semantic_hash": ""
   },
   ".claude/settings.json": {
-    "mtime": 1794586464.9533038,
-    "seen": 1794593067.0819857,
-    "ast_hash": "3ac995fbf93552a991ecab9b63f776aa",
+    "mtime": 1795633337.0614636,
+    "seen": 1795636201.8081503,
+    "ast_hash": "4e6b348f766cbe9ba72e1dbdcb9d4135",
     "semantic_hash": ""
   },
   "app/(saas)/create-studio/page.tsx": {
-    "mtime": 1795628087.0944035,
-    "seen": 1795631802.5781436,
-    "ast_hash": "ab4295aad4b9fdd367f2b06770c585e6",
+    "mtime": 1795635466.9679112,
+    "seen": 1795636201.8166482,
+    "ast_hash": "17b6566f05328bf0547dd645d03fc3f9",
     "semantic_hash": ""
   },
   "app/(saas)/error.tsx": {
@@ -426,9 +426,9 @@
     "semantic_hash": ""
   },
   "app/sitemap.ts": {
-    "mtime": 1795096192.2021134,
-    "seen": 1795110862.9894698,
-    "ast_hash": "1e16dff6624db83477179a9354d37e0b",
+    "mtime": 1795635466.966915,
+    "seen": 1795636201.8365815,
+    "ast_hash": "d595408d1fd2b4d97eee08483713ecf3",
     "semantic_hash": ""
   },
   "components.json": {
@@ -738,15 +738,15 @@
     "semantic_hash": ""
   },
   "components/saas/saas-footer.tsx": {
-    "mtime": 1795560435.1799352,
-    "seen": 1795561331.7265775,
-    "ast_hash": "fd4fba51615b7b677d79ca1f9d58e180",
+    "mtime": 1795635466.9639146,
+    "seen": 1795636201.872029,
+    "ast_hash": "3e79238e20c8123815f13adb9cf42cb7",
     "semantic_hash": ""
   },
   "components/saas/saas-navbar.tsx": {
-    "mtime": 1795622544.6275625,
-    "seen": 1795622576.3347669,
-    "ast_hash": "b3b6c5456c356287ed7a473f5970e0e8",
+    "mtime": 1795633960.6981406,
+    "seen": 1795636201.8720317,
+    "ast_hash": "bda78a1b0bb21f470634ccaf1b29498d",
     "semantic_hash": ""
   },
   "components/showcase/category-filter-bar.tsx": {
@@ -1104,9 +1104,9 @@
     "semantic_hash": ""
   },
   "lib/validations/onboarding.ts": {
-    "mtime": 1795628087.170192,
-    "seen": 1795631802.6671245,
-    "ast_hash": "9309017e207b4ebcec6a4b4ff606e5c7",
+    "mtime": 1795635466.9639146,
+    "seen": 1795636201.9286747,
+    "ast_hash": "9aa1fd4aef0992f802d3dc77addc14f6",
     "semantic_hash": ""
   },
   "lib/validations/proposal-templates.ts": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/runner.ts": {
-    "mtime": 1795628087.1858418,
-    "seen": 1795631802.6754048,
-    "ast_hash": "ad02a80b6f7c62d667705cace3446bb0",
+    "mtime": 1795635393.0263002,
+    "seen": 1795636201.9413562,
+    "ast_hash": "166cac77ee9121a177ec853eff6ee29f",
     "semantic_hash": ""
   },
   "tests/e2e/test-harness.ts": {
@@ -3858,9 +3858,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier33-studio-subdomains.test.ts": {
-    "mtime": 1795588003.622123,
-    "seen": 1795588313.6776707,
-    "ast_hash": "bc330be1b3c5cbfb35a252ad84e6280d",
+    "mtime": 1795635905.8882997,
+    "seen": 1795636201.9528308,
+    "ast_hash": "0075f68fa45f560d1e699508f1451aed",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-19-studio-subdomains.md": {
@@ -4686,9 +4686,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier42-one-login-switcher.test.ts": {
-    "mtime": 1795622544.6602218,
-    "seen": 1795622576.468602,
-    "ast_hash": "1492894e93988113973037b1689a4fac",
+    "mtime": 1795633943.7206373,
+    "seen": 1795636201.9554558,
+    "ast_hash": "7bff30f9616f7d7b26d56372b0a4b8ac",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-26-one-login-part-2.md": {
@@ -4791,6 +4791,36 @@
     "mtime": 1795630662.299012,
     "seen": 1795631802.6407142,
     "ast_hash": "abfed40c098c0fdd7e22641a8a6afa65",
+    "semantic_hash": ""
+  },
+  "app/(saas)/privacy/page.tsx": {
+    "mtime": 1795635466.9629095,
+    "seen": 1795636201.8178532,
+    "ast_hash": "4d62e2b9f4eb7895a6c8dd8233ae4a20",
+    "semantic_hash": ""
+  },
+  "app/(saas)/terms/page.tsx": {
+    "mtime": 1795635466.9609082,
+    "seen": 1795636201.8185372,
+    "ast_hash": "45dcb469c7d02805b33c4e1c798fb81e",
+    "semantic_hash": ""
+  },
+  "components/saas/legal-page.tsx": {
+    "mtime": 1795635402.5355835,
+    "seen": 1795636201.8720262,
+    "ast_hash": "d88838e14aa7319db1a2153897f9590e",
+    "semantic_hash": ""
+  },
+  "tests/e2e/.t44-only.ts": {
+    "mtime": 1795635393.0711632,
+    "seen": 1795636201.9385262,
+    "ast_hash": "075c57535f5d421027ed98608ab73e79",
+    "semantic_hash": ""
+  },
+  "tests/e2e/tier44-legal-pages.test.ts": {
+    "mtime": 1795635484.744774,
+    "seen": 1795636201.955749,
+    "ast_hash": "d1985a5807f15515ef1b580ad436a4fc",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {

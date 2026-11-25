@@ -61,6 +61,7 @@ import { runTier40OffersPrintsTests } from "./tier40-offers-prints.test";
 import { runTier41OneLoginTests } from "./tier41-one-login.test";
 import { runTier42OneLoginSwitcherTests } from "./tier42-one-login-switcher.test";
 import { runTier43GoogleSignInTests } from "./tier43-google-sign-in.test";
+import { runTier44LegalPagesTests } from "./tier44-legal-pages.test";
 
 // The suite creates and mutates lots of records; refuse to run against anything but the
 // throwaway test database (use `npm run test:e2e`, which builds prisma/test.db).
@@ -248,6 +249,7 @@ async function runMasterTestSuite() {
     await runTier41OneLoginTests(harness);
     await runTier42OneLoginSwitcherTests(harness);
     await runTier43GoogleSignInTests(harness);
+    await runTier44LegalPagesTests(harness);
   } catch (err) {
     console.error("\n\x1b[31m[CRITICAL RUNNER ERROR]\x1b[0m Unhandled exception in test runner:", err);
   } finally {

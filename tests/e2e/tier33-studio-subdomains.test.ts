@@ -481,7 +481,7 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
   await harness.test("T33-SEO-02: with subdomains on, the platform and each studio list only their own pages", async () => {
     await withSubdomains(true, async () => {
       const platform = urlsOf((await withHost(B, () => sitemap())).result);
-      harness.assertDeepEqual(platform, [U, `${U}/create-studio`], "Platform sitemap: its own pages only");
+      harness.assertDeepEqual(platform, [U, `${U}/create-studio`, `${U}/privacy`, `${U}/terms`], "Platform sitemap: its own pages only");
       const pr = rulesOf((await withHost(B, () => robots())).result);
       harness.assert(pr.allow.includes("/"), "Platform robots allows its pages");
       harness.assert(pr.disallow.includes("/api/") && pr.disallow.includes("/super-admin"), "…and keeps the API and console out", pr.disallow.join(" "));
