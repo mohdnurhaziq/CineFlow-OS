@@ -180,9 +180,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/create-studio/page.tsx": {
-    "mtime": 1795565578.9863794,
-    "seen": 1795566206.515915,
-    "ast_hash": "bcbfaa0c55de9d5d0426835e93026158",
+    "mtime": 1795580546.3167007,
+    "seen": 1795581067.2175925,
+    "ast_hash": "7227edb96b220e4d1a7e329c208c9638",
     "semantic_hash": ""
   },
   "app/(saas)/error.tsx": {
@@ -954,9 +954,9 @@
     "semantic_hash": ""
   },
   "lib/actions/admin-settings.ts": {
-    "mtime": 1795510886.1211252,
-    "seen": 1795544287.5917165,
-    "ast_hash": "bc4721a57472be2062c087251455ffd1",
+    "mtime": 1795580546.3141725,
+    "seen": 1795581067.3230064,
+    "ast_hash": "4d70fb84c093a10384429586eb562eda",
     "semantic_hash": ""
   },
   "lib/actions/admin-verification.ts": {
@@ -1110,9 +1110,9 @@
     "semantic_hash": ""
   },
   "lib/validations/onboarding.ts": {
-    "mtime": 1795565579.2374187,
-    "seen": 1795566206.9283435,
-    "ast_hash": "5e83fb56d75ee666fa918164472dccbe",
+    "mtime": 1795580546.3141725,
+    "seen": 1795581067.3572118,
+    "ast_hash": "38305b25a7eef062193e7deda48dd6b2",
     "semantic_hash": ""
   },
   "lib/validations/proposal-templates.ts": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier1/05-admin-verification.test.ts": {
-    "mtime": 1794662838.061841,
-    "seen": 1794664963.3206155,
-    "ast_hash": "d25f101fe829e2c3b4fd96158077d538",
+    "mtime": 1795580565.1059327,
+    "seen": 1795581067.371504,
+    "ast_hash": "090a66b36163a4de7c371ef94477b0bc",
     "semantic_hash": ""
   },
   "tests/e2e/tier2-boundary-corner-cases.test.ts": {
@@ -4224,9 +4224,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier39-landing-page.test.ts": {
-    "mtime": 1795566601.5187924,
-    "seen": 1795568660.8156085,
-    "ast_hash": "cf160e706b273037becd249beb0bdf6a",
+    "mtime": 1795580565.1082673,
+    "seen": 1795581067.3773224,
+    "ast_hash": "51d17a61aebb198383ed7758b72425d8",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-24-landing-page-redesign.md": {
@@ -4539,6 +4539,12 @@
     "mtime": 1795561596.597,
     "seen": 1795562068.8951077,
     "ast_hash": "43cc08d168099de113bad5ba75614ec0",
+    "semantic_hash": ""
+  },
+  "lib/validations/logo-url.ts": {
+    "mtime": 1795580546.235174,
+    "seen": 1795581067.357208,
+    "ast_hash": "82ebd452c7e094e89610c9e4bba5a9ed",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {
