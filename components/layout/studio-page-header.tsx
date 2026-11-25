@@ -6,6 +6,7 @@ import { ClientAccountHeader } from "@/components/account/client-account-header"
 import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { loadClientHeaderBadges } from "@/lib/client-header-badges";
 import { printsOffered } from "@/lib/billing/guard";
+import { loadSwitcher } from "@/lib/auth/switcher";
 
 interface StudioPageHeaderProps {
   tenantSlug: string;
@@ -60,6 +61,7 @@ export async function StudioPageHeader({ tenantSlug, staffView = "admin" }: Stud
       studioLead={studioLead}
       staff={session && isStaff ? { name: session.name, email: session.email, role: session.role } : null}
       showWallArt={await printsOffered(tenant.id)}
+      switcher={await loadSwitcher(tenant.slug)}
     />
   );
 }

@@ -32,6 +32,7 @@ const SECTIONS = [
   { id: "roles", title: "Your team's roles" },
   { id: "owner-only", title: "Who can do what" },
   { id: "sign-in", title: "Signing in and passwords" },
+  { id: "one-sign-in", title: "One sign-in for all your studios" },
   { id: "guidelines", title: "Guidelines" },
   { id: "questions", title: "Common questions" },
 ];
@@ -240,6 +241,34 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
               on set.
             </>,
             <>A team member only ever sees their own studio. They can&apos;t open another studio&apos;s admin console.</>,
+          ]}
+        />
+      </ManualSection>
+
+      <ManualSection id="one-sign-in" title="One sign-in for all your studios">
+        <ManualP>
+          One person can have one CineFlow sign-in for every studio they work with or book: for example your own studio, a studio
+          where you cover shoots as a photographer, and a studio you hire as a client. Each studio keeps its own account for you,
+          and sees nothing about the others.
+        </ManualP>
+        <ManualList
+          items={[
+            <>
+              <Ui>Use one sign-in for all your studios</Ui> on your Overview page emails you a link that confirms your email. You
+              then choose one password for every studio.
+            </>,
+            <>
+              The arrows button next to the sign-out button opens <Ui>Switch studio</Ui> when you belong to more than one studio. It
+              lists each studio with your role there; choose one to open it. Both studios stay signed in at once, even in two tabs.
+            </>,
+            <>
+              <Ui>Sign out everywhere</Ui> in the same menu signs you out on every phone and computer, not just this one. Use it if a
+              device is lost.
+            </>,
+            <>
+              A team invite only joins your sign-in if you enter your sign-in password when you accept it. The studio that invited
+              you can never set that password for you.
+            </>,
           ]}
         />
       </ManualSection>

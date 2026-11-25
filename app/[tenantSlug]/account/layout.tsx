@@ -5,6 +5,7 @@ import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { ClientAccountHeader } from "@/components/account/client-account-header";
 import { loadClientHeaderBadges } from "@/lib/client-header-badges";
 import { studioPath } from "@/lib/domain-name";
+import { loadSwitcher } from "@/lib/auth/switcher";
 
 interface ClientAccountLayoutProps {
   children: React.ReactNode;
@@ -45,12 +46,13 @@ export default async function ClientAccountLayout({ children, params }: ClientAc
   // Release slots whose QR/cash deposit went unpaid for 24 hours before counting
   await expireUnpaidDeposits(tenant.id);
 
-  const [client, badges] = await Promise.all([
+  const [client, badges, switcher] = await Promise.all([
     db.user.findFirst({
       where: { id: currentUser.id, tenantId: tenant.id, role: "CLIENT" },
       select: { id: true, name: true, email: true, phone: true },
     }),
     loadClientHeaderBadges(tenant.id, currentUser.id),
+    loadSwitcher(tenant.slug),
   ]);
 
   if (!client) redirect(studioPath(tenantSlug, "/login"));
@@ -61,6 +63,7 @@ export default async function ClientAccountLayout({ children, params }: ClientAc
         tenant={tenant}
         client={client}
         badges={badges}
+        switcher={switcher}
       />
       <main className="flex-1">{children}</main>
     </div>

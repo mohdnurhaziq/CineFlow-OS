@@ -11,6 +11,7 @@ import { isStudioOwner } from "@/lib/auth/admin-page";
 import { studioPath } from "@/lib/domain-name";
 import { loadPlanStatus } from "@/lib/billing/guard";
 import { ALL_FEATURES } from "@/lib/billing/plans";
+import { loadSwitcher } from "@/lib/auth/switcher";
 
 interface AdminHeaderProps {
   tenant: { id: string; name: string; slug: string; discipline: string };
@@ -26,9 +27,10 @@ interface AdminHeaderProps {
  */
 export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
   // The menu shows only what this person can open.
-  const [access, member] = await Promise.all([
+  const [access, member, switcher] = await Promise.all([
     loadAccess({ id: user.id, role: user.role, tenantId: tenant.id }),
     db.user.findUnique({ where: { id: user.id }, select: { teamRole: { select: { name: true } } } }),
+    loadSwitcher(tenant.slug),
   ]);
   const isOwner = isStudioOwner(user, tenant.id);
   // Menu items for features the studio's plan lacks get a lock; a super-admin has everything.
@@ -85,7 +87,7 @@ export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
               <span className="hidden sm:inline">View studio website</span>
             </Link>
             <div className="h-4 w-px bg-zinc-800" />
-            <AdminUserNav tenantSlug={tenant.slug} user={user} roleLabel={roleLabel} />
+            <AdminUserNav tenantSlug={tenant.slug} user={user} roleLabel={roleLabel} switcher={switcher} />
           </div>
         </div>
 

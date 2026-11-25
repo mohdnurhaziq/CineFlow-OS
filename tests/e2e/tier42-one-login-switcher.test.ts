@@ -12,6 +12,11 @@ import { loadSwitcher, accountHref } from "@/lib/auth/switcher";
 import { signOutEverywhere } from "@/lib/actions/one-login";
 import { getCurrentLogin, getCurrentUser } from "@/lib/auth/session";
 import { COOKIE_NAME, createSessionToken, liveAccounts } from "@/lib/auth/token";
+import { readFile } from "node:fs/promises";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { provideReactGlobal } from "./react-tree";
+import { SwitcherRow } from "@/components/auth/session-menu";
 import { withLoginSession, withRequest, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
@@ -169,5 +174,33 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
     } finally {
       await cleanUp();
     }
+  });
+
+  // ── Task 2: the account menu ────────────────────────────────────────────────────────────
+  await harness.test("T42-MENU-01: the menu is in all three account bars, and each page loads the switcher", async () => {
+    for (const f of ["components/admin/admin-user-nav.tsx", "components/account/client-user-nav.tsx", "components/account/client-account-menu.tsx"]) {
+      harness.assert(/<SessionMenu\b/.test(await readFile(f, "utf8")), `${f} renders the session menu`);
+    }
+    for (const f of ["components/admin/admin-header.tsx", "app/[tenantSlug]/account/layout.tsx", "components/layout/studio-page-header.tsx", "app/[tenantSlug]/page.tsx"]) {
+      harness.assert(/loadSwitcher\(/.test(await readFile(f, "utf8")), `${f} loads the switcher`);
+    }
+    const menu = await readFile("components/auth/session-menu.tsx", "utf8");
+    harness.assert(/aria-label="Studios and sign out"/.test(menu) && /Switch studio/.test(menu) && /Sign out everywhere/.test(menu), "The menu has its label, heading and sign-out item");
+    harness.assert(/entries\.length > 1/.test(menu), "The switcher part shows only with two or more studios");
+  });
+
+  await harness.test("T42-MENU-02: a switcher row shows the studio, the role, and marks the current one", async () => {
+    await provideReactGlobal();
+    const row = (current: boolean) =>
+      renderToStaticMarkup(createElement(SwitcherRow, { entry: { tenantSlug: "a", tenantName: "Apex Photo & Motion", roleLabel: "Photographer", href: "/a/admin", current } }) as never);
+    const here = row(true);
+    harness.assert(/Apex Photo &amp; Motion/.test(here) && /Photographer/.test(here), "Name and role");
+    harness.assertEqual((here.match(/Current/g) ?? []).length, 1, "The current row says so");
+    harness.assert(!/Current/.test(row(false)), "Another row doesn't");
+  });
+
+  await harness.test("T42-MENU-03: the manual explains one sign-in", async () => {
+    const manual = await readFile("app/[tenantSlug]/admin/manual/settings-and-team/page.tsx", "utf8");
+    harness.assert(/One sign-in/.test(manual) && /Sign out everywhere/.test(manual), "The settings manual has a One sign-in section that mentions signing out everywhere");
   });
 }

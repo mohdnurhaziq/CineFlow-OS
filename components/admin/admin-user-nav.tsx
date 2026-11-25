@@ -6,15 +6,19 @@ import { LogOut, LogIn, PlayCircle } from "lucide-react";
 import { logoutAction, type SessionUser } from "@/lib/auth/session";
 import { signedOutHref } from "@/lib/auth/signed-out";
 import { studioPath } from "@/lib/domain-name";
+import { SessionMenu } from "@/components/auth/session-menu";
+import type { SwitcherEntry } from "@/lib/auth/switcher";
 
 interface AdminUserNavProps {
   tenantSlug: string;
   user: SessionUser | null;
   /** Shown under the name: "Studio owner", the team member's role, or the account type. */
   roleLabel?: string;
+  /** The person's studios (empty unless they have a login). */
+  switcher?: SwitcherEntry[];
 }
 
-export function AdminUserNav({ tenantSlug, user, roleLabel }: AdminUserNavProps) {
+export function AdminUserNav({ tenantSlug, user, roleLabel, switcher = [] }: AdminUserNavProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -64,6 +68,8 @@ export function AdminUserNav({ tenantSlug, user, roleLabel }: AdminUserNavProps)
       >
         <PlayCircle className="size-3.5" />
       </Link>
+
+      <SessionMenu tenantSlug={tenantSlug} entries={switcher} />
 
       <button
         type="button"

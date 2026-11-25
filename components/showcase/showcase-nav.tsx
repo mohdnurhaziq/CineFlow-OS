@@ -6,6 +6,7 @@ import { ClientAccountMenu } from "@/components/account/client-account-menu";
 import { disciplineLabel } from "@/lib/labels";
 import { ToastAnchor } from "@/components/ui/toast-anchor";
 import { studioPath } from "@/lib/domain-name";
+import type { SwitcherEntry } from "@/lib/auth/switcher";
 
 interface ShowcaseNavProps {
   tenant: {
@@ -24,9 +25,11 @@ interface ShowcaseNavProps {
   staff?: { name: string; email?: string; role?: string } | null;
   /** The wall-art visualizer is on the studio's plan; the link is hidden when it isn't. */
   showWallArt?: boolean;
+  /** The person's studios (empty unless they have a login). */
+  switcher?: SwitcherEntry[];
 }
 
-export function ShowcaseNav({ tenant, studioLead, client = null, staff = null, showWallArt = true }: ShowcaseNavProps) {
+export function ShowcaseNav({ tenant, studioLead, client = null, staff = null, showWallArt = true, switcher = [] }: ShowcaseNavProps) {
   const brandColor = tenant.brandColor || "#f59e0b";
   const whatsappNumber = studioLead?.phone ? studioLead.phone.replace(/[^0-9]/g, "") : "60123456789";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
@@ -90,7 +93,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null, s
             <span className="hidden sm:inline">WhatsApp</span>
           </a>
 
-          <ClientAccountMenu tenantSlug={tenant.slug} client={client} staff={staff} />
+          <ClientAccountMenu tenantSlug={tenant.slug} client={client} staff={staff} switcher={switcher} />
 
           <Link
             href={studioPath(tenant.slug, "/book")}

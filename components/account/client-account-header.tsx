@@ -8,6 +8,7 @@ import { ClientUserNav } from "./client-user-nav";
 import { disciplineLabel } from "@/lib/labels";
 import { ToastAnchor } from "@/components/ui/toast-anchor";
 import { studioPath } from "@/lib/domain-name";
+import type { SwitcherEntry } from "@/lib/auth/switcher";
 
 interface ClientAccountHeaderProps {
   tenant: {
@@ -28,9 +29,11 @@ interface ClientAccountHeaderProps {
     projects: number;
     proposals: number;
   };
+  /** The person's studios (empty unless they have a login). */
+  switcher?: SwitcherEntry[];
 }
 
-export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHeaderProps) {
+export function ClientAccountHeader({ tenant, client, badges, switcher = [] }: ClientAccountHeaderProps) {
   const brandColor = tenant.brandColor || "#f59e0b";
 
   return (
@@ -80,7 +83,7 @@ export function ClientAccountHeader({ tenant, client, badges }: ClientAccountHea
               <span className="sm:hidden">Book</span>
             </Link>
 
-            <ClientUserNav tenantSlug={tenant.slug} client={client} />
+            <ClientUserNav tenantSlug={tenant.slug} client={client} switcher={switcher} />
           </div>
         </div>
 

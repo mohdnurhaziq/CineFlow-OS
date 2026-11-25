@@ -7,6 +7,8 @@ import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
 import { signedOutHref } from "@/lib/auth/signed-out";
 import { studioPath } from "@/lib/domain-name";
+import { SessionMenu } from "@/components/auth/session-menu";
+import type { SwitcherEntry } from "@/lib/auth/switcher";
 
 interface ClientAccountMenuProps {
   tenantSlug: string;
@@ -16,6 +18,8 @@ interface ClientAccountMenuProps {
   staff?: { name: string; email?: string; role?: string } | null;
   /** Where to come back to after signing in (defaults to the current page). */
   returnTo?: string;
+  /** The person's studios (empty unless they have a login). */
+  switcher?: SwitcherEntry[];
 }
 
 function initials(name: string): string {
@@ -26,7 +30,7 @@ function initials(name: string): string {
 }
 
 /** Header control: "Studio Admin" when staff is signed in, "My account" when client is signed in, otherwise "Sign in". */
-export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: ClientAccountMenuProps) {
+export function ClientAccountMenu({ tenantSlug, client, staff, returnTo, switcher = [] }: ClientAccountMenuProps) {
   const [isPending, startTransition] = useTransition();
 
   if (staff) {
@@ -43,6 +47,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
           <span className="hidden sm:inline text-amber-400/80">· Studio Admin</span>
           <span className="sm:hidden font-mono text-[11px]">Admin</span>
         </Link>
+        <SessionMenu tenantSlug={tenantSlug} entries={switcher} />
         <button
           type="button"
           disabled={isPending}
@@ -98,6 +103,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo }: Clien
         <span className="hidden sm:inline max-w-[10rem] truncate">{client.name}</span>
         <span className="hidden sm:inline text-zinc-500">· My account</span>
       </Link>
+      <SessionMenu tenantSlug={tenantSlug} entries={switcher} />
       <button
         type="button"
         disabled={isPending}

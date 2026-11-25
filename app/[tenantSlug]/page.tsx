@@ -11,6 +11,7 @@ import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 import { studioPath } from "@/lib/domain-name";
 import { printsOffered } from "@/lib/billing/guard";
+import { loadSwitcher } from "@/lib/auth/switcher";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -180,6 +181,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
         client={client ? { name: client.name, email: client.email } : null}
         staff={staff}
         showWallArt={sellsPrints}
+        switcher={await loadSwitcher(tenant.slug)}
       />
 
       {/* The portfolio slider comes first, the full width of the page under the bar; the studio's intro follows it. */}
