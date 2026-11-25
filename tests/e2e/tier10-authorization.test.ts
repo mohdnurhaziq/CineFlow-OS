@@ -52,6 +52,7 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "password-reset.resetPassword": "forgot password (needs the one-time emailed token; rate-limited)",
   "password-reset.sendOneLoginLink": "one sign-in: emails the signed-in stand-alone account a confirm link (checks the session itself; rate-limited)",
   "one-login.loginToPlatform": "one sign-in: the platform sign-in page (rate-limited like a studio sign-in, every failure looks the same)",
+  "one-login.beginGoogleReturn": "one sign-in: on a studio's own domain only, sets that domain's own nonce cookie for a Google return (no session needed)",
   "one-login.signOutEverywhere": "one sign-in: signs the current person out everywhere (checks the session itself)",
   "one-login.continueAsClient": "one sign-in: needs a login session (checks it itself), and only ever creates or takes up a CLIENT account",
 };

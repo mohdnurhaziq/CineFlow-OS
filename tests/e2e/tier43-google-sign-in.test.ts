@@ -9,7 +9,7 @@ import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair } from "jose";
 import bcrypt from "bcryptjs";
 import nodemailer, { type Transporter } from "nodemailer";
 import { readFile } from "node:fs/promises";
-import { NextRequest } from "next/server";
+import { NextRequest, type NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { createLoginFromProof, findLogin } from "@/lib/auth/login";
@@ -26,6 +26,12 @@ import { inviteTeamMember } from "@/lib/actions/admin-team";
 import { resetPassword } from "@/lib/actions/password-reset";
 import { withSession } from "./mocks/session";
 import { onboardStudio, readGoogleTicket } from "@/lib/actions/onboarding";
+import { APP_BASE_DOMAIN } from "@/lib/domain-name";
+import { SHARED_COOKIE_NAME } from "@/lib/auth/token";
+import { GOOGLE_NONCE_COOKIE } from "@/lib/auth/handoff";
+import { beginGoogleReturn } from "@/lib/actions/one-login";
+import { GET as GET_FINISH } from "@/app/[tenantSlug]/auth/google/finish/route";
+import { withHost } from "./mocks/session";
 import { TestHarness } from "./test-harness";
 import {
   GoogleError,
@@ -428,7 +434,7 @@ export async function runTier43GoogleSignInTests(harness: TestHarness) {
     harness.assert(/Continue with Google/.test(button) && /min-h-11/.test(button), "A 'Continue with Google' button at least 44px tall");
     for (const f of ["components/auth/studio-login-form.tsx", "components/auth/client-auth-panel.tsx", "components/auth/platform-account-login-form.tsx"]) {
       const src = await read(f);
-      harness.assert(/googleEnabled/.test(src) && /<GoogleButton\b/.test(src) && /googleErrorMessage\(/.test(src), `${f} shows the button only when enabled, and the messages`);
+      harness.assert(/googleEnabled/.test(src) && /<Google(Sign[Ii]n)?Button\b/.test(src) && /googleErrorMessage\(/.test(src), `${f} shows the button only when enabled, and the messages`);
     }
     for (const f of ["app/[tenantSlug]/login/page.tsx", "app/[tenantSlug]/register/page.tsx", "app/(saas)/login/page.tsx"]) {
       harness.assert(/googleEnabled=\{googleConfigured\(\)\}/.test(await read(f)), `${f} passes whether Google is set up`);
@@ -562,7 +568,7 @@ export async function runTier43GoogleSignInTests(harness: TestHarness) {
     const page = await readFile("app/[tenantSlug]/reset-password/page.tsx", "utf8");
     harness.assert(/googleInviteHref\(/.test(page) && /googleConfigured\(\)/.test(page) && /googleError=/.test(page), "The page works out the Google link and the reason");
     const form = await readFile("components/auth/reset-password-form.tsx", "utf8");
-    harness.assert(/welcome && googleHref/.test(form) && /<GoogleButton\b/.test(form) && /googleErrorMessage\(/.test(form), "The form shows the button only on a team invite, and the reason");
+    harness.assert(/welcome && googleHref/.test(form) && /<Google(Sign[Ii]n)?Button\b/.test(form) && /googleErrorMessage\(/.test(form), "The form shows the button only on a team invite, and the reason");
   });
 
   // ── Task 4: starting a studio with Google ───────────────────────────────────────────────
@@ -709,5 +715,178 @@ export async function runTier43GoogleSignInTests(harness: TestHarness) {
     harness.assert(/readGoogleTicket\(/.test(page) && /readOnly/.test(page) && /Signed in with Google/.test(page), "The ticket fills and locks the owner's email, and the password field gives way");
     harness.assert(/googleTicket/.test(page) && /googleErrorMessage\(/.test(page), "The ticket is sent with the sign-up, and Google's reasons are shown");
     harness.assert(/googleAvailable\(\)/.test(page), "The button shows only when Google is set up");
+  });
+
+  // ── Task 5: coming back to a studio's own domain ────────────────────────────────────────
+  const withProd = async <T,>(fn: () => Promise<T>): Promise<T> => {
+    const prev = { s: process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS, u: process.env.NEXT_PUBLIC_APP_URL };
+    process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS = "true";
+    process.env.NEXT_PUBLIC_APP_URL = "https://cineflow-os.my";
+    try {
+      return await fn();
+    } finally {
+      if (prev.s === undefined) delete process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS;
+      else process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS = prev.s;
+      if (prev.u === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = prev.u;
+    }
+  };
+  const PLATFORM = APP_BASE_DOMAIN;
+  const sha = (v: string) => createHash("sha256").update(v).digest("hex");
+  const domainStudio = async (label: string) => {
+    const domain = `cd-${label}-${STAMP}.example.test`;
+    const studio = await db.tenant.create({ data: { name: `T43 ${label} ${STAMP}`, slug: `t43-${label}-${STAMP}-${++counter}`, customDomain: domain } });
+    createdStudios.push(studio.id);
+    return { studio, domain };
+  };
+  const finishReq = (domain: string, code: string, to: string, nonce?: string) =>
+    new NextRequest(`https://${domain}/auth/google/finish?code=${encodeURIComponent(code)}&to=${encodeURIComponent(to)}`, nonce ? { headers: { cookie: `${GOOGLE_NONCE_COOKIE}=${nonce}` } } : undefined);
+  const finishCtx = (studio: { slug: string }) => ({ params: Promise.resolve({ tenantSlug: studio.slug }) });
+
+  /** The whole trip: the studio's page begins, the platform starts Google and takes the answer, and a code goes back. */
+  const googleTripFrom = async (studio: { slug: string }, domain: string, email: string, returnTo?: string, nonceOverride?: string) => {
+    const begun = await withRequest(async (jar) => {
+      const { result, calls } = await withHost(domain, () => beginGoogleReturn());
+      return { result, jarNonce: jar.get(GOOGLE_NONCE_COOKIE), calls };
+    });
+    const nonce = nonceOverride ?? begun.result?.nonce ?? "";
+    const qs = new URLSearchParams({ intent: "signin", studio: studio.slug, returnTo: returnTo ?? begun.result?.returnTo ?? "", nonce });
+    const start = await GET_START(new NextRequest(`https://cineflow-os.my/auth/google/start?${qs.toString()}`));
+    const cookie = start.cookies.get(FLOW_COOKIE)!.value;
+    const flow = openBlob<{ state: string; nonce: string; ret?: { to: string; nonceHash: string } }>(cookie)!;
+    await googleSays(flow.nonce, email);
+    createdEmails.add(email);
+    const back = await withRequest(async (jar) => {
+      const { result, calls } = await withHost(PLATFORM, () => GET_CALLBACK(callbackReq(`code=abc&state=${flow.state}`, cookie)));
+      return { res: result as NextResponse, calls, shared: jar.get(SHARED_COOKIE_NAME) };
+    });
+    return { begun, nonce, flow, back };
+  };
+
+  await harness.test("T43-RETURN-01: the whole return to a studio's own domain", async () => {
+    try {
+      await withProd(async () => {
+        configure();
+        const { studio, domain } = await domainStudio("r1");
+        const email = emailFor("r1");
+        const trip = await googleTripFrom(studio, domain, email);
+        harness.assert(trip.begun.result?.returnTo === `https://${domain}/` && !!trip.nonce, "The studio's page got a return address and a nonce", JSON.stringify(trip.begun.result));
+        harness.assert(trip.begun.calls.some((c) => c.op === "set" && c.args[0] === GOOGLE_NONCE_COOKIE), "…and set the nonce cookie on its own host");
+        harness.assert(trip.flow.ret?.to === `https://${domain}/` && trip.flow.ret.nonceHash === sha(trip.nonce) && !JSON.stringify(trip.flow).includes(trip.nonce), "The flow cookie keeps the return address and only a hash of the nonce");
+        const location = trip.back.res.headers.get("location") ?? "";
+        harness.assert(location.startsWith(`https://${domain}/auth/google/finish?code=`) && location.includes("to=%2Faccount"), "The platform sends the browser back to the studio's own domain with a code", location);
+        harness.assert(!!trip.back.shared, "…having set the platform's shared cookie too");
+        const code = new URL(location).searchParams.get("code")!;
+        const fin = await withRequest(async (jar) => {
+          const { result } = await withHost(domain, () => GET_FINISH(finishReq(domain, code, "/account", trip.nonce), finishCtx(studio)));
+          return { res: result as NextResponse, session: jar.get(COOKIE_NAME) };
+        });
+        harness.assertEqual(fin.res.headers.get("location"), `https://${domain}/account`, "Finished: on to the destination on that domain");
+        const decoded = await decodeSessionToken(fin.session ?? "");
+        harness.assert(decoded?.user.loginId !== undefined && decoded.user.tenantSlug === studio.slug, "This host's own cookie holds the person's login session");
+        harness.assertEqual(fin.res.cookies.get(GOOGLE_NONCE_COOKIE)?.value, "", "The nonce cookie is cleared");
+      });
+    } finally {
+      restoreEnv();
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-RETURN-02: a lured or replayed return does nothing", async () => {
+    try {
+      await withProd(async () => {
+        configure();
+        const a = await domainStudio("r2a");
+        const b = await domainStudio("r2b");
+        const issue = async () => {
+          const trip = await googleTripFrom(a.studio, a.domain, emailFor("r2"));
+          return { code: new URL(trip.back.res.headers.get("location")!).searchParams.get("code")!, nonce: trip.nonce };
+        };
+        const finish = async (domain: string, studio: { slug: string }, code: string, to: string, nonce?: string) =>
+          withRequest(async (jar) => {
+            const { result } = await withHost(domain, () => GET_FINISH(finishReq(domain, code, to, nonce), finishCtx(studio)));
+            return { res: result as NextResponse, set: jar.has(COOKIE_NAME) };
+          });
+        const refused = (r: { res: NextResponse; set: boolean }, domain: string) => r.res.headers.get("location") === `https://${domain}/login` && !r.set;
+
+        const one = await issue();
+        harness.assert(refused(await finish(a.domain, a.studio, one.code, "/account"), a.domain), "No nonce cookie (a link sent to someone else): refused");
+        harness.assert(refused(await finish(a.domain, a.studio, one.code, "/account", "another-browsers-nonce"), a.domain), "Another browser's nonce: refused");
+        harness.assert(!refused(await finish(a.domain, a.studio, one.code, "/account", one.nonce), a.domain), "…none of those used the code up: the right browser still can");
+        harness.assert(refused(await finish(a.domain, a.studio, one.code, "/account", one.nonce), a.domain), "A second use: refused");
+
+        const two = await issue();
+        harness.assert(refused(await finish(b.domain, b.studio, two.code, "/account", two.nonce), b.domain), "Another studio's domain: refused");
+        await db.signInHandoff.updateMany({ where: { usedAt: null }, data: { expiresAt: new Date(Date.now() - 1000) } });
+        harness.assert(refused(await finish(a.domain, a.studio, two.code, "/account", two.nonce), a.domain), "An expired code: refused");
+
+        for (const to of ["https://evil.com/x", "//evil.com/x", "/\\evil.com", "javascript:alert(1)"]) {
+          const three = await issue();
+          const r = await finish(a.domain, a.studio, three.code, to, three.nonce);
+          harness.assertEqual(r.res.headers.get("location"), `https://${a.domain}/`, `A bad destination (${to}) goes to the studio's home instead`);
+        }
+      });
+    } finally {
+      restoreEnv();
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-RETURN-03: a bad return address is dropped, and the person lands on the studio's subdomain address", async () => {
+    try {
+      await withProd(async () => {
+        configure();
+        const a = await domainStudio("r3a");
+        const b = await domainStudio("r3b");
+        const bad: Array<[string, string]> = [
+          ["another site", "https://evil.com/"],
+          ["a studio's subdomain", `https://${a.studio.slug}.${PLATFORM}/`],
+          ["another studio's own domain", `https://${b.domain}/`],
+          ["an address with a port", `https://${a.domain}:8443/`],
+        ];
+        for (const [what, returnTo] of bad) {
+          const trip = await googleTripFrom(a.studio, a.domain, emailFor("r3"), returnTo, "some-nonce");
+          harness.assert(trip.flow.ret === undefined, `${what}: dropped from the flow cookie`);
+          harness.assertEqual(trip.back.res.headers.get("location"), accountHref(a.studio.slug, "CLIENT"), `${what}: the person lands on the studio's subdomain address`);
+        }
+      });
+    } finally {
+      restoreEnv();
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-RETURN-04: only a studio's own domain begins a return; a failure comes back to that domain's sign-in", async () => {
+    try {
+      await withProd(async () => {
+        configure();
+        const { studio, domain } = await domainStudio("r4");
+        for (const host of [`${studio.slug}.${PLATFORM}`, PLATFORM, "unknown-site.example.test"]) {
+          const out = await withRequest(async () => withHost(host, () => beginGoogleReturn()));
+          harness.assertEqual(out.result, null, `${host}: nothing to begin`);
+        }
+        const start = await GET_START(new NextRequest(`https://cineflow-os.my/auth/google/start?${new URLSearchParams({ intent: "signin", studio: studio.slug, returnTo: `https://${domain}/`, nonce: "n1" }).toString()}`));
+        const cookie = start.cookies.get(FLOW_COOKIE)!.value;
+        const flow = openBlob<{ state: string }>(cookie)!;
+        const out = await withRequest(async () => GET_CALLBACK(callbackReq(`error=access_denied&state=${flow.state}`, cookie)));
+        harness.assertEqual(out.headers.get("location"), `https://${domain}/login?google=cancelled`, "The person who cancelled comes back to the studio's own sign-in page");
+      });
+      const off = await withRequest(async () => withHost("whatever.example.test", () => beginGoogleReturn()));
+      harness.assertEqual(off.result, null, "With studio subdomains off: nothing to begin");
+    } finally {
+      restoreEnv();
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-UI-04: the buttons on a studio's own pages begin the return", async () => {
+    const button = await readFile("components/auth/google-sign-in-button.tsx", "utf8");
+    harness.assert(/beginGoogleReturn\(/.test(button) && /returnTo/.test(button) && /nonce/.test(button), "The button asks the studio's page for a return address and nonce");
+    for (const f of ["components/auth/studio-login-form.tsx", "components/auth/client-auth-panel.tsx", "components/auth/reset-password-form.tsx"]) {
+      harness.assert(/<GoogleSignInButton\b/.test(await readFile(f, "utf8")), `${f} uses it`);
+    }
   });
 }

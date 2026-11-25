@@ -184,6 +184,8 @@ model SignInHandoff {
   activeUserId String
   /// The studio domain that issued it: only a return address on that domain may use it.
   host         String    @default("")
+  /// Set for a Google return: only the browser that holds the matching nonce (a cookie on the studio's domain) may use it.
+  nonceHash    String?
   expiresAt    DateTime
   usedAt       DateTime?
   createdAt    DateTime  @default(now())

@@ -16,7 +16,7 @@ function GoogleMark() {
  * "Continue with Google": a plain link (a full page navigation to the platform's Google start), so it
  * works without JavaScript. At least 44px tall for phones.
  */
-export function GoogleButton({ href, label = "Continue with Google", className, onClick }: { href: string; label?: string; className?: string; onClick?: () => void }) {
+export function GoogleButton({ href, label = "Continue with Google", className, onClick }: { href: string; label?: string; className?: string; onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void }) {
   return (
     <a
       href={href}

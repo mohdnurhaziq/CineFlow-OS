@@ -6,7 +6,8 @@ import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
 import { continueAsClient } from "@/lib/actions/one-login";
 import { handoffNavigate } from "@/lib/auth/handoff-client";
-import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { OrDivider } from "@/components/auth/google-button";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { googleErrorMessage } from "@/lib/auth/google-messages";
 import { googleStartHref } from "@/lib/auth/google-links";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
@@ -338,7 +339,7 @@ export function ClientAuthPanel({
       {googleEnabled && (
         <div className="space-y-3">
           <OrDivider />
-          <GoogleButton href={googleStartHref(tenantSlug)} />
+          <GoogleSignInButton href={googleStartHref(tenantSlug)} />
         </div>
       )}
     </div>

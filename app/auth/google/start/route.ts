@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { googleAuthorizationUrl, googleConfigured, newGoogleFlow } from "@/lib/auth/google";
 import { FLOW_COOKIE, signInPageFor, type FlowBlob, type FlowIntent } from "@/lib/auth/google-flow";
 import { signBlob } from "@/lib/auth/signed-blob";
+import { safeHandoffReturn } from "@/lib/auth/handoff";
+import { tenantSlugForDomain } from "@/lib/tenant-domain";
+import { createHash } from "node:crypto";
 import { platformUrl } from "@/lib/domain-name";
 
 export const dynamic = "force-dynamic";
@@ -44,8 +47,21 @@ export async function GET(request: NextRequest) {
     return go(platformUrl("/login"));
   }
 
+  // Begun on a studio's own domain: coming back there needs that domain to be this studio's own, and the
+  // nonce its page set in its own cookie. Anything else is dropped: the person lands on the studio's subdomain.
+  let ret: FlowBlob["ret"];
+  const returnTo = params.get("returnTo");
+  const nonce = params.get("nonce");
+  if ((intent.kind === "invite" || (intent.kind === "signin" && intent.studio)) && returnTo && nonce && nonce.length <= 100) {
+    const safe = await safeHandoffReturn(returnTo);
+    const studioSlug = intent.kind === "signin" ? intent.studio : intent.kind === "invite" ? intent.studio : null;
+    if (safe && studioSlug && (await tenantSlugForDomain(new URL(safe).hostname)) === studioSlug) {
+      ret = { to: safe, nonceHash: createHash("sha256").update(nonce).digest("hex") };
+    }
+  }
+
   const flow = newGoogleFlow();
-  const blob: FlowBlob = { state: flow.state, verifier: flow.verifier, nonce: flow.nonce, intent };
+  const blob: FlowBlob = { state: flow.state, verifier: flow.verifier, nonce: flow.nonce, intent, ...(ret ? { ret } : {}) };
   const res = NextResponse.redirect(googleAuthorizationUrl(flow));
   res.cookies.set(FLOW_COOKIE, signBlob(blob, FLOW_SECONDS), {
     httpOnly: true,

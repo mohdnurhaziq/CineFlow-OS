@@ -8,7 +8,8 @@ import { KeyRound, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { resetPassword } from "@/lib/actions/password-reset";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { studioPath } from "@/lib/domain-name";
-import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { OrDivider } from "@/components/auth/google-button";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { googleErrorMessage } from "@/lib/auth/google-messages";
 
 interface ResetPasswordFormProps {
@@ -165,7 +166,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
       {welcome && googleHref && (
         <div className="space-y-4">
           <OrDivider />
-          <GoogleButton href={googleHref} label="Accept with Google" />
+          <GoogleSignInButton href={googleHref} label="Accept with Google" />
         </div>
       )}
     </div>

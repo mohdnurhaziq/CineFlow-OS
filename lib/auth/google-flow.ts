@@ -40,9 +40,11 @@ export interface FlowBlob {
   verifier: string;
   nonce: string;
   intent: FlowIntent;
+  /** Begun on a studio's own domain: where to come back to, and a hash of that browser's nonce. */
+  ret?: { to: string; nonceHash: string };
 }
 
-type Done = { ok: true; redirectTo: string } | { ok: false; code: GoogleErrorCode; redirectTo: string };
+type Done = { ok: true; redirectTo: string; loginId?: string; userId?: string } | { ok: false; code: GoogleErrorCode; redirectTo: string };
 
 /** One of our own sign-in pages, with the reason Google sign-in didn't finish. */
 export function signInPageFor(studio: string | null, code: GoogleErrorCode): string {
@@ -129,18 +131,18 @@ export async function completeGoogleFlow(intent: FlowIntent, claims: GoogleClaim
     const first = accounts[0];
     if (!first) return back("no_studio");
     await setLoginSessionCookie(login.id, first.userId);
-    return { ok: true, redirectTo: platformUrl("/studios") };
+    return { ok: true, redirectTo: platformUrl("/studios"), loginId: login.id, userId: first.userId };
   }
 
   const here = accounts.find((a) => a.tenantSlug === studio.slug);
   if (here) {
     await setLoginSessionCookie(login.id, here.userId);
-    return { ok: true, redirectTo: accountHref(studio.slug, here.role) };
+    return { ok: true, redirectTo: accountHref(studio.slug, here.role), loginId: login.id, userId: here.userId };
   }
   const taken = await takeUpClientAccount({ id: login.id, email: login.email }, studio, { name: claims.name });
   if (!taken.ok) return back("needs_invite");
   await setLoginSessionCookie(login.id, taken.userId);
-  return { ok: true, redirectTo: accountHref(studio.slug, "CLIENT") };
+  return { ok: true, redirectTo: accountHref(studio.slug, "CLIENT"), loginId: login.id, userId: taken.userId };
 }
 
 /** Whether a platform super-admin uses this email (they sign in on their own page only). */
@@ -171,6 +173,6 @@ async function completeInvite(intent: Extract<FlowIntent, { kind: "invite" }>, c
   await linkAccountToLogin(account.id, found.login.id);
   await db.user.update({ where: { id: account.id }, data: { passwordResetToken: null, passwordResetExpires: null } });
   await setLoginSessionCookie(found.login.id, account.id);
-  return { ok: true, redirectTo: accountHref(studio.slug, account.role) };
+  return { ok: true, redirectTo: accountHref(studio.slug, account.role), loginId: found.login.id, userId: account.id };
 }
 

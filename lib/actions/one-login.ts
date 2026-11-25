@@ -9,8 +9,10 @@ import { requestIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
 import { hasSetUp } from "@/lib/auth/set-up";
 import { signInTarget } from "@/lib/auth/sign-in-target";
-import { liveAccounts, setLoginSessionCookie } from "@/lib/auth/token";
-import { handoffForRequest } from "@/lib/auth/handoff";
+import { liveAccounts, requestHost, setLoginSessionCookie } from "@/lib/auth/token";
+import { GOOGLE_NONCE_COOKIE, bareHost, handoffForRequest, isCustomDomainHost } from "@/lib/auth/handoff";
+import { cookies } from "next/headers";
+import { randomBytes } from "node:crypto";
 
 /**
  * "Continue as a client of this studio" for a signed-in login with no account there: takes up the
@@ -86,3 +88,15 @@ export async function loginToPlatform(
   return { success: true, redirectTo: "/studios" };
 }
 
+/**
+ * For "Continue with Google" on a studio's own domain only: sets a one-time nonce in a cookie on this
+ * domain and returns it with this domain's address. The platform keeps only a hash of it, so only this
+ * browser can use the code that brings the sign-in back here. Null on every other host.
+ */
+export async function beginGoogleReturn(): Promise<{ returnTo: string; nonce: string } | null> {
+  const host = bareHost(await requestHost());
+  if (!(await isCustomDomainHost(host))) return null;
+  const nonce = randomBytes(24).toString("base64url");
+  (await cookies()).set(GOOGLE_NONCE_COOKIE, nonce, { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 600 });
+  return { returnTo: `https://${host}/`, nonce };
+}

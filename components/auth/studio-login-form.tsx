@@ -10,7 +10,8 @@ import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { continueAsClient } from "@/lib/actions/one-login";
 import { handoffNavigate } from "@/lib/auth/handoff-client";
-import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { OrDivider } from "@/components/auth/google-button";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { googleErrorMessage } from "@/lib/auth/google-messages";
 import { googleStartHref } from "@/lib/auth/google-links";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
@@ -214,7 +215,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
       {googleEnabled && (
         <div className="space-y-4">
           <OrDivider />
-          <GoogleButton href={googleStartHref(tenantSlug)} />
+          <GoogleSignInButton href={googleStartHref(tenantSlug)} />
         </div>
       )}
 
