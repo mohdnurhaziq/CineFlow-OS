@@ -15,6 +15,7 @@ Welcome to the definitive documentation index for **CineFlow OS**: The Multi-Ten
 | **[05. Design System & UI Guidelines ("Nocturne Cine")](05_DESIGN_SYSTEM_AND_UI_GUIDELINES.md)** | Visual standards, "Nocturne Cine" obsidian/amber tokens, Emil Kowalski micro-interaction rules, typography, and on-set HUD layout strategies. |
 | **[06. User Journey & Operations Manual](06_USER_JOURNEY_AND_OPERATIONS_MANUAL.md)** | Step-by-step operational workflows for Clients, Studio Producers, Photographers, Videographers, and Super Admins. |
 | **[07. Deployment & Configuration Guide](07_DEPLOYMENT_AND_CONFIGURATION_GUIDE.md)** | Environment variables, local quickstart, custom domain DNS CNAME setup, and mobile PWA installation. |
+| **[08. Go-live Checklist](08_GO_LIVE_CHECKLIST.md)** | Step-by-step list for putting this release on the 24/7 PC: settings for staging and production, Google sign-in details, email setup, deploy commands, post-deploy checks, and decisions still open. |
 | **[Architecture Plan (Detailed)](ARCHITECTURE_PLAN.md)** | Comprehensive implementation roadmap and modular execution blueprint. |
 
 ---
