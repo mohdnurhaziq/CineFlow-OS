@@ -1,7 +1,7 @@
 # Graph Report - CineFlow-OS  (2026-11-25)
 
 ## Corpus Check
-- 708 files · ~1,322,999 words
+- 708 files · ~1,323,018 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 31 file(s) not represented in the graph (top: (none) 15, .css 10, .example 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `06d74a1d`
+- Built from commit: `a8237d67`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -357,16 +357,16 @@
 10. `levelAtLeast()` - 80 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `The main action (call: C)` --references--> `studioSignupStatus()`  [INFERRED]
+  docs/superpowers/specs/2026-11-24-landing-page-redesign-design.md → lib/actions/onboarding.ts
+- `BUG-20261117-04: A deleted account's cookie still signed in` --references--> `getCurrentUser()`  [INFERRED]
+  docs/BUG_FIX_LOG.md → lib/auth/session.ts
+- `Task 5: Pages and components` --references--> `studioUrl()`  [INFERRED]
+  docs/superpowers/plans/2026-11-19-studio-subdomains.md → lib/domain-name.ts
+- `Where the address is shown` --references--> `studioUrl()`  [INFERRED]
+  docs/superpowers/specs/2026-11-19-studio-subdomains-design.md → lib/domain-name.ts
 - `Invite requests (new, small)` --references--> `sendNotification()`  [INFERRED]
   docs/superpowers/specs/2026-11-24-landing-page-redesign-design.md → lib/notifications.ts
-- `Global Constraints` --references--> `createBookingForCustomer()`  [INFERRED]
-  docs/superpowers/plans/2026-11-14-new-booking-from-bookings.md → lib/actions/admin-bookings.ts
-- `BUG-20261105-13: Rejecting a slip cancelled the whole booking` --references--> `expireUnpaidDeposits()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/bookings/expiry.ts
-- `BUG-20261118-03: Dates changed day between the server and the browser` --references--> `formatSlotDate()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/slot-time.ts
-- `BUG-20261105-20: Staff could approve payments and change prices` --references--> `requireOwner()`  [INFERRED]
-  docs/BUG_FIX_LOG.md → lib/auth/guard.ts
 
 ## Import Cycles
 - None detected.
@@ -1627,7 +1627,7 @@ Nodes (3): ClientBookingPage(), ClientBookingPageProps, dynamic
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `Skeleton`, `react`, `account/invoices/[invoiceId]/page.tsx`, `CalendarAdminDashboard`, `team-tab.tsx`, `Step 4: Map Tokens to the Theme`, `projects/page.tsx`, `buttonVariants`, `visualizer-shell.tsx`, `action-error.ts`, `bookings-console.tsx`, `print-orders-console.tsx`, `my-booking.ts`, `Critical Rules`, `studioPath`, `client-dashboard.tsx`, `tier21-admin-manual.test.ts`, `labels.ts`, `next`, `my-schedule.tsx`, `Styling & Customization`, `account/page.tsx`, `db.ts`, `requireAccess`, `Step 4: Map Tokens to the Theme`, `forgot-password-form.tsx`, `setup-checklist.tsx`, `Critical Rules`, `Styling & Customization`, `[clientId]/page.tsx`?**
-  _High betweenness centrality (0.069) - this node is a cross-community bridge._
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
 - **Are the 6 inferred relationships involving `studioPath()` (e.g. with `Studio Subdomains Implementation Plan` and `Task 1: The switch, the helpers and the reserved names`) actually correct?**
   _`studioPath()` has 6 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `RFC-5545`, `RFC-4180`, `RFC-2606` to the rest of the system?**
@@ -1635,7 +1635,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `.agents/skills/design-taste-frontend/scripts/assets.mjs` be split into smaller, more focused modules?**
   _Cohesion score 0.06648426812585499 - nodes in this community are weakly interconnected._
 - **Why does `next` connect `next` to `tier15-projects.test.ts`, `lucide-react`, `team-tab.tsx`, `account/invoices/[invoiceId]/page.tsx`, `react`, `tier31-go-live.test.ts`, `lucide-react`, `actions/print-orders.ts`, `package.json`, `runTier39LandingPageTests`, `admin/page.tsx`, `team-tab.tsx`, `download/route.ts`, `actions/admin-cms.ts`, `notifications.ts`, `actions/logistics.ts`, `verification-queue.tsx`, `projects/page.tsx`, `tier38-studio-subscriptions.test.ts`, `admin-proposals.ts`, `admin-services.ts`, `tier10-authorization.test.ts`, `buttonVariants`, `visualizer-shell.tsx`, `auth/session.ts`, `super-admin-view.tsx`, `action-error.ts`, `upload/route.ts`, `actions/password-reset.ts`, `print-orders-console.tsx`, `(saas)/page.tsx`, `tier34-beta-security.test.ts`, `AuthorizationError`, `bookings-console.tsx`, `slot-time.ts`, `studioPath`, `my-booking.ts`, `tier24-team-access.test.ts`, `gallery.ts`, `deliverables/route.ts`, `tier21-admin-manual.test.ts`, `client-dashboard.tsx`, `tier33-studio-subdomains.test.ts`, `services-dashboard.tsx`, `labels.ts`, `next`, `[tenantSlug]/visualizer/page.tsx`, `my-schedule.tsx`, `admin-calendar.ts`, `proposal-admin-dashboard.tsx`, `account/page.tsx`, `actions/admin-shipping.ts`, `tier30-environments.test.ts`, `manual/page.tsx`, `db.ts`, `dependencies`, `actions/admin-frames.ts`, `forgot-password-form.tsx`, `actions/checkout.ts`, `account/bookings/[bookingId]/page.tsx`, `setup-checklist.tsx`, `requireAccess`, `job-header.tsx`, `domain-name.ts`, `processBookingCheckout`, `actions/gear.ts`, `tier26-access-matrix.test.ts`, `actions/admin-team.ts`, `tier20-print-orders.test.ts`, `admin-bookings.ts`, `cn`, `[clientId]/page.tsx`?**
-  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Should `tier15-projects.test.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.05759623861298854 - nodes in this community are weakly interconnected._
 

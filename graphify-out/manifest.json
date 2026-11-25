@@ -3912,9 +3912,9 @@
     "semantic_hash": ""
   },
   "components/showcase/showcase-big-slider.tsx": {
-    "mtime": 1795585766.761623,
-    "seen": 1795586556.8160477,
-    "ast_hash": "b35fefae01ce72e2e8e23a0feab0d328",
+    "mtime": 1795586619.95005,
+    "seen": 1795587317.8690207,
+    "ast_hash": "643ddb9430ce999341ff41e037dd0643",
     "semantic_hash": ""
   },
   "lib/bookings/calendar-invites.ts": {
@@ -4218,9 +4218,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier39-landing-page.test.ts": {
-    "mtime": 1795586156.0267043,
-    "seen": 1795586556.8797045,
-    "ast_hash": "82f36db8c98ebb0cf4c5603145de3a7d",
+    "mtime": 1795586619.9515846,
+    "seen": 1795587317.9406717,
+    "ast_hash": "edc12ec104d8e36a2997b3e3bc8aefc3",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-24-landing-page-redesign.md": {
@@ -4350,9 +4350,9 @@
     "semantic_hash": ""
   },
   "public/landing/shots/website-phone.webp": {
-    "mtime": 1795586148.583,
-    "seen": 1795586556.9199662,
-    "ast_hash": "353660eb2b7d8c6cac7b22d014988bf3",
+    "mtime": 1795586890.681,
+    "seen": 1795587317.9862344,
+    "ast_hash": "05131fbd4cbfb576b7c0543bdf52763c",
     "semantic_hash": ""
   },
   "public/landing/video/deliver-16x9.mp4": {
