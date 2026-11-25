@@ -9,6 +9,7 @@ import { TestHarness } from "./test-harness";
 import { withSession } from "./mocks/session";
 import { getSetupChecklist } from "@/lib/onboarding/checklist";
 import { dismissSetupChecklist, markTourSeen } from "@/lib/actions/onboarding-guide";
+import { readFileSync } from "node:fs";
 
 type Row = { id: string; email: string; name: string; role: string; tenantId: string | null };
 const as = (u: Row, tenantSlug: string | null) => ({
@@ -143,5 +144,13 @@ export async function runTier16OnboardingGuideTests(harness: TestHarness) {
     const superAfter = await db.user.findUnique({ where: { id: superRow.id } });
     harness.assert(superAfter?.onboardingTourSeenAt instanceof Date, "Super admin row records the tour");
     await db.user.update({ where: { id: superRow.id }, data: { onboardingTourSeenAt: superBefore } });
+  });
+
+  // ── Tour wording matches the screens ────────────────────────────────────────
+  await harness.test("T16-GUIDE-01: the tour describes the account menu and optional prints as they are now", async () => {
+    const tour = readFileSync("components/admin/onboarding/dashboard-tour.tsx", "utf8");
+    harness.assert(/Switch between your studios/.test(tour) && /sign out/i.test(tour), "The account stop says you can switch studios and sign out");
+    harness.assert(!/Sign out here\./.test(tour), "The old 'Sign out here' wording is gone");
+    harness.assert(/frames and prints, if you offer them/.test(tour), "The catalog stop says frames and prints are optional");
   });
 }

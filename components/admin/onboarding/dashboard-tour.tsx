@@ -38,7 +38,7 @@ const STOPS: { anchor: string | null; title: string; description: string; readyT
   {
     anchor: "nav-catalog",
     title: "Catalog & CMS",
-    description: "What you sell (services, frames and prints) and the work shown on your public page.",
+    description: "What you sell (services, plus frames and prints, if you offer them) and the work shown on your public page.",
   },
   {
     anchor: "nav-settings",
@@ -48,7 +48,7 @@ const STOPS: { anchor: string | null; title: string; description: string; readyT
   {
     anchor: "account",
     title: "Your account",
-    description: "Sign out here. The play button replays this tour any time.",
+    description: "Switch between your studios or sign out from the arrows button. The play button replays this tour any time.",
   },
   {
     anchor: "checklist",

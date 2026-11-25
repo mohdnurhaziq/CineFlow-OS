@@ -92,9 +92,14 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
           ]}
         />
         <ManualP>
-          Team members and clients sign in on the same page. The system sends each person to the right place: your team to the
-          admin console, clients to their account. The owner invites team members from Settings → Team; see{" "}
-          <ManualLink href={`${manual}/team`}>Team, roles and assigning shoots</ManualLink>.
+          Team members and clients sign in on the same page, with their email and password or with Google. The system sends each
+          person to the right place: your team to the admin console, clients to their account. The owner invites team members
+          from Settings → Team; see <ManualLink href={`${manual}/team`}>Team, roles and assigning shoots</ManualLink>.
+        </ManualP>
+        <ManualP>
+          <B>One email works at every studio.</B> If you also shoot for another studio, or book another studio as a client, you
+          sign in once. The arrows button at the top right (<Ui>Studios and sign out</Ui>) lists your studios under{" "}
+          <Ui>Switch studio</Ui>, and <Ui>Sign out everywhere</Ui> signs you out of all of them.
         </ManualP>
       </ManualSection>
 
@@ -126,8 +131,8 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
               <B>They pay the balance.</B> The full-resolution files unlock for download.
             </>,
             <>
-              <B>They order framed prints.</B> From their own photos, including any prints their package includes. You produce and
-              hand over the order. See <ManualLink href={`${manual}/prints`}>Framed prints</ManualLink>.
+              <B>They order framed prints</B> (if your studio offers them). From their own photos, including any prints their
+              package includes. You produce and hand over the order. See <ManualLink href={`${manual}/prints`}>Framed prints</ManualLink>.
             </>,
           ]}
         />
@@ -166,7 +171,7 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
               "Services",
               "Your packages, prices and categories.",
             ],
-            ["", "Frames & Prints", "The print sizes and frames you sell."],
+            ["", "Frames & Prints", "The print sizes and frames you sell. Don't sell prints? Switch them off in Settings → Photo delivery."],
             ["", "Showcase CMS", "The work shown on your studio website."],
             [<Ui key="s">Settings</Ui>, "", "Your studio's name, address, look, payment details and delivery options."],
             [<Ui key="m">Manual</Ui>, "", "These pages."],
@@ -314,6 +319,12 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
             <p>
               Yes, to book online, pay, see their photos and order prints. Creating one is part of booking, so it is not an extra
               step for them. A customer you book by hand gets an account they can claim later with the same email.
+            </p>
+          </ManualQa>
+          <ManualQa question="Can one person work for more than one studio?">
+            <p>
+              Yes. One email and one sign-in cover every studio you belong to, as owner, team member or client. Use the arrows
+              button at the top right to switch studio. Each studio keeps its own data: nothing is shared between them.
             </p>
           </ManualQa>
           <ManualQa question="Can the team use the system on a phone?">

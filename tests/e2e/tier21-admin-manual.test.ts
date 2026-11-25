@@ -102,6 +102,10 @@ const QUOTED_LABELS: [string, string, string][] = [
   ["settings-and-team", "Copy studio ID", "components/admin/settings/plan-tab.tsx"],
   ["getting-started", "Get your studio ready", "components/admin/onboarding/setup-checklist.tsx"],
   ["getting-started", "Take the tour", "components/admin/onboarding/setup-checklist.tsx"],
+  ["getting-started", "Studios and sign out", "components/auth/session-menu.tsx"],
+  ["getting-started", "Switch studio", "components/auth/session-menu.tsx"],
+  ["getting-started", "Sign out everywhere", "components/auth/session-menu.tsx"],
+  ["getting-started", "Photo delivery", "components/admin/settings/delivery-tab.tsx"],
 ];
 
 export async function runTier21AdminManualTests(harness: TestHarness) {
