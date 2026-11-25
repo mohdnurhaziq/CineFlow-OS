@@ -175,6 +175,19 @@ model PrintSize {
 // 2. USERS & ROLES
 // ==============================================================================
 
+/// One person's sign-in across studios. Exists only for an email that has been proven (a link we
+/// emailed, or Google). Each studio keeps its own User for the person, pointing here.
+model Login {
+  id                 String   @id @default(cuid())
+  email              String   @unique // lowercase
+  passwordHash       String?  // none for a Google-only login
+  googleSub          String?  @unique
+  sessionsValidAfter DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  users              User[]
+}
+
 model User {
   id                 String              @id @default(cuid())
   tenantId           String?
@@ -208,6 +221,9 @@ model User {
   // Team: the role this person holds, their own extra access on top of it (JSON), and when
   // the studio deactivated them (null = active). Deactivated people keep their past work.
   teamRoleId         String?
+  // The person's one login (one email, one password or Google across studios). Null: a stand-alone account.
+  loginId            String?
+  login              Login?              @relation(fields: [loginId], references: [id], onDelete: SetNull)
   extraAccess        String?
   deactivatedAt      DateTime?
   createdAt          DateTime            @default(now())
@@ -227,6 +243,7 @@ model User {
   // One account per email per studio, so the same person can be a client of several studios.
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([loginId])
   @@index([role])
 }
 
