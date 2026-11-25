@@ -8,6 +8,7 @@ import { findStudioAccount, passwordResetPath, resetTokenMatches } from "@/lib/a
 import { hasSetUp } from "@/lib/auth/set-up";
 import { linkAccountToLogin } from "@/lib/auth/login";
 import { signBlob } from "@/lib/auth/signed-blob";
+import { cookies } from "next/headers";
 import type { GoogleClaims, GoogleErrorCode } from "@/lib/auth/google";
 
 /**
@@ -22,6 +23,8 @@ export const FLOW_COOKIE = "cineflow_google_flow";
 /** What the sign-up wizard is handed after Google: the confirmed email, name and Google account, signed. */
 export const SIGNUP_TICKET = "signup-ticket";
 export const SIGNUP_TICKET_SECONDS = 900;
+/** Where the ticket lives: an httpOnly cookie in the browser that came back from Google, never the address. */
+export const SIGNUP_TICKET_COOKIE = "cineflow_google_ticket";
 export interface SignupTicket {
   kind: typeof SIGNUP_TICKET;
   email: string;
@@ -103,7 +106,14 @@ export async function completeGoogleFlow(intent: FlowIntent, claims: GoogleClaim
     // Nothing is created yet: the person finishes the wizard, and the ticket proves the email to onboardStudio.
     if (await isSuperAdminEmail(claims.email)) return { ok: false, code: "failed", redirectTo: intentBackUrl(intent, "failed") };
     const ticket = signBlob({ kind: SIGNUP_TICKET, email: claims.email, name: claims.name, sub: claims.sub }, SIGNUP_TICKET_SECONDS);
-    return { ok: true, redirectTo: platformUrl(`/create-studio?google=${encodeURIComponent(ticket)}`) };
+    (await cookies()).set(SIGNUP_TICKET_COOKIE, ticket, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: SIGNUP_TICKET_SECONDS,
+    });
+    return { ok: true, redirectTo: platformUrl("/create-studio?google=ready") };
   }
   const back = (code: GoogleErrorCode): Done => ({ ok: false, code, redirectTo: intentBackUrl(intent, code) });
 

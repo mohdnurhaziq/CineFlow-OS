@@ -76,7 +76,7 @@ export default function CreateStudioPage() {
 
   // Google sign-in for the owner: whether it is set up, and what Google confirmed (a signed ticket).
   const [googleOn, setGoogleOn] = useState(false);
-  const [googleTicket, setGoogleTicket] = useState<string | null>(null);
+  const [googleSignedIn, setGoogleSignedIn] = useState(false);
   const [googleMessage, setGoogleMessage] = useState<string | null>(null);
   useEffect(() => {
     googleAvailable()
@@ -187,7 +187,7 @@ export default function CreateStudioPage() {
   const isStep3Valid =
     formData.ownerName.trim().length >= 2 &&
     formData.ownerEmail.includes("@") &&
-    (googleTicket !== null || (formData.password ?? "").length >= 8);
+    (googleSignedIn || (formData.password ?? "").length >= 8);
 
   const saveWizardForGoogle = () => {
     try {
@@ -215,13 +215,13 @@ export default function CreateStudioPage() {
       setCurrentStep(Math.min(Math.max(saved?.step ?? 1, 1), 3));
       return;
     }
-    readGoogleTicket(returned)
+    readGoogleTicket()
       .then((who) => {
         if (!who) {
           setGoogleMessage(googleErrorMessage("failed"));
           return;
         }
-        setGoogleTicket(returned);
+        setGoogleSignedIn(true);
         setFormData((prev) => ({ ...prev, ownerEmail: who.email, ownerName: prev.ownerName || who.name || "" }));
         setCurrentStep(3);
       })
@@ -230,7 +230,7 @@ export default function CreateStudioPage() {
 
   const handleSubmit = () => {
     startTransition(async () => {
-      const res = await onboardStudio(googleTicket ? { ...formData, password: undefined, googleTicket } : formData);
+      const res = await onboardStudio(googleSignedIn ? { ...formData, password: undefined, googleSignup: true } : formData);
       if (res.success && res.slug) {
         toast.success("Studio workspace launched successfully!");
         // A full page load: with studio subdomains on, the new studio's admin is on another host.
@@ -626,7 +626,7 @@ export default function CreateStudioPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {googleOn && !googleTicket && (
+                  {googleOn && !googleSignedIn && (
                     <div className="space-y-4">
                       <GoogleButton href={GOOGLE_SIGNUP_HREF} onClick={saveWizardForGoogle} />
                       <OrDivider />
@@ -663,7 +663,7 @@ export default function CreateStudioPage() {
                         value={formData.ownerEmail}
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerEmail: e.target.value }))}
                         // Google confirmed this address: it is the owner's, and can't be changed here.
-                        readOnly={googleTicket !== null}
+                        readOnly={googleSignedIn}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500 read-only:text-zinc-400"
                         required
                       />
@@ -671,7 +671,7 @@ export default function CreateStudioPage() {
                   </div>
 
                   {/* Owner Password: not needed when Google confirmed the email */}
-                  {googleTicket ? (
+                  {googleSignedIn ? (
                     <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3.5 text-xs text-emerald-300">
                       Signed in with Google. You won&apos;t need a password: you can add one later from the sign-in page.
                     </div>

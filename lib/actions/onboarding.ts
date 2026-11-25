@@ -5,7 +5,8 @@ import bcrypt from "bcryptjs";
 import type { Login } from "@prisma/client";
 import { verifyLoginPassword } from "@/lib/auth/login";
 import { googleConfigured } from "@/lib/auth/google";
-import { SIGNUP_TICKET, isSuperAdminEmail, loginForGoogle, type SignupTicket } from "@/lib/auth/google-flow";
+import { SIGNUP_TICKET, SIGNUP_TICKET_COOKIE, isSuperAdminEmail, loginForGoogle, type SignupTicket } from "@/lib/auth/google-flow";
+import { cookies } from "next/headers";
 import { openBlob } from "@/lib/auth/signed-blob";
 import { setLoginSessionCookie, setSessionCookie } from "@/lib/auth/token";
 import {
@@ -107,11 +108,11 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     };
   }
 
-  // Signed in with Google: the ticket proves the email, and it is the ticket's, whatever was typed.
+  // Signed in with Google: the ticket (from this browser's own cookie) proves the email, and it is the ticket's, whatever was typed.
   let ticket: SignupTicket | null = null;
-  if (data.googleTicket) {
-    ticket = openBlob<SignupTicket>(data.googleTicket);
-    if (!ticket || ticket.kind !== SIGNUP_TICKET) {
+  if (data.googleSignup) {
+    ticket = await ticketFromCookie();
+    if (!ticket) {
       return { success: false, error: "Your Google sign-in expired. Please continue with Google again." };
     }
   } else if (!data.password) {
@@ -376,6 +377,8 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     // Automatically authenticate the new studio owner
     if (login) {
       await setLoginSessionCookie(login.id, result.ownerId);
+      // A Google ticket is good for one studio.
+      if (ticket) (await cookies()).delete(SIGNUP_TICKET_COOKIE);
     } else {
       await setSessionCookie({
         id: result.ownerId,
@@ -413,12 +416,19 @@ export async function googleAvailable(): Promise<boolean> {
   return googleConfigured();
 }
 
+/** This browser's sign-up ticket from Google: only a good, current one, from its own cookie. */
+async function ticketFromCookie(): Promise<SignupTicket | null> {
+  const raw = (await cookies()).get(SIGNUP_TICKET_COOKIE)?.value;
+  const t = raw ? openBlob<SignupTicket>(raw) : null;
+  return t && t.kind === SIGNUP_TICKET ? t : null;
+}
+
 /**
  * What the sign-up wizard is handed after Google: the email Google confirmed and the person's name, from
- * the signed ticket in the address. Null for anything that isn't a good, current ticket.
+ * the ticket in this browser's own cookie. Null when there is no good, current ticket.
  */
-export async function readGoogleTicket(ticket: string): Promise<{ email: string; name: string | null } | null> {
-  const t = openBlob<SignupTicket>(ticket);
-  return t && t.kind === SIGNUP_TICKET ? { email: t.email, name: t.name } : null;
+export async function readGoogleTicket(): Promise<{ email: string; name: string | null } | null> {
+  const t = await ticketFromCookie();
+  return t ? { email: t.email, name: t.name } : null;
 }
 
