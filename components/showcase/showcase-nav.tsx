@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquare, Calendar, Aperture, ArrowLeft } from "lucide-react";
+import { MessageSquare, Calendar, Aperture } from "lucide-react";
 import { ClientAccountMenu } from "@/components/account/client-account-menu";
 import { disciplineLabel } from "@/lib/labels";
 import { ToastAnchor } from "@/components/ui/toast-anchor";
-import { platformUrl, studioPath } from "@/lib/domain-name";
+import { studioPath } from "@/lib/domain-name";
 
 interface ShowcaseNavProps {
   tenant: {
@@ -37,18 +37,8 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null, s
     <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-[#09090b]/85 backdrop-blur-md">
       <ToastAnchor />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand */}
+        {/* Brand. No link back to the platform: this is the studio's own website, for its clients. */}
         <div className="flex items-center gap-3">
-          <Link
-            href={platformUrl("/")}
-            // Platform home is for studio owners, not a studio's clients; hidden on phones to fit the header.
-            className="hidden sm:inline-flex p-1.5 items-center justify-center rounded-lg border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-            title="Back to Platform Home"
-            aria-label="Back to Platform Home"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-          </Link>
-
           <Link href={studioPath(tenant.slug)} className="flex items-center gap-2.5 group">
             <div
               className="size-8 rounded-lg flex items-center justify-center font-bold text-black text-sm shadow-md transition-transform group-hover:scale-105"

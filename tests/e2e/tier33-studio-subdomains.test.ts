@@ -414,7 +414,7 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       harness.assert(internal(hrefs).length > 2, "On: the showcase has studio links", hrefs.join(" "));
       harness.assert(!hrefs.some((h) => h.startsWith("/lumina-cine")), "On: none carries the studio name", hrefs.join(" "));
       harness.assert(hrefs.includes(`${U}/`), "On: the platform home is linked by its full address", hrefs.join(" "));
-      harness.assert(hrefs.filter((h) => h === `${U}/`).length === 2, "On: both platform links (header and footer) are full addresses", hrefs.join(" "));
+      harness.assert(hrefs.filter((h) => h === `${U}/`).length === 1, "On: the one platform link (the footer's credit) is a full address; the website bar has none", hrefs.join(" "));
     });
     await withSubdomains(false, () => {
       harness.assert(menuHrefs().every((h) => h.startsWith("/lumina-cine/admin")), "Off: the menu keeps /lumina-cine/admin");

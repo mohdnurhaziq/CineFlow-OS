@@ -365,6 +365,13 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert(!/\$\{[^}]*price/.test(slider + grid) && /formatMoney\(currency/.test(slider) && /formatMoney\(currency/.test(grid), "Slider and portfolio prices follow the studio's currency, not a fixed dollar sign");
   });
 
+  await harness.test("T39-SITE-02: a studio's website bar has no link back to the platform; the footer credits it instead", async () => {
+    const nav = await fs.readFile(path.join(process.cwd(), "components/showcase/showcase-nav.tsx"), "utf8");
+    harness.assert(!/platformUrl|Back to Platform/.test(nav), "The website bar doesn't link to the CineFlow OS home page");
+    const footer = await fs.readFile(path.join(process.cwd(), "components/showcase/showcase-footer.tsx"), "utf8");
+    harness.assert(/Powered by[\s\S]{0,80}platformUrl\("\/"\)/.test(footer), "The footer still says it is powered by CineFlow OS, with a link");
+  });
+
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
     const offenders: string[] = [];
     const walk = async (dir: string) => {
