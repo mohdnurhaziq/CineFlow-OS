@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { loginToPlatform } from "@/lib/actions/one-login";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
+import { platformUrl } from "@/lib/domain-name";
 
 const ERRORS: Record<string, string> = {
   INVALID_CREDENTIALS: "Wrong email or password.",
@@ -100,7 +101,7 @@ export function PlatformAccountLoginForm() {
 
       <p className="text-center text-xs text-zinc-400">
         Don&apos;t have one yet? It starts when you confirm your email from a studio you use.{" "}
-        <Link href="/" className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
+        <Link href={platformUrl("/")} className="text-amber-400 underline underline-offset-2 hover:text-amber-300">
           Back to CineFlow OS
         </Link>
       </p>
