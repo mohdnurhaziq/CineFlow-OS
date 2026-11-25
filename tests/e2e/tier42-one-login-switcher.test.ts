@@ -17,6 +17,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { provideReactGlobal } from "./react-tree";
 import { SwitcherRow } from "@/components/auth/session-menu";
+import { loginToPlatform } from "@/lib/actions/one-login";
+import { loginWithCredentials } from "@/lib/auth/session";
+import { decodeSessionToken } from "@/lib/auth/token";
+import { RESERVED_SLUGS, OnboardStudioSchema } from "@/lib/validations/onboarding";
 import { withLoginSession, withRequest, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
@@ -202,5 +206,63 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
   await harness.test("T42-MENU-03: the manual explains one sign-in", async () => {
     const manual = await readFile("app/[tenantSlug]/admin/manual/settings-and-team/page.tsx", "utf8");
     harness.assert(/One sign-in/.test(manual) && /Sign out everywhere/.test(manual), "The settings manual has a One sign-in section that mentions signing out everywhere");
+  });
+
+  // ── Task 3: platform sign-in and Your studios ───────────────────────────────────────────
+  await harness.test("T42-PLATFORM-01: a login signs in on the platform and gets a login session", async () => {
+    try {
+      const p = await makePerson("pl1");
+      const out = await withRequest(async (jar) => ({ res: await loginToPlatform(p.email, "new-pass-123"), cookie: jar.get(COOKIE_NAME) }));
+      harness.assert(out.res.success === true && out.res.redirectTo === "/studios", "Signed in, on to Your studios", JSON.stringify(out.res));
+      const decoded = await decodeSessionToken(out.cookie ?? "");
+      harness.assertEqual(decoded?.accounts?.length, 3, "The session lists all three studios");
+      harness.assertEqual(decoded?.user.loginId, p.login.id, "…as the person's login");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-PLATFORM-02: every failure looks the same, and so does being blocked", async () => {
+    try {
+      const p = await makePerson("pl2");
+      const alone = emailFor("pl2-alone");
+      await makeUser(lumina.id, alone, "CLIENT", { password: "alone-pass-1" });
+      const superRow = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN" } });
+      const same = { success: false, error: "INVALID_CREDENTIALS" };
+      const tries: Array<[string, string, string]> = [
+        ["an unknown email", emailFor("pl2-nobody"), "whatever-123"],
+        ["a wrong password", p.email, "not-the-password"],
+        ["a stand-alone account's own password", alone, "alone-pass-1"],
+        ["a super-admin's email", superRow.email, "password123"],
+      ];
+      for (const [what, email, password] of tries) {
+        const out = await withRequest(async (jar) => ({ res: await loginToPlatform(email, password), set: jar.has(COOKIE_NAME) }));
+        harness.assert(JSON.stringify(out.res) === JSON.stringify(same) && !out.set, `${what}: the same answer, no session`, JSON.stringify(out.res));
+      }
+      // Ten tries for any email, known or not, then the same "wait" for both.
+      const unknown = emailFor("pl2-spray");
+      for (let i = 0; i < 10; i++) {
+        await loginToPlatform(unknown, `guess-${i}-xxxxx`);
+        await loginToPlatform(p.email, `guess-${i}-xxxxx`);
+      }
+      const a = await loginToPlatform(unknown, "guess-final-1");
+      const b = await loginToPlatform(p.email, "new-pass-123");
+      harness.assert(a.success === false && a.error === "RATE_LIMITED" && b.success === false && b.error === "RATE_LIMITED", "An unknown email and a real one are blocked alike", JSON.stringify([a, b]));
+      const sameLimit = await withRequest(() => loginWithCredentials(p.email, "new-pass-123", "lumina-cine"));
+      harness.assertEqual(sameLimit.error, "RATE_LIMITED", "…and it is the same limit as signing in at a studio");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-PLATFORM-03: the pages, the reserved address and the nav link", async () => {
+    const login = await readFile("app/(saas)/login/page.tsx", "utf8");
+    harness.assert(/getCurrentLogin\(\)/.test(login) && /redirect\("\/studios"\)/.test(login), "/login sends someone already signed in to /studios");
+    const studios = await readFile("app/(saas)/studios/page.tsx", "utf8");
+    harness.assert(/redirect\("\/login"\)/.test(studios) && /loadSwitcher\(null\)/.test(studios), "/studios needs a login session and lists their studios");
+    harness.assert(/You're not with any studio yet\./.test(studios) || /You&apos;re not with any studio yet\./.test(studios), "…with a line for someone with no studio");
+    harness.assert(RESERVED_SLUGS.has("studios"), "'studios' is a reserved address");
+    harness.assertEqual(OnboardStudioSchema.safeParse({ name: "Studios Co", slug: "studios", ownerName: "Maya Lin", ownerEmail: "maya@example.com", password: "password123" }).success, false, "No studio can take the slug 'studios'");
+    harness.assert(/href="\/login"/.test(await readFile("components/saas/saas-navbar.tsx", "utf8")), "The landing page's top bar links to /login");
   });
 }

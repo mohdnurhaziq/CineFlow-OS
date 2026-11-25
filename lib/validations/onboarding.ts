@@ -8,6 +8,7 @@ export const SubscriptionTierEnum = z.enum(["STARTER", "PRO", "STUDIO_UNLIMITED"
 export const RESERVED_SLUGS = new Set([
   "super-admin",
   "create-studio",
+  "studios",
   "api",
   "admin",
   "login",

@@ -2,10 +2,14 @@
 
 import { db } from "@/lib/db";
 import { getCurrentLogin, getCurrentUser, logoutAction } from "@/lib/auth/session";
-import { linkAccountToLogin } from "@/lib/auth/login";
+import bcrypt from "bcryptjs";
+import { findLogin, linkAccountToLogin, normalizeEmail } from "@/lib/auth/login";
+import { signInBlocked, signInFailed } from "@/lib/auth/sign-in-limits";
+import { requestIp } from "@/lib/client-ip";
+import { isRateLimited } from "@/lib/rate-limit";
 import { hasSetUp } from "@/lib/auth/set-up";
 import { signInTarget } from "@/lib/auth/sign-in-target";
-import { setLoginSessionCookie } from "@/lib/auth/token";
+import { liveAccounts, setLoginSessionCookie } from "@/lib/auth/token";
 
 /**
  * "Continue as a client of this studio" for a signed-in login with no account there: takes up the
@@ -66,3 +70,32 @@ export async function signOutEverywhere(): Promise<{ success: true } | { success
   await logoutAction();
   return { success: true };
 }
+
+/** A bcrypt hash of a password nobody knows: compared against when there is no login, so a miss takes as long as a hit. */
+const NO_LOGIN_HASH = "$2a$10$2zea66jS4W4aKqs7HzuES.cJiwy9TE21nNag2WO9T4cKeQU9rUuCW";
+
+/**
+ * Sign-in on the platform's own page (/login): the person's one login, then "Your studios". Every
+ * failure is the same answer (an unknown email, a wrong password, an email with only a stand-alone
+ * account, a super-admin's email), and every email is rate-limited alike, with the same limit as a
+ * studio's sign-in, so nothing here tells anyone whether an email has a login.
+ */
+export async function loginToPlatform(
+  email: string,
+  password: string
+): Promise<{ success: true; redirectTo: "/studios" } | { success: false; error: "INVALID_CREDENTIALS" | "RATE_LIMITED" }> {
+  const normalized = normalizeEmail(email);
+  const ip = await requestIp();
+  if (signInBlocked("login", normalized, ip) || (ip && isRateLimited(`login-ip:${ip}`, 30))) return { success: false, error: "RATE_LIMITED" };
+
+  const login = await findLogin(normalized);
+  const matches = bcrypt.compareSync(password, login?.passwordHash ?? NO_LOGIN_HASH) && !!login?.passwordHash;
+  const first = login && matches ? (await liveAccounts(login.id))[0] : undefined;
+  if (!login || !first) {
+    signInFailed("login", normalized, ip);
+    return { success: false, error: "INVALID_CREDENTIALS" };
+  }
+  await setLoginSessionCookie(login.id, first.userId);
+  return { success: true, redirectTo: "/studios" };
+}
+
