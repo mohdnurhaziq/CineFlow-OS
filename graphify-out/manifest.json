@@ -180,9 +180,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/create-studio/page.tsx": {
-    "mtime": 1795589881.3415911,
-    "seen": 1795590596.978515,
-    "ast_hash": "162cd114ba6439be2bbd2f8a2d488494",
+    "mtime": 1795625723.3780127,
+    "seen": 1795627104.8692431,
+    "ast_hash": "426d60eb5c442d9fe60afa18269076a5",
     "semantic_hash": ""
   },
   "app/(saas)/error.tsx": {
@@ -312,9 +312,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/login/page.tsx": {
-    "mtime": 1795038114.3137598,
-    "seen": 1795039054.9323168,
-    "ast_hash": "1d2e2349940a1e1009b6367ea6dcd084",
+    "mtime": 1795623722.5211008,
+    "seen": 1795627104.9212859,
+    "ast_hash": "aecc2d6c95af2ab82fc807f15562e5c9",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/page.tsx": {
@@ -564,9 +564,9 @@
     "semantic_hash": ""
   },
   "components/auth/studio-login-form.tsx": {
-    "mtime": 1795622544.6275625,
-    "seen": 1795622576.3219223,
-    "ast_hash": "e9f6f347387acbbab881b910fe3b837a",
+    "mtime": 1795626484.073917,
+    "seen": 1795627104.970888,
+    "ast_hash": "ce63d8a1be1c157d0d36ba42b9430ca9",
     "semantic_hash": ""
   },
   "components/booking/booking-intake-modal.tsx": {
@@ -984,9 +984,9 @@
     "semantic_hash": ""
   },
   "lib/actions/onboarding.ts": {
-    "mtime": 1795618390.6495764,
-    "seen": 1795618429.6485932,
-    "ast_hash": "b644257c4c796e240103819cd2f1dcbc",
+    "mtime": 1795625667.618847,
+    "seen": 1795627105.01423,
+    "ast_hash": "481fa9ecbb6de73afea329c4a4ccfc55",
     "semantic_hash": ""
   },
   "lib/actions/proposals.ts": {
@@ -1020,9 +1020,9 @@
     "semantic_hash": ""
   },
   "lib/env.ts": {
-    "mtime": 1794586465.3264623,
-    "seen": 1794593067.0823965,
-    "ast_hash": "ccdab3f31a1ad55c5b7b2ed34973d236",
+    "mtime": 1795623104.0201988,
+    "seen": 1795627105.037205,
+    "ast_hash": "bf3728694712cd168e619772f4149fcc",
     "semantic_hash": ""
   },
   "lib/notifications.ts": {
@@ -1104,9 +1104,9 @@
     "semantic_hash": ""
   },
   "lib/validations/onboarding.ts": {
-    "mtime": 1795622544.6499834,
-    "seen": 1795622576.4164555,
-    "ast_hash": "62e4a148647ef68424cbafa06e7a4538",
+    "mtime": 1795625667.618847,
+    "seen": 1795627105.0593026,
+    "ast_hash": "46c8897f9ca941cc2e18eeef5fcac805",
     "semantic_hash": ""
   },
   "lib/validations/proposal-templates.ts": {
@@ -1158,9 +1158,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1795517773.248194,
-    "seen": 1795544287.6276846,
-    "ast_hash": "0daf01d4f41f36fb85384d57d94dc3c8",
+    "mtime": 1795623030.214784,
+    "seen": 1795627105.0625517,
+    "ast_hash": "052f6e93970827e6e45a1897113c2b13",
     "semantic_hash": ""
   },
   "pnpm-workspace.yaml": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/runner.ts": {
-    "mtime": 1795622544.654452,
-    "seen": 1795622576.4557514,
-    "ast_hash": "12cb288bcc35781e8a46b0534ce89fcd",
+    "mtime": 1795623052.8914163,
+    "seen": 1795627105.0757968,
+    "ast_hash": "ad02a80b6f7c62d667705cace3446bb0",
     "semantic_hash": ""
   },
   "tests/e2e/test-harness.ts": {
@@ -1440,9 +1440,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/register/page.tsx": {
-    "mtime": 1795096192.1959963,
-    "seen": 1795110862.9864132,
-    "ast_hash": "0ce043765706fee95ce72fbd9730e94a",
+    "mtime": 1795623722.5403264,
+    "seen": 1795627104.9237754,
+    "ast_hash": "1bec6c47e495818a0d35aaee4186bcf4",
     "semantic_hash": ""
   },
   "components/account/client-dashboard.tsx": {
@@ -1458,15 +1458,15 @@
     "semantic_hash": ""
   },
   "components/auth/client-auth-panel.tsx": {
-    "mtime": 1795622544.62225,
-    "seen": 1795622576.3203504,
-    "ast_hash": "5c18a5c53aabe3fe729df77acf751ab3",
+    "mtime": 1795626484.073917,
+    "seen": 1795627104.9686131,
+    "ast_hash": "48da64da856030bbf1dc908c13e31c33",
     "semantic_hash": ""
   },
   "components/auth/client-register-card.tsx": {
-    "mtime": 1795096192.236214,
-    "seen": 1795110862.9993482,
-    "ast_hash": "2a4fe4bb32182b31cb459a143dc63af6",
+    "mtime": 1795623722.5362802,
+    "seen": 1795627104.9686167,
+    "ast_hash": "36dcf1d28e654cb29567970f653fcf74",
     "semantic_hash": ""
   },
   "components/booking/my-booking-lookup.tsx": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "docs/07_DEPLOYMENT_AND_CONFIGURATION_GUIDE.md": {
-    "mtime": 1794586465.1930916,
-    "seen": 1794593067.0826726,
-    "ast_hash": "4acb4ee66822f1ed607122baeda8c67e",
+    "mtime": 1795623104.0285864,
+    "seen": 1795627105.1115124,
+    "ast_hash": "f30395c322881f5ec098869d71702aa7",
     "semantic_hash": ""
   },
   "docs/ARCHITECTURE_PLAN.md": {
@@ -2316,9 +2316,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier10-authorization.test.ts": {
-    "mtime": 1795622544.654452,
-    "seen": 1795622576.45611,
-    "ast_hash": "3bce88f98f935188a7e42f73536a6d5f",
+    "mtime": 1795626484.073917,
+    "seen": 1795627105.076126,
+    "ast_hash": "cd8c353e4ea245affc7698b3ba8d6779",
     "semantic_hash": ""
   },
   "tests/e2e/run.mjs": {
@@ -2934,9 +2934,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/reset-password/page.tsx": {
-    "mtime": 1795618390.6263173,
-    "seen": 1795618429.5747616,
-    "ast_hash": "6591573ac03257962ad339b370e5bcaf",
+    "mtime": 1795624671.9024673,
+    "seen": 1795627104.9248204,
+    "ast_hash": "a5cadfe53063606a1b0ebc8598f9f510",
     "semantic_hash": ""
   },
   "components/auth/forgot-password-form.tsx": {
@@ -2946,9 +2946,9 @@
     "semantic_hash": ""
   },
   "components/auth/reset-password-form.tsx": {
-    "mtime": 1795618390.6368804,
-    "seen": 1795618429.599458,
-    "ast_hash": "1ef2defe6ea1dcb4a9a9aa0b1b33b232",
+    "mtime": 1795626484.073917,
+    "seen": 1795627104.9700997,
+    "ast_hash": "739bc6ef2c4d58fce0636a25008b6da4",
     "semantic_hash": ""
   },
   "lib/actions/password-reset.ts": {
@@ -4572,15 +4572,15 @@
     "semantic_hash": ""
   },
   "lib/actions/one-login.ts": {
-    "mtime": 1795622544.6394267,
-    "seen": 1795622576.3527067,
-    "ast_hash": "99c513c6fe47ff06df9d22b2792b2b32",
+    "mtime": 1795626484.072754,
+    "seen": 1795627105.0142355,
+    "ast_hash": "30af5d442fd11aefa0dd8fbd3553f2b5",
     "semantic_hash": ""
   },
   "lib/auth/login.ts": {
-    "mtime": 1795618390.6559763,
-    "seen": 1795618429.6517158,
-    "ast_hash": "c95b407fbc1118dd282d7499e152cc36",
+    "mtime": 1795623491.2232358,
+    "seen": 1795627105.0191662,
+    "ast_hash": "5447dac8a7e5d122a48be24e79fedaca",
     "semantic_hash": ""
   },
   "lib/auth/one-login-link.ts": {
@@ -4620,9 +4620,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/login/page.tsx": {
-    "mtime": 1795622544.5982983,
-    "seen": 1795622576.2782671,
-    "ast_hash": "868eed0370f7dff7c9d1a045a282c77c",
+    "mtime": 1795623722.5322297,
+    "seen": 1795627104.8820493,
+    "ast_hash": "3e2755e8675c1055cc5c528faba8127a",
     "semantic_hash": ""
   },
   "app/(saas)/studios/page.tsx": {
@@ -4644,9 +4644,9 @@
     "semantic_hash": ""
   },
   "components/auth/platform-account-login-form.tsx": {
-    "mtime": 1795622544.62225,
-    "seen": 1795622576.3212326,
-    "ast_hash": "b46e634e6072562933464b382356a19a",
+    "mtime": 1795623722.523125,
+    "seen": 1795627104.9697907,
+    "ast_hash": "92071c2901b4ed09adee178db042e85a",
     "semantic_hash": ""
   },
   "components/auth/session-menu.tsx": {
@@ -4668,9 +4668,9 @@
     "semantic_hash": ""
   },
   "lib/auth/handoff.ts": {
-    "mtime": 1795622544.6435125,
-    "seen": 1795622576.3559625,
-    "ast_hash": "c8925ada9fd2b07937f49e64d2609e9c",
+    "mtime": 1795626484.0658958,
+    "seen": 1795627105.0189018,
+    "ast_hash": "080e658b09157fbe1404ab817f90eb15",
     "semantic_hash": ""
   },
   "lib/auth/switcher.ts": {
@@ -4697,10 +4697,88 @@
     "ast_hash": "51e67f4533847c26a3ee1b4bc82124c6",
     "semantic_hash": ""
   },
+  "app/[tenantSlug]/auth/google/finish/route.ts": {
+    "mtime": 1795626484.2939267,
+    "seen": 1795627104.9119618,
+    "ast_hash": "45c566f9fef944f3b358ceed711f93e6",
+    "semantic_hash": ""
+  },
+  "app/auth/google/callback/route.ts": {
+    "mtime": 1795626484.0694997,
+    "seen": 1795627104.934431,
+    "ast_hash": "d95a9068ebe7da775b8635fa055b5478",
+    "semantic_hash": ""
+  },
+  "app/auth/google/start/route.ts": {
+    "mtime": 1795626484.0694997,
+    "seen": 1795627104.9344368,
+    "ast_hash": "cde7a4aa0cfa9bb551c63a603b6b99ee",
+    "semantic_hash": ""
+  },
+  "components/auth/google-button.tsx": {
+    "mtime": 1795626484.073917,
+    "seen": 1795627104.9688938,
+    "ast_hash": "d179a5421f371ac740746267bb37a8b2",
+    "semantic_hash": ""
+  },
+  "components/auth/google-sign-in-button.tsx": {
+    "mtime": 1795626484.073917,
+    "seen": 1795627104.9688973,
+    "ast_hash": "ba300d33a9a6c0ddc86cfeb4583d4945",
+    "semantic_hash": ""
+  },
+  "lib/auth/google-flow.ts": {
+    "mtime": 1795626484.0694997,
+    "seen": 1795627105.0183418,
+    "ast_hash": "2528d5d46d756fdaffc89c235d934615",
+    "semantic_hash": ""
+  },
+  "lib/auth/google-links.ts": {
+    "mtime": 1795624671.8776941,
+    "seen": 1795627105.0183454,
+    "ast_hash": "030377615c7af20d6aaf1c8796e4cfa8",
+    "semantic_hash": ""
+  },
+  "lib/auth/google-messages.ts": {
+    "mtime": 1795623663.8354378,
+    "seen": 1795627105.018348,
+    "ast_hash": "99a961fc9e6e9ff2510759300030298b",
+    "semantic_hash": ""
+  },
+  "lib/auth/google.ts": {
+    "mtime": 1795623491.2310596,
+    "seen": 1795627105.0183504,
+    "ast_hash": "71fd6882f30bec4c36c6c34b7adf0694",
+    "semantic_hash": ""
+  },
+  "lib/auth/signed-blob.ts": {
+    "mtime": 1795623093.7260313,
+    "seen": 1795627105.0218832,
+    "ast_hash": "62c4d95cd1459ff9c2ac193bd70031c1",
+    "semantic_hash": ""
+  },
+  "tests/e2e/.t43-only.ts": {
+    "mtime": 1795623030.425108,
+    "seen": 1795627105.0734167,
+    "ast_hash": "3108758d04f79bdce7bf0da6a6006131",
+    "semantic_hash": ""
+  },
+  "tests/e2e/tier43-google-sign-in.test.ts": {
+    "mtime": 1795626525.2584574,
+    "seen": 1795627105.0878258,
+    "ast_hash": "dc9ae5b89042421e59798b919dfd2854",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-11-26-one-login-part-3.md": {
+    "mtime": 1795622801.9092155,
+    "seen": 1795627105.1155796,
+    "ast_hash": "db6d35d4360b657b4696f5c6f614716f",
+    "semantic_hash": ""
+  },
   "pnpm-lock.yaml": {
-    "mtime": 1795517773.2514234,
-    "seen": 1795544287.7044032,
-    "ast_hash": "fd8836991ef8323f7bb22bb436b89543",
+    "mtime": 1795623030.19581,
+    "seen": 1795627105.1325297,
+    "ast_hash": "b07c144c40296c06afc251d7be188bc7",
     "semantic_hash": ""
   }
 }
