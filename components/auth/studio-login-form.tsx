@@ -9,7 +9,7 @@ import { Film, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, Spar
 import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { continueAsClient } from "@/lib/actions/one-login";
-import { handoffHref } from "@/lib/auth/handoff-client";
+import { handoffNavigate } from "@/lib/auth/handoff-client";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import type { DemoPersonas } from "@/lib/demo-studios";
 import { isSafeRelativePath, studioPath } from "@/lib/domain-name";
@@ -43,7 +43,8 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
     try {
       const res = await continueAsClient(tenantSlug);
       if (res.success) {
-        window.location.href = res.handoffCode ? handoffHref(res.handoffCode, res.redirectTo) : res.redirectTo;
+        if (res.handoffCode) handoffNavigate(res.handoffCode, res.redirectTo);
+        else window.location.href = res.redirectTo;
         return;
       }
       setError(res.message);
@@ -83,7 +84,8 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
       }
 
       const target = signInTarget({ role: result.user?.role, tenantSlug, callbackUrl });
-      window.location.href = result.handoffCode ? handoffHref(result.handoffCode, target) : target;
+      if (result.handoffCode) handoffNavigate(result.handoffCode, target);
+      else window.location.href = target;
     } catch {
       setError("An unexpected network error occurred.");
       setLoading(false);

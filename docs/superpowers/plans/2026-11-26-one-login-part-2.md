@@ -127,6 +127,8 @@ git commit -m "feat(auth): platform sign-in and Your studios"
 
 ### Task 4: The handoff for studios on their own domain
 
+> **Changed after the final review:** the handoff and sign-out routes take a form **POST** (not a GET link) and require the browser's `Origin` to be the return address's origin; a code is tied to the domain that issued it (`SignInHandoff.host`); the client helpers are `handoffNavigate` / `signOutNavigate` (they post a form); a return address may not carry a port. See the spec.
+
 **Files:**
 - Modify: `prisma/schema.prisma` (model `SignInHandoff`), create `prisma/migrations/20261126120000_sign_in_handoff/migration.sql`
 - Create: `lib/auth/handoff.ts`, `lib/auth/handoff-client.ts` (plain, client-safe), `app/auth/handoff/route.ts`, `app/auth/sign-out/route.ts`

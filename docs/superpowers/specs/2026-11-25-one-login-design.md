@@ -221,13 +221,17 @@ open in two tabs would share one cookie and keep pushing each other out.
 - **Studios with a custom domain:** the switcher links to their `<slug>.cineflow-os.my` address,
   which every studio keeps and which shares the cookie. No handoff is needed on the way in.
 - **The handoff** is only for sign-ins that start on a custom domain. Signing in there also signs
-  the person in on `cineflow-os.my`, through a single-use handoff link valid about a minute, so the
-  switcher works from there too. Google sign-in started on a custom domain comes back the same way.
+  the person in on `cineflow-os.my`, through a single-use code valid about a minute, so the
+  switcher works from there too. The studio's own page posts the code to the platform as a form (never
+  a link) and the platform checks the browser's Origin header is that studio's domain, so another site
+  can't log a visitor into someone else's account; the code is tied to the domain that issued it. Google sign-in started on a custom domain comes back the same way.
 
 ### Signing out
 
 - **Sign out** ends the session in this browser: the shared cookie for `cineflow-os.my` and its
   studios, and the current host's cookie.
+  Signing out on a studio's own domain goes through the platform the same way (a form post with an
+  Origin check), so no other site can sign visitors out.
 - **"Sign out everywhere"** (new, in the account menu) ends every session of the login on every
   device and host (`Login.sessionsValidAfter`). This covers a custom-domain cookie left in another
   browser, which a normal sign-out can't reach.

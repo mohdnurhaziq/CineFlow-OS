@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
 import { signedOutHref } from "@/lib/auth/signed-out";
-import { signOutHref } from "@/lib/auth/handoff-client";
+import { signOutNavigate } from "@/lib/auth/handoff-client";
 import { studioPath } from "@/lib/domain-name";
 import { SessionMenu } from "@/components/auth/session-menu";
 import type { SwitcherEntry } from "@/lib/auth/switcher";
@@ -50,7 +50,7 @@ export function ClientUserNav({ tenantSlug, client, switcher = [] }: ClientUserN
       const back = signedOutHref(studioPath(tenantSlug, "/login"));
       // On a studio's own domain, the platform clears its cookie too, then brings the browser back.
       if (res.via) {
-        window.location.href = signOutHref(res.via, back);
+        signOutNavigate(res.via, back);
         return;
       }
       router.push(back);

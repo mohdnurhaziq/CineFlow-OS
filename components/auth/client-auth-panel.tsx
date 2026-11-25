@@ -5,7 +5,7 @@ import { User, Mail, Phone, Lock, AlertCircle, Loader2, CheckCircle2 } from "luc
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
 import { continueAsClient } from "@/lib/actions/one-login";
-import { handoffHref } from "@/lib/auth/handoff-client";
+import { handoffNavigate } from "@/lib/auth/handoff-client";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { studioPath } from "@/lib/domain-name";
 
@@ -115,7 +115,7 @@ export function ClientAuthPanel({
     await new Promise((resolve) => setTimeout(resolve, 1400));
     // On a studio's own domain the sign-in is carried over to the platform host, then back to this page.
     if (handoffCode) {
-      window.location.href = handoffHref(handoffCode, `${window.location.pathname}${window.location.search}`);
+      handoffNavigate(handoffCode, `${window.location.pathname}${window.location.search}`);
       return;
     }
     onSuccess();

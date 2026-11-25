@@ -182,6 +182,8 @@ model SignInHandoff {
   codeHash     String    @unique
   loginId      String
   activeUserId String
+  /// The studio domain that issued it: only a return address on that domain may use it.
+  host         String    @default("")
   expiresAt    DateTime
   usedAt       DateTime?
   createdAt    DateTime  @default(now())

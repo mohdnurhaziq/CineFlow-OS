@@ -22,8 +22,8 @@ import { loginWithCredentials } from "@/lib/auth/session";
 import { decodeSessionToken } from "@/lib/auth/token";
 import { RESERVED_SLUGS, OnboardStudioSchema } from "@/lib/validations/onboarding";
 import { NextRequest } from "next/server";
-import { GET as GET_HANDOFF } from "@/app/auth/handoff/route";
-import { GET as GET_SIGNOUT } from "@/app/auth/sign-out/route";
+import { GET as GET_HANDOFF, POST as POST_HANDOFF } from "@/app/auth/handoff/route";
+import { GET as GET_SIGNOUT, POST as POST_SIGNOUT } from "@/app/auth/sign-out/route";
 import { HANDOFF_TTL_SECONDS, issueHandoff, redeemHandoff, safeHandoffReturn } from "@/lib/auth/handoff";
 import { APP_BASE_DOMAIN } from "@/lib/domain-name";
 import { SHARED_COOKIE_NAME } from "@/lib/auth/token";
@@ -298,6 +298,19 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
     await db.tenant.update({ where: { id: p.own.id }, data: { customDomain: domain } });
     return { ...p, domain };
   };
+  /** The POST a studio's page sends to the platform: a form with the code and return address, and the Origin header the browser adds. */
+  const postHandoff = (code: string, next: string, origin: string | null) =>
+    new NextRequest("https://cineflow-os.my/auth/handoff", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", ...(origin ? { origin } : {}) },
+      body: new URLSearchParams({ code, next }).toString(),
+    });
+  const postSignOut = (next: string, origin: string | null) =>
+    new NextRequest("https://cineflow-os.my/auth/sign-out", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", ...(origin ? { origin } : {}) },
+      body: new URLSearchParams({ next }).toString(),
+    });
   const sessionAndCalls = async (jar: Map<string, string>, host: string, fn: () => Promise<unknown>) => {
     const { result, calls } = await withHost(host, fn);
     return { result, calls, jar };
@@ -306,17 +319,19 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
   await harness.test("T42-HANDOFF-01: a handoff code works once, briefly, and only its hash is stored", async () => {
     try {
       const p = await makePerson("h1");
-      const code = await issueHandoff(p.login.id, p.team.id);
+      const code = await issueHandoff(p.login.id, p.team.id, "studio-a.example.test");
       const row = await db.signInHandoff.findFirstOrThrow({ where: { loginId: p.login.id } });
+      harness.assertEqual(row.host, "studio-a.example.test", "It remembers the host that issued it");
       harness.assert(row.codeHash !== code && row.codeHash.length === 64, "Only a hash is stored");
       harness.assert(row.expiresAt.getTime() - Date.now() <= HANDOFF_TTL_SECONDS * 1000 + 1000 && row.expiresAt.getTime() > Date.now(), "It is valid for about a minute");
-      const first = await redeemHandoff(code);
+      harness.assertEqual(await redeemHandoff(code, "studio-b.example.test"), null, "Another studio's host can't use it (and that doesn't use it up)");
+      const first = await redeemHandoff(code, "studio-a.example.test");
       harness.assert(first?.loginId === p.login.id && first.activeUserId === p.team.id, "It gives back the login and the active account", JSON.stringify(first));
-      harness.assertEqual(await redeemHandoff(code), null, "A second use gets nothing");
-      const old = await issueHandoff(p.login.id, p.team.id);
+      harness.assertEqual(await redeemHandoff(code, "studio-a.example.test"), null, "A second use gets nothing");
+      const old = await issueHandoff(p.login.id, p.team.id, "studio-a.example.test");
       await db.signInHandoff.updateMany({ where: { loginId: p.login.id, usedAt: null }, data: { expiresAt: new Date(Date.now() - 1000) } });
-      harness.assertEqual(await redeemHandoff(old), null, "An expired code gets nothing");
-      harness.assertEqual(await redeemHandoff("made-up-code"), null, "A made-up code gets nothing");
+      harness.assertEqual(await redeemHandoff(old, "studio-a.example.test"), null, "An expired code gets nothing");
+      harness.assertEqual(await redeemHandoff("made-up-code", "studio-a.example.test"), null, "A made-up code gets nothing");
     } finally {
       await db.signInHandoff.deleteMany({});
       await cleanUp();
@@ -328,20 +343,55 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
       await withProd(async () => {
         const p = await makeOnOwnDomain("h2");
         const next = `https://${p.domain}/account`;
-        const code = await issueHandoff(p.login.id, p.owner.id);
-        const url = (c: string) => new NextRequest(`https://cineflow-os.my/auth/handoff?code=${encodeURIComponent(c)}&next=${encodeURIComponent(next)}`);
+        const code = await issueHandoff(p.login.id, p.owner.id, p.domain);
         await withRequest(async (jar) => {
-          const ok = await sessionAndCalls(jar, PLATFORM, () => GET_HANDOFF(url(code)));
+          const ok = await sessionAndCalls(jar, PLATFORM, () => POST_HANDOFF(postHandoff(code, next, `https://${p.domain}`)));
           const res = ok.result as Response;
           harness.assertEqual(res.headers.get("location"), next, "Sent back to the studio's own domain");
+          harness.assertEqual(res.status, 303, "…with a 303, so the browser comes back with a plain GET");
           const set = ok.calls.find((c) => c.op === "set" && c.args[0] === SHARED_COOKIE_NAME);
           harness.assert(!!set && (set.args[2] as { domain?: string } | undefined)?.domain === PLATFORM, "The platform's shared cookie was set for the whole domain", JSON.stringify(ok.calls.map((c) => c.args[0])));
           const decoded = await decodeSessionToken(jar.get(SHARED_COOKIE_NAME) ?? "");
           harness.assert(decoded?.user.loginId === p.login.id && decoded.accounts?.length === 3, "…as the person's login session", JSON.stringify(decoded?.user));
           jar.clear();
-          const replay = await sessionAndCalls(jar, PLATFORM, () => GET_HANDOFF(url(code)));
-          harness.assert((replay.result as Response).headers.get("location")?.endsWith("/login") === true && !jar.has(SHARED_COOKIE_NAME), "The same link again: sent to sign in, nothing set");
+          const replay = await sessionAndCalls(jar, PLATFORM, () => POST_HANDOFF(postHandoff(code, next, `https://${p.domain}`)));
+          harness.assert((replay.result as Response).headers.get("location")?.endsWith("/login") === true && !jar.has(SHARED_COOKIE_NAME), "The same code again: sent to sign in, nothing set");
         });
+      });
+    } finally {
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-HANDOFF-06: a handoff only works when this browser's own studio page sent it (no login CSRF)", async () => {
+    try {
+      await withProd(async () => {
+        const p = await makeOnOwnDomain("h6");
+        const other = `cd-h6-other-${STAMP}.example.test`;
+        const otherStudio = await makeStudio("h6-other", { customDomain: other });
+        const next = `https://${p.domain}/account`;
+        const toSignIn = (r: unknown) => (r as Response).headers.get("location")?.endsWith("/login") === true;
+        await withRequest(async (jar) => {
+          const code = await issueHandoff(p.login.id, p.owner.id, p.domain);
+          // A link on a hostile page: no Origin, or someone else's Origin.
+          for (const [what, origin] of [["no Origin header", null], ["another site's Origin", "https://evil.com"], ["another studio's Origin", `https://${other}`]] as const) {
+            const out = await sessionAndCalls(jar, PLATFORM, () => POST_HANDOFF(postHandoff(code, next, origin)));
+            harness.assert(toSignIn(out.result) && !jar.has(SHARED_COOKIE_NAME), `${what}: refused, nothing set`);
+          }
+          // GET never signs anyone in.
+          const get = await sessionAndCalls(jar, PLATFORM, () => GET_HANDOFF(new NextRequest(`https://cineflow-os.my/auth/handoff?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`)));
+          harness.assert(toSignIn(get.result) && !jar.has(SHARED_COOKIE_NAME), "A plain link (GET) does nothing");
+          // None of that used the code up: the real page can still use it.
+          const real = await sessionAndCalls(jar, PLATFORM, () => POST_HANDOFF(postHandoff(code, next, `https://${p.domain}`)));
+          harness.assertEqual((real.result as Response).headers.get("location"), next, "The studio's own page still can");
+          // A code issued for one studio's domain doesn't work for another studio's.
+          jar.clear();
+          const mine = await issueHandoff(p.login.id, p.owner.id, p.domain);
+          const wrongStudio = await sessionAndCalls(jar, PLATFORM, () => POST_HANDOFF(postHandoff(mine, `https://${other}/account`, `https://${other}`)));
+          harness.assert(toSignIn(wrongStudio.result) && !jar.has(SHARED_COOKIE_NAME), "A code for studio A's domain is refused for studio B's");
+        });
+        void otherStudio;
       });
     } finally {
       await db.signInHandoff.deleteMany({});
@@ -366,15 +416,14 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
           `https://${p.domain}/a\tb`,
           `https://${p.domain}/a\nb`,
           `https://user:pass@${p.domain}/x`,
+          `https://${p.domain}:8443/x`,
           "",
         ];
         for (const b of bad) harness.assertEqual(await safeHandoffReturn(b), null, `Refused: ${JSON.stringify(b)}`);
         // Even with a valid code, a bad return address does nothing.
-        const code = await issueHandoff(p.login.id, p.owner.id);
+        const code = await issueHandoff(p.login.id, p.owner.id, p.domain);
         await withRequest(async (jar) => {
-          const out = await sessionAndCalls(jar, PLATFORM, () =>
-            GET_HANDOFF(new NextRequest(`https://cineflow-os.my/auth/handoff?code=${encodeURIComponent(code)}&next=${encodeURIComponent("https://evil.com/x")}`))
-          );
+          const out = await sessionAndCalls(jar, PLATFORM, () => POST_HANDOFF(postHandoff(code, "https://evil.com/x", "https://evil.com")));
           harness.assert((out.result as Response).headers.get("location")?.endsWith("/login") === true && !jar.has(SHARED_COOKIE_NAME), "A valid code with a bad address: sent to sign in, nothing set");
         });
       });
@@ -390,6 +439,7 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
         const p = await makeOnOwnDomain("h4");
         const atDomain = await withHost(p.domain, () => loginWithCredentials(p.email, "new-pass-123", p.own.slug));
         harness.assert(atDomain.result.success === true && typeof atDomain.result.handoffCode === "string", "On the studio's own domain: a code", JSON.stringify(atDomain.result));
+        harness.assertEqual((await db.signInHandoff.findFirstOrThrow({ where: { loginId: p.login.id }, orderBy: { createdAt: "desc" } })).host, p.domain, "…tied to that domain");
         const atSub = await withHost(`${p.own.slug}.${PLATFORM}`, () => loginWithCredentials(p.email, "new-pass-123", p.own.slug));
         harness.assert(atSub.result.success === true && atSub.result.handoffCode === undefined, "On the studio's subdomain: none");
         const atPlatform = await withHost(PLATFORM, () => loginWithCredentials(p.email, "new-pass-123", p.own.slug));
@@ -422,13 +472,20 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
         const onSub = await withLoginSession(p.login.id, p.owner.id, () => withHost(`${p.own.slug}.${PLATFORM}`, () => logoutAction()));
         harness.assertEqual(onSub.result.via, undefined, "On a subdomain the shared cookie is the only one: no detour");
         const back = `https://${p.domain}/login?signedOut=1`;
-        const out = await withLoginSession(p.login.id, p.owner.id, () =>
-          withHost(PLATFORM, () => GET_SIGNOUT(new NextRequest(`https://cineflow-os.my/auth/sign-out?next=${encodeURIComponent(back)}`)))
-        );
+        const out = await withLoginSession(p.login.id, p.owner.id, () => withHost(PLATFORM, () => POST_SIGNOUT(postSignOut(back, `https://${p.domain}`))));
         harness.assert(out.calls.some((c) => c.op === "delete" && (c.args[0] as { name?: string })?.name === SHARED_COOKIE_NAME && (c.args[0] as { domain?: string }).domain === PLATFORM), "The shared platform cookie is deleted for the whole domain");
         harness.assertEqual((out.result as Response).headers.get("location"), back, "…then back to the studio");
-        const bad = await withRequest(() => withHost(PLATFORM, () => GET_SIGNOUT(new NextRequest(`https://cineflow-os.my/auth/sign-out?next=${encodeURIComponent("https://evil.com/")}`))));
-        harness.assert(!((bad.result as Response).headers.get("location") ?? "").includes("evil.com"), "A bad return address goes to the platform home instead");
+        // A hostile page (a GET, no Origin, or someone else's Origin) can't sign people out.
+        const hostile = [
+          ["a plain link (GET)", () => GET_SIGNOUT(new NextRequest(`https://cineflow-os.my/auth/sign-out?next=${encodeURIComponent(back)}`))],
+          ["no Origin", () => POST_SIGNOUT(postSignOut(back, null))],
+          ["another site's Origin", () => POST_SIGNOUT(postSignOut(back, "https://evil.com"))],
+          ["a bad return address", () => POST_SIGNOUT(postSignOut("https://evil.com/", "https://evil.com"))],
+        ] as const;
+        for (const [what, run] of hostile) {
+          const r = await withLoginSession(p.login.id, p.owner.id, () => withHost(PLATFORM, run));
+          harness.assert(!r.calls.some((c) => c.op === "delete") && !((r.result as Response).headers.get("location") ?? "").includes("evil.com"), `${what}: the cookie stays, and nobody is sent to a bad address`);
+        }
       });
     } finally {
       await cleanUp();
@@ -438,12 +495,12 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
   await harness.test("T42-HANDOFF-05: the forms and sign-out controls use the handoff", async () => {
     for (const f of ["components/auth/studio-login-form.tsx", "components/auth/client-auth-panel.tsx"]) {
       const src = await readFile(f, "utf8");
-      harness.assert(/handoffCode/.test(src) && /handoffHref\(/.test(src), `${f} follows a handoff code`);
+      harness.assert(/handoffCode/.test(src) && /handoffNavigate\(/.test(src) && !/handoffHref/.test(src), `${f} follows a handoff code by posting a form`);
     }
     for (const f of ["components/admin/admin-user-nav.tsx", "components/account/client-user-nav.tsx", "components/account/client-account-menu.tsx"]) {
-      harness.assert(/\.via\b/.test(await readFile(f, "utf8")) && /signOutHref\(/.test(await readFile(f, "utf8")), `${f} signs out through the platform when told to`);
+      harness.assert(/\.via\b/.test(await readFile(f, "utf8")) && /signOutNavigate\(/.test(await readFile(f, "utf8")), `${f} signs out through the platform when told to`);
     }
     const client = await readFile("lib/auth/handoff-client.ts", "utf8");
-    harness.assert(/export function handoffHref/.test(client) && /export function signOutHref/.test(client), "The client helpers exist");
+    harness.assert(/export function handoffNavigate/.test(client) && /export function signOutNavigate/.test(client) && /method = "POST"/.test(client), "The client helpers post a form");
   });
 }
