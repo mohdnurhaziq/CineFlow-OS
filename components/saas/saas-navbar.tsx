@@ -38,9 +38,6 @@ export function SaasNavbar({ mode }: { mode: LandingMode }) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link href="/login" className={`${navLink} hidden sm:inline-flex`}>
-            Sign in
-          </Link>
           <div className="hidden sm:block">
             <PrimaryCta mode={mode} />
           </div>
@@ -58,9 +55,6 @@ export function SaasNavbar({ mode }: { mode: LandingMode }) {
                   {l.label}
                 </a>
               ))}
-              <Link href="/login" className="flex min-h-11 items-center rounded-lg px-3 text-zinc-200 hover:bg-zinc-800">
-                Sign in
-              </Link>
               <div className="mt-2 border-t border-zinc-800 pt-3">
                 <PrimaryCta mode={mode} />
               </div>

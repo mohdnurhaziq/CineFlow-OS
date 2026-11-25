@@ -1,5 +1,6 @@
 /* Plain <a> on purpose: these jump to a section of the landing page, and LandingMotion's click handler (smooth scroll, focus the form) only sees links next/link has not already handled. */
 /* eslint-disable @next/next/no-html-link-for-pages */
+import Link from "next/link";
 import { Aperture } from "lucide-react";
 
 const link = "inline-flex min-h-11 items-center text-zinc-400 hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 rounded";
@@ -26,6 +27,9 @@ export function SaasFooter({ email }: { email: string }) {
           <a href="/#faq" className={link}>
             FAQ
           </a>
+          <Link href="/login" className={link}>
+            Sign in
+          </Link>
           <a href={`mailto:${email}`} className={link}>
             {email}
           </a>

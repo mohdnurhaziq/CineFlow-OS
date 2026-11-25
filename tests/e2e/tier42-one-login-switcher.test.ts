@@ -273,7 +273,8 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
     harness.assert(/You're not with any studio yet\./.test(studios) || /You&apos;re not with any studio yet\./.test(studios), "…with a line for someone with no studio");
     harness.assert(RESERVED_SLUGS.has("studios"), "'studios' is a reserved address");
     harness.assertEqual(OnboardStudioSchema.safeParse({ name: "Studios Co", slug: "studios", ownerName: "Maya Lin", ownerEmail: "maya@example.com", password: "password123" }).success, false, "No studio can take the slug 'studios'");
-    harness.assert(/href="\/login"/.test(await readFile("components/saas/saas-navbar.tsx", "utf8")), "The landing page's top bar links to /login");
+    harness.assert(!/\/login/.test(await readFile("components/saas/saas-navbar.tsx", "utf8")), "The landing page's top bar has no sign-in link");
+    harness.assert(/<Link[^>]*href="\/login"/.test(await readFile("components/saas/saas-footer.tsx", "utf8")), "The landing page's footer links to /login");
   });
 
   // ── Task 4: the handoff for studios on their own domain ─────────────────────────────────
