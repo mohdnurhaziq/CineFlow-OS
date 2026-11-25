@@ -204,9 +204,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/page.tsx": {
-    "mtime": 1795560435.1821766,
-    "seen": 1795561331.6373408,
-    "ast_hash": "1c94d6b9e5085eb148db53ae08f90412",
+    "mtime": 1795636318.8774364,
+    "seen": 1795637156.0135956,
+    "ast_hash": "05eb51d918617ca6c9d6e51f13761d56",
     "semantic_hash": ""
   },
   "app/(saas)/super-admin/page.tsx": {
@@ -4110,15 +4110,15 @@
     "semantic_hash": ""
   },
   "components/landing/extras.tsx": {
-    "mtime": 1795517773.2114077,
-    "seen": 1795544287.572455,
-    "ast_hash": "ef43fb1438ddebdd83f93f4ff8639d2c",
+    "mtime": 1795636318.8774364,
+    "seen": 1795637156.0609734,
+    "ast_hash": "ce048127d2ac666bc6816be157ad968d",
     "semantic_hash": ""
   },
   "components/landing/faq.tsx": {
-    "mtime": 1795517773.2124405,
-    "seen": 1795544287.5724583,
-    "ast_hash": "e0a342e77fcc86db85093bb824b60f0f",
+    "mtime": 1795636318.8774364,
+    "seen": 1795637156.060976,
+    "ast_hash": "a9e406587171a08ef87ea6e049da26b1",
     "semantic_hash": ""
   },
   "components/landing/hero.tsx": {
@@ -4194,9 +4194,9 @@
     "semantic_hash": ""
   },
   "lib/landing/content.ts": {
-    "mtime": 1795545390.581375,
-    "seen": 1795552191.6326768,
-    "ast_hash": "e66495ea4b54a3ba3aed52b2efe72267",
+    "mtime": 1795636318.8759305,
+    "seen": 1795637156.1008966,
+    "ast_hash": "92f5c382d36d71fec1106ba69ba93e4c",
     "semantic_hash": ""
   },
   "lib/landing/media.ts": {
@@ -4218,9 +4218,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier39-landing-page.test.ts": {
-    "mtime": 1795587475.8040867,
-    "seen": 1795588313.6785433,
-    "ast_hash": "6708f0636b3c35953fd3942496900c48",
+    "mtime": 1795636339.892771,
+    "seen": 1795637156.1281252,
+    "ast_hash": "854a22748386b1658d8cb25e3d0dc158",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-24-landing-page-redesign.md": {

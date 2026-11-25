@@ -78,15 +78,53 @@ export function planBadge(feature: PlanFeature | null): string | null {
   return feature ? `${PLANS[cheapestPlanWith(feature)].name} plan` : null;
 }
 
-export const EXTRAS: { title: string; body: string; feature: PlanFeature | null }[] = [
+/** A line of the "rest of the day-to-day" list. `needs` hides it until that setting is on. */
+export interface Extra {
+  title: string;
+  body: string;
+  feature: PlanFeature | null;
+  needs?: "google";
+}
+
+export const EXTRAS: Extra[] = [
   { title: "Team roles and access", body: "Invite your crew with roles, and choose what each person can open.", feature: "team" },
-  { title: "A portal for every client", body: "Bookings, invoices, proposals and galleries in one place they sign in to.", feature: null },
+  {
+    title: "A portal for every client",
+    body: "Bookings, invoices, proposals and galleries in one place they sign in to, with a short tour the first time they do.",
+    feature: null,
+  },
+  {
+    title: "One login for every studio",
+    body: "Own a studio, shoot for another, book a third as a client? One email and one sign-in cover them all, and a switcher moves you between studios. Each studio's information stays separate.",
+    feature: null,
+  },
+  {
+    title: "Sign in with Google",
+    body: "Studio owners, teams and clients can sign in or sign up with Google, or keep using an email and a password.",
+    feature: null,
+    needs: "google",
+  },
+  {
+    title: "A guided start",
+    body: "A new studio gets a setup checklist that ticks itself off and a short tour of the admin. Clients get a quick tour of their portal the first time they sign in.",
+    feature: null,
+  },
+  {
+    title: "Framed prints are optional",
+    body: "If you don't sell framed prints, switch them off at sign-up or later in Settings, and they disappear from your site and your clients' galleries.",
+    feature: "wallArt",
+  },
   { title: "Gear and kits", body: "Track your equipment, group it into kits and reserve it for shoots.", feature: "gear" },
   { title: "Email reminders", body: "Clients and your team get clear emails for bookings, payments and delivery.", feature: null },
   { title: "Made for phones", body: "Clients book, pay and view galleries on their phone without installing anything.", feature: null },
 ];
 
-export function faqItems(mode: LandingMode, email: string): { q: string; a: string }[] {
+/** The lines of the extras list that apply: the Google one only once Google sign-in is set up. */
+export function extrasFor(googleOn: boolean): Extra[] {
+  return EXTRAS.filter((e) => e.needs !== "google" || googleOn);
+}
+
+export function faqItems(mode: LandingMode, email: string, googleOn = false): { q: string; a: string }[] {
   const items: { q: string; a: string }[] = [
     {
       q: "Is there a free trial?",
@@ -108,7 +146,21 @@ export function faqItems(mode: LandingMode, email: string): { q: string; a: stri
       q: "Can I use my own web address?",
       a: `Yes, on the ${PLANS[cheapestPlanWith("customDomain")].name} plan and above, so clients visit your own domain instead of ours.`,
     },
+    {
+      q: "I'm also a photographer at another studio. Do I need a second account?",
+      a: "No. One email and one sign-in work at every studio you belong to, whether you own it, shoot for it or book it as a client. A switcher in your account menu moves you between studios, and each studio's information stays separate.",
+    },
   ];
+  if (googleOn) {
+    items.push({
+      q: "Can I sign in with Google?",
+      a: "Yes. Studio owners, teams and clients can sign in or sign up with Google instead of a password, or keep using an email and password. Google only tells us your name and email address.",
+    });
+  }
+  items.push({
+    q: "Do I have to sell framed prints?",
+    a: "No. On the plan with wall art you can switch framed prints off at sign-up or later in Settings, and they are hidden from your site and your clients' galleries. Plans without wall art don't show prints at all.",
+  });
   if (mode !== "TRIAL") {
     items.push({
       q: "How do I join?",

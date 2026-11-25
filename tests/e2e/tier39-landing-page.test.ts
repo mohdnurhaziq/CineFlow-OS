@@ -79,6 +79,33 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     }
   });
 
+  await harness.test("T39-NEW-01: the page says what works now: one login, a guided start, optional prints", async () => {
+    const byTitle = (t: string) => EXTRAS.find((e) => e.title === t);
+    const login = byTitle("One login for every studio");
+    harness.assert(!!login && /one email/i.test(login.body) && /switcher/i.test(login.body), "One email and a switcher are explained");
+    const start = byTitle("A guided start");
+    harness.assert(!!start && /checklist/i.test(start.body) && /tour/i.test(start.body), "The setup checklist and the tours are explained");
+    const prints = byTitle("Framed prints are optional");
+    harness.assert(!!prints && planBadge(prints.feature) === "Production plan" && /switch/i.test(prints.body), "Prints can be switched off, on the wall-art plan");
+    harness.assert(/first time/i.test(byTitle("A portal for every client")?.body ?? ""), "The client portal mentions its first-time tour");
+    const google = EXTRAS.find((e) => e.needs === "google");
+    harness.assert(google?.title === "Sign in with Google", "Google sign-in is listed, only where Google is set up");
+    harness.assertEqual(EXTRAS.filter((e) => e.needs).length, 1, "Only that one line depends on a setting");
+  });
+
+  await harness.test("T39-NEW-02: the FAQ answers the questions the new features raise", async () => {
+    for (const m of MODES) {
+      const items = faqItems(m, EMAIL);
+      const second = items.find((i) => /another studio/i.test(i.q));
+      harness.assert(!!second && /one email/i.test(second.a) && /separate/i.test(second.a), `${m}: one email works at every studio, each kept separate`);
+      const prints = items.find((i) => /framed prints/i.test(i.q));
+      harness.assert(!!prints && /switch/i.test(prints.a) && /Settings/.test(prints.a), `${m}: prints can be switched off, and where`);
+      harness.assert(!items.some((i) => /Google/.test(`${i.q} ${i.a}`)), `${m}: no Google answer while Google isn't set up`);
+      const withGoogle = faqItems(m, EMAIL, true).find((i) => /Google/.test(i.q));
+      harness.assert(!!withGoogle && /email and password/i.test(withGoogle.a), `${m}: with Google set up, the answer says it and keeps email and password`);
+    }
+  });
+
   // ── Task 2: invite requests ─────────────────────────────────────────────────────────────
   const superRow = await db.user.findFirst({ where: { role: "SUPER_ADMIN", deactivatedAt: null } });
   const ownerRow = await db.user.findFirst({ where: { role: "STUDIO_OWNER" } });
@@ -440,6 +467,26 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
       harness.assert(!links.some((h) => h.startsWith("/super-admin")), `${mode}: no console link`);
       if (env.APP_ENV === "production") {
         harness.assert(!links.some((h) => h.includes("lumina-cine") || h.includes("apex-media")), `${mode}: no demo studio links`);
+      }
+    }
+  });
+
+  await harness.test("T39-NEW-03: the Google lines show on the page only when Google sign-in is set up", async () => {
+    const saved = { id: process.env.GOOGLE_CLIENT_ID, secret: process.env.GOOGLE_CLIENT_SECRET };
+    try {
+      delete process.env.GOOGLE_CLIENT_ID;
+      delete process.env.GOOGLE_CLIENT_SECRET;
+      const off = textOf(await renderSite({}));
+      harness.assert(!off.includes("Google"), "Not set up: the page doesn't mention Google");
+      harness.assert(off.includes("One login for every studio") && off.includes("Framed prints are optional"), "…but still shows the other new lines");
+      process.env.GOOGLE_CLIENT_ID = "fake-client.apps.googleusercontent.com";
+      process.env.GOOGLE_CLIENT_SECRET = "fake-secret";
+      const on = textOf(await renderSite({}));
+      harness.assert(on.includes("Sign in with Google") && /sign up with Google/.test(on), "Set up: the extra and the FAQ answer appear");
+    } finally {
+      for (const [k, v] of [["GOOGLE_CLIENT_ID", saved.id], ["GOOGLE_CLIENT_SECRET", saved.secret]] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
       }
     }
   });

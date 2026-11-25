@@ -3,6 +3,7 @@ import { studioSignupStatus } from "@/lib/actions/onboarding";
 import { landingMode } from "@/lib/landing/mode";
 import { publicContactEmail } from "@/lib/landing/contact";
 import { landingVideo } from "@/lib/landing/media";
+import { googleConfigured } from "@/lib/auth/google";
 import { LandingMotion } from "@/components/landing/landing-motion";
 import { Hero } from "@/components/landing/hero";
 import { Journey } from "@/components/landing/journey";
@@ -30,15 +31,17 @@ export const metadata: Metadata = {
 
 export default async function SaasLandingPage() {
   const mode = landingMode(await studioSignupStatus());
+  // Google lines appear only once Google sign-in is set up for this environment.
+  const googleOn = googleConfigured();
   return (
     <LandingMotion>
       <main>
         <Hero mode={mode} video={landingVideo("hero")} />
         <Journey videos={{ shoot: landingVideo("shoot"), deliver: landingVideo("deliver"), print: landingVideo("print") }} />
         <OwnWebsite />
-        <Extras />
+        <Extras googleOn={googleOn} />
         <Pricing mode={mode} />
-        <Faq mode={mode} email={publicContactEmail()} />
+        <Faq mode={mode} email={publicContactEmail()} googleOn={googleOn} />
         <InviteSection mode={mode} />
       </main>
     </LandingMotion>

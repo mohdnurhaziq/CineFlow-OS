@@ -1,8 +1,8 @@
-import { EXTRAS, planBadge } from "@/lib/landing/content";
+import { extrasFor, planBadge } from "@/lib/landing/content";
 import { SplitHeading } from "@/components/landing/split-heading";
 
 /** The smaller things, as a plain list. */
-export function Extras() {
+export function Extras({ googleOn = false }: { googleOn?: boolean }) {
   return (
     <section aria-labelledby="extras-h" className="py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -11,7 +11,7 @@ export function Extras() {
           Everything else
         </h2>
         <ul className="mt-14 divide-y divide-zinc-800 border-y border-zinc-800">
-          {EXTRAS.map((e) => {
+          {extrasFor(googleOn).map((e) => {
             const badge = planBadge(e.feature);
             return (
               <li key={e.title} data-reveal className="grid gap-2 py-6 sm:grid-cols-12 sm:items-baseline sm:gap-8">
