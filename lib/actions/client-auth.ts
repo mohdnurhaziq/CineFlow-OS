@@ -7,7 +7,8 @@ import { isRateLimited } from "@/lib/rate-limit";
 import { setLoginSessionCookie, setSessionCookie, type SessionUser } from "@/lib/auth/token";
 import { clientInvitePath, inviteMatches, issueClientInvite } from "@/lib/auth/invite";
 import { hasSetUp } from "@/lib/auth/set-up";
-import { proveEmailAndJoin } from "@/lib/auth/login";
+import { findLogin, proveEmailAndJoin } from "@/lib/auth/login";
+import { emailOneLoginLink } from "@/lib/auth/one-login-link";
 import { sendNotification } from "@/lib/notifications";
 import { isStudioPath, studioPath, studioUrl } from "@/lib/domain-name";
 
@@ -99,11 +100,26 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
 
     const passwordHash = await bcrypt.hash(password, 10);
     let user;
+    let standAlone = false;
 
     if (!existing) {
-      user = await db.user.create({
-        data: { tenantId: tenant.id, name, email, phone, role: "CLIENT", passwordHash },
-      });
+      // An email that already has a CineFlow sign-in joins it: the login's password is the proof.
+      const theirs = await findLogin(email);
+      if (theirs) {
+        if (!theirs.passwordHash || !bcrypt.compareSync(password, theirs.passwordHash)) {
+          return {
+            success: false,
+            error: "EMAIL_EXISTS",
+            message: "This email already has a CineFlow sign-in. Use its password, or reset it.",
+          };
+        }
+        user = await db.user.create({ data: { tenantId: tenant.id, name, email, phone, role: "CLIENT", loginId: theirs.id } });
+      } else {
+        user = await db.user.create({
+          data: { tenantId: tenant.id, name, email, phone, role: "CLIENT", passwordHash },
+        });
+        standAlone = true;
+      }
     } else if (existing.role !== "CLIENT" || hasSetUp(existing)) {
       return {
         success: false,
@@ -164,6 +180,8 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
     };
     if (user.loginId) await setLoginSessionCookie(user.loginId, user.id);
     else await setSessionCookie(sessionUser);
+    // A brand-new account works straight away; this invites them to use one sign-in for every studio.
+    if (standAlone) await emailOneLoginLink({ id: user.id, email: user.email, name: user.name }, { name: tenant.name, slug: tenant.slug });
 
     return { success: true, user: sessionUser };
   } catch (err) {

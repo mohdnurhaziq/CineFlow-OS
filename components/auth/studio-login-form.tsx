@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Film, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, Sparkles } from "lucide-react";
 import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
+import { continueAsClient } from "@/lib/actions/one-login";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import type { DemoPersonas } from "@/lib/demo-studios";
 import { isSafeRelativePath, studioPath } from "@/lib/domain-name";
@@ -32,15 +33,39 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Signed in with their one login, but this studio has no account for them yet.
+  const [offerClient, setOfferClient] = useState(false);
+
+  const continueHere = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await continueAsClient(tenantSlug);
+      if (res.success) {
+        window.location.href = res.redirectTo;
+        return;
+      }
+      setError(res.message);
+    } catch {
+      setError("An unexpected network error occurred.");
+    }
+    setLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setOfferClient(false);
     setLoading(true);
 
     try {
       const result = await loginWithCredentials(email, password, tenantSlug);
       if (!result.success) {
+        if (result.error === "NO_ACCOUNT_HERE") {
+          setOfferClient(true);
+          setLoading(false);
+          return;
+        }
         if (result.error === "INVALID_CREDENTIALS") {
           setError("Invalid email or password. Please verify your credentials.");
         } else if (result.error === "RATE_LIMITED") {
@@ -89,6 +114,15 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
       {justReset && !error && (
         <div role="status" className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200">
           Password updated. Sign in with your new password.
+        </div>
+      )}
+
+      {offerClient && (
+        <div role="status" className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-3 text-center">
+          <p className="text-sm text-amber-100">You don&apos;t have an account with {tenantName} yet.</p>
+          <button type="button" onClick={continueHere} disabled={loading} className={cn(buttonVariants({ size: "lg" }), "h-auto min-h-12 w-full whitespace-normal py-3 text-center")}>
+            Continue as a client of {tenantName}
+          </button>
         </div>
       )}
 

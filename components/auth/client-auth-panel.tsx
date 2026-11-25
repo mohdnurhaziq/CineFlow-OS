@@ -4,6 +4,7 @@ import { useId, useState, type ComponentType, type InputHTMLAttributes } from "r
 import { User, Mail, Phone, Lock, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
+import { continueAsClient } from "@/lib/actions/one-login";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { studioPath } from "@/lib/domain-name";
 
@@ -82,12 +83,29 @@ export function ClientAuthPanel({
   // Not an error: the account exists and its owner has been emailed a link to set the password.
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Signed in with their one login, but this studio has no account for them yet.
+  const [offerClient, setOfferClient] = useState(false);
   const [signedIn, setSignedIn] = useState<{ name: string; kind: "created" | "signedIn" } | null>(null);
 
   const switchMode = (next: "register" | "login") => {
     setMode(next);
     setError(null);
     setNotice(null);
+    setOfferClient(false);
+  };
+
+  const continueHere = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await continueAsClient(tenantSlug);
+      if (res.success) await confirmSignedIn(res.name, "created");
+      else setError(res.message);
+    } catch {
+      setError("An unexpected network error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /** Shows an explicit "you're signed in" state, then hands control back to the host page. */
@@ -101,6 +119,7 @@ export function ClientAuthPanel({
     e.preventDefault();
     setError(null);
     setNotice(null);
+    setOfferClient(false);
     setLoading(true);
 
     try {
@@ -122,6 +141,10 @@ export function ClientAuthPanel({
         await confirmSignedIn(res.user.name, "created");
       } else {
         const res = await loginWithCredentials(email, password, tenantSlug);
+        if (!res.success && res.error === "NO_ACCOUNT_HERE") {
+          setOfferClient(true);
+          return;
+        }
         if (!res.success) {
           setError(
             res.error === "RATE_LIMITED"
@@ -199,6 +222,14 @@ export function ClientAuthPanel({
           >
             <AlertCircle className="size-4 text-rose-400 flex-shrink-0 mt-0.5" />
             <span>{error}</span>
+          </div>
+        )}
+        {offerClient && (
+          <div role="status" className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2 text-xs text-amber-100">
+            <p>You don&apos;t have an account with this studio yet.</p>
+            <button type="button" onClick={continueHere} disabled={loading} className="w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-60">
+              Continue as a client of this studio
+            </button>
           </div>
         )}
         {notice && (

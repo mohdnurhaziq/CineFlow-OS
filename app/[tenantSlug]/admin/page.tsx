@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { dashboardSectionsFor, loadStudioAnalytics } from "@/lib/analytics/studio-analytics";
 import { getCurrentUser } from "@/lib/auth/session";
+import { OneLoginInvite } from "@/components/auth/one-login-invite";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
@@ -71,8 +72,13 @@ export default async function AdminDashboardPage({ params }: AdminPageProps) {
 
   const bookingUrl = studioUrl(tenantSlug, "/");
 
+  // A stand-alone account (no login yet) is invited to use one sign-in for all its studios.
+  const me = await getCurrentUser();
+  const offerOneLogin = !!me && !me.loginId && me.role !== "SUPER_ADMIN";
+
   return (
     <PageShell>
+      {offerOneLogin && <OneLoginInvite />}
       <StudioDashboard
         data={analytics}
         unassignedUpcoming={unassignedUpcoming}

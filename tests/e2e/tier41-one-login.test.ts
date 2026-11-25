@@ -29,6 +29,8 @@ import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { decodeSessionToken } from "@/lib/auth/token";
 import { withRequest } from "./mocks/session";
+import { continueAsClient } from "@/lib/actions/one-login";
+import { onboardStudio } from "@/lib/actions/onboarding";
 import { withLoginSession, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
@@ -551,5 +553,185 @@ export async function runTier41OneLoginTests(harness: TestHarness) {
     const form = await readFile("components/auth/reset-password-form.tsx", "utf8");
     harness.assert(/Use one sign-in for all your studios/.test(form), "The form has the one sign-in heading");
     harness.assert(/You already have a CineFlow sign-in\. Enter its password, or choose a new one\./.test(form), "…and the line for someone who already has a login");
+  });
+
+  // ── Task 5: signing in, registering and starting a studio with one login ────────────────
+  await harness.test("T41-SIGNIN-01: a linked account signs in with the login's password, as a login session", async () => {
+    try {
+      const { email, team, client } = await makeLoginWithTwoAccounts("in1");
+      const out = await withRequest(async (jar) => ({ res: await loginWithCredentials(email, "new-pass-123", "lumina-cine"), cookie: jar.get(COOKIE_NAME) }));
+      harness.assert(out.res.success === true && out.res.user?.id === team.id, "Signed in to the studio's account", JSON.stringify(out.res));
+      const decoded = await decodeSessionToken(out.cookie ?? "");
+      harness.assertEqual(decoded?.accounts?.map((a) => a.userId).sort().join(), [team.id, client.id].sort().join(), "The session covers both studios");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SIGNIN-02: a removed linked account is refused", async () => {
+    try {
+      const { email, team } = await makeLoginWithTwoAccounts("in2");
+      await db.user.update({ where: { id: team.id }, data: { deactivatedAt: new Date() } });
+      const res = await withRequest(() => loginWithCredentials(email, "new-pass-123", "lumina-cine"));
+      harness.assert(res.success === false && res.error === "ACCOUNT_REMOVED", "Removed", JSON.stringify(res));
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SIGNIN-03: a login without an account here is offered 'Continue as a client'", async () => {
+    try {
+      const { email } = await makeLoginWithTwoAccounts("in3");
+      const third = await makeStudio("signin");
+      await withRequest(async (jar) => {
+        const wrong = await loginWithCredentials(email, "not-the-password", third.slug);
+        harness.assert(wrong.success === false && wrong.error === "INVALID_CREDENTIALS" && !jar.has(COOKIE_NAME), "A wrong password: refused, no session");
+        const res = await loginWithCredentials(email, "new-pass-123", third.slug);
+        harness.assert(res.success === false && res.error === "NO_ACCOUNT_HERE", "Right password, no account here", JSON.stringify(res));
+        harness.assert(jar.has(COOKIE_NAME), "…but a login session starts, so the person can continue");
+        const cont = await continueAsClient(third.slug);
+        harness.assert(cont.success === true && cont.redirectTo.endsWith("/account"), "Continue as a client works", JSON.stringify(cont));
+        const account = await db.user.findFirstOrThrow({ where: { tenantId: third.id, email } });
+        harness.assert(account.role === "CLIENT" && account.loginId !== null && account.passwordHash === null, "A linked client account was created");
+        const me = await getCurrentLogin();
+        harness.assert(me?.accounts.some((a) => a.tenantSlug === third.slug) === true, "The session now lists that studio");
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SIGNIN-04: an old studio password stops working after joining", async () => {
+    try {
+      const { email } = await makeLoginWithTwoAccounts("in4");
+      const old = await withRequest(() => loginWithCredentials(email, "old-pass-1", "lumina-cine"));
+      harness.assert(old.success === false && old.error === "INVALID_CREDENTIALS", "The old password fails with the normal message", JSON.stringify(old));
+      const fresh = await withRequest(() => loginWithCredentials(email, "new-pass-123", "lumina-cine"));
+      harness.assertEqual(fresh.success, true, "The login's password works");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SIGNIN-05: continueAsClient never grants staff access", async () => {
+    try {
+      const { login, team, email } = await makeLoginWithTwoAccounts("in5");
+      const third = await makeStudio("staffonly");
+      await makeUser(third.id, email, "TEAM_MEMBER", { inviteToken: "pending-hash" });
+      const res = await withLoginSession(login.id, team.id, () => continueAsClient(third.slug));
+      harness.assert(res.success === false && /invite you/.test(res.message), "Refused: the studio has to invite them", JSON.stringify(res));
+      const account = await db.user.findFirstOrThrow({ where: { tenantId: third.id, email } });
+      harness.assert(account.loginId === null && account.role === "TEAM_MEMBER", "The pending invite was not taken up");
+      const nobody = await withSession(null, () => continueAsClient(third.slug));
+      harness.assertEqual(nobody.success, false, "No session: refused");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SIGNIN-06: continueAsClient takes up a client account the studio made for the email", async () => {
+    try {
+      const { login, team, email } = await makeLoginWithTwoAccounts("in6");
+      const third = await makeStudio("quickmade");
+      const quick = await makeUser(third.id, email, "CLIENT", { inviteToken: "pending-hash" });
+      const res = await withLoginSession(login.id, team.id, () => continueAsClient(third.slug));
+      harness.assert(res.success === true, "Continued", JSON.stringify(res));
+      const account = await db.user.findUniqueOrThrow({ where: { id: quick.id } });
+      harness.assert(account.loginId === login.id && account.inviteToken === null, "The studio's client account is now theirs");
+      harness.assertEqual(await db.user.count({ where: { tenantId: third.id, email } }), 1, "No duplicate account");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-REG-01: registering at a new studio with a login needs the login's password", async () => {
+    try {
+      const { email } = await makeLoginWithTwoAccounts("reg1");
+      const third = await makeStudio("register");
+      const input = { tenantSlug: third.slug, name: "T41 Client", email, phone: "0123456789" };
+      const wrong = await registerClient({ ...input, password: "some-other-pass" });
+      harness.assert(wrong.success === false && wrong.error === "EMAIL_EXISTS" && wrong.message === "This email already has a CineFlow sign-in. Use its password, or reset it.", "Wrong password: the exact message", JSON.stringify(wrong));
+      harness.assertEqual(await db.user.count({ where: { tenantId: third.id, email } }), 0, "…and nothing was created");
+      const right = await withRequest(async (jar) => ({ res: await registerClient({ ...input, password: "new-pass-123" }), cookie: jar.get(COOKIE_NAME) }));
+      harness.assert(right.res.success === true, "The login's password registers them", JSON.stringify(right.res));
+      const account = await db.user.findFirstOrThrow({ where: { tenantId: third.id, email } });
+      harness.assert(account.role === "CLIENT" && account.loginId !== null && account.passwordHash === null, "A linked client account");
+      harness.assertEqual((await decodeSessionToken(right.cookie ?? ""))?.user.id, account.id, "Signed in to it");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-REG-02: a brand-new client registers straight away, and is invited to use one sign-in", async () => {
+    try {
+      const email = emailFor("reg2");
+      createdEmails.add(email);
+      await withInbox(async (inbox) => {
+        const res = await registerClient({ tenantSlug: "lumina-cine", name: "T41 New", email, phone: "0123456789", password: "brand-new-1" });
+        harness.assert(res.success === true, "Registered", JSON.stringify(res));
+        const account = await db.user.findFirstOrThrow({ where: { tenantId: lumina.id, email } });
+        harness.assert(account.passwordHash !== null && account.loginId === null, "A stand-alone account that works straight away");
+        const mail = inbox.find((m) => m.to === email && /one sign-in/i.test(m.subject));
+        harness.assert(!!mail && /join=1/.test(mail.html), "One 'use one sign-in' email with the confirm link", inbox.map((m) => m.subject).join(" | "));
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-REG-03: studio sign-up with an email that already has a login, or a staff account elsewhere", async () => {
+    const saved = process.env.STUDIO_SIGNUP_CODE;
+    delete process.env.STUDIO_SIGNUP_CODE;
+    const slugs: string[] = [];
+    const input = (slug: string, email: string, password: string) => ({ name: `T41 ${slug}`, slug, discipline: "HYBRID", currency: "MYR", ownerName: "T41 Owner", ownerEmail: email, password });
+    try {
+      const { email } = await makeLoginWithTwoAccounts("reg3");
+      const wrongSlug = `t41-own-w-${STAMP}`;
+      const wrong = (await withRequest(() => onboardStudio(input(wrongSlug, email, "not-the-password-1") as never))) as { success?: boolean; error?: string };
+      harness.assert(wrong.success !== true && /already has a CineFlow sign-in/.test(wrong.error ?? ""), "A wrong password is refused with the sign-in message", JSON.stringify(wrong));
+      harness.assertEqual(await db.tenant.count({ where: { slug: wrongSlug } }), 0, "…and no studio was created");
+      const rightSlug = `t41-own-r-${STAMP}`;
+      slugs.push(rightSlug);
+      const right = (await withRequest(() => onboardStudio(input(rightSlug, email, "new-pass-123") as never))) as { success?: boolean; error?: string };
+      harness.assert(right.success === true, "The login's password starts a studio", JSON.stringify(right));
+      const owner = await db.user.findFirstOrThrow({ where: { email, role: "STUDIO_OWNER" } });
+      harness.assert(owner.loginId !== null && owner.passwordHash === null, "The owner account is joined to the login");
+
+      // A photographer elsewhere with no login can start their own studio.
+      const staffEmail = emailFor("reg3b");
+      await makeUser(lumina.id, staffEmail, "TEAM_MEMBER", { password: "staff-pass-1" });
+      const staffSlug = `t41-own-s-${STAMP}`;
+      slugs.push(staffSlug);
+      const staff = (await withRequest(() => onboardStudio(input(staffSlug, staffEmail, "staff-pass-2") as never))) as { success?: boolean; error?: string };
+      harness.assert(staff.success === true, "A team member elsewhere can sign up their own studio", JSON.stringify(staff));
+      // …but not with a platform super-admin's email.
+      const superRow = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN" } });
+      const superSlug = `t41-own-x-${STAMP}`;
+      const blocked = (await withRequest(() => onboardStudio(input(superSlug, superRow.email, "super-pass-123") as never))) as { success?: boolean };
+      harness.assert(blocked.success !== true, "A super-admin's email can't be used");
+    } finally {
+      if (saved === undefined) delete process.env.STUDIO_SIGNUP_CODE;
+      else process.env.STUDIO_SIGNUP_CODE = saved;
+      for (const slug of slugs) {
+        const t = await db.tenant.findUnique({ where: { slug } });
+        if (!t) continue;
+        const owners = await db.user.findMany({ where: { tenantId: t.id }, select: { email: true } });
+        owners.forEach((o) => createdEmails.add(o.email.toLowerCase()));
+        await db.tenant.delete({ where: { id: t.id } }).catch(() => undefined);
+      }
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-UI-01: the invite card and the sign-in fallback are wired", async () => {
+    const overview = await readFile("app/[tenantSlug]/admin/page.tsx", "utf8");
+    harness.assert(/<OneLoginInvite/.test(overview) && /loginId/.test(overview), "The Overview offers one sign-in to stand-alone accounts");
+    const account = await readFile("app/[tenantSlug]/account/page.tsx", "utf8");
+    harness.assert(/<OneLoginInvite/.test(account) && /loginId/.test(account), "So does the client account page");
+    for (const f of ["components/auth/studio-login-form.tsx", "components/auth/client-auth-panel.tsx"]) {
+      const src = await readFile(f, "utf8");
+      harness.assert(/NO_ACCOUNT_HERE/.test(src) && /continueAsClient/.test(src), `${f} offers "Continue as a client"`);
+    }
+    harness.assert(/sendOneLoginLink/.test(await readFile("components/auth/one-login-invite.tsx", "utf8")), "The card sends the confirm link");
   });
 }

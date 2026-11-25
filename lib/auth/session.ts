@@ -34,6 +34,7 @@ function signInFailed(scope: string, email: string, ip: string | null): void {
 import { requestIp } from "@/lib/client-ip";
 import { decodeSessionToken, isSessionRevoked, liveAccounts, requestHost, sessionCookieFor, setLoginSessionCookie, setSessionCookie, type SessionAccount, type SessionUser } from "./token";
 import { requestStudioSlug } from "./request-studio";
+import { findLogin } from "@/lib/auth/login";
 
 // NOTE: this is a "use server" module, so every export is a public server
 // action. Token minting/verification lives in ./token (not an action module).
@@ -132,6 +133,20 @@ export async function loginWithCredentials(
           include: { tenant: true },
         })))
       : await db.user.findFirst({ where: { email: normalizedEmail }, include: { tenant: true } });
+
+    // No account here, but the email has a login and this is its password: the person is signed in
+    // to their other studios and offered "Continue as a client" of this one (never any staff access).
+    if (!user && tenantSlug) {
+      const studio = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { subscriptionStatus: true } });
+      const theirs = studio && studio.subscriptionStatus !== "CANCELLED" ? await findLogin(normalizedEmail) : null;
+      if (theirs?.passwordHash && bcrypt.compareSync(password, theirs.passwordHash)) {
+        const first = (await liveAccounts(theirs.id))[0];
+        if (first) {
+          await setLoginSessionCookie(theirs.id, first.userId);
+          return { success: false, error: "NO_ACCOUNT_HERE" };
+        }
+      }
+    }
 
     // An account joined to the person's one login signs in with the login's password.
     const login = user?.loginId ? await db.login.findUnique({ where: { id: user.loginId } }) : null;

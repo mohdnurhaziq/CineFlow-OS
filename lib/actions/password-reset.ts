@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { proveEmailAndJoin } from "@/lib/auth/login";
+import { emailOneLoginLink } from "@/lib/auth/one-login-link";
 import { isRateLimited } from "@/lib/rate-limit";
 import { sendNotification } from "@/lib/notifications";
 import {
@@ -158,19 +159,6 @@ export async function sendOneLoginLink(): Promise<{ success: true } | { success:
   }
   const tenant = await db.tenant.findUnique({ where: { slug: user.tenantSlug }, select: { name: true, slug: true } });
   if (!tenant) return { success: false, message: "There is nothing to confirm for this account." };
-  const token = await issuePasswordReset(user.id);
-  const res = await sendNotification(
-    {
-      event: "ONE_LOGIN_CONFIRM",
-      studioName: tenant.name,
-      studioSlug: tenant.slug,
-      clientName: user.name,
-      clientEmail: user.email,
-      confirmUrl: `${studioUrl(tenant.slug, passwordResetPath(user.email, token))}&join=1`,
-      expiresMinutes: PASSWORD_RESET_TTL_MINUTES,
-    },
-    "EMAIL"
-  );
-  if (res.emailDelivery !== "SENT") console.error(`One-sign-in email for ${tenant.slug} not sent (${res.emailDelivery}): ${res.emailError ?? "no email provider configured"}`);
+  await emailOneLoginLink(user, tenant);
   return { success: true };
 }

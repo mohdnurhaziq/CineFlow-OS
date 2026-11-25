@@ -5,6 +5,7 @@ import { liveProjectWhere } from "@/lib/projects/list";
 import { expireUnpaidDeposits } from "@/lib/bookings/expiry";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ClientDashboard } from "@/components/account/client-dashboard";
+import { OneLoginInvite } from "@/components/auth/one-login-invite";
 import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
 import { loadBookingConfirmation } from "@/lib/payments/confirmation";
 import { loadFramedPrints } from "@/lib/prints/gallery";
@@ -158,14 +159,18 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
       projects={projectsWithPrints}
       categories={categories}
       banner={
-        confirmation ? (
-          <PaymentConfirmationBanner
-            tenantSlug={tenant.slug}
-            currency={tenant.currency}
-            confirmation={confirmation}
-            dismissHref={studioPath(tenant.slug, "/account?tab=bookings")}
-          />
-        ) : null
+        <>
+          {confirmation ? (
+            <PaymentConfirmationBanner
+              tenantSlug={tenant.slug}
+              currency={tenant.currency}
+              confirmation={confirmation}
+              dismissHref={studioPath(tenant.slug, "/account?tab=bookings")}
+            />
+          ) : null}
+          {/* A stand-alone account (no login yet) is invited to use one sign-in for all its studios. */}
+          {session.loginId ? null : <OneLoginInvite />}
+        </>
       }
     />
   );

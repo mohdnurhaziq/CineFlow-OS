@@ -2,7 +2,8 @@
 
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { setSessionCookie } from "@/lib/auth/token";
+import { findLogin } from "@/lib/auth/login";
+import { setLoginSessionCookie, setSessionCookie } from "@/lib/auth/token";
 import {
   OnboardStudioSchema,
   CheckSlugSchema,
@@ -102,6 +103,13 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     };
   }
 
+  // An email that already has a CineFlow sign-in starts a studio with that sign-in: its password is the
+  // proof, so the new owner account joins it. Otherwise it is a stand-alone account, as ever.
+  const login = await findLogin(data.ownerEmail);
+  if (login && (!login.passwordHash || !bcrypt.compareSync(data.password, login.passwordHash))) {
+    return { success: false, error: "This email already has a CineFlow sign-in. Use its password." };
+  }
+
   try {
     const result = await db.$transaction(async (tx) => {
       // 0. Explicit Transaction Guard: Reject reserved platform slugs
@@ -115,9 +123,10 @@ export async function onboardStudio(formData: OnboardStudioInput) {
         throw new Error("SLUG_ALREADY_TAKEN");
       }
 
-      // Studio staff/owner emails stay globally unique; a client account elsewhere does not block onboarding.
+      // The same person may own a studio and work elsewhere (one login), but a platform super-admin's
+      // email is never a studio owner's.
       const existingUser = await tx.user.findFirst({
-        where: { email: data.ownerEmail, role: { not: "CLIENT" } },
+        where: { role: "SUPER_ADMIN", email: { in: Array.from(new Set([data.ownerEmail, data.ownerEmail.toLowerCase()])) } },
       });
       if (existingUser) {
         throw new Error("EMAIL_ALREADY_TAKEN");
@@ -153,7 +162,8 @@ export async function onboardStudio(formData: OnboardStudioInput) {
           email: data.ownerEmail,
           phone: data.ownerPhone || null,
           role: "STUDIO_OWNER",
-          passwordHash,
+          // Joined to the person's login: it holds the password, the account keeps none of its own.
+          ...(login ? { loginId: login.id } : { passwordHash }),
         },
       });
 
@@ -331,14 +341,18 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     });
 
     // Automatically authenticate the new studio owner
-    await setSessionCookie({
-      id: result.ownerId,
-      email: result.ownerEmail,
-      name: result.ownerName,
-      role: "STUDIO_OWNER",
-      tenantId: result.tenantId,
-      tenantSlug: result.slug,
-    });
+    if (login) {
+      await setLoginSessionCookie(login.id, result.ownerId);
+    } else {
+      await setSessionCookie({
+        id: result.ownerId,
+        email: result.ownerEmail,
+        name: result.ownerName,
+        role: "STUDIO_OWNER",
+        tenantId: result.tenantId,
+        tenantSlug: result.slug,
+      });
+    }
 
     return {
       success: true,

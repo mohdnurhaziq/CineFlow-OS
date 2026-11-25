@@ -48,6 +48,8 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "checkout.processBookingCheckout": "client checkout",
   "password-reset.requestPasswordReset": "forgot password (signed out; rate-limited, same reply for any email)",
   "password-reset.resetPassword": "forgot password (needs the one-time emailed token; rate-limited)",
+  "password-reset.sendOneLoginLink": "one sign-in: emails the signed-in stand-alone account a confirm link (checks the session itself; rate-limited)",
+  "one-login.continueAsClient": "one sign-in: needs a login session (checks it itself), and only ever creates or takes up a CLIENT account",
 };
 
 const GUARD_RE = /await (requireStaff|requireOwner|requireAccess|requireOwnOrManage|requireTick|requireSuperAdmin|requireStaffBySlug|assertOwner|requireRecordAccess|requireItemAccess)\(|await getCurrentUser\(\)/;
