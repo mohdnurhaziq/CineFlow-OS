@@ -9,6 +9,8 @@ const state = (globalThis.__cineflowTestCookies ??= { enabled: false, jar: new M
 // The request's host (see withHost in ./session.ts) and a record of cookie writes, with their options.
 state.host ??= null;
 state.ip ??= null;
+// The studio the request is for (what the middleware reports in x-cineflow-studio; see withStudio in ./session.ts).
+state.studio ??= null;
 state.calls ??= [];
 
 export async function cookies() {
@@ -46,6 +48,7 @@ export async function headers() {
   const h = new Headers(state.host ? { host: state.host } : {});
   // The visitor's IP as Cloudflare reports it (see withIp in ./session.ts).
   if (state.ip) h.set("cf-connecting-ip", state.ip);
+  if (state.studio) h.set("x-cineflow-studio", state.studio);
   return h;
 }
 

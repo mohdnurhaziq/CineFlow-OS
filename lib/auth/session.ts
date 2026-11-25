@@ -32,7 +32,8 @@ function signInFailed(scope: string, email: string, ip: string | null): void {
   countAttempt(`${scope}-fail:${email}:${ip}`, 60 * 60 * 1000);
 }
 import { requestIp } from "@/lib/client-ip";
-import { decodeSessionToken, isSessionRevoked, requestHost, sessionCookieFor, setSessionCookie, type SessionUser } from "./token";
+import { decodeSessionToken, isSessionRevoked, liveAccounts, requestHost, sessionCookieFor, setSessionCookie, type SessionAccount, type SessionUser } from "./token";
+import { requestStudioSlug } from "./request-studio";
 
 // NOTE: this is a "use server" module, so every export is a public server
 // action. Token minting/verification lives in ./token (not an action module).
@@ -49,9 +50,48 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
     const decoded = await decodeSessionToken(sessionCookie.value);
     if (!decoded) return null;
+    const loginId = decoded.user.loginId ?? null;
+
+    // A stand-alone account (or a token from before logins): the one account, as ever.
     // Signed out everywhere (e.g. password reset) after this cookie was issued.
-    if (await isSessionRevoked(decoded.user.id, decoded.issuedAt)) return null;
-    return decoded.user;
+    if (!loginId || !decoded.accounts) {
+      if (await isSessionRevoked(decoded.user.id, decoded.issuedAt)) return null;
+      return decoded.user;
+    }
+
+    // A login session holds the person: the account is the one for the studio being visited, so
+    // two studios open in two tabs each stay signed in as their own account. Where no studio is
+    // known (the platform's pages) it is the account the person signed in with.
+    const slug = await requestStudioSlug();
+    const entry = slug ? decoded.accounts.find((a) => a.tenantSlug === slug) : decoded.accounts.find((a) => a.userId === decoded.user.id);
+    if (!entry) return null;
+    if (await isSessionRevoked(entry.userId, decoded.issuedAt, loginId)) return null;
+    // The list in the token is a hint: the account must still be joined, usable and in a live studio.
+    const row = await db.user.findUnique({ where: { id: entry.userId }, include: { tenant: { select: { slug: true, subscriptionStatus: true } } } });
+    if (!row || row.loginId !== loginId || row.deactivatedAt || !row.tenant || row.tenant.subscriptionStatus === "CANCELLED") return null;
+    return { id: row.id, email: row.email, name: row.name, role: row.role, tenantId: row.tenantId, tenantSlug: row.tenant.slug, loginId };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The signed-in person, as a login: their accounts across studios (for the platform's pages and
+ * the switcher). Null for a stand-alone account, a super-admin, or no session.
+ */
+export async function getCurrentLogin(): Promise<{ loginId: string; email: string; accounts: SessionAccount[] } | null> {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get(sessionCookieFor(await requestHost()).name);
+    if (!sessionCookie?.value) return null;
+    const decoded = await decodeSessionToken(sessionCookie.value);
+    const loginId = decoded?.user.loginId ?? null;
+    if (!decoded || !decoded.accounts || !loginId) return null;
+    if (await isSessionRevoked(decoded.user.id, decoded.issuedAt, loginId)) return null;
+    const login = await db.login.findUnique({ where: { id: loginId }, select: { email: true } });
+    if (!login) return null;
+    const accounts = (await liveAccounts(loginId)).map(({ tenantSlug, userId, role }) => ({ tenantSlug, userId, role }));
+    return { loginId, email: login.email, accounts };
   } catch {
     return null;
   }

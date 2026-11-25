@@ -13,6 +13,9 @@ interface EdgeSession {
   tenantSlug: string | null;
 }
 
+/** Sets on the request the studio it is for (and drops any value a visitor sent): login sessions pick the person's account by it. */
+const STUDIO_HEADER = "x-cineflow-studio";
+
 function base64urlToBytes(input: string): Uint8Array {
   const b64 = input.replace(/-/g, "+").replace(/_/g, "/");
   const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
@@ -31,7 +34,7 @@ function bytesToBase64url(bytes: Uint8Array): string {
  * layouts and pages in parallel, so a redirect inside a layout does not stop
  * the page's data fetching or keep its output out of the response.
  */
-async function readSession(request: NextRequest): Promise<EdgeSession | null> {
+async function readSession(request: NextRequest, studioSlug?: string): Promise<EdgeSession | null> {
   try {
     // The cookie that belongs to this host (lib/auth/cookie-name.ts).
     const token = request.cookies.get(sessionCookieFor(hostFrom((name) => request.headers.get(name))).name)?.value;
@@ -62,6 +65,11 @@ async function readSession(request: NextRequest): Promise<EdgeSession | null> {
     if (typeof payload.exp !== "number" || Date.now() > payload.exp) return null;
     if (typeof payload.role !== "string") return null;
 
+    // A login session lists the person's accounts: for the studio being asked for, the account there.
+    if (studioSlug && payload.loginId && Array.isArray(payload.accounts)) {
+      const here = payload.accounts.find((a: { tenantSlug?: string }) => a?.tenantSlug?.toLowerCase() === studioSlug.toLowerCase());
+      if (here && typeof here.role === "string") return { role: here.role, tenantSlug: here.tenantSlug };
+    }
     return { role: payload.role, tenantSlug: payload.tenantSlug ?? null };
   } catch {
     return null;
@@ -139,6 +147,14 @@ export async function middleware(request: NextRequest) {
     resolvedTenantSlug = platformSubdomainSlug(hostname) ?? (await tenantSlugForDomain(hostname));
   }
 
+  // The request's headers as the server will see them: the studio it is for set by us, never by the visitor.
+  const requestHeaders = (studio: string | null) => {
+    const h = new Headers(request.headers);
+    h.delete(STUDIO_HEADER);
+    if (studio) h.set(STUDIO_HEADER, studio);
+    return h;
+  };
+
   // A path that starts with the whole segment /<slug> (case-insensitive).
   const startsWithSlug = (p: string, slug: string) => {
     const lower = p.toLowerCase();
@@ -171,7 +187,7 @@ export async function middleware(request: NextRequest) {
   const adminMatch = ADMIN_PATTERN.exec(effectivePath);
   if (adminMatch) {
     const slug = adminMatch[1] ?? "";
-    const session = await readSession(request);
+    const session = await readSession(request, slug);
     // After signing in, return to the exact admin page that was asked for (e.g. one invoice).
     const loginUrl = to(studioPath(slug, "/login"));
     loginUrl.searchParams.set("callbackUrl", `${studioPath(slug, effectivePath.slice(slug.length + 1) || "/")}${url.search}`);
@@ -196,7 +212,7 @@ export async function middleware(request: NextRequest) {
 
     // Keep the query: reset and invite links carry their token in it, payments their invoice.
     const rewriteUrl = new URL(`${targetPath}${url.search}`, request.url);
-    const response = NextResponse.rewrite(rewriteUrl);
+    const response = NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders(resolvedTenantSlug) } });
 
     // Pass tenant identification downstream to Server Components
     response.headers.set("x-tenant-slug", resolvedTenantSlug);
@@ -204,8 +220,10 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // 6. Standard Platform Request
-  const response = NextResponse.next();
+  // 6. Standard Platform Request. On the path form of a studio's address (/<slug>/…) it is still that studio's page.
+  const firstSegment = (effectivePath.split("/")[1] ?? "").toLowerCase();
+  const pathStudio = firstSegment && !RESERVED_SLUGS.has(firstSegment) && (await studioExists(firstSegment)) ? firstSegment : null;
+  const response = NextResponse.next({ request: { headers: requestHeaders(pathStudio) } });
   response.headers.set("x-platform-host", hostname);
   return response;
 }

@@ -11,6 +11,11 @@ import { db } from "@/lib/db";
 import { setSmtpTransportForTests } from "@/lib/email/smtp";
 import { hasSetUp } from "@/lib/auth/set-up";
 import { createLoginFromProof, findLogin, sendJoinedEmail, type JoinedAccount } from "@/lib/auth/login";
+import { NextRequest } from "next/server";
+import { middleware } from "@/middleware";
+import { COOKIE_NAME, createSessionToken, liveAccounts } from "@/lib/auth/token";
+import { getCurrentLogin, getCurrentUser } from "@/lib/auth/session";
+import { withLoginSession, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
 let counter = 0;
@@ -180,5 +185,122 @@ export async function runTier41OneLoginTests(harness: TestHarness) {
       harness.assert(/Lumina CineWorks/.test(mail.text) && /Apex Media/.test(mail.text), "It names each studio");
       harness.assert(/Your old passwords for these studios no longer work\./.test(mail.text), "It says the old passwords no longer work");
     });
+  });
+
+  // ── Task 2: a session that holds the person ─────────────────────────────────────────────
+  /** A login with a team account at lumina-cine and a client account at apex-media, both joined. */
+  const makeLoginWithTwoAccounts = async (label: string) => {
+    const email = emailFor(label);
+    const team = await makeUser(lumina.id, email, "PHOTOGRAPHER", { password: "old-pass-1" });
+    const client = await makeUser(apex.id, email, "CLIENT", { password: "old-pass-2" });
+    const { login } = await createLoginFromProof(email, await bcrypt.hash("new-pass-123", 4));
+    return { email, team, client, login };
+  };
+
+  await harness.test("T41-SESSION-01: the account follows the studio being visited", async () => {
+    try {
+      const { team, client, login } = await makeLoginWithTwoAccounts("s1");
+      await withLoginSession(login.id, team.id, async () => {
+        const atApex = await withStudio("apex-media", getCurrentUser);
+        harness.assert(atApex?.id === client.id && atApex.role === "CLIENT" && atApex.tenantSlug === "apex-media", "At apex: the client account");
+        const atLumina = await withStudio("lumina-cine", getCurrentUser);
+        harness.assert(atLumina?.id === team.id && atLumina.role === "PHOTOGRAPHER" && atLumina.tenantSlug === "lumina-cine", "At lumina: the team account");
+        harness.assertEqual(await withStudio("some-other-studio", getCurrentUser), null, "A studio with no account for the person: nobody");
+        harness.assertEqual((await getCurrentUser())?.id, team.id, "No studio known (platform): the active account");
+        harness.assertEqual(atApex?.loginId, login.id, "The account carries its login");
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SESSION-02: two studios in two tabs don't push each other out", async () => {
+    try {
+      const { team, client, login } = await makeLoginWithTwoAccounts("s2");
+      await withLoginSession(login.id, team.id, async () => {
+        for (let i = 0; i < 3; i++) {
+          harness.assertEqual((await withStudio("lumina-cine", getCurrentUser))?.id, team.id, `Round ${i + 1}: lumina is still the team account`);
+          harness.assertEqual((await withStudio("apex-media", getCurrentUser))?.id, client.id, `Round ${i + 1}: apex is still the client account`);
+        }
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SESSION-03: the middleware lets each account into /admin of its own studio only, and reports the studio", async () => {
+    try {
+      const { team, login } = await makeLoginWithTwoAccounts("s3");
+      const accounts = await liveAccounts(login.id);
+      const active = accounts.find((a) => a.userId === team.id)!;
+      const token = await createSessionToken(active.user, accounts.map(({ tenantSlug, userId, role }) => ({ tenantSlug, userId, role })));
+      const mw = (path: string, extra: Record<string, string> = {}) =>
+        middleware(new NextRequest(`http://localhost:3000${path}`, { headers: { host: "localhost:3000", cookie: `${COOKIE_NAME}=${token}`, ...extra } }));
+      const own = await mw("/lumina-cine/admin");
+      harness.assert(!own.headers.get("location"), "The team account gets into its own studio's admin", own.headers.get("location") ?? "");
+      const asClient = await mw("/apex-media/admin");
+      harness.assert((asClient.headers.get("location") ?? "").endsWith("/apex-media/account"), "At the studio where it is a client: sent to the account page", asClient.headers.get("location") ?? "");
+      const elsewhere = await mw("/third-studio/admin");
+      harness.assert((elsewhere.headers.get("location") ?? "").includes("/third-studio/login"), "A studio with no account: sent to its sign-in", elsewhere.headers.get("location") ?? "");
+      const page = await mw("/lumina-cine/book");
+      harness.assertEqual(page.headers.get("x-middleware-request-x-cineflow-studio"), "lumina-cine", "A studio page tells the server which studio it is");
+      const spoof = await mw("/create-studio", { "x-cineflow-studio": "lumina-cine" });
+      harness.assert(!(spoof.headers.get("x-middleware-override-headers") ?? "").split(",").includes("x-cineflow-studio"), "A made-up header on a platform page is dropped");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SESSION-04: a removed account or a cancelled studio ends access there, nowhere else", async () => {
+    try {
+      const { team, client, login } = await makeLoginWithTwoAccounts("s4");
+      await withLoginSession(login.id, team.id, async () => {
+        await db.user.update({ where: { id: team.id }, data: { deactivatedAt: new Date() } });
+        harness.assertEqual(await withStudio("lumina-cine", getCurrentUser), null, "Removed at lumina: nobody there");
+        harness.assertEqual((await withStudio("apex-media", getCurrentUser))?.id, client.id, "Apex still works");
+        await db.user.update({ where: { id: team.id }, data: { deactivatedAt: null } });
+        await db.tenant.update({ where: { id: apex.id }, data: { subscriptionStatus: "CANCELLED" } });
+        try {
+          harness.assertEqual(await withStudio("apex-media", getCurrentUser), null, "A cancelled studio: nobody there");
+          harness.assertEqual((await withStudio("lumina-cine", getCurrentUser))?.id, team.id, "Lumina still works");
+        } finally {
+          await db.tenant.update({ where: { id: apex.id }, data: { subscriptionStatus: apex.subscriptionStatus } });
+        }
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SESSION-05: signing the login out everywhere ends the session", async () => {
+    try {
+      const { team, login } = await makeLoginWithTwoAccounts("s5");
+      await withLoginSession(login.id, team.id, async () => {
+        harness.assert((await getCurrentLogin()) !== null, "Signed in before");
+        await db.login.update({ where: { id: login.id }, data: { sessionsValidAfter: new Date(Date.now() + 1000) } });
+        harness.assertEqual(await withStudio("lumina-cine", getCurrentUser), null, "No account after sign-out-everywhere");
+        harness.assertEqual(await getCurrentLogin(), null, "No login either");
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-SESSION-06: getCurrentLogin lists the person's live accounts; old one-account tokens still work", async () => {
+    try {
+      const { team, client, login } = await makeLoginWithTwoAccounts("s6");
+      await withLoginSession(login.id, team.id, async () => {
+        const me = await getCurrentLogin();
+        harness.assertEqual(me?.loginId, login.id, "The login");
+        harness.assertEqual(me?.email, login.email, "Its email");
+        harness.assertEqual(me?.accounts.map((a) => a.userId).sort().join(), [team.id, client.id].sort().join(), "Both accounts");
+      });
+      const owner = await db.user.findFirstOrThrow({ where: { tenantId: lumina.id, role: "STUDIO_OWNER" } });
+      const old = { id: owner.id, email: owner.email, name: owner.name, role: owner.role, tenantId: owner.tenantId, tenantSlug: "lumina-cine" };
+      harness.assertEqual((await withSession(old, () => withStudio("lumina-cine", getCurrentUser)))?.id, owner.id, "A token without a login works as before");
+      harness.assertEqual(await withSession(old, getCurrentLogin), null, "…and is not a login session");
+    } finally {
+      await cleanUp();
+    }
   });
 }

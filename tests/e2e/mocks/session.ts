@@ -2,7 +2,7 @@
  * Helpers to run server actions as a signed-in user in the E2E runner.
  * Backed by the `next/headers` stub (see next-headers-stub.mjs).
  */
-import { COOKIE_NAME, createSessionToken, type SessionUser } from "../../../lib/auth/token";
+import { COOKIE_NAME, createSessionToken, liveAccounts, type SessionUser } from "../../../lib/auth/token";
 
 interface CookieState {
   enabled: boolean;
@@ -10,6 +10,7 @@ interface CookieState {
   ambient: { name: string; value: string } | null;
   host: string | null;
   ip: string | null;
+  studio: string | null;
   calls: Array<{ op: "set" | "delete"; args: unknown[] }>;
 }
 
@@ -73,6 +74,35 @@ export async function withHost<T>(host: string, fn: () => Promise<T>): Promise<{
   } finally {
     state.host = saved;
     state.calls = [];
+  }
+}
+
+/** Runs `fn` as if the request is for studio `slug` (what the middleware reports in x-cineflow-studio). */
+export async function withStudio<T>(slug: string | null, fn: () => Promise<T>): Promise<T> {
+  const state = cookieState();
+  const saved = state.studio;
+  state.studio = slug;
+  try {
+    return await fn();
+  } finally {
+    state.studio = saved;
+  }
+}
+
+/** Like withSession, but for a person's one login: the token lists all their accounts, `activeUserId` is the active one. */
+export async function withLoginSession<T>(loginId: string, activeUserId: string, fn: () => Promise<T>): Promise<T> {
+  const state = cookieState();
+  const accounts = await liveAccounts(loginId);
+  const active = accounts.find((a) => a.userId === activeUserId);
+  if (!active) throw new Error("withLoginSession: the active account isn't one of the login's live accounts");
+  state.jar.clear();
+  state.jar.set(COOKIE_NAME, await createSessionToken(active.user, accounts.map(({ tenantSlug, userId, role }) => ({ tenantSlug, userId, role }))));
+  state.enabled = true;
+  try {
+    return await fn();
+  } finally {
+    state.enabled = false;
+    state.jar.clear();
   }
 }
 
