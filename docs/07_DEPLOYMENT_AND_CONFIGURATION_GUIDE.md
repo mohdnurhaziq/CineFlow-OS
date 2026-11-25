@@ -100,3 +100,36 @@ CineFlow OS is configured with `manifest.json` and mobile meta tags:
 - **iOS (iPhone & iPad)**: Open Safari, tap the Share icon, tap **"Add to Home Screen"**. The app opens full-screen without Safari browser bars.
 - **Android**: Open Chrome, tap the menu, tap **"Install App"** or **"Add to Home screen"**.
 - Ideal for **On-Set Live Mode** during shoot days.
+
+## Google sign-in ("Continue with Google")
+
+People can sign in and register with Google as well as with an email and password. It is off until you
+create a Google sign-in key and give it to the app. Do this once per environment (production, staging
+and your own computer can share one key or have one each).
+
+1. Open the Google Cloud Console (console.cloud.google.com) and pick or create a project.
+2. **APIs & Services > OAuth consent screen.** Choose **External**. App name "CineFlow OS", your support
+   email and developer email. Scopes: `openid`, `email` and `profile` only. Then press **Publish app**.
+   An app left in "Testing" only lets people you list sign in, and their access stops after 7 days.
+3. **APIs & Services > Credentials > Create credentials > OAuth client ID.** Application type **Web
+   application**. Name it for the environment ("CineFlow production").
+4. **Authorized redirect URIs.** Add exactly the address of the platform host, with `/auth/google/callback`:
+   - production: `https://cineflow-os.my/auth/google/callback`
+   - staging: `https://staging.cineflow-os.my/auth/google/callback`
+   - your own computer: `http://localhost:3000/auth/google/callback`
+
+   You do not need any "Authorized JavaScript origins". The address must match character for character
+   (scheme, host, no trailing slash).
+5. Press **Create**, then copy the **Client ID** and **Client secret** into that environment's `.env`:
+
+   ```
+   GOOGLE_CLIENT_ID="...apps.googleusercontent.com"
+   GOOGLE_CLIENT_SECRET="GOCSPX-..."
+   ```
+
+   Rebuild or restart the app (`docker compose up -d --build app`, or `node scripts/ops.mjs deploy ...`
+   after putting the values in that environment's `.env`). Keep the secret out of git.
+6. Check it: open `/login` on the platform. A **Continue with Google** button should appear. If the
+   buttons don't show, one of the two values is missing. If Google says "redirect_uri_mismatch", the
+   address in step 4 doesn't match the one in the error message.
+

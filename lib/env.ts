@@ -7,6 +7,9 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters long").default(DEV_FALLBACK_AUTH_SECRET),
   NEXT_PUBLIC_APP_DOMAIN: z.string().default("cineflow.app"),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+  // "Continue with Google". Both must be set for the buttons to show (see docs/07_DEPLOYMENT_AND_CONFIGURATION_GUIDE.md).
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
