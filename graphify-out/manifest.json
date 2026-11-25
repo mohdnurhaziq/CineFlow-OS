@@ -4553,6 +4553,18 @@
     "ast_hash": "704cae9db8d80708df758280e1a148f2",
     "semantic_hash": ""
   },
+  "docs/superpowers/plans/2026-11-25-one-login-part-1.md": {
+    "mtime": 1795593984.678747,
+    "seen": 1795594634.1663857,
+    "ast_hash": "43665c34c4009e0a7ef9f1a5eb564568",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-11-25-one-login-design.md": {
+    "mtime": 1795593714.3519845,
+    "seen": 1795594634.1699255,
+    "ast_hash": "757bfa861c6cbabe9336168dc5c6c19d",
+    "semantic_hash": ""
+  },
   "pnpm-lock.yaml": {
     "mtime": 1795517773.2514234,
     "seen": 1795544287.7044032,
