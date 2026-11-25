@@ -8,6 +8,7 @@ import { ClientDashboard } from "@/components/account/client-dashboard";
 import { PaymentConfirmationBanner } from "@/components/checkout/payment-confirmation-banner";
 import { loadBookingConfirmation } from "@/lib/payments/confirmation";
 import { loadFramedPrints } from "@/lib/prints/gallery";
+import { printsOffered } from "@/lib/billing/guard";
 import { clientVisibleProposalWhere } from "@/lib/proposals/status";
 import { studioPath } from "@/lib/domain-name";
 
@@ -139,7 +140,9 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
   const categories = await db.campaignCategory.findMany({ where: { tenantId: tenant.id }, select: { slug: true, name: true } });
 
   // Each gallery's framed prints (included prints, past orders), for its Galleries card.
-  const projectsWithPrints = await Promise.all(projects.map(async (p) => ({ ...p, framedPrints: await loadFramedPrints(p.id) })));
+  // A studio that sells no framed prints shows none.
+  const sellsPrints = await printsOffered(tenant.id);
+  const projectsWithPrints = await Promise.all(projects.map(async (p) => ({ ...p, framedPrints: sellsPrints ? await loadFramedPrints(p.id) : undefined })));
 
   // Right after checkout: confirm the booking (looked up as this client's, never trusted from the URL).
   const confirmation =

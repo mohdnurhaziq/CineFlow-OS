@@ -137,6 +137,7 @@ export async function onboardStudio(formData: OnboardStudioInput) {
           bio: data.bio || "Crafting cinematic visuals, authentic emotion, and timeless milestone imagery.",
           brandColor: data.brandColor || "#f59e0b",
           logoUrl: data.logoUrl || null,
+          offersPrints: data.offersPrints,
           subscriptionTier: data.subscriptionTier,
           subscriptionStatus: "ACTIVE",
           // A free trial with everything open; the chosen plan applies after it.
@@ -199,69 +200,72 @@ export async function onboardStudio(formData: OnboardStudioInput) {
       });
 
       // 6. Seed Default Print Sizes & Frame Designs (for Wall Visualizer)
-      await tx.printSize.createMany({
-        data: [
-          {
-            tenantId: tenant.id,
-            code: "8R",
-            name: "8R (8 x 10 in)",
-            widthInches: 8.0,
-            heightInches: 10.0,
-            basePrice: data.currency === "MYR" ? 180.0 : 45.0,
-          },
-          {
-            tenantId: tenant.id,
-            code: "12R",
-            name: "12R (12 x 15 in)",
-            widthInches: 12.0,
-            heightInches: 15.0,
-            basePrice: data.currency === "MYR" ? 350.0 : 85.0,
-          },
-          {
-            tenantId: tenant.id,
-            code: "16R",
-            name: "16R (16 x 20 in)",
-            widthInches: 16.0,
-            heightInches: 20.0,
-            basePrice: data.currency === "MYR" ? 580.0 : 140.0,
-          },
-        ],
-      });
+      // A studio that sells no framed prints starts with none to switch off.
+      if (data.offersPrints) {
+        await tx.printSize.createMany({
+          data: [
+            {
+              tenantId: tenant.id,
+              code: "8R",
+              name: "8R (8 x 10 in)",
+              widthInches: 8.0,
+              heightInches: 10.0,
+              basePrice: data.currency === "MYR" ? 180.0 : 45.0,
+            },
+            {
+              tenantId: tenant.id,
+              code: "12R",
+              name: "12R (12 x 15 in)",
+              widthInches: 12.0,
+              heightInches: 15.0,
+              basePrice: data.currency === "MYR" ? 350.0 : 85.0,
+            },
+            {
+              tenantId: tenant.id,
+              code: "16R",
+              name: "16R (16 x 20 in)",
+              widthInches: 16.0,
+              heightInches: 20.0,
+              basePrice: data.currency === "MYR" ? 580.0 : 140.0,
+            },
+          ],
+        });
 
-      await tx.frameDesign.createMany({
-        data: [
-          {
-            tenantId: tenant.id,
-            name: "Matte Black Minimalist",
-            material: "Aluminum",
-            moldingWidth: 1.25,
-            frameColor: "#18181b",
-            previewAsset: "/uploads/frames/matte_black.jpg",
-            priceOffset: 0.0,
-            isAvailable: true,
-          },
-          {
-            tenantId: tenant.id,
-            name: "Warm Walnut Shadowbox",
-            material: "Solid Wood",
-            moldingWidth: 1.75,
-            frameColor: "#5c3a21",
-            previewAsset: "/uploads/frames/walnut.jpg",
-            priceOffset: data.currency === "MYR" ? 150.0 : 35.0,
-            isAvailable: true,
-          },
-          {
-            tenantId: tenant.id,
-            name: "Champagne Gold Gallery",
-            material: "Anodized Metal",
-            moldingWidth: 1.5,
-            frameColor: "#d4af37",
-            previewAsset: "/uploads/frames/gold.jpg",
-            priceOffset: data.currency === "MYR" ? 220.0 : 50.0,
-            isAvailable: true,
-          },
-        ],
-      });
+        await tx.frameDesign.createMany({
+          data: [
+            {
+              tenantId: tenant.id,
+              name: "Matte Black Minimalist",
+              material: "Aluminum",
+              moldingWidth: 1.25,
+              frameColor: "#18181b",
+              previewAsset: "/uploads/frames/matte_black.jpg",
+              priceOffset: 0.0,
+              isAvailable: true,
+            },
+            {
+              tenantId: tenant.id,
+              name: "Warm Walnut Shadowbox",
+              material: "Solid Wood",
+              moldingWidth: 1.75,
+              frameColor: "#5c3a21",
+              previewAsset: "/uploads/frames/walnut.jpg",
+              priceOffset: data.currency === "MYR" ? 150.0 : 35.0,
+              isAvailable: true,
+            },
+            {
+              tenantId: tenant.id,
+              name: "Champagne Gold Gallery",
+              material: "Anodized Metal",
+              moldingWidth: 1.5,
+              frameColor: "#d4af37",
+              previewAsset: "/uploads/frames/gold.jpg",
+              priceOffset: data.currency === "MYR" ? 220.0 : 50.0,
+              isAvailable: true,
+            },
+          ],
+        });
+      }
 
       // 7. Seed Default Proposal Add-On Templates
       await tx.proposalAddOnTemplate.createMany({

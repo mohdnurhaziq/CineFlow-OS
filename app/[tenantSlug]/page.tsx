@@ -10,7 +10,7 @@ import { ShowcaseIntro } from "@/components/showcase/showcase-intro";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
 import { studioPath } from "@/lib/domain-name";
-import { hasFeature } from "@/lib/billing/guard";
+import { printsOffered } from "@/lib/billing/guard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -108,9 +108,11 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
       includedPrints: { select: { quantity: true } },
     },
   });
+  // A studio that sells no framed prints promises none: its packages show no included prints.
+  const sellsPrints = await printsOffered(tenant.id);
   const packages = packageRows.map(({ includedPrints, ...pkg }) => ({
     ...pkg,
-    includedPrintCount: includedPrintCount(includedPrints),
+    includedPrintCount: sellsPrints ? includedPrintCount(includedPrints) : 0,
   }));
 
   // 4. Fetch scoped Showcase Items
@@ -177,7 +179,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
         studioLead={studioLead}
         client={client ? { name: client.name, email: client.email } : null}
         staff={staff}
-        showWallArt={await hasFeature(tenant.id, "wallArt")}
+        showWallArt={sellsPrints}
       />
 
       {/* The portfolio slider comes first, the full width of the page under the bar; the studio's intro follows it. */}

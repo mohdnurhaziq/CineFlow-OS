@@ -38,6 +38,8 @@ interface ServicesDashboardProps {
   initialCategories: CategoryRow[];
   printSizes?: PrintOption[];
   frames?: FrameOption[];
+  /** The studio sells framed prints, so a package can include some. */
+  showPrints?: boolean;
   /** The setPrices permission: may create, edit and delete packages (prices) and delete categories. */
   canSetPrices: boolean;
   /** Services MANAGE: may feature packages and add, edit or switch off categories. */
@@ -52,6 +54,7 @@ export function ServicesDashboard({
   initialCategories,
   printSizes = [],
   frames = [],
+  showPrints = true,
   canSetPrices,
   canManage,
 }: ServicesDashboardProps) {
@@ -519,6 +522,7 @@ export function ServicesDashboard({
         packageToEdit={packageToEdit}
         printSizes={printSizes}
         frames={frames}
+        showPrints={showPrints}
         onSuccess={handleSuccess}
       />
 

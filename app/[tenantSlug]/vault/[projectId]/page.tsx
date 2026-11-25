@@ -6,6 +6,7 @@ import { requirePageAccess } from "@/lib/auth/project-access";
 import { VaultShell } from "@/components/vault/vault-shell";
 import { StudioPageHeader } from "@/components/layout/studio-page-header";
 import { FramedPrintsSection } from "@/components/prints/framed-prints-section";
+import { printsOffered } from "@/lib/billing/guard";
 import { loadFramedPrints } from "@/lib/prints/gallery";
 import { currencySymbol } from "@/lib/money";
 import { STAFF_ROLES } from "@/lib/auth/guard";
@@ -112,12 +113,14 @@ export default async function ProjectVaultPage({ params }: VaultPageProps) {
   const money = !access || levelAtLeast(access.areas.invoices, "VIEW");
   const canMarkUp = !access || (await canWorkOn({ id: viewer.id, access }, tenant.id, "galleries", project.id));
   const finalInvoice = money ? project.invoices[0] || null : null;
-  const [framedPrints, orderableSizes] = await Promise.all([
+  const [framedPrints, orderableSizes, sellsPrints] = await Promise.all([
     loadFramedPrints(project.id),
     db.printSize.count({ where: { tenantId: tenant.id, isAvailable: true } }),
+    printsOffered(tenant.id),
   ]);
-  // Shown when there is something to claim, an order to follow, or a catalog to order from.
-  const showFramedPrints = framedPrints.lines.length > 0 || framedPrints.orders.length > 0 || orderableSizes > 0;
+  // Shown when there is something to claim, an order to follow, or a catalog to order from;
+  // never for a studio that sells no framed prints.
+  const showFramedPrints = sellsPrints && (framedPrints.lines.length > 0 || framedPrints.orders.length > 0 || orderableSizes > 0);
   const released = filesReleased(project, tenant);
   const allItems = project.deliverables.flatMap((d) => d.items);
 

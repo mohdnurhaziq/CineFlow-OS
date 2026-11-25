@@ -55,6 +55,7 @@ export default function CreateStudioPage() {
     password: "",
     ownerPhone: "",
     subscriptionTier: "PRO",
+    offersPrints: true,
   });
 
   // Whether sign-up is open, and whether it needs the beta's invite code (studioSignupStatus).
@@ -679,6 +680,8 @@ export default function CreateStudioPage() {
                         setFormData((prev) => ({
                           ...prev,
                           subscriptionTier: tier.id as OnboardStudioInput["subscriptionTier"],
+                          // Only the plan with wall art can choose not to sell prints: another plan starts with them on.
+                          offersPrints: tier.id === "STUDIO_UNLIMITED" ? prev.offersPrints : true,
                         }))
                       }
                       className={`w-full p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
@@ -705,6 +708,24 @@ export default function CreateStudioPage() {
                   ))}
                 </div>
 
+                {/* Framed prints (the wall-art plan only): set up by default; a studio that sells none skips them and can switch them on later */}
+                {formData.subscriptionTier === "STUDIO_UNLIMITED" && (
+                  <label className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-[#18181b] p-4 cursor-pointer has-[:checked]:border-amber-500/60">
+                    <input
+                      type="checkbox"
+                      checked={formData.offersPrints === false}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, offersPrints: !e.target.checked }))}
+                      className="mt-0.5 size-4 accent-amber-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-white">I don&apos;t sell framed prints</span>
+                      <span className="block text-xs text-zinc-400 mt-0.5">
+                        We&apos;ll skip the wall-art setup, and your clients won&apos;t see Wall Art. You can switch it on later in Settings.
+                      </span>
+                    </span>
+                  </label>
+                )}
+
                 {/* Provisioning summary list */}
                 <div className="p-4 rounded-xl border border-zinc-800 bg-[#09090b] space-y-2 text-xs">
                   <span className="font-mono uppercase tracking-wider text-zinc-400">
@@ -712,8 +733,8 @@ export default function CreateStudioPage() {
                   </span>
                   <div className="grid grid-cols-2 gap-2 text-zinc-300">
                     <div>✓ 4 Standard Campaign Categories</div>
-                    <div>✓ 3 Frame Moldings (Black, Walnut, Gold)</div>
-                    <div>✓ 3 Wall Print Sizing Specs (8R, 12R, 16R)</div>
+                    {formData.offersPrints !== false && <div>✓ 3 Frame Moldings (Black, Walnut, Gold)</div>}
+                    {formData.offersPrints !== false && <div>✓ 3 Wall Print Sizing Specs (8R, 12R, 16R)</div>}
                     <div>✓ 4 Proposal Add-On Templates</div>
                     <div>✓ 1 Seed Starter Service Package</div>
                     <div>✓ Clash-Free Online Booking Calendar</div>

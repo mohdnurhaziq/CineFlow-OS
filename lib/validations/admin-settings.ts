@@ -40,6 +40,8 @@ export const UpdateStudioSettingsSchema = z.object({
   bankDetails: z.string().optional().nullable(),
   // Photo delivery: true releases full-resolution files on upload; false keeps watermarked previews until paid.
   releaseFilesBeforePayment: z.boolean().optional(),
+  // Whether the studio sells framed prints (Wall Art, print ordering, included prints). Only on a plan with wall art.
+  offersPrints: z.boolean().optional(),
 });
 
 export type UpdateStudioSettingsInput = z.input<typeof UpdateStudioSettingsSchema>;

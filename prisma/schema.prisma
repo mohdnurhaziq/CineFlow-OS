@@ -25,6 +25,7 @@ model Tenant {
   qrCodeUrl          String?             // Studio payment QR code image asset
   bankDetails        String?             // Bank name, account number, account holder
   releaseFilesBeforePayment Boolean      @default(false) // false: clients see watermarked previews until the balance is paid; true: full-resolution files right after upload
+  offersPrints       Boolean             @default(true) // false: the studio sells no framed prints, so clients see no Wall Art, print ordering or included prints (only on a plan with wall art)
   toyyibpaySecretEnc    String?          // AES-GCM encrypted Toyyibpay userSecretKey (never stored in plaintext)
   toyyibpayCategoryCode String?          // Toyyibpay category the studio's bills are created under
   invoiceSeq         Int                 @default(0) // Last invoice number used in invoiceSeqYear (INV-<year>-<seq>)

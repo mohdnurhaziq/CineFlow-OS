@@ -340,6 +340,14 @@ export default async function PrintsManualPage({ params }: PrintsManualPageProps
 
       <ManualSection id="questions" title="Common questions">
         <div className="space-y-5">
+          <ManualQa question="We don't sell framed prints. Can I hide all of it?">
+            <p>
+              Yes. On a plan with wall art, open <Ui>Settings</Ui> → <Ui>Photo delivery</Ui> and choose <Ui>No, we don&apos;t offer prints</Ui>,
+              then save. Your clients no longer see Wall Art, print ordering or included prints, and new packages and bookings carry no
+              prints. Nothing is deleted: choose <Ui>Yes</Ui> again to bring it all back. Orders already placed stay in Print orders for you
+              to finish.
+            </p>
+          </ManualQa>
           <ManualQa question="A client can't order prints. Why?">
             <p>
               Almost always, their final balance is unpaid. Framed prints open as soon as the balance is paid. Check the

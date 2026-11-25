@@ -1,3 +1,4 @@
+import { printsOffered } from "@/lib/billing/guard";
 import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -90,6 +91,7 @@ export default async function AdminServicesPage({ params }: ServicesPageProps) {
         initialCategories={categories as unknown as CategoryRow[]}
         printSizes={printSizes}
         frames={frames}
+        showPrints={await printsOffered(tenant.id)}
         canSetPrices={viewer.access.ticks.setPrices}
         canManage={levelAtLeast(viewer.access.areas.services, "MANAGE")}
       />

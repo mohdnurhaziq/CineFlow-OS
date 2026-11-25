@@ -7,7 +7,7 @@ import { planStatus, type PlanStatus } from "@/lib/billing/state";
  * Platform super-admins are never blocked. Not a "use server" module.
  */
 
-export type PlanLockCode = "PLAN_UPGRADE_REQUIRED" | "PLAN_PAUSED" | "PLAN_TEAM_LIMIT";
+export type PlanLockCode = "PLAN_UPGRADE_REQUIRED" | "PLAN_PAUSED" | "PLAN_TEAM_LIMIT" | "PRINTS_OFF";
 
 /** Refused by the studio's plan; `message` is plain words for the person. Not an AuthorizationError on purpose: it is shown as written. */
 export class PlanLockedError extends Error {
@@ -67,6 +67,27 @@ export async function requireFeature(tenantId: string, feature: PlanFeature, use
 /** Whether `feature` is on for the studio (for pages that hide links to it). */
 export async function hasFeature(tenantId: string, feature: PlanFeature): Promise<boolean> {
   return (await loadPlanStatus(tenantId)).features.has(feature);
+}
+
+export const PRINTS_OFF_MESSAGE = "This studio doesn't offer framed prints.";
+
+/**
+ * Whether the studio sells framed prints: its plan includes wall art AND it hasn't switched
+ * prints off in Settings. Clients see nothing about prints (Wall Art, ordering, included prints)
+ * unless this is true. The team's own pages ignore the switch, so they can still finish open orders.
+ */
+export async function printsOffered(tenantId: string): Promise<boolean> {
+  if (!(await hasFeature(tenantId, "wallArt"))) return false;
+  const t = await db.tenant.findUnique({ where: { id: tenantId }, select: { offersPrints: true } });
+  return t?.offersPrints ?? true;
+}
+
+/** Refuses a new print order unless the studio sells prints (plan and switch). */
+export async function requirePrintsOffered(tenantId: string, user?: { role: string } | null): Promise<void> {
+  await requireFeature(tenantId, "wallArt", user);
+  if (isSuper(user)) return;
+  const t = await db.tenant.findUnique({ where: { id: tenantId }, select: { offersPrints: true } });
+  if (t && !t.offersPrints) throw new PlanLockedError("PRINTS_OFF", PRINTS_OFF_MESSAGE);
 }
 
 /** The email a studio is told to contact: the first platform super-admin. */

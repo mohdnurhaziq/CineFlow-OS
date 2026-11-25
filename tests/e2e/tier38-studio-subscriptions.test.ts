@@ -357,7 +357,7 @@ export async function runTier38StudioSubscriptionsTests(harness: TestHarness) {
       await setPlan("STUDIO_UNLIMITED");
       harness.assertEqual(await hasFeature(lumina.id, "wallArt"), true, "Production plan: wall art");
       const page = await readFile("app/[tenantSlug]/visualizer/page.tsx", "utf8");
-      harness.assert(/hasFeature\(.*"wallArt"\)/.test(page), "The visualizer page checks the plan");
+      harness.assert(/printsOffered\(/.test(page), "The visualizer page checks the plan (and the studio's own switch)");
       const nav = await readFile("components/showcase/showcase-nav.tsx", "utf8");
       harness.assert(/showWallArt|wallArt/.test(nav), "The website bar hides the link without it");
     } finally {

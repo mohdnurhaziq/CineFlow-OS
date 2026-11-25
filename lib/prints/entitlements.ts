@@ -20,6 +20,9 @@ export async function snapshotIncludedPrints(
   source: "PACKAGE" | "BACKFILL"
 ): Promise<number> {
   if (!booking.packageId) return 0;
+  // A studio that sells no framed prints promises none, whatever its packages still list.
+  const studio = await tx.tenant.findUnique({ where: { id: booking.tenantId }, select: { offersPrints: true } });
+  if (studio && !studio.offersPrints) return 0;
   const existing = await tx.bookingIncludedPrint.count({
     where: { bookingId: booking.id, source: { in: ["PACKAGE", "BACKFILL"] } },
   });

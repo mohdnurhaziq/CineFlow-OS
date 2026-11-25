@@ -39,6 +39,10 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
     if (logo && logo !== currentTenant.logoUrl && !isOwnLogoPath(logo)) {
       return { success: false, error: "LOGO_INVALID", message: LOGO_URL_MESSAGE };
     }
+    // Selling framed prints is the wall-art plan's feature: its switch is for studios that have it.
+    if (validated.offersPrints !== undefined && validated.offersPrints !== currentTenant.offersPrints) {
+      await requireFeature(tenantId, "wallArt", owner);
+    }
     // A custom domain is a plan feature: one already set stays, but a new one needs the plan.
     if (customDomain && customDomain !== currentTenant.customDomain) await requireFeature(tenantId, "customDomain", owner);
 
@@ -96,6 +100,7 @@ export async function updateStudioSettings(input: UpdateStudioSettingsInput) {
         qrCodeUrl: text(validated.qrCodeUrl),
         bankDetails: text(validated.bankDetails),
         releaseFilesBeforePayment: validated.releaseFilesBeforePayment,
+        offersPrints: validated.offersPrints,
       },
     });
 

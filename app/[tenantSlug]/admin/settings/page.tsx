@@ -10,6 +10,7 @@ import { adminPageAccess } from "@/lib/auth/admin-page";
 import { ensureStudioRoles, parseAccess } from "@/lib/auth/access";
 import { NoAccess } from "@/components/admin/no-access";
 import { loadTeamMembers, type TeamMemberRow } from "@/lib/team/members";
+import { hasFeature } from "@/lib/billing/guard";
 
 interface SettingsPageProps {
   params: Promise<{
@@ -54,6 +55,7 @@ export default async function AdminSettingsPage({ params, searchParams }: Settin
     ...safeTenant,
     gatewayConfigured: Boolean(toyyibpaySecretEnc && toyyibpayCategoryCode),
     gatewayCategoryCode: toyyibpayCategoryCode,
+    hasWallArt: await hasFeature(tenant.id, "wallArt"),
   };
 
   let roles: { id: string; name: string; access: ReturnType<typeof parseAccess>; members: number }[] = [];

@@ -129,6 +129,13 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
                 always releases everything.
               </>,
             ],
+            [
+              <Ui key="p">Framed prints</Ui>,
+              <>
+                On a plan with wall art only. <Ui>Yes, we sell framed prints</Ui> or <Ui>No, we don&apos;t offer prints</Ui>. Choosing no hides Wall
+                Art, print ordering and included prints from your clients; nothing is deleted.
+              </>,
+            ],
           ]}
         />
         <ManualP>

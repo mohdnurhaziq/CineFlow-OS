@@ -75,6 +75,8 @@ export const OnboardStudioSchema = z.object({
 
   // Step 4: Plan Selection
   subscriptionTier: SubscriptionTierEnum.default("PRO"),
+  // false: the studio sells no framed prints, so none are set up and clients never see Wall Art.
+  offersPrints: z.boolean().default(true),
 });
 
 export type OnboardStudioInput = z.input<typeof OnboardStudioSchema>;

@@ -1,3 +1,4 @@
+import { printsOffered } from "@/lib/billing/guard";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
@@ -146,6 +147,7 @@ export default async function ClientBookingPage({ params }: ClientBookingPagePro
     claimed: Math.max(0, p.quantity - (remainingMap.get(p.id) ?? p.quantity)),
   }));
 
+  const sellsPrints = await printsOffered(tenant.id);
   const [categories, studioOwner] = await Promise.all([
     db.campaignCategory.findMany({
       where: { tenantId: tenant.id },
@@ -163,7 +165,8 @@ export default async function ClientBookingPage({ params }: ClientBookingPagePro
       booking={{
         ...booking,
         invoices: allInvoices,
-        includedPrints: printsWithRemaining,
+        // A studio that sells no framed prints shows none.
+        includedPrints: sellsPrints ? printsWithRemaining : [],
       }}
       categories={categories}
       studioOwner={studioOwner}

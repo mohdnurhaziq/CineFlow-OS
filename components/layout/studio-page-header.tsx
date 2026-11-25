@@ -5,7 +5,7 @@ import { AdminHeader } from "@/components/admin/admin-header";
 import { ClientAccountHeader } from "@/components/account/client-account-header";
 import { ShowcaseNav } from "@/components/showcase/showcase-nav";
 import { loadClientHeaderBadges } from "@/lib/client-header-badges";
-import { hasFeature } from "@/lib/billing/guard";
+import { printsOffered } from "@/lib/billing/guard";
 
 interface StudioPageHeaderProps {
   tenantSlug: string;
@@ -59,7 +59,7 @@ export async function StudioPageHeader({ tenantSlug, staffView = "admin" }: Stud
       tenant={tenant}
       studioLead={studioLead}
       staff={session && isStaff ? { name: session.name, email: session.email, role: session.role } : null}
-      showWallArt={await hasFeature(tenant.id, "wallArt")}
+      showWallArt={await printsOffered(tenant.id)}
     />
   );
 }

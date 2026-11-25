@@ -25,6 +25,10 @@ export interface StudioTenantData {
   qrCodeUrl?: string | null;
   bankDetails?: string | null;
   releaseFilesBeforePayment?: boolean;
+  /** The studio sells framed prints (Wall Art, print ordering, included prints). */
+  offersPrints?: boolean;
+  /** The studio's plan (or trial) includes wall art, so it can choose whether to sell prints. */
+  hasWallArt?: boolean;
   subscriptionTier: string;
   subscriptionStatus: string;
   gatewayConfigured?: boolean;

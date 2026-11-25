@@ -17,7 +17,7 @@ import { getSessionClient } from "@/lib/clients";
 import type { PhotoOption } from "@/components/visualizer/configurator-panel";
 import { studioPath } from "@/lib/domain-name";
 import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
-import { hasFeature } from "@/lib/billing/guard";
+import { printsOffered } from "@/lib/billing/guard";
 
 interface VisualizerPageProps {
   params: Promise<{
@@ -57,8 +57,8 @@ export default async function VisualizerPage({
     select: { id: true, name: true, slug: true, discipline: true, brandColor: true, currency: true, matBoardPrice: true },
   });
   if (!tenant) notFound();
-  // A Production-plan feature: without it the page says so and nothing is offered.
-  if (!(await hasFeature(tenant.id, "wallArt"))) {
+  // A Production-plan feature the studio can switch off: without it the page says so and nothing is offered.
+  if (!(await printsOffered(tenant.id))) {
     return (
       <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex items-center justify-center p-6">
         <div className="max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d10] p-8 text-center space-y-3">
