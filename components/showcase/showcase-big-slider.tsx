@@ -196,7 +196,7 @@ export function ShowcaseBigSlider({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="group relative w-full h-[calc(100svh-8rem)] min-h-[420px] max-h-[75svh] sm:max-h-[900px] overflow-hidden bg-[#0b0b0e] select-none"
+        className="group relative w-full h-[115vw] min-h-[420px] max-h-[75svh] sm:h-[calc(100svh-8rem)] sm:max-h-[900px] overflow-hidden bg-[#0b0b0e] select-none"
       >
         {/* Horizontal Sliding Track: Translates -100% per slide */}
         <div

@@ -356,7 +356,8 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assert(!/<main[^>]*max-w/.test(page), "The page's main area doesn't narrow the slider");
     harness.assert(/hasSlider \? "pt-12" : "pt-12 sm:pt-16"/.test(shell), "With no portfolio yet, the intro gets its own room at the top");
     const slider = await fs.readFile(path.join(root, "components/showcase/showcase-big-slider.tsx"), "utf8");
-    harness.assert(!/rounded-3xl|max-w-7xl/.test(slider) && /h-\[calc\(100svh-8rem\)\]/.test(slider), "The slider is edge to edge and fills the first screen under the bar");
+    harness.assert(!/rounded-3xl|max-w-7xl/.test(slider) && /sm:h-\[calc\(100svh-8rem\)\]/.test(slider), "The slider is edge to edge and fills the first screen under the bar on computers");
+    harness.assert(/ h-\[115vw\] /.test(slider), "On phones it is shorter, so less of each photo is cropped away");
     const intro = await fs.readFile(path.join(root, "components/showcase/showcase-intro.tsx"), "utf8");
     harness.assertEqual((intro.match(/<h1[\s>]/g) ?? []).length, 1, "The intro holds the page's one h1");
     harness.assert(!/currency/i.test(intro), "The intro doesn't show a currency");
