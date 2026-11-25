@@ -15,6 +15,8 @@ interface ClientRegisterCardProps {
   defaultPhone?: string;
   /** Where to go once signed in (a path inside this studio); the account page by default. */
   next?: string;
+  googleEnabled?: boolean;
+  googleError?: string | null;
 }
 
 export function ClientRegisterCard({
@@ -26,6 +28,8 @@ export function ClientRegisterCard({
   defaultName,
   defaultPhone,
   next,
+  googleEnabled = false,
+  googleError = null,
 }: ClientRegisterCardProps) {
   const router = useRouter();
 
@@ -48,6 +52,8 @@ export function ClientRegisterCard({
         defaultEmail={defaultEmail}
         defaultName={defaultName}
         defaultPhone={defaultPhone}
+        googleEnabled={googleEnabled}
+        googleError={googleError}
         // One navigation only: a refresh here re-renders /register, which itself redirects signed-in
         // clients, and the two navigations race (the page could be left blank). /account is
         // dynamic, so it renders fresh with the new session; replace keeps /register out of history.

@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { getCurrentLogin, getCurrentUser, logoutAction } from "@/lib/auth/session";
 import bcrypt from "bcryptjs";
-import { findLogin, linkAccountToLogin, normalizeEmail } from "@/lib/auth/login";
+import { findLogin, normalizeEmail, takeUpClientAccount } from "@/lib/auth/login";
 import { signInBlocked, signInFailed } from "@/lib/auth/sign-in-limits";
 import { requestIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
@@ -26,29 +26,14 @@ export async function continueAsClient(
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true, subscriptionStatus: true } });
   if (!tenant || tenant.subscriptionStatus === "CANCELLED") return { success: false, message: "Studio not found." };
 
-  // Legacy rows can be mixed case, so match on lower(email).
-  const found = await db.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE "tenantId" = ${tenant.id} AND lower(email) = ${me.email}`;
-  const existing = found[0] ? await db.user.findUnique({ where: { id: found[0].id } }) : null;
-
-  let userId: string;
-  let name: string;
-  if (existing) {
-    if (existing.role !== "CLIENT" || existing.deactivatedAt) return { success: false, message: "Ask the studio to invite you." };
-    if (existing.loginId !== me.loginId) {
-      // An account with its own password was never proven to be this person's.
-      if (hasSetUp(existing)) return { success: false, message: "This studio already has an account for this email. Ask the studio to help you sign in." };
-      await linkAccountToLogin(existing.id, me.loginId);
-    }
-    userId = existing.id;
-    name = existing.name;
-  } else {
-    const prior = await db.user.findFirst({ where: { loginId: me.loginId }, orderBy: { createdAt: "desc" }, select: { name: true, phone: true } });
-    const created = await db.user.create({
-      data: { tenantId: tenant.id, name: prior?.name ?? me.email, email: me.email, phone: prior?.phone ?? null, role: "CLIENT", loginId: me.loginId },
-    });
-    userId = created.id;
-    name = created.name;
+  const taken = await takeUpClientAccount({ id: me.loginId, email: me.email }, tenant, { name: null });
+  if (!taken.ok) {
+    return {
+      success: false,
+      message: taken.reason === "staff" ? "Ask the studio to invite you." : "This studio already has an account for this email. Ask the studio to help you sign in.",
+    };
   }
+  const { userId, name } = taken;
 
   await setLoginSessionCookie(me.loginId, userId);
   const handoffCode = await handoffForRequest(me.loginId, userId);

@@ -9,7 +9,7 @@ import { appUrl } from "@/lib/domain-name";
  * Server-only, not a "use server" module.
  */
 
-export type GoogleErrorCode = "cancelled" | "failed" | "unverified" | "linked_other" | "needs_invite" | "mismatch" | "closed";
+export type GoogleErrorCode = "cancelled" | "failed" | "unverified" | "linked_other" | "needs_invite" | "mismatch" | "closed" | "no_studio";
 
 /** Why Google sign-in was refused, as a code for our own message (never Google's text). */
 export class GoogleError extends Error {

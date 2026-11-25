@@ -8,10 +8,11 @@ import { getSessionClient } from "@/lib/clients";
 import { StudioLoginForm } from "@/components/auth/studio-login-form";
 import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
 import { demoPersonasFor } from "@/lib/demo-studios";
+import { googleConfigured } from "@/lib/auth/google";
 
 interface LoginPageProps {
   params: Promise<{ tenantSlug: string }>;
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; google?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: LoginPageProps): Promise<Meta
 
 export default async function StudioLoginPage({ params, searchParams }: LoginPageProps) {
   const { tenantSlug } = await params;
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, google } = await searchParams;
 
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
@@ -50,7 +51,7 @@ export default async function StudioLoginPage({ params, searchParams }: LoginPag
       {session && (isClient || isStaff) ? (
         <SignedInRedirect name={session.name} href={target} />
       ) : (
-        <StudioLoginForm tenantSlug={tenant.slug} tenantName={tenant.name} demo={demoPersonasFor(tenant.slug)} />
+        <StudioLoginForm tenantSlug={tenant.slug} tenantName={tenant.name} demo={demoPersonasFor(tenant.slug)} googleEnabled={googleConfigured()} googleError={google ?? null} />
       )}
     </div>
   );

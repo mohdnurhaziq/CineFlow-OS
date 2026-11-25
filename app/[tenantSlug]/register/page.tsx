@@ -4,13 +4,14 @@ import { db } from "@/lib/db";
 import { getSessionClient } from "@/lib/clients";
 import { inviteMatches } from "@/lib/auth/invite";
 import { ClientRegisterCard } from "@/components/auth/client-register-card";
+import { googleConfigured } from "@/lib/auth/google";
 import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
 import { InviteForAnotherAccount } from "@/components/auth/invite-for-another-account";
 import { isStudioPath, studioPath } from "@/lib/domain-name";
 
 interface RegisterPageProps {
   params: Promise<{ tenantSlug: string }>;
-  searchParams: Promise<{ invite?: string; email?: string; next?: string }>;
+  searchParams: Promise<{ invite?: string; email?: string; next?: string; google?: string }>;
 }
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 
 export default async function ClientRegisterPage({ params, searchParams }: RegisterPageProps) {
   const { tenantSlug } = await params;
-  const { invite, email, next: rawNext } = await searchParams;
+  const { invite, email, next: rawNext, google } = await searchParams;
 
   const tenant = await db.tenant.findUnique({
     where: { slug: tenantSlug },
@@ -73,6 +74,8 @@ export default async function ClientRegisterPage({ params, searchParams }: Regis
           defaultName={prefill?.name}
           defaultPhone={prefill?.phone ?? undefined}
           next={next}
+          googleEnabled={googleConfigured()}
+          googleError={google ?? null}
         />
       )}
     </div>

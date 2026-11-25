@@ -151,3 +151,34 @@ export async function sendJoinedEmail(email: string, joined: JoinedAccount[]): P
     console.error("Joined-accounts email failed:", err);
   }
 }
+
+/**
+ * Gives a login a client account at a studio: takes up the passwordless client account the studio
+ * already made for the email, or creates a linked one (clients can register themselves anyway). Never
+ * a staff account (that only ever comes from an invite), a removed one, or one with its own password
+ * (never proven to be this person's). `profile.name` names a new account, falling back to the name on
+ * the person's latest account, then the email. The caller checks the studio is open.
+ */
+export async function takeUpClientAccount(
+  login: { id: string; email: string },
+  tenant: { id: string },
+  profile: { name: string | null }
+): Promise<{ ok: true; userId: string; name: string } | { ok: false; reason: "staff" | "own_account" }> {
+  // Legacy rows can be mixed case, so match on lower(email).
+  const found = await db.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE "tenantId" = ${tenant.id} AND lower(email) = ${login.email}`;
+  const existing = found[0] ? await db.user.findUnique({ where: { id: found[0].id } }) : null;
+  if (existing) {
+    if (existing.role !== "CLIENT" || existing.deactivatedAt) return { ok: false, reason: "staff" };
+    if (existing.loginId !== login.id) {
+      if (hasSetUp(existing)) return { ok: false, reason: "own_account" };
+      await linkAccountToLogin(existing.id, login.id);
+    }
+    return { ok: true, userId: existing.id, name: existing.name };
+  }
+  const prior = await db.user.findFirst({ where: { loginId: login.id }, orderBy: { createdAt: "desc" }, select: { name: true, phone: true } });
+  const created = await db.user.create({
+    data: { tenantId: tenant.id, name: profile.name ?? prior?.name ?? login.email, email: login.email, phone: prior?.phone ?? null, role: "CLIENT", loginId: login.id },
+  });
+  return { ok: true, userId: created.id, name: created.name };
+}
+

@@ -10,6 +10,9 @@ import { signInTarget } from "@/lib/auth/sign-in-target";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { continueAsClient } from "@/lib/actions/one-login";
 import { handoffNavigate } from "@/lib/auth/handoff-client";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { googleErrorMessage } from "@/lib/auth/google-messages";
+import { googleStartHref } from "@/lib/auth/google-links";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import type { DemoPersonas } from "@/lib/demo-studios";
 import { isSafeRelativePath, studioPath } from "@/lib/domain-name";
@@ -19,9 +22,14 @@ interface StudioLoginFormProps {
   tenantName: string;
   /** The demo studios' accounts, offered as shortcuts (dev and staging only; see lib/demo-studios). */
   demo: DemoPersonas | null;
+  /** Google sign-in is set up: show "Continue with Google". */
+  googleEnabled?: boolean;
+  /** Why Google sign-in came back (`?google=`), if it did. */
+  googleError?: string | null;
 }
 
-export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFormProps) {
+export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = false, googleError = null }: StudioLoginFormProps) {
+  const googleMessage = googleErrorMessage(googleError);
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl");
   // Only allow same-site relative paths to prevent open redirects.
@@ -129,6 +137,13 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
         </div>
       )}
 
+      {googleMessage && !error && (
+        <div role="alert" className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2.5 text-xs text-rose-300">
+          <AlertCircle className="size-4 text-rose-400 flex-shrink-0 mt-0.5" />
+          <span>{googleMessage}</span>
+        </div>
+      )}
+
       {error && (
         <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2.5 text-xs text-rose-300">
           <AlertCircle className="size-4 text-rose-400 flex-shrink-0 mt-0.5" />
@@ -195,6 +210,13 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo }: StudioLoginFor
           )}
         </button>
       </form>
+
+      {googleEnabled && (
+        <div className="space-y-4">
+          <OrDivider />
+          <GoogleButton href={googleStartHref(tenantSlug)} />
+        </div>
+      )}
 
       {/* Demo Credentials Quick-Switcher (seeded demo studios only) */}
       {demo && (

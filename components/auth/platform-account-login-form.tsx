@@ -8,6 +8,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { loginToPlatform } from "@/lib/actions/one-login";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { platformUrl } from "@/lib/domain-name";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { googleErrorMessage } from "@/lib/auth/google-messages";
+import { googleStartHref } from "@/lib/auth/google-links";
 
 const ERRORS: Record<string, string> = {
   INVALID_CREDENTIALS: "Wrong email or password.",
@@ -18,7 +21,8 @@ const inputClass =
   "w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors";
 
 /** The one-login sign-in on the platform's page: email and password, then "Your studios". */
-export function PlatformAccountLoginForm() {
+export function PlatformAccountLoginForm({ googleEnabled = false, googleError = null }: { googleEnabled?: boolean; googleError?: string | null }) {
+  const googleMessage = googleErrorMessage(googleError);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -52,6 +56,13 @@ export function PlatformAccountLoginForm() {
           One sign-in for every studio you work with or book. You can also sign in on a studio&apos;s own page.
         </p>
       </div>
+
+      {googleMessage && !error && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3.5 text-xs text-rose-300">
+          <AlertCircle className="mt-0.5 size-4 flex-shrink-0 text-rose-400" aria-hidden="true" />
+          <span>{googleMessage}</span>
+        </div>
+      )}
 
       {error && (
         <div role="alert" className="flex items-start gap-2.5 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3.5 text-xs text-rose-300">
@@ -98,6 +109,13 @@ export function PlatformAccountLoginForm() {
           )}
         </button>
       </form>
+
+      {googleEnabled && (
+        <div className="space-y-4">
+          <OrDivider />
+          <GoogleButton href={googleStartHref(null)} />
+        </div>
+      )}
 
       <p className="text-center text-xs text-zinc-400">
         Don&apos;t have one yet? It starts when you confirm your email from a studio you use.{" "}

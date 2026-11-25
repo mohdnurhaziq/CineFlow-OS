@@ -1,0 +1,121 @@
+import type { Login } from "@prisma/client";
+import { db } from "@/lib/db";
+import { createLoginFromProof, findLogin, sendJoinedEmail, takeUpClientAccount } from "@/lib/auth/login";
+import { liveAccounts, setLoginSessionCookie } from "@/lib/auth/token";
+import { accountHref } from "@/lib/auth/switcher";
+import { platformUrl, studioUrl } from "@/lib/domain-name";
+import type { GoogleClaims, GoogleErrorCode } from "@/lib/auth/google";
+
+/**
+ * What "Continue with Google" does once Google has said who the person is. The routes in
+ * app/auth/google only carry the browser to Google and back; every decision about accounts is here.
+ * Server-only, not a "use server" module.
+ */
+
+/** The short-lived signed cookie that ties a Google sign-in to the browser that started it. */
+export const FLOW_COOKIE = "cineflow_google_flow";
+
+/** Why the person is signing in, kept in the flow cookie (never in Google's address). */
+export type FlowIntent =
+  | { kind: "signin"; studio: string | null }
+  | { kind: "invite"; studio: string; email: string; token: string }
+  | { kind: "signup" };
+
+export interface FlowBlob {
+  state: string;
+  verifier: string;
+  nonce: string;
+  intent: FlowIntent;
+}
+
+type Done = { ok: true; redirectTo: string } | { ok: false; code: GoogleErrorCode; redirectTo: string };
+
+/** One of our own sign-in pages, with the reason Google sign-in didn't finish. */
+export function signInPageFor(studio: string | null, code: GoogleErrorCode): string {
+  return studio ? studioUrl(studio, `/login?google=${code}`) : platformUrl(`/login?google=${code}`);
+}
+
+/** The intent's studio, for sending someone back to the right sign-in page. */
+export function intentStudio(intent: FlowIntent): string | null {
+  return intent.kind === "signin" || intent.kind === "invite" ? intent.studio : null;
+}
+
+/**
+ * The login for a Google identity: found by its Google account, else by the verified email (which
+ * gains the Google account), else created, which joins the person's set-up accounts exactly as any
+ * proof of the email does. A login that already has a different Google account is refused.
+ */
+async function loginForGoogle(claims: GoogleClaims): Promise<{ login: Login } | { error: GoogleErrorCode }> {
+  const bySub = await db.login.findUnique({ where: { googleSub: claims.sub } });
+  if (bySub) return { login: bySub };
+  try {
+    const byEmail = await findLogin(claims.email);
+    if (byEmail) {
+      if (byEmail.googleSub && byEmail.googleSub !== claims.sub) return { error: "linked_other" };
+      return { login: await db.login.update({ where: { id: byEmail.id }, data: { googleSub: claims.sub } }) };
+    }
+    const { login, joined } = await createLoginFromProof(claims.email, null);
+    const withGoogle = await db.login.update({ where: { id: login.id }, data: { googleSub: claims.sub } });
+    await sendJoinedEmail(claims.email, joined);
+    return { login: withGoogle };
+  } catch {
+    // Lost a race for the same Google account or email.
+    return { error: "linked_other" };
+  }
+}
+
+/** Whether any account anywhere (a studio's, not a platform admin's) uses this email. */
+async function hasAnyAccount(email: string): Promise<boolean> {
+  const rows = await db.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE lower(email) = ${email} AND "tenantId" IS NOT NULL LIMIT 1`;
+  return rows.length > 0;
+}
+
+/**
+ * Finishes a Google sign-in for the intent: finds or creates the person's login, signs them in (a
+ * login session), and says where to go. Failures say where to go too: one of our own sign-in pages
+ * with a reason. A Google-verified email is proof of the email, so it may create a login; it never
+ * gives staff access without an invite, and never signs a platform super-admin in.
+ */
+export async function completeGoogleFlow(intent: FlowIntent, claims: GoogleClaims): Promise<Done> {
+  if (intent.kind !== "signin") {
+    return { ok: false, code: "failed", redirectTo: signInPageFor(intentStudio(intent), "failed") };
+  }
+  const back = (code: GoogleErrorCode): Done => ({ ok: false, code, redirectTo: signInPageFor(intent.studio, code) });
+
+  const studio = intent.studio
+    ? await db.tenant.findUnique({ where: { slug: intent.studio }, select: { id: true, slug: true, subscriptionStatus: true } })
+    : null;
+  if (intent.studio && (!studio || studio.subscriptionStatus === "CANCELLED")) return back("closed");
+
+  // A platform super-admin signs in on its own page only.
+  const admin = await db.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE role = 'SUPER_ADMIN' AND lower(email) = ${claims.email} LIMIT 1`;
+  if (admin.length > 0) return back("failed");
+
+  // On the platform page, an email nobody has an account or login for creates nothing.
+  if (!studio) {
+    const known = (await db.login.findUnique({ where: { googleSub: claims.sub } })) ?? (await findLogin(claims.email));
+    if (!known && !(await hasAnyAccount(claims.email))) return back("no_studio");
+  }
+
+  const found = await loginForGoogle(claims);
+  if ("error" in found) return back(found.error);
+  const { login } = found;
+  const accounts = await liveAccounts(login.id);
+
+  if (!studio) {
+    const first = accounts[0];
+    if (!first) return back("no_studio");
+    await setLoginSessionCookie(login.id, first.userId);
+    return { ok: true, redirectTo: platformUrl("/studios") };
+  }
+
+  const here = accounts.find((a) => a.tenantSlug === studio.slug);
+  if (here) {
+    await setLoginSessionCookie(login.id, here.userId);
+    return { ok: true, redirectTo: accountHref(studio.slug, here.role) };
+  }
+  const taken = await takeUpClientAccount({ id: login.id, email: login.email }, studio, { name: claims.name });
+  if (!taken.ok) return back("needs_invite");
+  await setLoginSessionCookie(login.id, taken.userId);
+  return { ok: true, redirectTo: accountHref(studio.slug, "CLIENT") };
+}

@@ -6,6 +6,9 @@ import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
 import { continueAsClient } from "@/lib/actions/one-login";
 import { handoffNavigate } from "@/lib/auth/handoff-client";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { googleErrorMessage } from "@/lib/auth/google-messages";
+import { googleStartHref } from "@/lib/auth/google-links";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { studioPath } from "@/lib/domain-name";
 
@@ -25,6 +28,10 @@ interface ClientAuthPanelProps {
    * true for the page they're on now (a checkout). Default: their account.
    */
   returnHere?: boolean;
+  /** Google sign-in is set up: show "Continue with Google" (not in a booking or checkout, which Google would leave). */
+  googleEnabled?: boolean;
+  /** Why Google sign-in came back (`?google=`), if it did. */
+  googleError?: string | null;
 }
 
 const inputClass =
@@ -74,7 +81,10 @@ export function ClientAuthPanel({
   defaultName = "",
   defaultPhone = "",
   returnHere = false,
+  googleEnabled = false,
+  googleError = null,
 }: ClientAuthPanelProps) {
+  const googleMessage = googleErrorMessage(googleError);
   const [mode, setMode] = useState<"register" | "login">(defaultMode);
   const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState(defaultEmail);
@@ -230,6 +240,12 @@ export function ClientAuthPanel({
             <span>{error}</span>
           </div>
         )}
+        {googleMessage && !error && (
+          <div role="alert" className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2 text-xs text-rose-300">
+            <AlertCircle className="size-4 text-rose-400 flex-shrink-0 mt-0.5" />
+            <span>{googleMessage}</span>
+          </div>
+        )}
         {offerClient && (
           <div role="status" className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2 text-xs text-amber-100">
             <p>You don&apos;t have an account with this studio yet.</p>
@@ -318,6 +334,13 @@ export function ClientAuthPanel({
           {mode === "register" ? "Create account & continue" : "Sign in & continue"}
         </button>
       </form>
+
+      {googleEnabled && (
+        <div className="space-y-3">
+          <OrDivider />
+          <GoogleButton href={googleStartHref(tenantSlug)} />
+        </div>
+      )}
     </div>
   );
 }
