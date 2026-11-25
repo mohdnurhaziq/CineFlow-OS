@@ -326,6 +326,14 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     harness.assertEqual(parsed.currency, "MYR", "A sign-up that names no currency gets ringgit");
   });
 
+  await harness.test("T39-SIGNUP-02: Settings has no currency dropdown, and the manual doesn't describe one", async () => {
+    const tab = await fs.readFile(path.join(process.cwd(), "components/admin/settings/payments-tab.tsx"), "utf8");
+    harness.assert(!/pay-currency|CURRENCIES|currency above/.test(tab), "The Getting paid tab has no currency setting");
+    harness.assert(!/save\(\{ currency/.test(tab), "Saving it never changes the currency");
+    const manual = await fs.readFile(path.join(process.cwd(), "app/[tenantSlug]/admin/manual/settings-and-team/page.tsx"), "utf8");
+    harness.assert(!/<Ui key="c">Currency<\/Ui>|Set your currency to ringgit/.test(manual), "The manual no longer tells owners to set a currency");
+  });
+
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
     const offenders: string[] = [];
     const walk = async (dir: string) => {

@@ -103,7 +103,6 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
         <ManualTable
           head={["Setting", "What it does"]}
           rows={[
-            [<Ui key="c">Currency</Ui>, "The currency of your prices, invoices and payments."],
             [<Ui key="b">Bank transfer</Ui>, "Your bank name, account name and account number, shown at checkout with a copy button."],
             [<Ui key="q">Payment QR code</Ui>, "The QR image clients scan to pay from their banking app. A preview shows how clients see it."],
             [
@@ -257,7 +256,6 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
           items={[
             <>Don&apos;t change your studio address once clients have links.</>,
             <>Don&apos;t share one sign-in across the team. You lose the record of who did what.</>,
-            <>Don&apos;t switch the currency after you have issued invoices. Existing amounts are not converted.</>,
             <>Don&apos;t turn on Full resolution right away unless you accept delivering before you are fully paid.</>,
           ]}
         />
@@ -285,8 +283,8 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
           </ManualQa>
           <ManualQa question="Why is online payment greyed out?">
             <p>
-              Online payments work in Malaysian ringgit only. Set your currency to ringgit and save, then connect your Toyyibpay
-              account.
+              Online payments work in Malaysian ringgit only, and CineFlow OS studios are in ringgit. If you see this
+              message, your studio was set up in another currency: contact us to switch it.
             </p>
           </ManualQa>
           <ManualQa question="Does changing the delivery setting affect galleries I already delivered?">

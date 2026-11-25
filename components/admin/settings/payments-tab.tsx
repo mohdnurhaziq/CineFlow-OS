@@ -22,19 +22,9 @@ import {
   type StudioTenantData,
 } from "./settings-ui";
 
-type Currency = "USD" | "MYR" | "SGD" | "EUR" | "GBP";
-const CURRENCIES: { code: Currency; label: string }[] = [
-  { code: "MYR", label: "Malaysian ringgit (RM)" },
-  { code: "SGD", label: "Singapore dollar (S$)" },
-  { code: "USD", label: "US dollar ($)" },
-  { code: "EUR", label: "Euro (€)" },
-  { code: "GBP", label: "British pound (£)" },
-];
-
-/** Getting paid tab: currency, bank transfer and QR code (one Save), then online payments (their own). */
+/** Getting paid tab: bank transfer and QR code (one Save), then online payments (their own). Studios are in ringgit for now, so there is no currency to choose. */
 export function PaymentsTab({ tenant }: { tenant: StudioTenantData }) {
   const initial = {
-    currency: ((tenant.currency as Currency) || "USD") as Currency,
     bankDetails: tenant.bankDetails ?? "",
     qrCodeUrl: tenant.qrCodeUrl ?? "",
   };
@@ -47,24 +37,9 @@ export function PaymentsTab({ tenant }: { tenant: StudioTenantData }) {
   return (
     <div className="space-y-8">
       <SettingsForm
-        onSubmit={() => save({ currency: v.currency, bankDetails: v.bankDetails, qrCodeUrl: v.qrCodeUrl })}
+        onSubmit={() => save({ bankDetails: v.bankDetails, qrCodeUrl: v.qrCodeUrl })}
         footer={<SaveBar dirty={dirty} saving={saving} onDiscard={() => setV(initial)} />}
       >
-        <SettingsSection title="Currency" description="Your prices, invoices and payments use this currency.">
-          <div>
-            <label htmlFor="pay-currency" className={labelCls}>
-              Currency
-            </label>
-            <select id="pay-currency" value={v.currency} onChange={(e) => set("currency", e.target.value as Currency)} className={`${inputCls} sm:max-w-xs`}>
-              {CURRENCIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </SettingsSection>
-
         <SettingsSection title="Bank transfer" description="Shown at checkout when a client pays by bank transfer, with a button to copy it.">
           <div>
             <label htmlFor="pay-bank" className={labelCls}>
@@ -184,8 +159,8 @@ function OnlinePayments({
         <div className="space-y-5 min-w-0">
           {!supported ? (
             <p className="text-sm text-amber-200 bg-amber-500/10 rounded-lg px-4 py-3 leading-relaxed">
-              Toyyibpay only charges in Malaysian ringgit, and your studio uses {currency}. Change the currency above to
-              Malaysian ringgit and save, then connect Toyyibpay here.
+              Toyyibpay only charges in Malaysian ringgit, and your studio uses {currency}, so online payments aren&apos;t
+              available for it.
             </p>
           ) : (
             <>
