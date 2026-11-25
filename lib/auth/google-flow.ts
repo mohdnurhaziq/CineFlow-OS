@@ -4,6 +4,9 @@ import { createLoginFromProof, findLogin, sendJoinedEmail, takeUpClientAccount }
 import { liveAccounts, setLoginSessionCookie } from "@/lib/auth/token";
 import { accountHref } from "@/lib/auth/switcher";
 import { platformUrl, studioUrl } from "@/lib/domain-name";
+import { findStudioAccount, passwordResetPath, resetTokenMatches } from "@/lib/auth/password-reset";
+import { hasSetUp } from "@/lib/auth/set-up";
+import { linkAccountToLogin } from "@/lib/auth/login";
 import type { GoogleClaims, GoogleErrorCode } from "@/lib/auth/google";
 
 /**
@@ -35,9 +38,13 @@ export function signInPageFor(studio: string | null, code: GoogleErrorCode): str
   return studio ? studioUrl(studio, `/login?google=${code}`) : platformUrl(`/login?google=${code}`);
 }
 
-/** The intent's studio, for sending someone back to the right sign-in page. */
-export function intentStudio(intent: FlowIntent): string | null {
-  return intent.kind === "signin" || intent.kind === "invite" ? intent.studio : null;
+/**
+ * Where to send someone when Google sign-in didn't finish, by what they were doing: back to the page
+ * they started on (a studio's or the platform's sign-in, or the invite page they came from), with the reason.
+ */
+export function intentBackUrl(intent: FlowIntent, code: GoogleErrorCode): string {
+  if (intent.kind === "invite") return studioUrl(intent.studio, `${passwordResetPath(intent.email, intent.token)}&welcome=1&google=${code}`);
+  return signInPageFor(intent.kind === "signin" ? intent.studio : null, code);
 }
 
 /**
@@ -77,10 +84,11 @@ async function hasAnyAccount(email: string): Promise<boolean> {
  * gives staff access without an invite, and never signs a platform super-admin in.
  */
 export async function completeGoogleFlow(intent: FlowIntent, claims: GoogleClaims): Promise<Done> {
+  if (intent.kind === "invite") return completeInvite(intent, claims);
   if (intent.kind !== "signin") {
-    return { ok: false, code: "failed", redirectTo: signInPageFor(intentStudio(intent), "failed") };
+    return { ok: false, code: "failed", redirectTo: intentBackUrl(intent, "failed") };
   }
-  const back = (code: GoogleErrorCode): Done => ({ ok: false, code, redirectTo: signInPageFor(intent.studio, code) });
+  const back = (code: GoogleErrorCode): Done => ({ ok: false, code, redirectTo: intentBackUrl(intent, code) });
 
   const studio = intent.studio
     ? await db.tenant.findUnique({ where: { slug: intent.studio }, select: { id: true, slug: true, subscriptionStatus: true } })
@@ -119,3 +127,35 @@ export async function completeGoogleFlow(intent: FlowIntent, claims: GoogleClaim
   await setLoginSessionCookie(login.id, taken.userId);
   return { ok: true, redirectTo: accountHref(studio.slug, "CLIENT") };
 }
+
+/** Whether a platform super-admin uses this email (they sign in on their own page only). */
+async function isSuperAdminEmail(email: string): Promise<boolean> {
+  const rows = await db.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE role = 'SUPER_ADMIN' AND lower(email) = ${email} LIMIT 1`;
+  return rows.length > 0;
+}
+
+/**
+ * Accepting a team invite with Google. The invite link is shown to the studio, so it proves nothing
+ * about the email: Google does. The Google email must be the one the invite was sent to, the invite
+ * must still be good, and then the pending staff account joins the person's login (found or created).
+ * The invite link is used up. Staff access comes from the invite and nothing else.
+ */
+async function completeInvite(intent: Extract<FlowIntent, { kind: "invite" }>, claims: GoogleClaims): Promise<Done> {
+  const back = (code: GoogleErrorCode): Done => ({ ok: false, code, redirectTo: intentBackUrl(intent, code) });
+  const studio = await db.tenant.findUnique({ where: { slug: intent.studio }, select: { id: true, slug: true, subscriptionStatus: true } });
+  if (!studio || studio.subscriptionStatus === "CANCELLED") return back("closed");
+  if (claims.email !== intent.email.trim().toLowerCase()) return back("mismatch");
+  if (await isSuperAdminEmail(claims.email)) return back("failed");
+
+  const account = await findStudioAccount(studio.id, intent.email);
+  const pendingStaff = !!account && !account.deactivatedAt && !hasSetUp(account) && account.role !== "CLIENT" && account.role !== "STUDIO_OWNER" && account.role !== "SUPER_ADMIN";
+  if (!account || !pendingStaff || !resetTokenMatches(account, intent.token)) return back("failed");
+
+  const found = await loginForGoogle(claims);
+  if ("error" in found) return back(found.error);
+  await linkAccountToLogin(account.id, found.login.id);
+  await db.user.update({ where: { id: account.id }, data: { passwordResetToken: null, passwordResetExpires: null } });
+  await setLoginSessionCookie(found.login.id, account.id);
+  return { ok: true, redirectTo: accountHref(studio.slug, account.role) };
+}
+

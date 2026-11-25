@@ -8,6 +8,8 @@ import { KeyRound, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { resetPassword } from "@/lib/actions/password-reset";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { studioPath } from "@/lib/domain-name";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { googleErrorMessage } from "@/lib/auth/google-messages";
 
 interface ResetPasswordFormProps {
   tenantSlug: string;
@@ -20,12 +22,17 @@ interface ResetPasswordFormProps {
   join?: boolean;
   /** The person already has a CineFlow sign-in, and this password becomes its password. */
   hasLogin?: boolean;
+  /** A team invite can be accepted with Google: where that button goes. */
+  googleHref?: string | null;
+  /** Why Google sign-in came back (`?google=`), if it did. */
+  googleError?: string | null;
 }
 
 const inputClass =
   "w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors font-mono";
 
-export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcome = false, join = false, hasLogin = false }: ResetPasswordFormProps) {
+export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcome = false, join = false, hasLogin = false, googleHref = null, googleError = null }: ResetPasswordFormProps) {
+  const googleMessage = googleErrorMessage(googleError);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
@@ -85,6 +92,11 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
       </div>
 
       <form onSubmit={submit} className="space-y-4">
+        {googleMessage && !error && (
+          <div role="alert" className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+            {googleMessage}
+          </div>
+        )}
         {error && (
           <div role="alert" className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2.5 text-xs text-rose-300">
             <AlertCircle className="size-4 text-rose-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
@@ -150,6 +162,12 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
         </button>
         {!welcome && !join && <p className="text-[11px] text-zinc-500 text-center">Saving signs you out on every other device.</p>}
       </form>
+      {welcome && googleHref && (
+        <div className="space-y-4">
+          <OrDivider />
+          <GoogleButton href={googleHref} label="Accept with Google" />
+        </div>
+      )}
     </div>
   );
 }

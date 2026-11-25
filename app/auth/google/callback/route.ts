@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleError, exchangeGoogleCode, type GoogleErrorCode } from "@/lib/auth/google";
-import { FLOW_COOKIE, completeGoogleFlow, intentStudio, signInPageFor, type FlowBlob } from "@/lib/auth/google-flow";
+import { FLOW_COOKIE, completeGoogleFlow, intentBackUrl, signInPageFor, type FlowBlob } from "@/lib/auth/google-flow";
 import { openBlob } from "@/lib/auth/signed-blob";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   const raw = request.cookies.get(FLOW_COOKIE)?.value;
   const flow = raw ? openBlob<FlowBlob>(raw) : null;
   if (!flow) return done(signInPageFor(null, "failed"));
-  const back = (code: GoogleErrorCode) => done(signInPageFor(intentStudio(flow.intent), code));
+  const back = (code: GoogleErrorCode) => done(intentBackUrl(flow.intent, code));
 
   const params = request.nextUrl.searchParams;
   const state = params.get("state") ?? "";

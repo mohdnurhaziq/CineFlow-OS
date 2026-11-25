@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
       if (!studio || studio.subscriptionStatus === "CANCELLED") return go(signInPageFor(null, "closed"));
     }
     intent = { kind: "signin", studio: slug || null };
+  } else if (kind === "invite") {
+    const slug = params.get("studio") ?? "";
+    const email = (params.get("email") ?? "").trim().toLowerCase();
+    const token = params.get("token") ?? "";
+    const studio = SLUG.test(slug) ? await db.tenant.findUnique({ where: { slug }, select: { subscriptionStatus: true } }) : null;
+    if (!studio || studio.subscriptionStatus === "CANCELLED") return go(signInPageFor(null, "closed"));
+    if (!/^[^@\s]+@[^@\s]+$/.test(email) || email.length > 254 || !token || token.length > 200) return go(signInPageFor(slug, "failed"));
+    intent = { kind: "invite", studio: slug, email, token };
   } else {
     return go(platformUrl("/login"));
   }

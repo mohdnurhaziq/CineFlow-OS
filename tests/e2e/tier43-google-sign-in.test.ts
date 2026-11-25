@@ -20,6 +20,11 @@ import { FLOW_COOKIE, completeGoogleFlow } from "@/lib/auth/google-flow";
 import { GET as GET_START } from "@/app/auth/google/start/route";
 import { GET as GET_CALLBACK } from "@/app/auth/google/callback/route";
 import { withRequest } from "./mocks/session";
+import { ensureStudioRoles } from "@/lib/auth/access";
+import { teamMemberStatus } from "@/lib/team/status";
+import { inviteTeamMember } from "@/lib/actions/admin-team";
+import { resetPassword } from "@/lib/actions/password-reset";
+import { withSession } from "./mocks/session";
 import { TestHarness } from "./test-harness";
 import {
   GoogleError,
@@ -307,7 +312,7 @@ export async function runTier43GoogleSignInTests(harness: TestHarness) {
       harness.assert(errorsAt(none.r, "no_studio") && !none.set, "No login and no account anywhere: nothing is created", JSON.stringify(none.r));
       harness.assertEqual(await findLogin(nobody), null, "…not even a login");
       const superRow = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN" } });
-      const sup = await withRequest(async (jar) => ({ r: await completeGoogleFlow({ kind: "signin", studio: null }, claims(superRow.email)), set: jar.has(COOKIE_NAME) }));
+      const sup = await withRequest(async (jar) => ({ r: await completeGoogleFlow({ kind: "signin", studio: null }, { sub: `sub-${STAMP}-super`, email: superRow.email, emailVerified: true, name: "Not The Admin" }), set: jar.has(COOKIE_NAME) }));
       harness.assert(errorsAt(sup.r, "failed") && !sup.set, "A super-admin's email never signs in this way", JSON.stringify(sup.r));
       harness.assertEqual(await findLogin(superRow.email), null, "…and no login is made for it");
       const studio = await makeStudio("f5");
@@ -428,5 +433,134 @@ export async function runTier43GoogleSignInTests(harness: TestHarness) {
       harness.assert(/googleEnabled=\{googleConfigured\(\)\}/.test(await read(f)), `${f} passes whether Google is set up`);
     }
     harness.assert(/Ask the studio to invite you\./.test(await read("lib/auth/google-messages.ts")), "The messages are in plain words");
+  });
+
+  // ── Task 3: accepting a team invite with Google ─────────────────────────────────────────
+  const tokenOf = (url: string) => new URL(url).searchParams.get("token")!;
+  /** A studio with an owner who can invite people: the invite link is what the studio sees. */
+  const makeStudioWithOwner = async (label: string) => {
+    const studio = await makeStudio(label);
+    await ensureStudioRoles(studio.id);
+    const roleId = (await db.teamRole.findFirstOrThrow({ where: { tenantId: studio.id } })).id;
+    const o = await makeUser(studio.id, emailFor(`${label}-owner`), "STUDIO_OWNER", { password: "owner-pass-1" });
+    const owner = { id: o.id, email: o.email, name: o.name, role: "STUDIO_OWNER", tenantId: studio.id, tenantSlug: studio.slug };
+    const invite = async (email: string) => {
+      createdEmails.add(email.toLowerCase());
+      const res = (await withSession(owner, () => inviteTeamMember({ tenantId: studio.id, tenantSlug: studio.slug, name: "T43 Invitee", email, roleId }))) as { success: boolean; inviteUrl?: string };
+      if (!res.success || !res.inviteUrl) throw new Error(`invite failed: ${JSON.stringify(res)}`);
+      return tokenOf(res.inviteUrl);
+    };
+    return { studio, invite };
+  };
+  const pendingAccount = (studioId: string, email: string) => db.user.findFirstOrThrow({ where: { tenantId: studioId, email } });
+
+  await harness.test("T43-INVITE-01: Google accepts an invite and proves the email", async () => {
+    try {
+      const { studio, invite } = await makeStudioWithOwner("i1");
+      const elsewhere = await makeStudio("i1x");
+      const email = emailFor("i1");
+      const other = await makeUser(elsewhere.id, email, "CLIENT", { password: "alone-1111" });
+      const token = await invite(email);
+      const c = claims(email);
+      const out = await withRequest(async (jar) => ({ r: await completeGoogleFlow({ kind: "invite", studio: studio.slug, email, token }, c), cookie: jar.get(COOKIE_NAME) }));
+      harness.assert(out.r.ok === true, "Accepted", JSON.stringify(out.r));
+      const login = await findLogin(email);
+      harness.assert(login !== null && login.googleSub === c.sub && login.passwordHash === null, "A login with Google and no password");
+      const account = await pendingAccount(studio.id, email);
+      harness.assert(account.loginId === login!.id && account.passwordHash === null, "The team account is joined to it");
+      harness.assertEqual(teamMemberStatus(account), "ACTIVE", "…and Active");
+      const reuse = await resetPassword({ tenantSlug: studio.slug, email, token, password: "Another-pass-1234" });
+      harness.assert(!reuse.success && reuse.error === "INVALID_LINK", "The invite link is used up");
+      harness.assertEqual((await decodeSessionToken(out.cookie ?? ""))?.user.id, account.id, "Signed in as that account");
+      const joined = await db.user.findUniqueOrThrow({ where: { id: other.id } });
+      harness.assert(joined.loginId === login!.id && joined.passwordHash === null, "The person's other set-up account is joined too");
+      harness.assertEqual(out.r.redirectTo, accountHref(studio.slug, account.role), "On to the team's page");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-INVITE-02: an invite for a different email is refused, and nothing changes", async () => {
+    try {
+      const { studio, invite } = await makeStudioWithOwner("i2");
+      const email = emailFor("i2");
+      const token = await invite(email);
+      const wrong = emailFor("i2-wrong");
+      const out = await withRequest(async (jar) => ({ r: await completeGoogleFlow({ kind: "invite", studio: studio.slug, email, token }, claims(wrong)), set: jar.has(COOKIE_NAME) }));
+      harness.assert(!out.r.ok && out.r.code === "mismatch" && !out.set, "Refused as a mismatch, no session", JSON.stringify(out.r));
+      harness.assert(out.r.redirectTo.includes("reset-password") && out.r.redirectTo.includes("google=mismatch"), "…back on the invite page with the reason", out.r.redirectTo);
+      const account = await pendingAccount(studio.id, email);
+      harness.assert(account.loginId === null && account.passwordResetToken !== null, "The account is still pending and the link still works");
+      harness.assertEqual(await findLogin(email), null, "No login for the invited email");
+      harness.assertEqual(await findLogin(wrong), null, "No login for the Google email");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-INVITE-03: an existing login joins without a password", async () => {
+    try {
+      const { studio, invite } = await makeStudioWithOwner("i3");
+      const elsewhere = await makeStudio("i3x");
+      const email = emailFor("i3");
+      await makeUser(elsewhere.id, email, "CLIENT", { password: "alone-2222" });
+      const hash = await bcrypt.hash("login-pass-1", 4);
+      const login = (await createLoginFromProof(email, hash)).login;
+      const token = await invite(email);
+      const c = claims(email);
+      const out = await withRequest(() => completeGoogleFlow({ kind: "invite", studio: studio.slug, email, token }, c));
+      harness.assert(out.ok === true, "Accepted", JSON.stringify(out));
+      const after = await db.login.findUniqueOrThrow({ where: { id: login.id } });
+      harness.assert(after.googleSub === c.sub && after.passwordHash === hash, "Google added, password kept");
+      harness.assertEqual((await pendingAccount(studio.id, email)).loginId, login.id, "The account joined the existing login");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-INVITE-04: a used or made-up token does nothing", async () => {
+    try {
+      const { studio, invite } = await makeStudioWithOwner("i4");
+      const email = emailFor("i4");
+      const token = await invite(email);
+      const fake = await withRequest(async (jar) => ({ r: await completeGoogleFlow({ kind: "invite", studio: studio.slug, email, token: "made-up-token-value" }, claims(email)), set: jar.has(COOKIE_NAME) }));
+      harness.assert(!fake.r.ok && fake.r.code === "failed" && !fake.set, "A made-up token: refused", JSON.stringify(fake.r));
+      harness.assertEqual((await pendingAccount(studio.id, email)).loginId, null, "Nothing linked");
+      const c = claims(email);
+      const first = await withRequest(() => completeGoogleFlow({ kind: "invite", studio: studio.slug, email, token }, c));
+      harness.assert(first.ok === true, "The real token works once");
+      const again = await withRequest(() => completeGoogleFlow({ kind: "invite", studio: studio.slug, email, token }, c));
+      harness.assert(!again.ok && again.code === "failed", "…and not twice", JSON.stringify(again));
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-INVITE-05: the start link carries the invite only in the flow cookie", async () => {
+    try {
+      configure();
+      const { studio, invite } = await makeStudioWithOwner("i5");
+      const email = emailFor("i5");
+      const token = await invite(email);
+      const res = await GET_START(new NextRequest(`https://cineflow-os.my/auth/google/start?intent=invite&studio=${studio.slug}&email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`));
+      const location = res.headers.get("location") ?? "";
+      harness.assert(location.startsWith("https://accounts.google.com/") && !location.includes(token) && !location.includes(encodeURIComponent(email)), "To Google, with neither the token nor the email in the address");
+      const blob = openBlob<{ intent: { kind: string; studio: string; email: string; token: string } }>(res.cookies.get(FLOW_COOKIE)!.value);
+      harness.assert(blob?.intent.kind === "invite" && blob.intent.token === token && blob.intent.email === email.toLowerCase(), "They are in the signed flow cookie");
+      for (const qs of [`intent=invite&studio=no-such-studio-xyz&email=${encodeURIComponent(email)}&token=${token}`, `intent=invite&studio=${studio.slug}&email=not-an-email&token=${token}`, `intent=invite&studio=${studio.slug}&email=${encodeURIComponent(email)}`]) {
+        const bad = await GET_START(new NextRequest(`https://cineflow-os.my/auth/google/start?${qs}`));
+        harness.assert(!bad.cookies.get(FLOW_COOKIE) && (bad.headers.get("location") ?? "").includes("google="), `Refused: ${qs.slice(0, 60)}`);
+      }
+    } finally {
+      restoreEnv();
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-UI-02: the invite page offers it, on a team invite only", async () => {
+    const page = await readFile("app/[tenantSlug]/reset-password/page.tsx", "utf8");
+    harness.assert(/googleInviteHref\(/.test(page) && /googleConfigured\(\)/.test(page) && /googleError=/.test(page), "The page works out the Google link and the reason");
+    const form = await readFile("components/auth/reset-password-form.tsx", "utf8");
+    harness.assert(/welcome && googleHref/.test(form) && /<GoogleButton\b/.test(form) && /googleErrorMessage\(/.test(form), "The form shows the button only on a team invite, and the reason");
   });
 }
