@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { getCurrentLogin } from "@/lib/auth/session";
+import { getCurrentLogin, getCurrentUser, logoutAction } from "@/lib/auth/session";
 import { linkAccountToLogin } from "@/lib/auth/login";
 import { hasSetUp } from "@/lib/auth/set-up";
 import { signInTarget } from "@/lib/auth/sign-in-target";
@@ -47,4 +47,22 @@ export async function continueAsClient(
 
   await setLoginSessionCookie(me.loginId, userId);
   return { success: true, redirectTo: signInTarget({ role: "CLIENT", tenantSlug: tenant.slug }), name };
+}
+
+/**
+ * Ends every session of the signed-in person, on every device and host, and this browser's too: a
+ * login's sessions through `Login.sessionsValidAfter`, a stand-alone account's through its own.
+ * For when a phone is lost or someone else may have been in the account. Not for a super-admin.
+ */
+export async function signOutEverywhere(): Promise<{ success: true } | { success: false; message: string }> {
+  const me = await getCurrentLogin();
+  if (me) {
+    await db.login.update({ where: { id: me.loginId }, data: { sessionsValidAfter: new Date() } });
+  } else {
+    const user = await getCurrentUser();
+    if (!user || user.role === "SUPER_ADMIN") return { success: false, message: "You're not signed in." };
+    await db.user.update({ where: { id: user.id }, data: { sessionsValidAfter: new Date() } });
+  }
+  await logoutAction();
+  return { success: true };
 }

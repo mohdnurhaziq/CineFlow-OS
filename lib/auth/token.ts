@@ -145,7 +145,7 @@ export async function isSessionRevoked(userId: string, issuedAt: number, loginId
 }
 
 /** A person's accounts that can still be used: not removed, studio not cancelled. By studio name. */
-export async function liveAccounts(loginId: string): Promise<(SessionAccount & { user: SessionUser })[]> {
+export async function liveAccounts(loginId: string): Promise<(SessionAccount & { tenantName: string; user: SessionUser })[]> {
   const rows = await db.user.findMany({
     where: { loginId, deactivatedAt: null, tenantId: { not: null }, tenant: { subscriptionStatus: { not: "CANCELLED" } } },
     include: { tenant: { select: { slug: true, name: true } } },
@@ -153,6 +153,7 @@ export async function liveAccounts(loginId: string): Promise<(SessionAccount & {
   });
   return rows.map((u) => ({
     tenantSlug: u.tenant!.slug,
+    tenantName: u.tenant!.name,
     userId: u.id,
     role: u.role,
     user: { id: u.id, email: u.email, name: u.name, role: u.role, tenantId: u.tenantId, tenantSlug: u.tenant!.slug, loginId },
