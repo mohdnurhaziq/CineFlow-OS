@@ -45,7 +45,7 @@ export default function CreateStudioPage() {
     name: "",
     slug: "",
     discipline: "HYBRID",
-    currency: "USD",
+    currency: "MYR",
     tagline: "",
     bio: "",
     brandColor: "#f59e0b",
@@ -401,28 +401,10 @@ export default function CreateStudioPage() {
                     </div>
                   </div>
 
-                  {/* Currency Selector */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-                      Primary Operating Currency
-                    </label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {["USD", "MYR", "EUR", "GBP"].map((curr) => (
-                        <button
-                          type="button"
-                          key={curr}
-                          onClick={() => setFormData((prev) => ({ ...prev, currency: curr as OnboardStudioInput["currency"] }))}
-                          className={`py-2 rounded-lg border text-xs font-mono font-bold transition-all ${
-                            formData.currency === curr
-                              ? "bg-amber-500 text-black border-amber-500"
-                              : "bg-[#18181b] border-zinc-800 text-zinc-400 hover:border-zinc-700"
-                          }`}
-                        >
-                          {curr}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Currency: Malaysian ringgit for now, so there is nothing to choose */}
+                  <p className="text-xs text-zinc-400">
+                    Prices, invoices and payments are in Malaysian ringgit (RM).
+                  </p>
                 </div>
 
                 <div className="pt-4 flex justify-end">

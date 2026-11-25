@@ -49,7 +49,8 @@ export const OnboardStudioSchema = z.object({
   name: z.string().min(2, "Studio name must be at least 2 characters").max(100),
   slug: SlugSchema,
   discipline: StudioDisciplineEnum.default("HYBRID"),
-  currency: CurrencyEnum.default("USD"),
+  // Ringgit for now: the product is sold in Malaysia first.
+  currency: CurrencyEnum.default("MYR"),
 
   // Step 2: Brand Styling
   tagline: z.string().max(200).optional(),

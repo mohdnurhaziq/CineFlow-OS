@@ -27,6 +27,7 @@ import { SuperAdminView } from "@/components/super-admin/super-admin-view";
 import { withIp, withSession } from "./mocks/session";
 import { listInviteRequests, requestInvite, setInviteRequestHandled, submitInviteRequest } from "@/lib/actions/invite-requests";
 import { appUrl } from "@/lib/domain-name";
+import { OnboardStudioSchema } from "@/lib/validations/onboarding";
 
 const MODES: LandingMode[] = ["TRIAL", "INVITE_WITH_CODE", "INVITE_ONLY"];
 const EMAIL = "hello@cineflow-os.my";
@@ -315,6 +316,14 @@ export async function runTier39LandingPageTests(harness: TestHarness) {
     const hero = await fs.readFile(path.join(process.cwd(), "components/landing/hero.tsx"), "utf8");
     harness.assert(/posterPortrait=\{video\.posterPortrait\}/.test(hero), "The hero passes the phone still");
     harness.assert((await fs.stat(path.join(process.cwd(), "public/landing/posters/hero-9x16.jpg"))).size > 1000, "The phone still exists");
+  });
+
+  await harness.test("T39-SIGNUP-01: studios sign up in ringgit; the sign-up page offers no other currency", async () => {
+    const page = await fs.readFile(path.join(process.cwd(), "app/(saas)/create-studio/page.tsx"), "utf8");
+    harness.assert(/currency: "MYR"/.test(page), "The form starts in ringgit");
+    harness.assert(!/Primary Operating Currency/.test(page) && !/"USD", "MYR"/.test(page), "There is no currency picker");
+    const parsed = OnboardStudioSchema.parse({ name: "Ringgit Studio", slug: "ringgit-studio", ownerName: "Maya Lin", ownerEmail: "maya@example.com", password: "password123" });
+    harness.assertEqual(parsed.currency, "MYR", "A sign-up that names no currency gets ringgit");
   });
 
   await harness.test("T39-MEDIA-03: motion libraries are imported only from components/landing", async () => {
