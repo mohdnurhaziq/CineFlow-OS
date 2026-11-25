@@ -175,6 +175,18 @@ model PrintSize {
 // 2. USERS & ROLES
 // ==============================================================================
 
+/// A one-time code that carries a sign-in begun on a studio's own domain over to the platform host
+/// (see lib/auth/handoff.ts). Only the code's hash is stored; valid for a minute, single use.
+model SignInHandoff {
+  id           String    @id @default(cuid())
+  codeHash     String    @unique
+  loginId      String
+  activeUserId String
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime  @default(now())
+}
+
 /// One person's sign-in across studios. Exists only for an email that has been proven (a link we
 /// emailed, or Google). Each studio keeps its own User for the person, pointing here.
 model Login {

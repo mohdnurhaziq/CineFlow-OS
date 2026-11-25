@@ -11,6 +11,8 @@ import { decodeSessionToken, isSessionRevoked, liveAccounts, requestHost, sessio
 import { requestStudioSlug } from "./request-studio";
 import { findLogin } from "@/lib/auth/login";
 import { hasSetUp } from "@/lib/auth/set-up";
+import { handoffForRequest, isCustomDomainHost } from "@/lib/auth/handoff";
+import { platformUrl } from "@/lib/domain-name";
 
 // NOTE: this is a "use server" module, so every export is a public server
 // action. Token minting/verification lives in ./token (not an action module).
@@ -84,7 +86,7 @@ export async function loginWithCredentials(
   email: string,
   password: string,
   tenantSlug?: string
-): Promise<{ success: boolean; error?: string; user?: SessionUser }> {
+): Promise<{ success: boolean; error?: string; user?: SessionUser; handoffCode?: string }> {
   try {
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -154,8 +156,13 @@ export async function loginWithCredentials(
       ...(user.loginId ? { loginId: user.loginId } : {}),
     };
 
-    if (user.loginId) await setLoginSessionCookie(user.loginId, user.id);
-    else await setSessionCookie(sessionUser);
+    if (user.loginId) {
+      await setLoginSessionCookie(user.loginId, user.id);
+      // On a studio's own domain the browser carries the sign-in over to the platform host too.
+      const handoffCode = await handoffForRequest(user.loginId, user.id);
+      return { success: true, user: sessionUser, ...(handoffCode ? { handoffCode } : {}) };
+    }
+    await setSessionCookie(sessionUser);
 
     return { success: true, user: sessionUser };
   } catch (err) {
@@ -210,14 +217,17 @@ export async function loginPlatformAdmin(
 /**
  * Destroys the active session cookie.
  */
-export async function logoutAction(): Promise<{ success: boolean }> {
+export async function logoutAction(): Promise<{ success: boolean; via?: string }> {
   try {
     const cookieStore = await cookies();
-    const cookie = sessionCookieFor(await requestHost());
+    const host = await requestHost();
+    const cookie = sessionCookieFor(host);
     // A cookie set for the whole domain is only removed when deleted with that domain.
     if (cookie.domain) cookieStore.delete({ name: cookie.name, domain: cookie.domain, path: "/" });
     else cookieStore.delete(cookie.name);
-    return { success: true };
+    // On a studio's own domain only that host's cookie is gone: the browser then goes through the
+    // platform to clear its shared cookie too.
+    return { success: true, ...((await isCustomDomainHost(host)) ? { via: platformUrl("/auth/sign-out") } : {}) };
   } catch {
     return { success: false };
   }

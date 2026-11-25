@@ -21,6 +21,16 @@ import { loginToPlatform } from "@/lib/actions/one-login";
 import { loginWithCredentials } from "@/lib/auth/session";
 import { decodeSessionToken } from "@/lib/auth/token";
 import { RESERVED_SLUGS, OnboardStudioSchema } from "@/lib/validations/onboarding";
+import { NextRequest } from "next/server";
+import { GET as GET_HANDOFF } from "@/app/auth/handoff/route";
+import { GET as GET_SIGNOUT } from "@/app/auth/sign-out/route";
+import { HANDOFF_TTL_SECONDS, issueHandoff, redeemHandoff, safeHandoffReturn } from "@/lib/auth/handoff";
+import { APP_BASE_DOMAIN } from "@/lib/domain-name";
+import { SHARED_COOKIE_NAME } from "@/lib/auth/token";
+import { logoutAction } from "@/lib/auth/session";
+import { registerClient } from "@/lib/actions/client-auth";
+import { continueAsClient } from "@/lib/actions/one-login";
+import { withHost } from "./mocks/session";
 import { withLoginSession, withRequest, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
@@ -264,5 +274,176 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
     harness.assert(RESERVED_SLUGS.has("studios"), "'studios' is a reserved address");
     harness.assertEqual(OnboardStudioSchema.safeParse({ name: "Studios Co", slug: "studios", ownerName: "Maya Lin", ownerEmail: "maya@example.com", password: "password123" }).success, false, "No studio can take the slug 'studios'");
     harness.assert(/href="\/login"/.test(await readFile("components/saas/saas-navbar.tsx", "utf8")), "The landing page's top bar links to /login");
+  });
+
+  // ── Task 4: the handoff for studios on their own domain ─────────────────────────────────
+  const withProd = async <T>(fn: () => Promise<T>): Promise<T> => {
+    const saved = { s: process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS, u: process.env.NEXT_PUBLIC_APP_URL };
+    process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS = "true";
+    process.env.NEXT_PUBLIC_APP_URL = "https://cineflow-os.my";
+    try {
+      return await fn();
+    } finally {
+      if (saved.s === undefined) delete process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS;
+      else process.env.NEXT_PUBLIC_STUDIO_SUBDOMAINS = saved.s;
+      if (saved.u === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = saved.u;
+    }
+  };
+  const PLATFORM = APP_BASE_DOMAIN;
+  /** A person whose own studio has its own domain. */
+  const makeOnOwnDomain = async (label: string) => {
+    const p = await makePerson(label);
+    const domain = `cd-${label}-${STAMP}.example.test`;
+    await db.tenant.update({ where: { id: p.own.id }, data: { customDomain: domain } });
+    return { ...p, domain };
+  };
+  const sessionAndCalls = async (jar: Map<string, string>, host: string, fn: () => Promise<unknown>) => {
+    const { result, calls } = await withHost(host, fn);
+    return { result, calls, jar };
+  };
+
+  await harness.test("T42-HANDOFF-01: a handoff code works once, briefly, and only its hash is stored", async () => {
+    try {
+      const p = await makePerson("h1");
+      const code = await issueHandoff(p.login.id, p.team.id);
+      const row = await db.signInHandoff.findFirstOrThrow({ where: { loginId: p.login.id } });
+      harness.assert(row.codeHash !== code && row.codeHash.length === 64, "Only a hash is stored");
+      harness.assert(row.expiresAt.getTime() - Date.now() <= HANDOFF_TTL_SECONDS * 1000 + 1000 && row.expiresAt.getTime() > Date.now(), "It is valid for about a minute");
+      const first = await redeemHandoff(code);
+      harness.assert(first?.loginId === p.login.id && first.activeUserId === p.team.id, "It gives back the login and the active account", JSON.stringify(first));
+      harness.assertEqual(await redeemHandoff(code), null, "A second use gets nothing");
+      const old = await issueHandoff(p.login.id, p.team.id);
+      await db.signInHandoff.updateMany({ where: { loginId: p.login.id, usedAt: null }, data: { expiresAt: new Date(Date.now() - 1000) } });
+      harness.assertEqual(await redeemHandoff(old), null, "An expired code gets nothing");
+      harness.assertEqual(await redeemHandoff("made-up-code"), null, "A made-up code gets nothing");
+    } finally {
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-HANDOFF-02: the route signs the person in on the platform host and sends them back; a replay does nothing", async () => {
+    try {
+      await withProd(async () => {
+        const p = await makeOnOwnDomain("h2");
+        const next = `https://${p.domain}/account`;
+        const code = await issueHandoff(p.login.id, p.owner.id);
+        const url = (c: string) => new NextRequest(`https://cineflow-os.my/auth/handoff?code=${encodeURIComponent(c)}&next=${encodeURIComponent(next)}`);
+        await withRequest(async (jar) => {
+          const ok = await sessionAndCalls(jar, PLATFORM, () => GET_HANDOFF(url(code)));
+          const res = ok.result as Response;
+          harness.assertEqual(res.headers.get("location"), next, "Sent back to the studio's own domain");
+          const set = ok.calls.find((c) => c.op === "set" && c.args[0] === SHARED_COOKIE_NAME);
+          harness.assert(!!set && (set.args[2] as { domain?: string } | undefined)?.domain === PLATFORM, "The platform's shared cookie was set for the whole domain", JSON.stringify(ok.calls.map((c) => c.args[0])));
+          const decoded = await decodeSessionToken(jar.get(SHARED_COOKIE_NAME) ?? "");
+          harness.assert(decoded?.user.loginId === p.login.id && decoded.accounts?.length === 3, "…as the person's login session", JSON.stringify(decoded?.user));
+          jar.clear();
+          const replay = await sessionAndCalls(jar, PLATFORM, () => GET_HANDOFF(url(code)));
+          harness.assert((replay.result as Response).headers.get("location")?.endsWith("/login") === true && !jar.has(SHARED_COOKIE_NAME), "The same link again: sent to sign in, nothing set");
+        });
+      });
+    } finally {
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-HANDOFF-03: the return address is only ever a studio's own domain", async () => {
+    try {
+      await withProd(async () => {
+        const p = await makeOnOwnDomain("h3");
+        const good = `https://${p.domain}/account?tab=bookings`;
+        harness.assertEqual(await safeHandoffReturn(good), good, "A studio's own domain with a path is fine");
+        const bad = [
+          "https://evil.com/x",
+          "//evil.com",
+          "javascript:alert(1)",
+          `https://${p.own.slug}.${PLATFORM}/admin`,
+          `https://${PLATFORM}/login`,
+          `https://nobody-${STAMP}.example.test/x`,
+          `https://${p.domain}/\\evil`,
+          `https://${p.domain}/a\tb`,
+          `https://${p.domain}/a\nb`,
+          `https://user:pass@${p.domain}/x`,
+          "",
+        ];
+        for (const b of bad) harness.assertEqual(await safeHandoffReturn(b), null, `Refused: ${JSON.stringify(b)}`);
+        // Even with a valid code, a bad return address does nothing.
+        const code = await issueHandoff(p.login.id, p.owner.id);
+        await withRequest(async (jar) => {
+          const out = await sessionAndCalls(jar, PLATFORM, () =>
+            GET_HANDOFF(new NextRequest(`https://cineflow-os.my/auth/handoff?code=${encodeURIComponent(code)}&next=${encodeURIComponent("https://evil.com/x")}`))
+          );
+          harness.assert((out.result as Response).headers.get("location")?.endsWith("/login") === true && !jar.has(SHARED_COOKIE_NAME), "A valid code with a bad address: sent to sign in, nothing set");
+        });
+      });
+    } finally {
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-HANDOFF-04: signing in on a custom domain returns a handoff code; elsewhere none", async () => {
+    try {
+      await withProd(async () => {
+        const p = await makeOnOwnDomain("h4");
+        const atDomain = await withHost(p.domain, () => loginWithCredentials(p.email, "new-pass-123", p.own.slug));
+        harness.assert(atDomain.result.success === true && typeof atDomain.result.handoffCode === "string", "On the studio's own domain: a code", JSON.stringify(atDomain.result));
+        const atSub = await withHost(`${p.own.slug}.${PLATFORM}`, () => loginWithCredentials(p.email, "new-pass-123", p.own.slug));
+        harness.assert(atSub.result.success === true && atSub.result.handoffCode === undefined, "On the studio's subdomain: none");
+        const atPlatform = await withHost(PLATFORM, () => loginWithCredentials(p.email, "new-pass-123", p.own.slug));
+        harness.assert(atPlatform.result.success === true && atPlatform.result.handoffCode === undefined, "On the platform host: none");
+        const alone = emailFor("h4-alone");
+        await makeUser(p.own.id, alone, "CLIENT", { password: "alone-pass-1" });
+        const standAlone = await withHost(p.domain, () => loginWithCredentials(alone, "alone-pass-1", p.own.slug));
+        harness.assert(standAlone.result.success === true && standAlone.result.handoffCode === undefined, "A stand-alone account never gets one");
+        // Registering and continuing as a client at that studio hand off too.
+        const second = await makePerson("h4b");
+        const reg = await withHost(p.domain, () => registerClient({ tenantSlug: p.own.slug, name: "T42 Reg", email: second.email, phone: "0123456789", password: "new-pass-123" }));
+        harness.assert(reg.result.success === true && typeof (reg.result as { handoffCode?: string }).handoffCode === "string", "Registering with a login: a code", JSON.stringify(reg.result));
+        const third = await makePerson("h4c");
+        const cont = await withLoginSession(third.login.id, third.team.id, () => withHost(p.domain, () => continueAsClient(p.own.slug)));
+        harness.assert(cont.result.success === true && typeof (cont.result as { handoffCode?: string }).handoffCode === "string", "Continuing as a client: a code", JSON.stringify(cont.result));
+      });
+    } finally {
+      await db.signInHandoff.deleteMany({});
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-SIGNOUT-01: signing out on a custom domain also clears the platform cookie", async () => {
+    try {
+      await withProd(async () => {
+        const p = await makeOnOwnDomain("so1");
+        const onDomain = await withLoginSession(p.login.id, p.owner.id, () => withHost(p.domain, () => logoutAction()));
+        harness.assert(onDomain.result.success === true && onDomain.result.via?.endsWith("/auth/sign-out") === true, "On the custom domain: told to go through the platform", JSON.stringify(onDomain.result));
+        harness.assert(onDomain.calls.some((c) => c.op === "delete" && (c.args[0] === COOKIE_NAME || (c.args[0] as { name?: string })?.name === COOKIE_NAME)), "…and this host's own cookie is deleted");
+        const onSub = await withLoginSession(p.login.id, p.owner.id, () => withHost(`${p.own.slug}.${PLATFORM}`, () => logoutAction()));
+        harness.assertEqual(onSub.result.via, undefined, "On a subdomain the shared cookie is the only one: no detour");
+        const back = `https://${p.domain}/login?signedOut=1`;
+        const out = await withLoginSession(p.login.id, p.owner.id, () =>
+          withHost(PLATFORM, () => GET_SIGNOUT(new NextRequest(`https://cineflow-os.my/auth/sign-out?next=${encodeURIComponent(back)}`)))
+        );
+        harness.assert(out.calls.some((c) => c.op === "delete" && (c.args[0] as { name?: string })?.name === SHARED_COOKIE_NAME && (c.args[0] as { domain?: string }).domain === PLATFORM), "The shared platform cookie is deleted for the whole domain");
+        harness.assertEqual((out.result as Response).headers.get("location"), back, "…then back to the studio");
+        const bad = await withRequest(() => withHost(PLATFORM, () => GET_SIGNOUT(new NextRequest(`https://cineflow-os.my/auth/sign-out?next=${encodeURIComponent("https://evil.com/")}`))));
+        harness.assert(!((bad.result as Response).headers.get("location") ?? "").includes("evil.com"), "A bad return address goes to the platform home instead");
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T42-HANDOFF-05: the forms and sign-out controls use the handoff", async () => {
+    for (const f of ["components/auth/studio-login-form.tsx", "components/auth/client-auth-panel.tsx"]) {
+      const src = await readFile(f, "utf8");
+      harness.assert(/handoffCode/.test(src) && /handoffHref\(/.test(src), `${f} follows a handoff code`);
+    }
+    for (const f of ["components/admin/admin-user-nav.tsx", "components/account/client-user-nav.tsx", "components/account/client-account-menu.tsx"]) {
+      harness.assert(/\.via\b/.test(await readFile(f, "utf8")) && /signOutHref\(/.test(await readFile(f, "utf8")), `${f} signs out through the platform when told to`);
+    }
+    const client = await readFile("lib/auth/handoff-client.ts", "utf8");
+    harness.assert(/export function handoffHref/.test(client) && /export function signOutHref/.test(client), "The client helpers exist");
   });
 }

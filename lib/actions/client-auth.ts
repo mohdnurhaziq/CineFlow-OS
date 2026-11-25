@@ -9,6 +9,7 @@ import { clientInvitePath, inviteMatches, issueClientInvite } from "@/lib/auth/i
 import { hasSetUp } from "@/lib/auth/set-up";
 import { proveEmailAndJoin, verifyLoginPassword } from "@/lib/auth/login";
 import { emailOneLoginLink } from "@/lib/auth/one-login-link";
+import { handoffForRequest } from "@/lib/auth/handoff";
 import { sendNotification } from "@/lib/notifications";
 import { isStudioPath, studioPath, studioUrl } from "@/lib/domain-name";
 
@@ -38,7 +39,7 @@ const RegisterSchema = z.object({
 export type RegisterClientInput = z.input<typeof RegisterSchema>;
 
 export type RegisterClientResult =
-  | { success: true; user: SessionUser }
+  | { success: true; user: SessionUser; handoffCode?: string }
   | {
       success: false;
       error:
@@ -176,12 +177,17 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
       tenantSlug: tenant.slug,
       ...(user.loginId ? { loginId: user.loginId } : {}),
     };
-    if (user.loginId) await setLoginSessionCookie(user.loginId, user.id);
-    else await setSessionCookie(sessionUser);
+    let handoffCode: string | undefined;
+    if (user.loginId) {
+      await setLoginSessionCookie(user.loginId, user.id);
+      handoffCode = await handoffForRequest(user.loginId, user.id);
+    } else {
+      await setSessionCookie(sessionUser);
+    }
     // A brand-new account works straight away; this invites them to use one sign-in for every studio.
     if (standAlone) await emailOneLoginLink({ id: user.id, email: user.email, name: user.name }, { name: tenant.name, slug: tenant.slug });
 
-    return { success: true, user: sessionUser };
+    return { success: true, user: sessionUser, ...(handoffCode ? { handoffCode } : {}) };
   } catch (err) {
     // Lost a race with a concurrent registration of the same (studio, email).
     if ((err as { code?: string })?.code === "P2002") {

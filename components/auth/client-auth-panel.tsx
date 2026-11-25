@@ -5,6 +5,7 @@ import { User, Mail, Phone, Lock, AlertCircle, Loader2, CheckCircle2 } from "luc
 import { registerClient } from "@/lib/actions/client-auth";
 import { loginWithCredentials, logoutAction } from "@/lib/auth/session";
 import { continueAsClient } from "@/lib/actions/one-login";
+import { handoffHref } from "@/lib/auth/handoff-client";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { studioPath } from "@/lib/domain-name";
 
@@ -99,7 +100,7 @@ export function ClientAuthPanel({
     setError(null);
     try {
       const res = await continueAsClient(tenantSlug);
-      if (res.success) await confirmSignedIn(res.name, "created");
+      if (res.success) await confirmSignedIn(res.name, "created", res.handoffCode);
       else setError(res.message);
     } catch {
       setError("An unexpected network error occurred. Please try again.");
@@ -109,9 +110,14 @@ export function ClientAuthPanel({
   };
 
   /** Shows an explicit "you're signed in" state, then hands control back to the host page. */
-  const confirmSignedIn = async (displayName: string, kind: "created" | "signedIn") => {
+  const confirmSignedIn = async (displayName: string, kind: "created" | "signedIn", handoffCode?: string) => {
     setSignedIn({ name: displayName, kind });
     await new Promise((resolve) => setTimeout(resolve, 1400));
+    // On a studio's own domain the sign-in is carried over to the platform host, then back to this page.
+    if (handoffCode) {
+      window.location.href = handoffHref(handoffCode, `${window.location.pathname}${window.location.search}`);
+      return;
+    }
     onSuccess();
   };
 
@@ -138,7 +144,7 @@ export function ClientAuthPanel({
           else setError(res.message);
           return;
         }
-        await confirmSignedIn(res.user.name, "created");
+        await confirmSignedIn(res.user.name, "created", res.handoffCode);
       } else {
         const res = await loginWithCredentials(email, password, tenantSlug);
         if (!res.success && res.error === "NO_ACCOUNT_HERE") {
@@ -164,7 +170,7 @@ export function ClientAuthPanel({
           setError("That is a studio staff account. Please use Studio Login instead.");
           return;
         }
-        await confirmSignedIn(res.user.name, "signedIn");
+        await confirmSignedIn(res.user.name, "signedIn", res.handoffCode);
       }
     } catch {
       setError("An unexpected network error occurred. Please try again.");

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/lib/auth/session";
 import { signedOutHref } from "@/lib/auth/signed-out";
+import { signOutHref } from "@/lib/auth/handoff-client";
 import { studioPath } from "@/lib/domain-name";
 import { SessionMenu } from "@/components/auth/session-menu";
 import type { SwitcherEntry } from "@/lib/auth/switcher";
@@ -53,8 +54,9 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo, switche
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await logoutAction();
-              window.location.href = signedOutHref(studioPath(tenantSlug));
+              const res = await logoutAction();
+              const back = signedOutHref(studioPath(tenantSlug));
+              window.location.href = res.via ? signOutHref(res.via, back) : back;
             })
           }
           title="Sign out"
@@ -109,8 +111,9 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo, switche
         disabled={isPending}
         onClick={() =>
           startTransition(async () => {
-            await logoutAction();
-            window.location.href = signedOutHref(studioPath(tenantSlug));
+            const res = await logoutAction();
+            const back = signedOutHref(studioPath(tenantSlug));
+            window.location.href = res.via ? signOutHref(res.via, back) : back;
           })
         }
         title="Sign out"

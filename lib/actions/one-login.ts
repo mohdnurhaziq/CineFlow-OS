@@ -10,6 +10,7 @@ import { isRateLimited } from "@/lib/rate-limit";
 import { hasSetUp } from "@/lib/auth/set-up";
 import { signInTarget } from "@/lib/auth/sign-in-target";
 import { liveAccounts, setLoginSessionCookie } from "@/lib/auth/token";
+import { handoffForRequest } from "@/lib/auth/handoff";
 
 /**
  * "Continue as a client of this studio" for a signed-in login with no account there: takes up the
@@ -18,7 +19,7 @@ import { liveAccounts, setLoginSessionCookie } from "@/lib/auth/token";
  */
 export async function continueAsClient(
   tenantSlug: string
-): Promise<{ success: true; redirectTo: string; name: string } | { success: false; message: string }> {
+): Promise<{ success: true; redirectTo: string; name: string; handoffCode?: string } | { success: false; message: string }> {
   const me = await getCurrentLogin();
   if (!me) return { success: false, message: "Please sign in first." };
 
@@ -50,7 +51,8 @@ export async function continueAsClient(
   }
 
   await setLoginSessionCookie(me.loginId, userId);
-  return { success: true, redirectTo: signInTarget({ role: "CLIENT", tenantSlug: tenant.slug }), name };
+  const handoffCode = await handoffForRequest(me.loginId, userId);
+  return { success: true, redirectTo: signInTarget({ role: "CLIENT", tenantSlug: tenant.slug }), name, ...(handoffCode ? { handoffCode } : {}) };
 }
 
 /**
