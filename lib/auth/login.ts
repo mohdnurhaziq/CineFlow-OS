@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import type { Login } from "@prisma/client";
 import { db } from "@/lib/db";
 import { hasSetUp } from "@/lib/auth/set-up";
@@ -71,6 +72,37 @@ export async function createLoginFromProof(
 /** Joins one account to an existing login (same changes as when a login is created). */
 export async function linkAccountToLogin(userId: string, loginId: string): Promise<void> {
   await db.user.update({ where: { id: userId }, data: { ...JOIN_FIELDS, loginId, sessionsValidAfter: new Date() } });
+}
+
+/**
+ * Sets the login's password after the person proved their email (a reset, invite or confirm link).
+ * The same password again changes nothing. A different one ends the login's sessions everywhere.
+ */
+export async function setLoginPassword(loginId: string, password: string): Promise<void> {
+  const login = await db.login.findUniqueOrThrow({ where: { id: loginId } });
+  if (login.passwordHash && bcrypt.compareSync(password, login.passwordHash)) return;
+  await db.login.update({ where: { id: loginId }, data: { passwordHash: await bcrypt.hash(password, 10), sessionsValidAfter: new Date() } });
+}
+
+/**
+ * The email link was used: `account` is taken up into the person's one login, whose password is
+ * the one just typed. Creates the login (joining the person's other set-up accounts, and emailing
+ * them which) or joins the account to the login that already exists. Returns the login's id.
+ */
+export async function proveEmailAndJoin(account: { id: string; email: string; loginId: string | null }, password: string): Promise<string> {
+  if (account.loginId) {
+    await setLoginPassword(account.loginId, password);
+    return account.loginId;
+  }
+  const existing = await findLogin(account.email);
+  if (existing) {
+    await linkAccountToLogin(account.id, existing.id);
+    await setLoginPassword(existing.id, password);
+    return existing.id;
+  }
+  const { login, joined } = await createLoginFromProof(account.email, await bcrypt.hash(password, 10), { takeUpUserId: account.id });
+  await sendJoinedEmail(account.email, joined.filter((j) => j.userId !== account.id));
+  return login.id;
 }
 
 const roleLabel = (role: string) => (role === "STUDIO_OWNER" ? "Owner" : role === "CLIENT" ? "Client" : "Team");

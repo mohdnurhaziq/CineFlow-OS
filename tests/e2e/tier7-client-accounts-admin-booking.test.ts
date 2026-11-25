@@ -9,6 +9,7 @@
  * unauthenticated caller must never be able to book on a customer's behalf.
  */
 
+import { hasSetUp } from "@/lib/auth/set-up";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextRequest } from "next/server";
@@ -177,7 +178,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
     const good = await registerClient({ ...claimInput, inviteToken: token });
     harness.assert(good.success === true, "The emailed link claims the account");
     const claimed = await db.user.findUnique({ where: { id: guest.id } });
-    harness.assert(!!claimed?.passwordHash, "Password now set");
+    harness.assert(!!claimed && hasSetUp(claimed), "Account now set up (password is the person's login password)");
     harness.assertEqual(claimed?.isQuickCreated, false, "isQuickCreated cleared");
 
     const replay = await registerClient({ ...claimInput, inviteToken: token });
@@ -349,7 +350,7 @@ export async function runTier7ClientAccountsTests(harness: TestHarness) {
       ));
       harness.assertEqual(claimed.success, true, `The invite lets the customer set a password (${claimed.message ?? "ok"})`);
       const account = await db.user.findFirst({ where: { tenantId: lumina.id, email: e } });
-      harness.assert(!!account?.passwordHash, "The account now has a password");
+      harness.assert(!!account && hasSetUp(account), "The account is now set up with the typed password");
       harness.assertEqual(account?.inviteToken ?? null, null, "and the invite is used up");
     } finally {
       globalThis.fetch = realFetch;

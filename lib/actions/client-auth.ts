@@ -4,8 +4,10 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { isRateLimited } from "@/lib/rate-limit";
-import { setSessionCookie, type SessionUser } from "@/lib/auth/token";
+import { setLoginSessionCookie, setSessionCookie, type SessionUser } from "@/lib/auth/token";
 import { clientInvitePath, inviteMatches, issueClientInvite } from "@/lib/auth/invite";
+import { hasSetUp } from "@/lib/auth/set-up";
+import { proveEmailAndJoin } from "@/lib/auth/login";
 import { sendNotification } from "@/lib/notifications";
 import { isStudioPath, studioPath, studioUrl } from "@/lib/domain-name";
 
@@ -102,17 +104,19 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
       user = await db.user.create({
         data: { tenantId: tenant.id, name, email, phone, role: "CLIENT", passwordHash },
       });
-    } else if (existing.role !== "CLIENT" || existing.passwordHash) {
+    } else if (existing.role !== "CLIENT" || hasSetUp(existing)) {
       return {
         success: false,
         error: "EMAIL_EXISTS",
         message: "An account with this email already exists. Please sign in instead.",
       };
     } else if (inviteMatches(existing, inviteToken)) {
-      // Passwordless account the studio created and invited by email: the invite is the proof.
+      // Passwordless account the studio created and invited by email: the invite is the proof of the
+      // email, so the password typed here becomes the person's one login password.
+      await proveEmailAndJoin(existing, password);
       user = await db.user.update({
         where: { id: existing.id },
-        data: { name, phone, passwordHash, isQuickCreated: false, inviteToken: null, inviteTokenExpires: null },
+        data: { name, phone, isQuickCreated: false, inviteToken: null, inviteTokenExpires: null },
       });
     } else {
       // Passwordless account and no valid invite: email its owner a fresh link to set the password.
@@ -156,8 +160,10 @@ export async function registerClient(input: RegisterClientInput): Promise<Regist
       role: user.role,
       tenantId: user.tenantId,
       tenantSlug: tenant.slug,
+      ...(user.loginId ? { loginId: user.loginId } : {}),
     };
-    await setSessionCookie(sessionUser);
+    if (user.loginId) await setLoginSessionCookie(user.loginId, user.id);
+    else await setSessionCookie(sessionUser);
 
     return { success: true, user: sessionUser };
   } catch (err) {

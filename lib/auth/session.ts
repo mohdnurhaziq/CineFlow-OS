@@ -32,7 +32,7 @@ function signInFailed(scope: string, email: string, ip: string | null): void {
   countAttempt(`${scope}-fail:${email}:${ip}`, 60 * 60 * 1000);
 }
 import { requestIp } from "@/lib/client-ip";
-import { decodeSessionToken, isSessionRevoked, liveAccounts, requestHost, sessionCookieFor, setSessionCookie, type SessionAccount, type SessionUser } from "./token";
+import { decodeSessionToken, isSessionRevoked, liveAccounts, requestHost, sessionCookieFor, setLoginSessionCookie, setSessionCookie, type SessionAccount, type SessionUser } from "./token";
 import { requestStudioSlug } from "./request-studio";
 
 // NOTE: this is a "use server" module, so every export is a public server
@@ -133,7 +133,10 @@ export async function loginWithCredentials(
         })))
       : await db.user.findFirst({ where: { email: normalizedEmail }, include: { tenant: true } });
 
-    if (!user || !user.passwordHash || !bcrypt.compareSync(password, user.passwordHash)) {
+    // An account joined to the person's one login signs in with the login's password.
+    const login = user?.loginId ? await db.login.findUnique({ where: { id: user.loginId } }) : null;
+    const passwordHash = user?.loginId ? (login?.passwordHash ?? null) : (user?.passwordHash ?? null);
+    if (!user || !passwordHash || !bcrypt.compareSync(password, passwordHash)) {
       signInFailed("login", normalizedEmail, ip);
       return { success: false, error: "INVALID_CREDENTIALS" };
     }
@@ -155,9 +158,11 @@ export async function loginWithCredentials(
       role: user.role,
       tenantId: user.tenantId,
       tenantSlug: user.tenant?.slug ?? null,
+      ...(user.loginId ? { loginId: user.loginId } : {}),
     };
 
-    await setSessionCookie(sessionUser);
+    if (user.loginId) await setLoginSessionCookie(user.loginId, user.id);
+    else await setSessionCookie(sessionUser);
 
     return { success: true, user: sessionUser };
   } catch (err) {

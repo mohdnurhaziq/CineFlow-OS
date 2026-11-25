@@ -1,9 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import bcrypt from "bcryptjs";
 import { after } from "next/server";
 import { db } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/session";
+import { proveEmailAndJoin } from "@/lib/auth/login";
 import { isRateLimited } from "@/lib/rate-limit";
 import { sendNotification } from "@/lib/notifications";
 import {
@@ -125,20 +126,51 @@ export async function resetPassword(
   const account = await findStudioAccount(tenant.id, email);
   if (!account || account.deactivatedAt || !resetTokenMatches(account, token)) return INVALID_LINK;
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  // Single use: only succeeds while the stored token is still the one that was checked.
+  // Single use: only succeeds while the stored token is still the one that was checked. The link
+  // proves the email, so the password typed here becomes the person's one login password. The
+  // account never keeps a password of its own (an unproven account's password must never carry over).
   const { count } = await db.user.updateMany({
     where: { id: account.id, passwordResetToken: account.passwordResetToken, deactivatedAt: null },
     data: {
-      passwordHash,
       passwordResetToken: null,
       passwordResetExpires: null,
       inviteToken: null,
       inviteTokenExpires: null,
       isQuickCreated: false,
-      sessionsValidAfter: new Date(),
     },
   });
   if (count === 0) return INVALID_LINK;
+  await proveEmailAndJoin(account, password);
+  return { success: true };
+}
+
+/**
+ * For the signed-in person on a stand-alone account: emails them a link to "use one sign-in for all
+ * your studios". The page it opens asks for one password for every studio, and proves the email.
+ */
+export async function sendOneLoginLink(): Promise<{ success: true } | { success: false; message: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.loginId || user.role === "SUPER_ADMIN" || !user.tenantSlug) {
+    return { success: false, message: "There is nothing to confirm for this account." };
+  }
+  if (isRateLimited(`one-login-link:${user.id}`, 3, 60 * 60_000)) {
+    return { success: false, message: "We already sent you a link. Check your inbox, or try again in an hour." };
+  }
+  const tenant = await db.tenant.findUnique({ where: { slug: user.tenantSlug }, select: { name: true, slug: true } });
+  if (!tenant) return { success: false, message: "There is nothing to confirm for this account." };
+  const token = await issuePasswordReset(user.id);
+  const res = await sendNotification(
+    {
+      event: "ONE_LOGIN_CONFIRM",
+      studioName: tenant.name,
+      studioSlug: tenant.slug,
+      clientName: user.name,
+      clientEmail: user.email,
+      confirmUrl: `${studioUrl(tenant.slug, passwordResetPath(user.email, token))}&join=1`,
+      expiresMinutes: PASSWORD_RESET_TTL_MINUTES,
+    },
+    "EMAIL"
+  );
+  if (res.emailDelivery !== "SENT") console.error(`One-sign-in email for ${tenant.slug} not sent (${res.emailDelivery}): ${res.emailError ?? "no email provider configured"}`);
   return { success: true };
 }

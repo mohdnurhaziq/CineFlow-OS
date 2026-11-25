@@ -16,12 +16,16 @@ interface ResetPasswordFormProps {
   token: string;
   /** A team invite: welcome wording instead of "reset". */
   welcome?: boolean;
+  /** "Use one sign-in for all your studios": wording for choosing one password for every studio. */
+  join?: boolean;
+  /** The person already has a CineFlow sign-in, and this password becomes its password. */
+  hasLogin?: boolean;
 }
 
 const inputClass =
   "w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors font-mono";
 
-export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcome = false }: ResetPasswordFormProps) {
+export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcome = false, join = false, hasLogin = false }: ResetPasswordFormProps) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
@@ -55,7 +59,13 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
         <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mx-auto mb-3">
           <KeyRound className="size-6" aria-hidden="true" />
         </div>
-        {welcome ? (
+        {join ? (
+          <>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">One sign-in</span>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Use one sign-in for all your studios</h1>
+            <p className="text-sm text-zinc-400">Choose one password for every CineFlow studio you work with or book.</p>
+          </>
+        ) : welcome ? (
           <>
             <h1 className="text-2xl font-bold tracking-tight text-white">Welcome to {tenantName}</h1>
             <p className="text-sm text-zinc-400">Set a password to start using your studio account.</p>
@@ -67,6 +77,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
           </>
         )}
         <p className="text-xs text-zinc-400 break-all">for {email}</p>
+        {hasLogin && !join && <p className="text-xs text-amber-300/90">You already have a CineFlow sign-in. Enter its password, or choose a new one.</p>}
       </div>
 
       <form onSubmit={submit} className="space-y-4">
@@ -128,12 +139,12 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
             <span>Saving…</span>
           ) : (
             <>
-              <span>{welcome ? "Set my password" : "Save new password"}</span>
+              <span>{join ? "Set my password" : welcome ? "Set my password" : "Save new password"}</span>
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </>
           )}
         </button>
-        {!welcome && <p className="text-[11px] text-zinc-500 text-center">Saving signs you out on every other device.</p>}
+        {!welcome && !join && <p className="text-[11px] text-zinc-500 text-center">Saving signs you out on every other device.</p>}
       </form>
     </div>
   );

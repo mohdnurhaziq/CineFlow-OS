@@ -22,6 +22,13 @@ import { clientAccountStatus } from "@/lib/client-directory";
 import { ensureStudioRoles } from "@/lib/auth/access";
 import { assignTeamMember } from "@/lib/actions/admin-assignments";
 import { inviteTeamMember, resendTeamInvite } from "@/lib/actions/admin-team";
+import { resetPassword, sendOneLoginLink } from "@/lib/actions/password-reset";
+import { issuePasswordReset } from "@/lib/auth/password-reset";
+import { issueClientInvite } from "@/lib/auth/invite";
+import { registerClient } from "@/lib/actions/client-auth";
+import { loginWithCredentials } from "@/lib/auth/session";
+import { decodeSessionToken } from "@/lib/auth/token";
+import { withRequest } from "./mocks/session";
 import { withLoginSession, withSession, withStudio } from "./mocks/session";
 
 const STAMP = Date.now().toString(36);
@@ -399,5 +406,150 @@ export async function runTier41OneLoginTests(harness: TestHarness) {
     for (const f of noPasswordChecks) {
       harness.assert(!/(?:if \(|\? |&& |! ?)(?:member|account|client|user)\.passwordHash\b/.test(await readFile(f, "utf8")), `${f} no longer reads a bare passwordHash as 'set up'`);
     }
+  });
+
+  // ── Task 4: proof links create or update the login ──────────────────────────────────────
+  const tokenOf = (url: string) => new URL(url).searchParams.get("token")!;
+  const loginRow = (email: string) => db.login.findUnique({ where: { email: email.toLowerCase() } });
+
+  await harness.test("T41-PROOF-01: a reset link on a stand-alone account creates the login and joins the rest", async () => {
+    try {
+      const email = emailFor("proof1");
+      const client = await makeUser(lumina.id, email, "CLIENT", { password: "old-pass-1" });
+      const other = await makeUser(apex.id, email, "TEAM_MEMBER", { password: "old-pass-2" });
+      await withInbox(async (inbox) => {
+        const token = await issuePasswordReset(client.id);
+        const res = await resetPassword({ tenantSlug: "lumina-cine", email, token, password: "new-pass-123" });
+        harness.assert(res.success === true, "The reset works", JSON.stringify(res));
+        const login = await loginRow(email);
+        harness.assert(login !== null && bcrypt.compareSync("new-pass-123", login.passwordHash ?? ""), "A login exists with the new password");
+        const [c2, o2] = await Promise.all([client, other].map((u) => db.user.findUniqueOrThrow({ where: { id: u.id } })));
+        harness.assert(c2!.loginId === login!.id && c2!.passwordHash === null, "The account whose link was used is joined");
+        harness.assert(o2!.loginId === login!.id && o2!.passwordHash === null, "The person's account at the other studio is joined too");
+        harness.assert(c2!.passwordResetToken === null, "The link is used up");
+        harness.assertEqual(inbox.length, 1, "One email about the joined studios");
+        harness.assert(inbox[0]!.to === email && /Apex Media|apex/i.test(inbox[0]!.text), "…to the person, naming the other studio", inbox[0]?.text.slice(0, 200) ?? "");
+        const signedIn = await withRequest(() => loginWithCredentials(email, "new-pass-123", "lumina-cine"));
+        harness.assert(signedIn.success === true, "They can sign in with the new password", JSON.stringify(signedIn));
+      });
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-PROOF-02: a reset on a linked account changes the login's password and ends its sessions", async () => {
+    try {
+      const { team, login, email } = await makeLoginWithTwoAccounts("proof2");
+      const token = await issuePasswordReset(team.id);
+      harness.assertEqual((await loginRow(email))?.sessionsValidAfter, null, "No sign-out yet");
+      const res = await resetPassword({ tenantSlug: "lumina-cine", email, token, password: "other-pass-123" });
+      harness.assert(res.success === true, "The reset works", JSON.stringify(res));
+      const after = await loginRow(email);
+      harness.assert(bcrypt.compareSync("other-pass-123", after!.passwordHash ?? ""), "The login has the new password");
+      harness.assert(after!.sessionsValidAfter !== null, "Its sessions everywhere are ended");
+      harness.assertEqual((await db.user.findUniqueOrThrow({ where: { id: team.id } })).passwordHash, null, "The account still has no password of its own");
+      harness.assertEqual(login.id, after!.id, "Still the same login");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-PROOF-03: the attacker's password never reaches the login", async () => {
+    try {
+      const email = emailFor("proof3");
+      const victim = await makeUser(lumina.id, email, "CLIENT", { password: "victim-old-1" });
+      const reg = await registerClient({ tenantSlug: "apex-media", name: "Attacker", email, phone: "0123456789", password: "attacker-pass1" });
+      harness.assert(reg.success === true, "Anyone can register with an email at a studio, as today", JSON.stringify(reg));
+      const token = await issuePasswordReset(victim.id);
+      const res = await resetPassword({ tenantSlug: "lumina-cine", email, token, password: "victim-pass-1" });
+      harness.assert(res.success === true, "The real owner proves the email", JSON.stringify(res));
+      const login = await loginRow(email);
+      harness.assert(bcrypt.compareSync("victim-pass-1", login!.passwordHash ?? "") && !bcrypt.compareSync("attacker-pass1", login!.passwordHash ?? ""), "The login has the owner's password");
+      const attackerAccount = await db.user.findFirstOrThrow({ where: { tenantId: apex.id, email } });
+      harness.assert(attackerAccount.passwordHash === null && attackerAccount.loginId === login!.id, "The attacker's account lost its own password");
+      const attempt = await withRequest(() => loginWithCredentials(email, "attacker-pass1", "apex-media"));
+      harness.assertEqual(attempt.success, false, "The attacker's password opens nothing");
+      const owner = await withRequest(() => loginWithCredentials(email, "victim-pass-1", "lumina-cine"));
+      harness.assertEqual(owner.success, true, "The owner's password works");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-PROOF-04: a team invite link to someone with a login links the new account", async () => {
+    try {
+      const { email, login } = await makeLoginWithTwoAccounts("proof4");
+      // The person's accounts are at lumina and apex; invite them to a third studio.
+      const third = await makeStudio("invite");
+      await ensureStudioRoles(third.id);
+      const roleId = (await db.teamRole.findFirstOrThrow({ where: { tenantId: third.id } })).id;
+      const owner = await makeUser(third.id, emailFor("proof4-owner"), "STUDIO_OWNER", { password: "owner-pass-1" });
+      const invited = (await withSession({ id: owner.id, email: owner.email, name: owner.name, role: "STUDIO_OWNER", tenantId: third.id, tenantSlug: third.slug }, () =>
+        inviteTeamMember({ tenantId: third.id, tenantSlug: third.slug, name: "T41 Invitee", email, roleId })
+      )) as { success: boolean; inviteUrl?: string };
+      harness.assert(invited.success === true && !!invited.inviteUrl, "Invited", JSON.stringify(invited));
+      const res = await resetPassword({ tenantSlug: third.slug, email, token: tokenOf(invited.inviteUrl!), password: "new-pass-123" });
+      harness.assert(res.success === true, "Accepted with the login's current password", JSON.stringify(res));
+      const account = await db.user.findFirstOrThrow({ where: { tenantId: third.id, email } });
+      harness.assert(account.loginId === login.id && account.passwordHash === null, "The new team account is linked to the login");
+      harness.assertEqual(teamMemberStatus(account), "ACTIVE", "…and Active");
+      harness.assertEqual((await loginRow(email))?.sessionsValidAfter, null, "The same password ends nobody's session");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-PROOF-05: a client invite link proves the email and creates the login", async () => {
+    try {
+      const email = emailFor("proof5");
+      const client = await makeUser(lumina.id, email, "CLIENT");
+      const invite = await issueClientInvite(client.id);
+      const reg = await withRequest(async (jar) => {
+        const r = await registerClient({ tenantSlug: "lumina-cine", name: "T41 Client", email, phone: "0123456789", password: "client-pass-1", inviteToken: invite });
+        return { r, cookie: jar.get(COOKIE_NAME) };
+      });
+      harness.assert(reg.r.success === true, "Registered through the invite", JSON.stringify(reg.r));
+      const login = await loginRow(email);
+      harness.assert(login !== null && bcrypt.compareSync("client-pass-1", login.passwordHash ?? ""), "A login exists with the typed password");
+      const account = await db.user.findUniqueOrThrow({ where: { id: client.id } });
+      harness.assert(account.loginId === login!.id && account.passwordHash === null && account.inviteToken === null, "The account is joined and the invite used up");
+      const decoded = await decodeSessionToken(reg.cookie ?? "");
+      harness.assert(decoded?.user.loginId === login!.id && decoded.accounts?.some((a) => a.userId === client.id) === true, "They are signed in as a login session");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-PROOF-06: sendOneLoginLink emails a confirm link to a stand-alone account, and refuses a linked one", async () => {
+    try {
+      const email = emailFor("proof6");
+      const client = await makeUser(lumina.id, email, "CLIENT", { password: "old-pass-1" });
+      const asClient = { id: client.id, email, name: client.name, role: "CLIENT", tenantId: lumina.id, tenantSlug: "lumina-cine" };
+      await withInbox(async (inbox) => {
+        const sent = await withSession(asClient, () => sendOneLoginLink());
+        harness.assert(sent.success === true, "Sent", JSON.stringify(sent));
+        const mail = inbox.find((m) => m.to === email);
+        harness.assert(!!mail && /join=1/.test(mail.html) && /reset-password\?/.test(mail.html), "The email links to the reset page with join=1", mail?.html.slice(0, 300) ?? "no mail");
+        const row = await db.user.findUniqueOrThrow({ where: { id: client.id } });
+        harness.assert(row.passwordResetToken !== null && row.passwordHash !== null, "A token was issued; the account is untouched");
+      });
+      const { team } = await makeLoginWithTwoAccounts("proof6b");
+      const linked = await db.user.findUniqueOrThrow({ where: { id: team.id } });
+      const asLinked = { id: linked.id, email: linked.email, name: linked.name, role: linked.role, tenantId: linked.tenantId, tenantSlug: "lumina-cine", loginId: linked.loginId };
+      const refused = await withSession(asLinked, () => sendOneLoginLink());
+      harness.assertEqual(refused.success, false, "A linked account has nothing to confirm");
+      const nobody = await withSession(null, () => sendOneLoginLink());
+      harness.assertEqual(nobody.success, false, "Nobody signed in: refused");
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T41-PROOF-07: the reset page words itself for one sign-in, and for someone who already has one", async () => {
+    const page = await readFile("app/[tenantSlug]/reset-password/page.tsx", "utf8");
+    harness.assert(/joinParam === "1"/.test(page) && /join=\{join\} hasLogin=\{hasLogin\}/.test(page), "The page passes join and hasLogin to the form");
+    const form = await readFile("components/auth/reset-password-form.tsx", "utf8");
+    harness.assert(/Use one sign-in for all your studios/.test(form), "The form has the one sign-in heading");
+    harness.assert(/You already have a CineFlow sign-in\. Enter its password, or choose a new one\./.test(form), "…and the line for someone who already has a login");
   });
 }

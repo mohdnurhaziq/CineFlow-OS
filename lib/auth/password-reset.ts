@@ -49,7 +49,7 @@ export async function findStudioAccount(tenantId: string, email: string) {
   const raw = email.trim();
   return db.user.findFirst({
     where: { tenantId, email: { in: Array.from(new Set([raw.toLowerCase(), raw])) } },
-    select: { id: true, name: true, email: true, role: true, passwordResetToken: true, passwordResetExpires: true, deactivatedAt: true },
+    select: { id: true, name: true, email: true, role: true, loginId: true, passwordResetToken: true, passwordResetExpires: true, deactivatedAt: true },
   });
 }
 

@@ -18,6 +18,7 @@ export type NotificationEvent =
   | "STUDIO_UPDATE"
   | "PASSWORD_RESET"
   | "TEAM_INVITE"
+  | "ONE_LOGIN_CONFIRM"
   | "SHOOT_ASSIGNED"
   | "SHOOT_CHANGED";
 
@@ -154,6 +155,18 @@ export interface PasswordResetPayload {
   expiresMinutes: number;
 }
 
+/** "Use one sign-in for all your studios": a one-time link that proves the email. Email only, never logged. */
+export interface OneLoginConfirmPayload {
+  event: "ONE_LOGIN_CONFIRM";
+  studioName: string;
+  studioSlug: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: undefined;
+  confirmUrl: string;
+  expiresMinutes: number;
+}
+
 /** A studio added someone to its team: a set-password link (a credential: email only, never logged). */
 export interface TeamInvitePayload {
   event: "TEAM_INVITE";
@@ -217,6 +230,7 @@ export type NotificationPayload =
   | PhotosReadyPayload
   | StudioUpdatePayload
   | PasswordResetPayload
+  | OneLoginConfirmPayload
   | TeamInvitePayload
   | ShootAssignedPayload
   | ShootChangedPayload;
@@ -651,6 +665,23 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
       whatsappText = "";
       break;
     }
+    case "ONE_LOGIN_CONFIRM": {
+      emailSubject = "Use one sign-in for all your CineFlow studios";
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>You asked to use one sign-in for every CineFlow studio you work with or book. Confirm your email and choose one password for all of them.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${esc(payload.confirmUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            Confirm my email
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #a1a1aa;">This link works once and expires in ${esc(payload.expiresMinutes)} minutes. If you didn't ask for this, you can ignore this email: nothing changes.</p>
+      `;
+      emailText = `Confirm your email to use one sign-in for all your CineFlow studios: ${payload.confirmUrl} (works once, expires in ${payload.expiresMinutes} minutes). If you didn't ask for this, ignore this email.`;
+      // Deliberately no WhatsApp text: this link is a credential.
+      whatsappText = "";
+      break;
+    }
     case "TEAM_INVITE": {
       emailSubject = `You're invited to join ${payload.studioName} on CineFlow`;
       bodyHtml = `
@@ -765,11 +796,11 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
 
   // The log keeps recent sends for auditing; reset and invite links are credentials, so never keep them.
   notificationLog.push(
-    payload.event === "PASSWORD_RESET" || payload.event === "TEAM_INVITE"
+    payload.event === "PASSWORD_RESET" || payload.event === "TEAM_INVITE" || payload.event === "ONE_LOGIN_CONFIRM"
       ? {
           ...result,
-          emailHtml: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : "password reset"}]`,
-          emailText: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : "password reset"}]`,
+          emailHtml: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : payload.event === "ONE_LOGIN_CONFIRM" ? "one sign-in link" : "password reset"}]`,
+          emailText: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : payload.event === "ONE_LOGIN_CONFIRM" ? "one sign-in link" : "password reset"}]`,
           whatsappMessage: undefined,
         }
       : result

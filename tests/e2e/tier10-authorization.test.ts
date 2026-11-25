@@ -7,6 +7,7 @@
  * themselves, and a static check keeps every new action classified.
  */
 
+import { hasSetUp } from "@/lib/auth/set-up";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { db } from "@/lib/db";
@@ -423,7 +424,7 @@ export async function runTier10AuthorizationTests(harness: TestHarness) {
     const ok = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
     harness.assertEqual(ok.success, true, "Correct invite: password set", JSON.stringify(ok));
     const after = await db.user.findUnique({ where: { id: invited.id } });
-    harness.assert(!!after?.passwordHash && after.inviteToken === null, "Invite used up");
+    harness.assert(!!after && hasSetUp(after) && after.inviteToken === null, "Invite used up, and the account is set up (its password is the person's login password)");
     const again = await withSession(null, () => registerClient({ ...base, inviteToken: token }));
     harness.assertEqual(again.success, false, "Invite can't be reused");
   });
