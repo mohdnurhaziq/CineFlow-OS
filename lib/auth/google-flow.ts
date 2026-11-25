@@ -7,6 +7,7 @@ import { platformUrl, studioUrl } from "@/lib/domain-name";
 import { findStudioAccount, passwordResetPath, resetTokenMatches } from "@/lib/auth/password-reset";
 import { hasSetUp } from "@/lib/auth/set-up";
 import { linkAccountToLogin } from "@/lib/auth/login";
+import { signBlob } from "@/lib/auth/signed-blob";
 import type { GoogleClaims, GoogleErrorCode } from "@/lib/auth/google";
 
 /**
@@ -17,6 +18,16 @@ import type { GoogleClaims, GoogleErrorCode } from "@/lib/auth/google";
 
 /** The short-lived signed cookie that ties a Google sign-in to the browser that started it. */
 export const FLOW_COOKIE = "cineflow_google_flow";
+
+/** What the sign-up wizard is handed after Google: the confirmed email, name and Google account, signed. */
+export const SIGNUP_TICKET = "signup-ticket";
+export const SIGNUP_TICKET_SECONDS = 900;
+export interface SignupTicket {
+  kind: typeof SIGNUP_TICKET;
+  email: string;
+  name: string | null;
+  sub: string;
+}
 
 /** Why the person is signing in, kept in the flow cookie (never in Google's address). */
 export type FlowIntent =
@@ -43,6 +54,7 @@ export function signInPageFor(studio: string | null, code: GoogleErrorCode): str
  * they started on (a studio's or the platform's sign-in, or the invite page they came from), with the reason.
  */
 export function intentBackUrl(intent: FlowIntent, code: GoogleErrorCode): string {
+  if (intent.kind === "signup") return platformUrl(`/create-studio?google=${code}`);
   if (intent.kind === "invite") return studioUrl(intent.studio, `${passwordResetPath(intent.email, intent.token)}&welcome=1&google=${code}`);
   return signInPageFor(intent.kind === "signin" ? intent.studio : null, code);
 }
@@ -52,7 +64,7 @@ export function intentBackUrl(intent: FlowIntent, code: GoogleErrorCode): string
  * gains the Google account), else created, which joins the person's set-up accounts exactly as any
  * proof of the email does. A login that already has a different Google account is refused.
  */
-async function loginForGoogle(claims: GoogleClaims): Promise<{ login: Login } | { error: GoogleErrorCode }> {
+export async function loginForGoogle(claims: GoogleClaims): Promise<{ login: Login } | { error: GoogleErrorCode }> {
   const bySub = await db.login.findUnique({ where: { googleSub: claims.sub } });
   if (bySub) return { login: bySub };
   try {
@@ -85,8 +97,11 @@ async function hasAnyAccount(email: string): Promise<boolean> {
  */
 export async function completeGoogleFlow(intent: FlowIntent, claims: GoogleClaims): Promise<Done> {
   if (intent.kind === "invite") return completeInvite(intent, claims);
-  if (intent.kind !== "signin") {
-    return { ok: false, code: "failed", redirectTo: intentBackUrl(intent, "failed") };
+  if (intent.kind === "signup") {
+    // Nothing is created yet: the person finishes the wizard, and the ticket proves the email to onboardStudio.
+    if (await isSuperAdminEmail(claims.email)) return { ok: false, code: "failed", redirectTo: intentBackUrl(intent, "failed") };
+    const ticket = signBlob({ kind: SIGNUP_TICKET, email: claims.email, name: claims.name, sub: claims.sub }, SIGNUP_TICKET_SECONDS);
+    return { ok: true, redirectTo: platformUrl(`/create-studio?google=${encodeURIComponent(ticket)}`) };
   }
   const back = (code: GoogleErrorCode): Done => ({ ok: false, code, redirectTo: intentBackUrl(intent, code) });
 
@@ -129,7 +144,7 @@ export async function completeGoogleFlow(intent: FlowIntent, claims: GoogleClaim
 }
 
 /** Whether a platform super-admin uses this email (they sign in on their own page only). */
-async function isSuperAdminEmail(email: string): Promise<boolean> {
+export async function isSuperAdminEmail(email: string): Promise<boolean> {
   const rows = await db.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE role = 'SUPER_ADMIN' AND lower(email) = ${email} LIMIT 1`;
   return rows.length > 0;
 }

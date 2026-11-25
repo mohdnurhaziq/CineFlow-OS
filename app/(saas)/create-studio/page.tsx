@@ -21,10 +21,18 @@ import {
 } from "lucide-react";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { toast } from "sonner";
-import { checkSignupCode, checkSlugAvailability, onboardStudio, studioSignupStatus } from "@/lib/actions/onboarding";
+import { checkSignupCode, checkSlugAvailability, googleAvailable, onboardStudio, readGoogleTicket, studioSignupStatus } from "@/lib/actions/onboarding";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { googleErrorMessage } from "@/lib/auth/google-messages";
+import { platformUrl } from "@/lib/domain-name";
 import type { OnboardStudioInput } from "@/lib/validations/onboarding";
 import { disciplineLabel } from "@/lib/labels";
 import { PLANS } from "@/lib/billing/plans";
+
+/** "Continue with Google" for the owner step: to the platform's Google start, then back here with a ticket. */
+const GOOGLE_SIGNUP_HREF = `${platformUrl("/auth/google/start")}?intent=signup`;
+/** The wizard's answers, kept while Google has the browser (sessionStorage; never the password). */
+const SAVE_KEY = "cineflow:create-studio";
 
 const COLOR_PRESETS = [
   { name: "Warm Amber", hex: "#f59e0b" },
@@ -64,6 +72,16 @@ export default function CreateStudioPage() {
     studioSignupStatus()
       .then(setSignup)
       .catch(() => setSignup({ open: true, needsCode: false }));
+  }, []);
+
+  // Google sign-in for the owner: whether it is set up, and what Google confirmed (a signed ticket).
+  const [googleOn, setGoogleOn] = useState(false);
+  const [googleTicket, setGoogleTicket] = useState<string | null>(null);
+  const [googleMessage, setGoogleMessage] = useState<string | null>(null);
+  useEffect(() => {
+    googleAvailable()
+      .then(setGoogleOn)
+      .catch(() => setGoogleOn(false));
   }, []);
 
   const [slugChecking, setSlugChecking] = useState<boolean>(false);
@@ -165,15 +183,54 @@ export default function CreateStudioPage() {
     setCurrentStep(2);
   };
 
-  // Step 3 Validation
+  // Step 3 Validation: a password, unless Google confirmed the owner's email.
   const isStep3Valid =
     formData.ownerName.trim().length >= 2 &&
     formData.ownerEmail.includes("@") &&
-    formData.password.length >= 8;
+    (googleTicket !== null || (formData.password ?? "").length >= 8);
+
+  const saveWizardForGoogle = () => {
+    try {
+      window.sessionStorage.setItem(SAVE_KEY, JSON.stringify({ step: currentStep, form: { ...formData, password: undefined } }));
+    } catch {
+      // Without storage the answers have to be entered again after Google.
+    }
+  };
+
+  // Coming back from Google: the saved answers return, and the ticket says who the owner is.
+  useEffect(() => {
+    const returned = new URLSearchParams(window.location.search).get("google");
+    if (!returned) return;
+    let saved: { step?: number; form?: Partial<OnboardStudioInput> } | null = null;
+    try {
+      saved = JSON.parse(window.sessionStorage.getItem(SAVE_KEY) ?? "null");
+    } catch {
+      saved = null;
+    }
+    if (saved?.form) setFormData((prev) => ({ ...prev, ...saved!.form, password: "" }));
+    window.history.replaceState(null, "", window.location.pathname);
+    const reason = googleErrorMessage(returned);
+    if (reason) {
+      setGoogleMessage(reason);
+      setCurrentStep(Math.min(Math.max(saved?.step ?? 1, 1), 3));
+      return;
+    }
+    readGoogleTicket(returned)
+      .then((who) => {
+        if (!who) {
+          setGoogleMessage(googleErrorMessage("failed"));
+          return;
+        }
+        setGoogleTicket(returned);
+        setFormData((prev) => ({ ...prev, ownerEmail: who.email, ownerName: prev.ownerName || who.name || "" }));
+        setCurrentStep(3);
+      })
+      .catch(() => setGoogleMessage(googleErrorMessage("failed")));
+  }, []);
 
   const handleSubmit = () => {
     startTransition(async () => {
-      const res = await onboardStudio(formData);
+      const res = await onboardStudio(googleTicket ? { ...formData, password: undefined, googleTicket } : formData);
       if (res.success && res.slug) {
         toast.success("Studio workspace launched successfully!");
         // A full page load: with studio subdomains on, the new studio's admin is on another host.
@@ -267,6 +324,11 @@ export default function CreateStudioPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Form Wizard Column */}
           <div className="lg:col-span-7 rounded-2xl border border-zinc-800 bg-[#121215] p-6 sm:p-8 space-y-6">
+            {googleMessage && (
+              <div role="alert" className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3.5 text-xs text-rose-300">
+                {googleMessage}
+              </div>
+            )}
             {/* STEP 1: IDENTITY & DISCIPLINE */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-fadeIn">
@@ -564,6 +626,12 @@ export default function CreateStudioPage() {
                 </div>
 
                 <div className="space-y-4">
+                  {googleOn && !googleTicket && (
+                    <div className="space-y-4">
+                      <GoogleButton href={GOOGLE_SIGNUP_HREF} onClick={saveWizardForGoogle} />
+                      <OrDivider />
+                    </div>
+                  )}
                   {/* Owner Name */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
@@ -594,31 +662,41 @@ export default function CreateStudioPage() {
                         placeholder="maya@veloxcinema.com"
                         value={formData.ownerEmail}
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerEmail: e.target.value }))}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
+                        // Google confirmed this address: it is the owner's, and can't be changed here.
+                        readOnly={googleTicket !== null}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500 read-only:text-zinc-400"
                         required
                       />
                     </div>
                   </div>
 
-                  {/* Owner Password */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-                      Password (min 8 chars) *
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-3 size-4 text-zinc-500" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••••••"
-                        value={formData.password}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                        className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
-                        autoComplete="new-password"
-                        required
-                      />
-                      <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+                  {/* Owner Password: not needed when Google confirmed the email */}
+                  {googleTicket ? (
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3.5 text-xs text-emerald-300">
+                      Signed in with Google. You won&apos;t need a password: you can add one later from the sign-in page.
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                        Password (min 8 chars) *
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-3 size-4 text-zinc-500" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••••••"
+                          value={formData.password}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                          className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
+                          autoComplete="new-password"
+                          required
+                        />
+                        <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+                      </div>
+                    </div>
+                    </>
+                  )}
 
                   {/* Owner Phone */}
                   <div className="space-y-1.5">

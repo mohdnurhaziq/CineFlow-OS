@@ -25,6 +25,7 @@ import { teamMemberStatus } from "@/lib/team/status";
 import { inviteTeamMember } from "@/lib/actions/admin-team";
 import { resetPassword } from "@/lib/actions/password-reset";
 import { withSession } from "./mocks/session";
+import { onboardStudio, readGoogleTicket } from "@/lib/actions/onboarding";
 import { TestHarness } from "./test-harness";
 import {
   GoogleError,
@@ -562,5 +563,151 @@ export async function runTier43GoogleSignInTests(harness: TestHarness) {
     harness.assert(/googleInviteHref\(/.test(page) && /googleConfigured\(\)/.test(page) && /googleError=/.test(page), "The page works out the Google link and the reason");
     const form = await readFile("components/auth/reset-password-form.tsx", "utf8");
     harness.assert(/welcome && googleHref/.test(form) && /<GoogleButton\b/.test(form) && /googleErrorMessage\(/.test(form), "The form shows the button only on a team invite, and the reason");
+  });
+
+  // ── Task 4: starting a studio with Google ───────────────────────────────────────────────
+  const ticketOf2 = (redirectTo: string) => new URL(redirectTo, "http://localhost").searchParams.get("google")!;
+  const signupInput = (slug: string, email: string, extra: Record<string, unknown> = {}) => ({
+    name: `T43 ${slug}`, slug, discipline: "HYBRID", currency: "MYR", ownerName: "T43 Owner", ownerEmail: email, ...extra,
+  });
+  const withSignupOpen = async <T,>(fn: (slugs: string[]) => Promise<T>): Promise<T> => {
+    const savedCode = process.env.STUDIO_SIGNUP_CODE;
+    delete process.env.STUDIO_SIGNUP_CODE;
+    const slugs: string[] = [];
+    try {
+      return await fn(slugs);
+    } finally {
+      if (savedCode === undefined) delete process.env.STUDIO_SIGNUP_CODE;
+      else process.env.STUDIO_SIGNUP_CODE = savedCode;
+      for (const slug of slugs) {
+        const t = await db.tenant.findUnique({ where: { slug } });
+        if (!t) continue;
+        (await db.user.findMany({ where: { tenantId: t.id }, select: { email: true } })).forEach((u) => createdEmails.add(u.email.toLowerCase()));
+        await db.tenant.delete({ where: { id: t.id } }).catch(() => undefined);
+      }
+      await cleanUp();
+    }
+  };
+  const newSlug = (slugs: string[], label: string) => {
+    const slug = `t43-${label}-${STAMP}-${++counter}`;
+    slugs.push(slug);
+    return slug;
+  };
+
+  await harness.test("T43-SIGNUP-01: Google starts a studio: a ticket, nothing created yet", async () => {
+    try {
+      const email = emailFor("su1");
+      const c = claims(email, { name: "Maya Lin" });
+      const out = await withRequest(async (jar) => ({ r: await completeGoogleFlow({ kind: "signup" }, c), set: jar.has(COOKIE_NAME) }));
+      harness.assert(out.r.ok === true && out.r.redirectTo.includes("/create-studio?google="), "On to the sign-up wizard with a ticket", JSON.stringify(out.r));
+      harness.assert(!out.set && (await findLogin(email)) === null && (await db.user.count({ where: { email } })) === 0, "Nothing is created yet: no session, no login, no account");
+      const got = await readGoogleTicket(ticketOf2(out.r.redirectTo));
+      harness.assert(got?.email === email && got.name === "Maya Lin", "The ticket gives the email and name", JSON.stringify(got));
+      const ticket = ticketOf2(out.r.redirectTo);
+      harness.assertEqual(await readGoogleTicket(`${ticket.slice(0, -2)}${ticket.endsWith("AA") ? "BB" : "AA"}`), null, "A changed ticket gives nothing");
+      harness.assertEqual(await readGoogleTicket(signBlob({ kind: "signup-ticket", email, name: null, sub: "x" }, -5)), null, "An expired ticket gives nothing");
+      harness.assertEqual(await readGoogleTicket(signBlob({ state: "s", verifier: "v", nonce: "n", intent: { kind: "signup" } }, 60)), null, "Another kind of signed blob (the flow cookie) is not a ticket");
+      harness.assertEqual(await readGoogleTicket("garbage"), null, "Garbage gives nothing");
+      const superRow = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN" } });
+      const sup = await completeGoogleFlow({ kind: "signup" }, { sub: `sub-${STAMP}-su`, email: superRow.email, emailVerified: true, name: "X" });
+      harness.assert(!sup.ok && sup.redirectTo.includes("/create-studio?google=failed"), "A super-admin's email gets no ticket", JSON.stringify(sup));
+    } finally {
+      await cleanUp();
+    }
+  });
+
+  await harness.test("T43-SIGNUP-02: a ticket creates the owner joined to a Google login, with no password", async () => {
+    await withSignupOpen(async (slugs) => {
+      const email = emailFor("su2");
+      const c = claims(email, { name: "Maya Lin" });
+      const ticket = ticketOf2((await completeGoogleFlow({ kind: "signup" }, c) as { redirectTo: string }).redirectTo);
+      const slug = newSlug(slugs, "own");
+      const out = await withRequest(async (jar) => ({
+        res: (await onboardStudio(signupInput(slug, "someone-else@example.test", { googleTicket: ticket }) as never)) as { success?: boolean; error?: string },
+        cookie: jar.get(COOKIE_NAME),
+      }));
+      harness.assert(out.res.success === true, "The studio is created without a password", JSON.stringify(out.res));
+      const owner = await db.user.findFirstOrThrow({ where: { tenant: { slug }, role: "STUDIO_OWNER" } });
+      harness.assertEqual(owner.email, email, "The owner's email is the one Google confirmed, not the one typed");
+      const login = await findLogin(email);
+      harness.assert(login !== null && owner.loginId === login.id && owner.passwordHash === null, "The owner has no password and is joined to the login");
+      harness.assert(login!.googleSub === c.sub && login!.passwordHash === null, "The login holds the Google account");
+      harness.assertEqual((await decodeSessionToken(out.cookie ?? ""))?.user.loginId, login!.id, "Signed in as a login session");
+    });
+  });
+
+  await harness.test("T43-SIGNUP-03: existing logins, stand-alone accounts and a super-admin", async () => {
+    await withSignupOpen(async (slugs) => {
+      const ticketFor = async (c: GoogleClaims) => ticketOf2((await completeGoogleFlow({ kind: "signup" }, c) as { redirectTo: string }).redirectTo);
+      // (a) the email already has a password login: the owner joins it, no password needed
+      const emailA = emailFor("su3a");
+      const hash = await bcrypt.hash("login-pass-1", 4);
+      const loginA = (await createLoginFromProof(emailA, hash)).login;
+      const cA = claims(emailA);
+      const slugA = newSlug(slugs, "a");
+      const a = (await withRequest(async () => onboardStudio(signupInput(slugA, emailA, { googleTicket: await ticketFor(cA) }) as never))) as { success?: boolean };
+      harness.assert(a.success === true, "An existing login: the studio is created", JSON.stringify(a));
+      const afterA = await db.login.findUniqueOrThrow({ where: { id: loginA.id } });
+      harness.assert(afterA.googleSub === cA.sub && afterA.passwordHash === hash, "Google was added and the password kept");
+      harness.assertEqual((await db.user.findFirstOrThrow({ where: { tenant: { slug: slugA }, role: "STUDIO_OWNER" } })).loginId, loginA.id, "The owner joined that login");
+      // (b) a login that already has another Google account
+      const emailB = emailFor("su3b");
+      createdEmails.add(emailB);
+      await db.login.create({ data: { email: emailB, googleSub: "sub-other" } });
+      const slugB = newSlug(slugs, "b");
+      const b = (await withRequest(async () => onboardStudio(signupInput(slugB, emailB, { googleTicket: await ticketFor(claims(emailB, { sub: "sub-new" })) }) as never))) as { success?: boolean; error?: string };
+      harness.assert(b.success !== true && b.error === "This email is already linked to a different Google account.", "Refused with the exact message", JSON.stringify(b));
+      harness.assertEqual(await db.tenant.count({ where: { slug: slugB } }), 0, "…and no studio was created");
+      // (c) stand-alone accounts elsewhere get joined
+      const other = await makeStudio("su3c");
+      const emailC = emailFor("su3c");
+      const alone = await makeUser(other.id, emailC, "CLIENT", { password: "alone-3333" });
+      await withInbox(async (inbox) => {
+        const slugC = newSlug(slugs, "c");
+        const c3 = (await withRequest(async () => onboardStudio(signupInput(slugC, emailC, { googleTicket: await ticketFor(claims(emailC)) }) as never))) as { success?: boolean };
+        harness.assert(c3.success === true, "Created", JSON.stringify(c3));
+        const joined = await db.user.findUniqueOrThrow({ where: { id: alone.id } });
+        harness.assert(joined.loginId !== null && joined.passwordHash === null, "The stand-alone account elsewhere is joined");
+        harness.assertEqual(inbox.filter((m) => m.to === emailC).length, 1, "One joined email");
+      });
+      // (d) a ticket made by hand for a super-admin's email
+      const superRow = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN" } });
+      const slugD = newSlug(slugs, "d");
+      const forged = signBlob({ kind: "signup-ticket", email: superRow.email, name: "X", sub: "sub-forged" }, 60);
+      const d = (await withRequest(() => onboardStudio(signupInput(slugD, superRow.email, { googleTicket: forged }) as never))) as { success?: boolean };
+      harness.assert(d.success !== true && (await db.tenant.count({ where: { slug: slugD } })) === 0, "A super-admin's email can never own a studio");
+      harness.assertEqual(await findLogin(superRow.email), null, "…and no login is made for it");
+    });
+  });
+
+  await harness.test("T43-SIGNUP-04: no ticket and no password, or a bad ticket, creates nothing", async () => {
+    await withSignupOpen(async (slugs) => {
+      const slug = newSlug(slugs, "np");
+      const none = (await withRequest(() => onboardStudio(signupInput(slug, emailFor("su4")) as never))) as { success?: boolean; error?: string };
+      harness.assert(none.success !== true && /password/i.test(none.error ?? ""), "Without a ticket the password is still required", JSON.stringify(none));
+      const bad = (await withRequest(() => onboardStudio(signupInput(slug, emailFor("su4b"), { googleTicket: "garbage" }) as never))) as { success?: boolean; error?: string };
+      harness.assert(bad.success !== true && /Google/.test(bad.error ?? ""), "A bad ticket is refused with a Google message", JSON.stringify(bad));
+      harness.assertEqual(await db.tenant.count({ where: { slug } }), 0, "No studio was created");
+    });
+  });
+
+  await harness.test("T43-SIGNUP-05: the start link for sign-up", async () => {
+    try {
+      configure();
+      const res = await GET_START(new NextRequest("https://cineflow-os.my/auth/google/start?intent=signup"));
+      harness.assert((res.headers.get("location") ?? "").startsWith("https://accounts.google.com/"), "To Google");
+      harness.assertEqual(openBlob<{ intent: { kind: string } }>(res.cookies.get(FLOW_COOKIE)!.value)?.intent.kind, "signup", "The flow cookie says sign-up");
+    } finally {
+      restoreEnv();
+    }
+  });
+
+  await harness.test("T43-UI-03: the wizard", async () => {
+    const page = await readFile("app/(saas)/create-studio/page.tsx", "utf8");
+    harness.assert(/sessionStorage\.setItem/.test(page) && /sessionStorage\.getItem/.test(page), "The wizard's answers are saved before Google opens and restored after");
+    harness.assert(/<GoogleButton\b/.test(page) && /intent=signup/.test(page), "Step 3 has the Google button");
+    harness.assert(/readGoogleTicket\(/.test(page) && /readOnly/.test(page) && /Signed in with Google/.test(page), "The ticket fills and locks the owner's email, and the password field gives way");
+    harness.assert(/googleTicket/.test(page) && /googleErrorMessage\(/.test(page), "The ticket is sent with the sign-up, and Google's reasons are shown");
+    harness.assert(/googleAvailable\(\)/.test(page), "The button shows only when Google is set up");
   });
 }

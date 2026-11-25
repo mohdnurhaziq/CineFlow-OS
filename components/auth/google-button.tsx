@@ -16,10 +16,11 @@ function GoogleMark() {
  * "Continue with Google": a plain link (a full page navigation to the platform's Google start), so it
  * works without JavaScript. At least 44px tall for phones.
  */
-export function GoogleButton({ href, label = "Continue with Google", className }: { href: string; label?: string; className?: string }) {
+export function GoogleButton({ href, label = "Continue with Google", className, onClick }: { href: string; label?: string; className?: string; onClick?: () => void }) {
   return (
     <a
       href={href}
+      onClick={onClick}
       className={cn(
         "inline-flex min-h-11 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400",
         className

@@ -2,7 +2,11 @@
 
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import type { Login } from "@prisma/client";
 import { verifyLoginPassword } from "@/lib/auth/login";
+import { googleConfigured } from "@/lib/auth/google";
+import { SIGNUP_TICKET, isSuperAdminEmail, loginForGoogle, type SignupTicket } from "@/lib/auth/google-flow";
+import { openBlob } from "@/lib/auth/signed-blob";
 import { setLoginSessionCookie, setSessionCookie } from "@/lib/auth/token";
 import {
   OnboardStudioSchema,
@@ -103,16 +107,41 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     };
   }
 
-  // An email that already has a CineFlow sign-in starts a studio with that sign-in: its password is the
-  // proof, so the new owner account joins it. Otherwise it is a stand-alone account, as ever.
-  const check = await verifyLoginPassword(data.ownerEmail, data.password);
-  if (!check.ok && check.reason === "RATE_LIMITED") {
-    return { success: false, error: "Too many attempts. Please wait a few minutes and try again." };
+  // Signed in with Google: the ticket proves the email, and it is the ticket's, whatever was typed.
+  let ticket: SignupTicket | null = null;
+  if (data.googleTicket) {
+    ticket = openBlob<SignupTicket>(data.googleTicket);
+    if (!ticket || ticket.kind !== SIGNUP_TICKET) {
+      return { success: false, error: "Your Google sign-in expired. Please continue with Google again." };
+    }
+  } else if (!data.password) {
+    return { success: false, error: "Password must be at least 8 characters" };
   }
-  if (!check.ok && check.reason === "WRONG") {
-    return { success: false, error: "This email already has a CineFlow sign-in. Use its password." };
+  const ownerEmail = ticket ? ticket.email : data.ownerEmail;
+
+  let login: Login | null = null;
+  if (ticket) {
+    if (await isSuperAdminEmail(ticket.email)) return { success: false, error: "An account with this email already exists." };
+    const found = await loginForGoogle({ sub: ticket.sub, email: ticket.email, emailVerified: true, name: ticket.name });
+    if ("error" in found) {
+      return {
+        success: false,
+        error: found.error === "linked_other" ? "This email is already linked to a different Google account." : "Google sign-in didn't work. Please try again.",
+      };
+    }
+    login = found.login;
+  } else {
+    // An email that already has a CineFlow sign-in starts a studio with that sign-in: its password is the
+    // proof, so the new owner account joins it. Otherwise it is a stand-alone account, as ever.
+    const check = await verifyLoginPassword(data.ownerEmail, data.password ?? "");
+    if (!check.ok && check.reason === "RATE_LIMITED") {
+      return { success: false, error: "Too many attempts. Please wait a few minutes and try again." };
+    }
+    if (!check.ok && check.reason === "WRONG") {
+      return { success: false, error: "This email already has a CineFlow sign-in. Use its password." };
+    }
+    login = check.ok ? check.login : null;
   }
-  const login = check.ok ? check.login : null;
 
   try {
     const result = await db.$transaction(async (tx) => {
@@ -130,14 +159,14 @@ export async function onboardStudio(formData: OnboardStudioInput) {
       // The same person may own a studio and work elsewhere (one login), but a platform super-admin's
       // email is never a studio owner's.
       const existingUser = await tx.user.findFirst({
-        where: { role: "SUPER_ADMIN", email: { in: Array.from(new Set([data.ownerEmail, data.ownerEmail.toLowerCase()])) } },
+        where: { role: "SUPER_ADMIN", email: { in: Array.from(new Set([ownerEmail, ownerEmail.toLowerCase()])) } },
       });
       if (existingUser) {
         throw new Error("EMAIL_ALREADY_TAKEN");
       }
 
       // 2. Hash Password
-      const passwordHash = await bcrypt.hash(data.password, 10);
+      const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : null;
 
       // 3. Create Tenant Record
       const tenant = await tx.tenant.create({
@@ -163,7 +192,7 @@ export async function onboardStudio(formData: OnboardStudioInput) {
         data: {
           tenantId: tenant.id,
           name: data.ownerName,
-          email: data.ownerEmail,
+          email: ownerEmail,
           phone: data.ownerPhone || null,
           role: "STUDIO_OWNER",
           // Joined to the person's login: it holds the password, the account keeps none of its own.
@@ -378,3 +407,18 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     return { success: false, error: "Failed to create studio workspace. Please try again." };
   }
 }
+
+/** Whether "Continue with Google" is set up, for the sign-up wizard (a client page) to show the button. */
+export async function googleAvailable(): Promise<boolean> {
+  return googleConfigured();
+}
+
+/**
+ * What the sign-up wizard is handed after Google: the email Google confirmed and the person's name, from
+ * the signed ticket in the address. Null for anything that isn't a good, current ticket.
+ */
+export async function readGoogleTicket(ticket: string): Promise<{ email: string; name: string | null } | null> {
+  const t = openBlob<SignupTicket>(ticket);
+  return t && t.kind === SIGNUP_TICKET ? { email: t.email, name: t.name } : null;
+}
+

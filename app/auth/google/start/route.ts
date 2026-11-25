@@ -30,6 +30,8 @@ export async function GET(request: NextRequest) {
       if (!studio || studio.subscriptionStatus === "CANCELLED") return go(signInPageFor(null, "closed"));
     }
     intent = { kind: "signin", studio: slug || null };
+  } else if (kind === "signup") {
+    intent = { kind: "signup" };
   } else if (kind === "invite") {
     const slug = params.get("studio") ?? "";
     const email = (params.get("email") ?? "").trim().toLowerCase();

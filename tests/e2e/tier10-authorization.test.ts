@@ -44,6 +44,8 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "onboarding.studioSignupStatus": "public studio sign-up: only says whether it's open and needs a code",
   "onboarding.checkSignupCode": "public studio sign-up: checks the invite code early (limited per visitor; onboardStudio checks it again)",
   "onboarding.onboardStudio": "public studio sign-up",
+  "onboarding.googleAvailable": "public studio sign-up: only says whether Google sign-in is set up",
+  "onboarding.readGoogleTicket": "public studio sign-up: reads the signed ticket Google sign-in handed back (nothing without a good ticket)",
   "my-booking.lookupMyBooking": "tracking-code lookup",
   "checkout.processBookingCheckout": "client checkout",
   "password-reset.requestPasswordReset": "forgot password (signed out; rate-limited, same reply for any email)",

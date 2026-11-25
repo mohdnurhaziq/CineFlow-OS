@@ -71,7 +71,9 @@ export const OnboardStudioSchema = z.object({
   // Step 3: Studio Owner Credentials
   ownerName: z.string().min(2, "Owner name must be at least 2 characters"),
   ownerEmail: z.string().email("Please provide a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  // Required unless the owner signed in with Google (googleTicket); checked in onboardStudio.
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  googleTicket: z.string().max(2000).optional(),
   ownerPhone: z.string().optional(),
 
   // Step 4: Plan Selection
