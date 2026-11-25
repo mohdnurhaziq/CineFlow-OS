@@ -318,9 +318,9 @@
     "semantic_hash": ""
   },
   "app/[tenantSlug]/page.tsx": {
-    "mtime": 1795510886.100117,
-    "seen": 1795544287.5205202,
-    "ast_hash": "49f486a6053086f4d19588153ca022f1",
+    "mtime": 1795585120.7399254,
+    "seen": 1795586556.7731752,
+    "ast_hash": "d118d12aa7edd79313d1e103fcba0a17",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/proposals/[proposalId]/loading.tsx": {
@@ -774,21 +774,15 @@
     "semantic_hash": ""
   },
   "components/showcase/portfolio-grid.tsx": {
-    "mtime": 1795167005.281772,
-    "seen": 1795233149.177268,
-    "ast_hash": "abdd6cf321c661691d35b56738848712",
+    "mtime": 1795585771.306807,
+    "seen": 1795586556.8160443,
+    "ast_hash": "1902ccf6a813d338d6370e684bf42ecf",
     "semantic_hash": ""
   },
   "components/showcase/showcase-footer.tsx": {
     "mtime": 1795096192.2530935,
     "seen": 1795110863.0092936,
     "ast_hash": "4668d1fa61d601af57495b1df3592b5b",
-    "semantic_hash": ""
-  },
-  "components/showcase/showcase-hero.tsx": {
-    "mtime": 1794752024.2574868,
-    "seen": 1794752616.205906,
-    "ast_hash": "a1ca5fee9c011d68f2d8e4bb5cc0dae3",
     "semantic_hash": ""
   },
   "components/showcase/showcase-nav.tsx": {
@@ -798,9 +792,9 @@
     "semantic_hash": ""
   },
   "components/showcase/showcase-shell.tsx": {
-    "mtime": 1795120186.3855104,
-    "seen": 1795148239.2101154,
-    "ast_hash": "95284ebb996d0dcdbe7488634893e6b3",
+    "mtime": 1795585771.306807,
+    "seen": 1795586556.8164763,
+    "ast_hash": "e1fb91bc8b1fbcd6317bd1369518d5d2",
     "semantic_hash": ""
   },
   "components/showcase/studio-pedigree.tsx": {
@@ -3918,9 +3912,9 @@
     "semantic_hash": ""
   },
   "components/showcase/showcase-big-slider.tsx": {
-    "mtime": 1795167005.2851787,
-    "seen": 1795233149.1772716,
-    "ast_hash": "32a99a602db5ebdd9540978b3d64d06f",
+    "mtime": 1795585766.761623,
+    "seen": 1795586556.8160477,
+    "ast_hash": "b35fefae01ce72e2e8e23a0feab0d328",
     "semantic_hash": ""
   },
   "lib/bookings/calendar-invites.ts": {
@@ -4224,9 +4218,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier39-landing-page.test.ts": {
-    "mtime": 1795580565.1082673,
-    "seen": 1795581067.3773224,
-    "ast_hash": "51d17a61aebb198383ed7758b72425d8",
+    "mtime": 1795586156.0267043,
+    "seen": 1795586556.8797045,
+    "ast_hash": "82f36db8c98ebb0cf4c5603145de3a7d",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-24-landing-page-redesign.md": {
@@ -4350,15 +4344,15 @@
     "semantic_hash": ""
   },
   "public/landing/shots/website-desktop.webp": {
-    "mtime": 1795555514.004,
-    "seen": 1795558349.029907,
-    "ast_hash": "1cd77bcbe92322ee2a76cce55ac92c55",
+    "mtime": 1795586148.496,
+    "seen": 1795586556.919963,
+    "ast_hash": "d8927168edcc897c6b4c6c7dee9ef438",
     "semantic_hash": ""
   },
   "public/landing/shots/website-phone.webp": {
-    "mtime": 1795555514.287,
-    "seen": 1795558349.0299096,
-    "ast_hash": "4a842d9d8e17e1760aece842359ba31a",
+    "mtime": 1795586148.583,
+    "seen": 1795586556.9199662,
+    "ast_hash": "353660eb2b7d8c6cac7b22d014988bf3",
     "semantic_hash": ""
   },
   "public/landing/video/deliver-16x9.mp4": {
@@ -4545,6 +4539,12 @@
     "mtime": 1795580546.235174,
     "seen": 1795581067.357208,
     "ast_hash": "82ebd452c7e094e89610c9e4bba5a9ed",
+    "semantic_hash": ""
+  },
+  "components/showcase/showcase-intro.tsx": {
+    "mtime": 1795583921.073801,
+    "seen": 1795586556.8162637,
+    "ast_hash": "9f8e97eced978dde3464b7b7ba92d21e",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {
