@@ -180,9 +180,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/create-studio/page.tsx": {
-    "mtime": 1795625723.3780127,
-    "seen": 1795627104.8692431,
-    "ast_hash": "426d60eb5c442d9fe60afa18269076a5",
+    "mtime": 1795627293.5599308,
+    "seen": 1795627807.3703277,
+    "ast_hash": "ab4295aad4b9fdd367f2b06770c585e6",
     "semantic_hash": ""
   },
   "app/(saas)/error.tsx": {
@@ -984,9 +984,9 @@
     "semantic_hash": ""
   },
   "lib/actions/onboarding.ts": {
-    "mtime": 1795625667.618847,
-    "seen": 1795627105.01423,
-    "ast_hash": "481fa9ecbb6de73afea329c4a4ccfc55",
+    "mtime": 1795627293.5569127,
+    "seen": 1795627807.4368253,
+    "ast_hash": "2450af37c85cea15279d9a3291cf219c",
     "semantic_hash": ""
   },
   "lib/actions/proposals.ts": {
@@ -1104,9 +1104,9 @@
     "semantic_hash": ""
   },
   "lib/validations/onboarding.ts": {
-    "mtime": 1795625667.618847,
-    "seen": 1795627105.0593026,
-    "ast_hash": "46c8897f9ca941cc2e18eeef5fcac805",
+    "mtime": 1795627293.4866917,
+    "seen": 1795627807.4685724,
+    "ast_hash": "9309017e207b4ebcec6a4b4ff606e5c7",
     "semantic_hash": ""
   },
   "lib/validations/proposal-templates.ts": {
@@ -4728,9 +4728,9 @@
     "semantic_hash": ""
   },
   "lib/auth/google-flow.ts": {
-    "mtime": 1795626484.0694997,
-    "seen": 1795627105.0183418,
-    "ast_hash": "2528d5d46d756fdaffc89c235d934615",
+    "mtime": 1795627293.4839363,
+    "seen": 1795627807.4392483,
+    "ast_hash": "b3669739a3547838043dc5530311a0b2",
     "semantic_hash": ""
   },
   "lib/auth/google-links.ts": {
@@ -4764,9 +4764,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier43-google-sign-in.test.ts": {
-    "mtime": 1795626525.2584574,
-    "seen": 1795627105.0878258,
-    "ast_hash": "dc9ae5b89042421e59798b919dfd2854",
+    "mtime": 1795627270.2780266,
+    "seen": 1795627807.4967065,
+    "ast_hash": "4e8edf6362aa734b8b39edfb966ab2f4",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-26-one-login-part-3.md": {
