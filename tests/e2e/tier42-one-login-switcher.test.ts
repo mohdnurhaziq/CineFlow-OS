@@ -242,7 +242,7 @@ export async function runTier42OneLoginSwitcherTests(harness: TestHarness) {
       const tries: Array<[string, string, string]> = [
         ["an unknown email", emailFor("pl2-nobody"), "whatever-123"],
         ["a wrong password", p.email, "not-the-password"],
-        ["a stand-alone account's own password", alone, "alone-pass-1"],
+        ["a stand-alone account's wrong password", alone, "alone-pass-2"],
         ["a super-admin's email", superRow.email, "password123"],
       ];
       for (const [what, email, password] of tries) {

@@ -28,6 +28,9 @@ import { platformUrl } from "@/lib/domain-name";
 import type { OnboardStudioInput } from "@/lib/validations/onboarding";
 import { disciplineLabel } from "@/lib/labels";
 import { PLANS } from "@/lib/billing/plans";
+import { slugFromName } from "@/lib/studio-slug";
+import { draftToStore, isFullEmail, parseDraft, reachableStep, stepForField } from "@/lib/onboarding/wizard-draft";
+import { ReviewSummary } from "@/components/onboarding/review-summary";
 
 /** "Continue with Google" for the owner step: to the platform's Google start, then back here with a ticket. */
 const GOOGLE_SIGNUP_HREF = `${platformUrl("/auth/google/start")}?intent=signup`;
@@ -85,23 +88,52 @@ export default function CreateStudioPage() {
   }, []);
 
   const [slugChecking, setSlugChecking] = useState<boolean>(false);
-  const [slugStatus, setSlugStatus] = useState<{ available?: boolean; error?: string }>({});
+  /** The answer for one address: `slug` says which, so an old answer is never shown for a new one. */
+  const [slugStatus, setSlugStatus] = useState<{ slug?: string; available?: boolean; error?: string }>({});
+  // Once the owner types an address of their own, it stops following the name.
+  const [addressEdited, setAddressEdited] = useState(false);
 
-  // Auto-slugify name
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    const autoSlug = val
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-
-    setFormData((prev) => ({
-      ...prev,
-      name: val,
-      slug: prev.slug === "" || prev.slug === autoSlug.slice(0, -1) ? autoSlug : prev.slug,
-    }));
+    setFormData((prev) => ({ ...prev, name: val, slug: addressEdited ? prev.slug : slugFromName(val) }));
   };
+
+  // The address is checked whenever it changes, however it was filled in.
+  useEffect(() => {
+    const slug = formData.slug;
+    if (slug.length < 3) {
+      setSlugStatus(slug ? { slug, available: false, error: "At least 3 characters" } : {});
+      setSlugChecking(false);
+      return;
+    }
+    let stale = false;
+    setSlugChecking(true);
+    const timer = window.setTimeout(() => {
+      checkSlugAvailability(slug)
+        .then((result) => {
+          if (!stale) setSlugStatus({ slug, ...result });
+        })
+        // Can't ask right now: the server checks again when the studio is made.
+        .catch(() => {
+          if (!stale) setSlugStatus({ slug });
+        })
+        .finally(() => {
+          if (!stale) setSlugChecking(false);
+        });
+    }, 350);
+    return () => {
+      stale = true;
+      window.clearTimeout(timer);
+    };
+  }, [formData.slug]);
+
+  /** Why the server last refused, kept on screen until the answer it was about changes. */
+  const [submitError, setSubmitError] = useState<{ message: string; field?: string } | null>(null);
+  useEffect(() => {
+    setSubmitError(null);
+  }, [formData.slug, formData.ownerEmail, formData.password, formData.signupCode, formData.ownerName]);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
 
   const [logoUploading, setLogoUploading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -141,23 +173,13 @@ export default function CreateStudioPage() {
     }
   };
 
-  const handleSlugBlur = async () => {
-    if (!formData.slug || formData.slug.length < 3) {
-      setSlugStatus({ available: false, error: "Slug must be at least 3 characters" });
-      return;
-    }
-
-    setSlugChecking(true);
-    const result = await checkSlugAvailability(formData.slug);
-    setSlugChecking(false);
-    setSlugStatus(result);
-  };
-
-  // Step 1 Validation
+  // Step 1 Validation: Continue waits for the answer about this very address.
+  const addressChecked = slugStatus.slug === formData.slug && !slugChecking;
   const isStep1Valid =
+    addressChecked &&
+    slugStatus.available !== false &&
     formData.name.trim().length >= 2 &&
     formData.slug.trim().length >= 3 &&
-    slugStatus.available !== false &&
     (!signup?.needsCode || (formData.signupCode ?? "").trim().length > 0);
 
   // A wrong invite code is caught here, not after the whole form is filled in.
@@ -180,64 +202,124 @@ export default function CreateStudioPage() {
       }
     }
     setCodeError(null);
-    setCurrentStep(2);
+    goToStep(2);
   };
 
   // Step 3 Validation: a password, unless Google confirmed the owner's email.
   const isStep3Valid =
     formData.ownerName.trim().length >= 2 &&
-    formData.ownerEmail.includes("@") &&
+    isFullEmail(formData.ownerEmail) &&
     (googleSignedIn || (formData.password ?? "").length >= 8);
 
-  const saveWizardForGoogle = () => {
-    try {
-      window.sessionStorage.setItem(SAVE_KEY, JSON.stringify({ step: currentStep, form: { ...formData, password: undefined } }));
-    } catch {
-      // Without storage the answers have to be entered again after Google.
-    }
+  // The steps are in the browser's history, so Back and Forward move between them.
+  const goToStep = (step: number) => {
+    if (step === currentStep) return;
+    window.history.pushState({ wizardStep: step, wizardFrom: currentStep }, "", `?step=${step}`);
+    setCurrentStep(step);
+    window.scrollTo({ top: 0 });
+  };
+  /** The wizard's own Back: the browser's, when that leads to the same step, so history doesn't pile up. */
+  const goBack = (step: number) => {
+    if (window.history.state?.wizardFrom === step) window.history.back();
+    else goToStep(step);
   };
 
-  // Coming back from Google: the saved answers return, and the ticket says who the owner is.
+  // What the history listener needs to know, as it is right now.
+  const ready = useRef({ hasStudio: false, owner: false });
+  ready.current = { hasStudio: formData.name.trim().length >= 2 && formData.slug.length >= 3, owner: isStep3Valid };
+  useEffect(() => {
+    const onPop = () => {
+      const wanted = Number(new URLSearchParams(window.location.search).get("step") ?? 1);
+      setCurrentStep(ready.current.hasStudio ? reachableStep(wanted, ready.current.owner) : 1);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // The answers are kept in this tab (never the password), through refresh, Back and a trip to Google.
+  const [draftReady, setDraftReady] = useState(false);
+  const finished = useRef(false);
+  useEffect(() => {
+    if (!draftReady || finished.current) return;
+    try {
+      if (!formData.name && !formData.ownerEmail) return;
+      window.sessionStorage.setItem(SAVE_KEY, draftToStore({ step: currentStep, form: formData, addressEdited, google: googleSignedIn }));
+    } catch {
+      // Without storage the answers just aren't remembered.
+    }
+  }, [draftReady, currentStep, formData, addressEdited, googleSignedIn]);
+
+  // On arrival: bring back what was typed. Coming back from Google, the ticket says who the owner is.
   useEffect(() => {
     const returned = new URLSearchParams(window.location.search).get("google");
-    if (!returned) return;
-    let saved: { step?: number; form?: Partial<OnboardStudioInput> } | null = null;
+    let draft: ReturnType<typeof parseDraft> = null;
     try {
-      saved = JSON.parse(window.sessionStorage.getItem(SAVE_KEY) ?? "null");
+      draft = parseDraft(window.sessionStorage.getItem(SAVE_KEY));
     } catch {
-      saved = null;
+      draft = null;
     }
-    if (saved?.form) setFormData((prev) => ({ ...prev, ...saved!.form, password: "" }));
-    window.history.replaceState(null, "", window.location.pathname);
-    const reason = googleErrorMessage(returned);
+    if (draft) {
+      const saved = draft.form;
+      setFormData((prev) => ({ ...prev, ...saved, password: "" }));
+      setAddressEdited(draft.addressEdited);
+    }
+    const hasStudio = (draft?.form.name?.trim().length ?? 0) >= 2 && (draft?.form.slug?.length ?? 0) >= 3;
+    const show = (step: number) => {
+      window.history.replaceState(window.history.state, "", step > 1 ? `?step=${step}` : window.location.pathname);
+      setCurrentStep(step);
+    };
+
+    const reason = returned ? googleErrorMessage(returned) : null;
     if (reason) {
       setGoogleMessage(reason);
-      setCurrentStep(Math.min(Math.max(saved?.step ?? 1, 1), 3));
+      show(Math.min(reachableStep(draft?.step ?? 1, false), 3));
+      setDraftReady(true);
+      return;
+    }
+    if (!returned && !draft?.google) {
+      // The password isn't kept, so the review waits until it is typed again.
+      show(draft && hasStudio ? reachableStep(draft.step, false) : 1);
+      setDraftReady(true);
       return;
     }
     readGoogleTicket()
       .then((who) => {
         if (!who) {
-          setGoogleMessage(googleErrorMessage("failed"));
+          if (returned) setGoogleMessage(googleErrorMessage("failed"));
+          show(draft && hasStudio ? reachableStep(draft.step, false) : 1);
           return;
         }
         setGoogleSignedIn(true);
         setFormData((prev) => ({ ...prev, ownerEmail: who.email, ownerName: prev.ownerName || who.name || "" }));
-        setCurrentStep(3);
+        // Straight back from Google: the owner step. After a refresh: where they were.
+        show(returned ? 3 : reachableStep(draft?.step ?? 3, true));
       })
-      .catch(() => setGoogleMessage(googleErrorMessage("failed")));
+      .catch(() => setGoogleMessage(googleErrorMessage("failed")))
+      .finally(() => setDraftReady(true));
   }, []);
 
   const handleSubmit = () => {
     startTransition(async () => {
+      setSubmitError(null);
       const res = await onboardStudio(googleSignedIn ? { ...formData, password: undefined, googleSignup: true } : formData);
       if (res.success && res.slug) {
         toast.success("Studio workspace launched successfully!");
+        finished.current = true;
+        try {
+          window.sessionStorage.removeItem(SAVE_KEY);
+        } catch {
+          // Nothing was kept.
+        }
         // A full page load: with studio subdomains on, the new studio's admin is on another host.
         window.location.href = res.redirectUrl || studioUrl(res.slug, "/admin");
-      } else {
-        toast.error(res.error || "Failed to create studio workspace");
+        return;
       }
+      const message = res.error || "Failed to create studio workspace";
+      // Go to the answer that needs fixing, and keep the reason on screen there.
+      goToStep(stepForField(res.field));
+      if (res.field === "slug") setSlugStatus({ slug: formData.slug, available: false, error: "Not available" });
+      if (/Google sign-in expired/.test(message)) setGoogleSignedIn(false);
+      setSubmitError({ message, field: res.field });
     });
   };
 
@@ -291,7 +373,7 @@ export default function CreateStudioPage() {
             { num: 1, title: "Studio Identity" },
             { num: 2, title: "Brand Styling" },
             { num: 3, title: "Owner Access" },
-            { num: 4, title: "Launch Plan" },
+            { num: 4, title: "Review & Plan" },
           ].map((s) => (
             <div
               key={s.num}
@@ -327,6 +409,11 @@ export default function CreateStudioPage() {
             {googleMessage && (
               <div role="alert" className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3.5 text-xs text-rose-300">
                 {googleMessage}
+              </div>
+            )}
+            {submitError && (
+              <div role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3.5 text-sm text-rose-200">
+                {submitError.message}
               </div>
             )}
             {/* STEP 1: IDENTITY & DISCIPLINE */}
@@ -393,10 +480,10 @@ export default function CreateStudioPage() {
                           <Loader2 className="size-3 animate-spin" /> checking...
                         </span>
                       )}
-                      {!slugChecking && slugStatus.available === true && (
+                      {addressChecked && slugStatus.available === true && (
                         <span className="text-[11px] text-emerald-400 font-mono">✓ Available</span>
                       )}
-                      {!slugChecking && slugStatus.available === false && (
+                      {addressChecked && slugStatus.available === false && (
                         <span className="text-[11px] text-red-400 font-mono">
                           ✕ {slugStatus.error || "Slug taken"}
                         </span>
@@ -412,10 +499,14 @@ export default function CreateStudioPage() {
                         type="text"
                         placeholder="velox-cinema"
                         value={formData.slug}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, slug: e.target.value.toLowerCase().trim() }))
-                        }
-                        onBlur={handleSlugBlur}
+                        onChange={(e) => {
+                          const typed = e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+                          // Emptied, it follows the name again.
+                          setAddressEdited(typed !== "");
+                          setFormData((prev) => ({ ...prev, slug: typed }));
+                        }}
+                        aria-label="Studio web address"
+                        aria-invalid={addressChecked && slugStatus.available === false ? true : undefined}
                         className="w-full min-w-0 px-3 py-2 bg-transparent text-white text-sm font-mono focus:outline-none"
                         required
                       />
@@ -600,14 +691,14 @@ export default function CreateStudioPage() {
                 <div className="pt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(1)}
+                    onClick={() => goBack(1)}
                     className="inline-flex min-h-11 items-center justify-center whitespace-nowrap px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
                   >
                     ← Back to Step 1
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => goToStep(3)}
                     className={buttonVariants({ size: "lg" })}
                   >
                     Continue to Owner Credentials
@@ -628,7 +719,7 @@ export default function CreateStudioPage() {
                 <div className="space-y-4">
                   {googleOn && !googleSignedIn && (
                     <div className="space-y-4">
-                      <GoogleButton href={GOOGLE_SIGNUP_HREF} onClick={saveWizardForGoogle} />
+                      <GoogleButton href={GOOGLE_SIGNUP_HREF} />
                       <OrDivider />
                     </div>
                   )}
@@ -644,6 +735,8 @@ export default function CreateStudioPage() {
                         placeholder="e.g. Maya Lin"
                         value={formData.ownerName}
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerName: e.target.value }))}
+                        onBlur={() => setNameTouched(true)}
+                        aria-invalid={nameTouched && formData.ownerName.trim().length < 2 ? true : undefined}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
                         required
                       />
@@ -662,6 +755,8 @@ export default function CreateStudioPage() {
                         placeholder="e.g. maya@veloxcinema.com"
                         value={formData.ownerEmail}
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerEmail: e.target.value }))}
+                        onBlur={() => setEmailTouched(true)}
+                        aria-invalid={(emailTouched && formData.ownerEmail !== "" && !isFullEmail(formData.ownerEmail)) || submitError?.field === "ownerEmail" ? true : undefined}
                         // Google confirmed this address: it is the owner's, and can't be changed here.
                         readOnly={googleSignedIn}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500 read-only:text-zinc-400"
@@ -694,6 +789,13 @@ export default function CreateStudioPage() {
                         />
                         <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
                       </div>
+                      {(formData.password ?? "").length > 0 && (formData.password ?? "").length < 8 && (
+                        <p className="text-xs text-rose-300">{8 - (formData.password ?? "").length} more characters needed</p>
+                      )}
+                      {emailTouched && formData.ownerEmail !== "" && !isFullEmail(formData.ownerEmail) && (
+                        <p className="text-xs text-rose-300">Enter a full email address, like name@example.com</p>
+                      )}
+                      {nameTouched && formData.ownerName.trim().length < 2 && <p className="text-xs text-rose-300">Enter your full name</p>}
                     </div>
                     </>
                   )}
@@ -719,7 +821,7 @@ export default function CreateStudioPage() {
                 <div className="pt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => goBack(2)}
                     className="inline-flex min-h-11 items-center justify-center whitespace-nowrap px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
                   >
                     ← Back to Step 2
@@ -727,7 +829,7 @@ export default function CreateStudioPage() {
                   <button
                     type="button"
                     disabled={!isStep3Valid}
-                    onClick={() => setCurrentStep(4)}
+                    onClick={() => goToStep(4)}
                     className={buttonVariants({ size: "lg" })}
                   >
                     Continue to Plan
@@ -741,9 +843,23 @@ export default function CreateStudioPage() {
             {currentStep === 4 && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-bold text-white tracking-tight">Select Launch Plan &amp; Review</h2>
-                  <p className="text-xs text-zinc-400">Every studio starts with a free 14-day trial with everything included. Pick the plan you want after it.</p>
+                  <h2 className="text-xl font-bold text-white tracking-tight">Review and choose your plan</h2>
+                  <p className="text-xs text-zinc-400">Check your answers, then pick the plan you want after your free 14-day trial. The trial has everything included.</p>
                 </div>
+
+                <ReviewSummary
+                  details={{
+                    name: formData.name,
+                    address: subdomains ? `${formData.slug}.${APP_DOMAIN}` : `${APP_DOMAIN}/${formData.slug}`,
+                    discipline: disciplineLabel(formData.discipline),
+                    tagline: formData.tagline ?? "",
+                    ownerName: formData.ownerName,
+                    ownerEmail: formData.ownerEmail,
+                    ownerPhone: formData.ownerPhone ?? "",
+                    google: googleSignedIn,
+                  }}
+                  onChange={goBack}
+                />
 
                 <div className="space-y-3">
                   {[
@@ -834,7 +950,7 @@ export default function CreateStudioPage() {
                 <div className="pt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => goBack(3)}
                     className="inline-flex min-h-11 items-center justify-center whitespace-nowrap px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
                   >
                     ← Back to Step 3

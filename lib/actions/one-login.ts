@@ -9,7 +9,8 @@ import { requestIp } from "@/lib/client-ip";
 import { isRateLimited } from "@/lib/rate-limit";
 import { hasSetUp } from "@/lib/auth/set-up";
 import { signInTarget } from "@/lib/auth/sign-in-target";
-import { liveAccounts, requestHost, setLoginSessionCookie } from "@/lib/auth/token";
+import { liveAccounts, requestHost, setLoginSessionCookie, setSessionCookie } from "@/lib/auth/token";
+import { accountHref } from "@/lib/auth/switcher";
 import { GOOGLE_NONCE_COOKIE, bareHost, handoffForRequest, isCustomDomainHost } from "@/lib/auth/handoff";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
@@ -64,15 +65,62 @@ export async function signOutEverywhere(): Promise<{ success: true } | { success
 const NO_LOGIN_HASH = "$2a$10$2zea66jS4W4aKqs7HzuES.cJiwy9TE21nNag2WO9T4cKeQU9rUuCW";
 
 /**
- * Sign-in on the platform's own page (/login): the person's one login, then "Your studios". Every
- * failure is the same answer (an unknown email, a wrong password, an email with only a stand-alone
- * account, a super-admin's email), and every email is rate-limited alike, with the same limit as a
- * studio's sign-in, so nothing here tells anyone whether an email has a login.
+ * How many stand-alone accounts a password is tried against. A refusal always does exactly this many
+ * checks, padded with a dummy, so how long it takes says nothing about the email.
  */
-export async function loginToPlatform(
-  email: string,
-  password: string
-): Promise<{ success: true; redirectTo: "/studios" } | { success: false; error: "INVALID_CREDENTIALS" | "RATE_LIMITED" }> {
+const STAND_ALONE_CHECKS = 4;
+
+/**
+ * The email's stand-alone accounts that this password opens: exactly those it would open on their
+ * studio's own sign-in page, and never a removed one, one in a closed studio, or the super-admin.
+ * Owners come first, then team, then client accounts, newest first (a person with more than
+ * STAND_ALONE_CHECKS of them signs in to the rest on the studio's own page).
+ */
+async function standAloneAccountsFor(email: string, password: string) {
+  const rows = await db.user.findMany({
+    where: {
+      email,
+      loginId: null,
+      passwordHash: { not: null },
+      deactivatedAt: null,
+      tenantId: { not: null },
+      role: { not: "SUPER_ADMIN" },
+      tenant: { subscriptionStatus: { not: "CANCELLED" } },
+    },
+    include: { tenant: { select: { slug: true, name: true } }, teamRole: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  const rank = (role: string) => (role === "STUDIO_OWNER" ? 0 : role === "CLIENT" ? 2 : 1);
+  rows.sort((a, b) => rank(a.role) - rank(b.role));
+  const opened: typeof rows = [];
+  for (let i = 0; i < STAND_ALONE_CHECKS; i++) {
+    const row = rows[i];
+    if (bcrypt.compareSync(password, row?.passwordHash ?? NO_LOGIN_HASH) && row) opened.push(row);
+  }
+  return opened;
+}
+
+export interface StudioChoice {
+  slug: string;
+  name: string;
+  role: string;
+}
+
+export type PlatformSignInResult =
+  | { success: true; redirectTo: string }
+  | { success: false; error: "INVALID_CREDENTIALS" | "RATE_LIMITED" }
+  | { success: false; error: "CHOOSE_STUDIO"; studios: StudioChoice[] };
+
+/**
+ * Sign-in on the platform's own page (/login). The person's one login goes to "Your studios". An
+ * account that has no one login yet (a new studio owner, say) signs in with its own password and goes
+ * straight to its studio, as if signed in on that studio's page: a stand-alone session, with no login
+ * made, because nothing here proves the email. If the password opens several, the person chooses
+ * (`studioSlug`). Every failure is the same answer (an unknown email, a wrong password, a
+ * super-admin's email), and every email is rate-limited alike, with the same limit as a studio's
+ * sign-in, so nothing here tells anyone whether an email has an account.
+ */
+export async function loginToPlatform(email: string, password: string, studioSlug?: string): Promise<PlatformSignInResult> {
   const normalized = normalizeEmail(email);
   const ip = await requestIp();
   if (signInBlocked("login", normalized, ip) || (ip && isRateLimited(`login-ip:${ip}`, 30))) return { success: false, error: "RATE_LIMITED" };
@@ -80,12 +128,38 @@ export async function loginToPlatform(
   const login = await findLogin(normalized);
   const matches = bcrypt.compareSync(password, login?.passwordHash ?? NO_LOGIN_HASH) && !!login?.passwordHash;
   const first = login && matches ? (await liveAccounts(login.id))[0] : undefined;
-  if (!login || !first) {
+  if (login && first) {
+    await setLoginSessionCookie(login.id, first.userId);
+    return { success: true, redirectTo: "/studios" };
+  }
+
+  let opened = await standAloneAccountsFor(normalized, password);
+  if (studioSlug) opened = opened.filter((u) => u.tenant!.slug === studioSlug);
+  const [account, another] = opened;
+  if (!account) {
     signInFailed("login", normalized, ip);
     return { success: false, error: "INVALID_CREDENTIALS" };
   }
-  await setLoginSessionCookie(login.id, first.userId);
-  return { success: true, redirectTo: "/studios" };
+  if (another) {
+    return {
+      success: false,
+      error: "CHOOSE_STUDIO",
+      studios: opened.map((u) => ({
+        slug: u.tenant!.slug,
+        name: u.tenant!.name,
+        role: u.role === "STUDIO_OWNER" ? "Owner" : u.role === "CLIENT" ? "Client" : (u.teamRole?.name ?? "Team"),
+      })),
+    };
+  }
+  await setSessionCookie({
+    id: account.id,
+    email: account.email,
+    name: account.name,
+    role: account.role,
+    tenantId: account.tenantId,
+    tenantSlug: account.tenant!.slug,
+  });
+  return { success: true, redirectTo: accountHref(account.tenant!.slug, account.role) };
 }
 
 /**

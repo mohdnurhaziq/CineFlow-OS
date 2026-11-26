@@ -20,7 +20,7 @@ import { errorMessageOf } from "@/lib/action-error";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { appEnvFrom } from "@/lib/app-env";
 import { requestIp } from "@/lib/client-ip";
-import { isRateLimited } from "@/lib/rate-limit";
+import { isRateLimited, attemptCount, countAttempt } from "@/lib/rate-limit";
 import { studioUrl } from "@/lib/domain-name";
 import { TRIAL_DAYS } from "@/lib/billing/state";
 
@@ -75,26 +75,50 @@ export async function checkSignupCode(code: string): Promise<{ valid: boolean; m
     : { valid: false, message: "That invite code isn't right. Check it and try again." };
 }
 
-export async function onboardStudio(formData: OnboardStudioInput) {
+/** What sign-up answers. `field` names the answer to fix, so the wizard can show the problem beside it. */
+export interface OnboardStudioResult {
+  success: boolean;
+  /** Set when the studio was made. */
+  tenantId?: string;
+  slug?: string;
+  redirectUrl?: string;
+  /** Set when it wasn't: why, and which answer to fix. */
+  error?: string;
+  field?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+}
+
+const SIGNUP_HOUR = 60 * 60 * 1000;
+const TOO_MANY_SIGNUPS = "Too many tries from here. Please try again later.";
+
+export async function onboardStudio(formData: OnboardStudioInput): Promise<OnboardStudioResult> {
   const status = await studioSignupStatus();
   if (!status.open) {
     return { success: false, error: "Studio sign-up is closed during the beta. Ask us for an invite." };
   }
-  // Every attempt counts, before the code is checked, so the code can't be guessed over and over.
+  // Honest people make mistakes (a taken address, a typo), so what is tightly limited is what can be
+  // abused: new studios and wrong invite codes (5 an hour each from one visitor; the first step's
+  // own check has its separate limit). All attempts together have a generous ceiling.
   const ip = await requestIp();
-  if (ip && isRateLimited(`studio-signup:${ip}`, 5, 60 * 60 * 1000)) {
-    return { success: false, error: "Too many tries from here. Please try again later." };
+  if (ip && (isRateLimited(`studio-signup:${ip}`, 30, SIGNUP_HOUR) || attemptCount(`studio-created:${ip}`) >= 5)) {
+    return { success: false, error: TOO_MANY_SIGNUPS };
   }
-  if (status.needsCode && !signupCodeMatches(formData.signupCode)) {
-    return { success: false, error: "That invite code isn't right. Check it and try again." };
+  if (status.needsCode) {
+    if (ip && attemptCount(`studio-signup-wrong-code:${ip}`) >= 5) return { success: false, error: TOO_MANY_SIGNUPS };
+    if (!signupCodeMatches(formData.signupCode)) {
+      if (ip) countAttempt(`studio-signup-wrong-code:${ip}`, SIGNUP_HOUR);
+      return { success: false, error: "That invite code isn't right. Check it and try again.", field: "signupCode" };
+    }
   }
 
   const validated = OnboardStudioSchema.safeParse(formData);
   if (!validated.success) {
     const firstErrorMessage = validated.error.errors[0]?.message || "Validation failed";
+    const firstField = validated.error.errors[0]?.path[0];
     return {
       success: false,
       error: firstErrorMessage,
+      field: typeof firstField === "string" ? firstField : undefined,
       fieldErrors: validated.error.flatten().fieldErrors,
     };
   }
@@ -106,6 +130,7 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     return {
       success: false,
       error: "Studio URL slug is reserved for platform operations.",
+      field: "slug",
     };
   }
 
@@ -114,20 +139,21 @@ export async function onboardStudio(formData: OnboardStudioInput) {
   if (data.googleSignup) {
     ticket = await ticketFromCookie();
     if (!ticket) {
-      return { success: false, error: "Your Google sign-in expired. Please continue with Google again." };
+      return { success: false, error: "Your Google sign-in expired. Please continue with Google again.", field: "ownerEmail" };
     }
   } else if (!data.password) {
-    return { success: false, error: "Password must be at least 8 characters" };
+    return { success: false, error: "Password must be at least 8 characters", field: "password" };
   }
   const ownerEmail = ticket ? ticket.email : data.ownerEmail;
 
   let login: Login | null = null;
   if (ticket) {
-    if (await isSuperAdminEmail(ticket.email)) return { success: false, error: "An account with this email already exists." };
+    if (await isSuperAdminEmail(ticket.email)) return { success: false, error: "An account with this email already exists.", field: "ownerEmail" };
     const found = await loginForGoogle({ sub: ticket.sub, email: ticket.email, emailVerified: true, name: ticket.name });
     if ("error" in found) {
       return {
         success: false,
+        field: "ownerEmail",
         error: found.error === "linked_other" ? "This email is already linked to a different Google account." : "Google sign-in didn't work. Please try again.",
       };
     }
@@ -137,10 +163,10 @@ export async function onboardStudio(formData: OnboardStudioInput) {
     // proof, so the new owner account joins it. Otherwise it is a stand-alone account, as ever.
     const check = await verifyLoginPassword(data.ownerEmail, data.password ?? "");
     if (!check.ok && check.reason === "RATE_LIMITED") {
-      return { success: false, error: "Too many attempts. Please wait a few minutes and try again." };
+      return { success: false, error: "Too many attempts. Please wait a few minutes and try again.", field: "password" };
     }
     if (!check.ok && check.reason === "WRONG") {
-      return { success: false, error: "This email already has a CineFlow sign-in. Use its password." };
+      return { success: false, error: "This email already has a CineFlow sign-in. Use its password.", field: "password" };
     }
     login = check.ok ? check.login : null;
   }
@@ -395,6 +421,8 @@ export async function onboardStudio(formData: OnboardStudioInput) {
       });
     }
 
+    if (ip) countAttempt(`studio-created:${ip}`, SIGNUP_HOUR);
+
     // Never fails the sign-up. A stand-alone account's email isn't proven yet, so it gets the link.
     await sendStudioWelcome(
       { id: result.ownerId, email: result.ownerEmail, name: result.ownerName },
@@ -411,13 +439,13 @@ export async function onboardStudio(formData: OnboardStudioInput) {
   } catch (error) {
     console.error("Onboarding transaction error:", error);
     if (errorMessageOf(error) === "RESERVED_SLUG") {
-      return { success: false, error: "Studio URL slug is reserved for platform operations." };
+      return { success: false, error: "Studio URL slug is reserved for platform operations.", field: "slug" };
     }
     if (errorMessageOf(error) === "SLUG_ALREADY_TAKEN") {
-      return { success: false, error: "Studio URL slug is already taken. Please choose another." };
+      return { success: false, error: "Studio URL slug is already taken. Please choose another.", field: "slug" };
     }
     if (errorMessageOf(error) === "EMAIL_ALREADY_TAKEN") {
-      return { success: false, error: "An account with this email already exists." };
+      return { success: false, error: "An account with this email already exists.", field: "ownerEmail" };
     }
     return { success: false, error: "Failed to create studio workspace. Please try again." };
   }
