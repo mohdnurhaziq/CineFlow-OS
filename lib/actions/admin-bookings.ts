@@ -14,6 +14,7 @@ import { DEPOSIT_HOLD_HOURS } from "@/lib/bookings/expiry";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { errorMessageOf } from "@/lib/action-error";
 import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
+import { newTrackingCode } from "@/lib/bookings/tracking-code";
 
 
 const AdminCreateBookingSchema = z
@@ -124,10 +125,7 @@ export async function createBookingForCustomer(input: AdminCreateBookingInput) {
       });
       if (claimed.count !== 1) throw new Error("Slot is no longer available");
 
-      const trackingCode = `BK-${Date.now().toString(36).toUpperCase()}-${Math.random()
-        .toString(36)
-        .substring(2, 6)
-        .toUpperCase()}`;
+      const trackingCode = newTrackingCode();
 
       const booking = await tx.clientBooking.create({
         data: {

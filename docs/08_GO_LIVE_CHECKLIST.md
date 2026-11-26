@@ -146,6 +146,7 @@ On **staging** first (`https://staging.cineflow-os.my`), then on **production**.
 - [ ] Studio sign-up (`/create-studio`) shows the Google button on step 3 and the Terms line on step 4.
 - [ ] Send a message to `hello@cineflow-os.my` from another account. It arrives in your inbox.
 - [ ] A studio owner sees the admin tour on first sign-in. A client sees the client tour.
+- [ ] On staging and production: `node scripts/ops.mjs email-report`. It only reads. It should say "Nothing to clean up"; if it lists duplicates, tell Claude before any change.
 - [ ] Production only: `node scripts/ops.mjs test-alert` emails every super-admin within a minute.
 - [ ] Production only: UptimeRobot monitor on `https://cineflow-os.my/api/health` (every 5 minutes).
 

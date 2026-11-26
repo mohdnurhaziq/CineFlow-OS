@@ -139,8 +139,11 @@ export async function provisionProjectForBooking(
   // 3. Resolve client User ID
   let clientId = booking.userId;
   if (!clientId) {
+    // Accounts are stored lowercase; an older row in another spelling is still found, never duplicated.
+    const rawEmail = booking.clientEmail.trim();
+    const lowerEmail = rawEmail.toLowerCase();
     let clientUser = await tx.user.findFirst({
-      where: { tenantId: booking.tenantId, email: booking.clientEmail },
+      where: { tenantId: booking.tenantId, email: { in: Array.from(new Set([lowerEmail, rawEmail, booking.clientEmail])) } },
       select: { id: true },
     });
     if (!clientUser) {
@@ -148,7 +151,7 @@ export async function provisionProjectForBooking(
         data: {
           tenantId: booking.tenantId,
           name: booking.clientName,
-          email: booking.clientEmail,
+          email: lowerEmail,
           phone: booking.clientPhone,
           role: "CLIENT",
         },

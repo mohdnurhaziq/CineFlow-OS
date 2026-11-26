@@ -966,9 +966,9 @@
     "semantic_hash": ""
   },
   "lib/actions/checkout.ts": {
-    "mtime": 1795510886.1270561,
-    "seen": 1795544287.5921168,
-    "ast_hash": "52cf8f75be09ef126065883fe22b803e",
+    "mtime": 1795669725.7656784,
+    "seen": 1795672086.896039,
+    "ast_hash": "32f569cd977758427ff5f34d96fb9263",
     "semantic_hash": ""
   },
   "lib/actions/gear.ts": {
@@ -1104,9 +1104,9 @@
     "semantic_hash": ""
   },
   "lib/validations/onboarding.ts": {
-    "mtime": 1795635466.9639146,
-    "seen": 1795636201.9286747,
-    "ast_hash": "9aa1fd4aef0992f802d3dc77addc14f6",
+    "mtime": 1795669760.269518,
+    "seen": 1795672087.015775,
+    "ast_hash": "fb91b7bf4c42199d5a2505a53a5dae4f",
     "semantic_hash": ""
   },
   "lib/validations/proposal-templates.ts": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/runner.ts": {
-    "mtime": 1795635393.0263002,
-    "seen": 1795636201.9413562,
-    "ast_hash": "166cac77ee9121a177ec853eff6ee29f",
+    "mtime": 1795669688.3532991,
+    "seen": 1795672087.0349143,
+    "ast_hash": "e5ef2fc1b7c49396bfbccd0dc940d8fb",
     "semantic_hash": ""
   },
   "tests/e2e/test-harness.ts": {
@@ -1488,9 +1488,9 @@
     "semantic_hash": ""
   },
   "lib/actions/my-booking.ts": {
-    "mtime": 1795167005.3500028,
-    "seen": 1795233149.1894,
-    "ast_hash": "326fa5d3b4d997d70701bf68174cb54c",
+    "mtime": 1795669720.574001,
+    "seen": 1795672086.8982744,
+    "ast_hash": "0a9068b29877f070b0bef400b23c3faf",
     "semantic_hash": ""
   },
   "lib/auth/dev-secret.ts": {
@@ -1782,9 +1782,9 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1794586465.1930916,
-    "seen": 1794593067.0826776,
-    "ast_hash": "d2148916d083c58903df7dac6d33d090",
+    "mtime": 1795639994.2975097,
+    "seen": 1795672087.0857341,
+    "ast_hash": "5f149a76ac224f0fbffe5c9dcd36ba99",
     "semantic_hash": ""
   },
   ".agents/skills/shadcn/assets/shadcn-small.png": {
@@ -1818,9 +1818,9 @@
     "semantic_hash": ""
   },
   "lib/actions/admin-bookings.ts": {
-    "mtime": 1794886169.3543487,
-    "seen": 1794922899.086707,
-    "ast_hash": "450074a96d400a23a9d24e3dddca388d",
+    "mtime": 1795669725.8046627,
+    "seen": 1795672086.8732388,
+    "ast_hash": "c3466a8698e9ac1385fa72bd9f50ec42",
     "semantic_hash": ""
   },
   ".claude/skills/design-taste-frontend/assets/base.js": {
@@ -2664,9 +2664,9 @@
     "semantic_hash": ""
   },
   "lib/bookings/project-promotion.ts": {
-    "mtime": 1794665247.781623,
-    "seen": 1794667067.055521,
-    "ast_hash": "863a10c99a6b093b41d0be621a0e194a",
+    "mtime": 1795669760.269518,
+    "seen": 1795672086.9367719,
+    "ast_hash": "35489173625681f58140bddc3f1746de",
     "semantic_hash": ""
   },
   "tests/e2e/proposal-helpers.ts": {
@@ -3768,9 +3768,9 @@
     "semantic_hash": ""
   },
   "scripts/ops.mjs": {
-    "mtime": 1795074683.110637,
-    "seen": 1795075289.5850601,
-    "ast_hash": "924331d3df50a783011385228d02e693",
+    "mtime": 1795669709.41571,
+    "seen": 1795672087.0270429,
+    "ast_hash": "c558bd6425878a9c5ddf0b3a815c5eff",
     "semantic_hash": ""
   },
   "scripts/ops/lib.mjs": {
@@ -4821,6 +4821,48 @@
     "mtime": 1795635484.744774,
     "seen": 1795636201.955749,
     "ast_hash": "d1985a5807f15515ef1b580ad436a4fc",
+    "semantic_hash": ""
+  },
+  "lib/bookings/tracking-code.ts": {
+    "mtime": 1795669709.17504,
+    "seen": 1795672086.9381738,
+    "ast_hash": "5a88127473163e7ec36515790678f7cb",
+    "semantic_hash": ""
+  },
+  "lib/maintenance/email-case-report.ts": {
+    "mtime": 1795669709.233148,
+    "seen": 1795672086.9830577,
+    "ast_hash": "afca8c06606a9b6a395189929c4ecdc5",
+    "semantic_hash": ""
+  },
+  "scripts/report-email-case.ts": {
+    "mtime": 1795669709.2918851,
+    "seen": 1795672087.027695,
+    "ast_hash": "f747a99a1f0eecfd7127c531bee103d4",
+    "semantic_hash": ""
+  },
+  "tests/e2e/.t45-only.ts": {
+    "mtime": 1795669688.4071248,
+    "seen": 1795672087.032628,
+    "ast_hash": "23c74bcc5f4973e8fc2761ae48132b52",
+    "semantic_hash": ""
+  },
+  "tests/e2e/tier45-audit-fixes.test.ts": {
+    "mtime": 1795669681.704803,
+    "seen": 1795672087.04946,
+    "ast_hash": "f6cf117291c51aa185a4c0c281f093e7",
+    "semantic_hash": ""
+  },
+  "docs/08_GO_LIVE_CHECKLIST.md": {
+    "mtime": 1795670205.851325,
+    "seen": 1795672087.0850437,
+    "ast_hash": "187a504776d8662e5f32628c61ea2982",
+    "semantic_hash": ""
+  },
+  "docs/AUDIT_2026-11-26.md": {
+    "mtime": 1795670205.851325,
+    "seen": 1795672087.085411,
+    "ast_hash": "717560638ccc79dd0a6130a43332b252",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {

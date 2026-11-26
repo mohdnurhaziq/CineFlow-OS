@@ -5,6 +5,8 @@ import { filesReleased } from "@/lib/deliverables/access";
 import { liveProjectWhere } from "@/lib/projects/list";
 import { z } from "zod";
 import { studioPath } from "@/lib/domain-name";
+import { isRateLimited } from "@/lib/rate-limit";
+import { requestIp } from "@/lib/client-ip";
 
 /**
  * Public "My Booking" lookup. Clients have no accounts, so a booking is
@@ -77,23 +79,11 @@ export type LookupResult =
   | { success: true; booking: MyBookingView; currency: string }
   | { success: false; error: "INVALID_INPUT" | "NOT_FOUND" | "RATE_LIMITED" | "INTERNAL_ERROR"; message: string };
 
-// ─── Basic in-memory throttle (per tenant + email) ──────────────────────────
-// Good enough for a single Node process; use a shared store (Redis) if the
-// app is ever run on multiple instances.
+// Limits, on the shared limiter (lib/rate-limit): one email at one studio, and one visitor across
+// every email, so neither guessing codes for a known email nor trying many emails gets far.
 const WINDOW_MS = 10 * 60 * 1000;
-const MAX_ATTEMPTS = 8;
-const attempts = new Map<string, { count: number; resetAt: number }>();
-
-function isThrottled(key: string): boolean {
-  const now = Date.now();
-  const entry = attempts.get(key);
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > MAX_ATTEMPTS;
-}
+const MAX_PER_EMAIL = 8;
+const MAX_PER_VISITOR = 40;
 
 const NOT_FOUND: LookupResult = {
   success: false,
@@ -118,7 +108,11 @@ export async function lookupMyBooking(input: {
   const { tenantSlug, email, trackingCode } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
-  if (isThrottled(`${tenantSlug}:${normalizedEmail}`)) {
+  const ip = await requestIp();
+  if (
+    isRateLimited(`my-booking:${tenantSlug}:${normalizedEmail}`, MAX_PER_EMAIL, WINDOW_MS) ||
+    (ip && isRateLimited(`my-booking-ip:${ip}`, MAX_PER_VISITOR, WINDOW_MS))
+  ) {
     return {
       success: false,
       error: "RATE_LIMITED",

@@ -25,6 +25,7 @@ import {
 import { requestIp } from "@/lib/client-ip";
 import { errorMessageOf } from "@/lib/action-error";
 import { isRateLimited } from "@/lib/rate-limit";
+import { newTrackingCode } from "@/lib/bookings/tracking-code";
 import { snapshotIncludedPrints } from "@/lib/prints/entitlements";
 import { studioUrl } from "@/lib/domain-name";
 import { BOOKINGS_CLOSED_MESSAGE, bookingsOpen } from "@/lib/billing/guard";
@@ -108,8 +109,7 @@ export async function processBookingCheckout(input: ProcessBookingCheckoutInput)
     const deposit = pricing.deposit;
 
     // 2. Generate Tracking Code & Invoice Number
-    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const trackingCode = `BK-${tenantSlug.toUpperCase().slice(0, 4)}-${Date.now().toString(36).toUpperCase()}-${randomHex}`;
+    const trackingCode = newTrackingCode(tenantSlug);
 
     // Card payments go through the studio's Toyyibpay account. Without one, card is
     // only available as a simulation (dev/test) and is refused in production.

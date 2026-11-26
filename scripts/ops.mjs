@@ -8,6 +8,7 @@
 //   node scripts/ops.mjs check-backup <name>      check a backup could be restored
 //   node scripts/ops.mjs restore <backup name>    put a backup back (and the version it ran)
 //   node scripts/ops.mjs create-super-admin <email>
+//   node scripts/ops.mjs email-report              list emails stored with capital letters, and duplicates (read-only)
 //   node scripts/ops.mjs test-alert                email the super-admins a test backup alert
 //   node scripts/ops.mjs status
 //
@@ -266,6 +267,9 @@ async function main() {
       if (!arg) fail("Use: node scripts/ops.mjs create-super-admin <email>");
       run("docker", ["compose", "exec", "app", "pnpm", "tsx", "scripts/create-super-admin.ts", arg]);
       return;
+    case "email-report":
+      run("docker", ["compose", "exec", "app", "pnpm", "tsx", "scripts/report-email-case.ts"]);
+      return;
     case "test-alert":
       run("docker", ["compose", "run", "--rm", "backup", "alert-test"]);
       console.log("\nTest alert sent. Check the super-admins' inboxes (staging: its test inbox).");
@@ -275,7 +279,7 @@ async function main() {
       return;
     default:
       fail(
-        "Commands: deploy staging | deploy production | backup now | check-backup <backup name> | restore <backup name> | create-super-admin <email> | test-alert | status"
+        "Commands: deploy staging | deploy production | backup now | check-backup <backup name> | restore <backup name> | create-super-admin <email> | email-report | test-alert | status"
       );
   }
 }
