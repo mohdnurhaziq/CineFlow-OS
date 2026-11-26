@@ -8,6 +8,7 @@ import { NewInvoiceButton } from "@/components/admin/invoices/new-invoice-dialog
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { isPastDue } from "@/lib/slot-time";
 
 interface InvoicesPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -57,7 +58,7 @@ export default async function AdminInvoicesPage({ params }: InvoicesPageProps) {
     type: inv.milestoneType,
     typeLabel: milestoneInstallmentLabel(inv.milestoneType),
     // Overdue is derived here so the server and browser render the same thing.
-    status: inv.status === "PENDING" && inv.dueDate < now ? "OVERDUE" : inv.status,
+    status: inv.status === "PENDING" && isPastDue(inv.dueDate, now) ? "OVERDUE" : inv.status,
     amount: inv.amount,
     clientName: inv.client.name,
     clientEmail: inv.client.email,

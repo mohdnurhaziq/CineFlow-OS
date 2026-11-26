@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Banknote, CheckCircle2, Eye, Frame, Loader2, MessageSquare, XCircle } from "lucide-react";
 import { milestoneLabel, paymentMethodLabel } from "@/lib/labels";
-import { formatSlotDate, STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatSlotDate, formatStudioDateTime } from "@/lib/slot-time";
 import type { AdminVerificationConsoleProps } from "./admin-verification-console";
 import type { PrintOrderPreview } from "@/lib/prints/order-preview";
 import { PrintOrderPreviewDialog } from "@/components/admin/print-orders/print-order-preview-dialog";
@@ -33,7 +33,7 @@ const money = (symbol: string, n: number) => `${symbol}${n.toLocaleString("en-US
 
 // Studio time zone, so the server (UTC) and the browser render the same text.
 const submittedAt = (d: Date | string) =>
-  new Date(d).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: STUDIO_TIME_ZONE });
+  formatStudioDateTime(d);
 
 /** `short` is for the list rows ("QR", "Cash"), where the full label crowds out the tracking code. */
 function MethodBadge({ method, short = false }: { method: string | null; short?: boolean }) {

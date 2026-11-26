@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
-import { formatSlotDate, STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatDay } from "@/lib/slot-time";
 import { cn } from "@/lib/utils";
 
 interface ShootPageProps {
@@ -280,7 +280,7 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
                     {booking.slot ? `${booking.slot.startTime} – ${booking.slot.endTime}` : "Time to be confirmed"}
                   </p>
                   <p className="text-xs text-zinc-400">
-                    {booking.slot ? formatSlotDate(booking.slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" }, "en-US") : "Date TBD"}
+                    {booking.slot ? formatDay(booking.slot.date) : "Date TBD"}
                   </p>
                   {booking.project?.callSheets?.[0]?.generalCallTime && (
                     <p className="text-xs font-mono text-amber-400 font-bold pt-1">

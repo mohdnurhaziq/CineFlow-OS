@@ -546,8 +546,7 @@ export function ClientBookingDetailView({
                     {booking.slot
                       ? formatSlotDate(
                           booking.slot.date,
-                          { weekday: "long", year: "numeric", month: "long", day: "numeric" },
-                          "en-US"
+                          { weekday: "long", year: "numeric", month: "long", day: "numeric" }
                         )
                       : booking.targetDate || "Date to be confirmed"}
                   </p>

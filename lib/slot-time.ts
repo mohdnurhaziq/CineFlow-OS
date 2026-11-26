@@ -1,5 +1,7 @@
 /**
- * Time helpers for booking slots.
+ * The studio's calendar and clock: time helpers for booking slots, and the one way dates are
+ * worked out and written. The server runs on UTC, so "today", "this year" and any displayed date
+ * must come from here, never from the computer's own clock.
  *
  * A slot stores its calendar day in `date` (midnight UTC of that day) and its
  * local start time as text such as "09:00 AM". Both are in the studio's local
@@ -91,4 +93,36 @@ export function formatStudioDate(date: Date | string): string {
  */
 export function formatSlotDate(date: Date | string, options: Intl.DateTimeFormatOptions, locale = "en-GB"): string {
   return new Date(date).toLocaleDateString(locale, { ...options, timeZone: "UTC" });
+}
+
+/** A moment with its time, studio-local: "13 Nov 2026, 14:05". */
+export function formatStudioDateTime(date: Date | string): string {
+  return new Date(date).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: STUDIO_TIME_ZONE });
+}
+
+/** A shoot or session day (stored as midnight UTC, or as "YYYY-MM-DD"): "Fri, 27 Nov 2026". */
+export function formatDay(day: Date | string): string {
+  return formatSlotDate(day, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+}
+
+/** The studio's today as "YYYY-MM-DD", or the day `offsetDays` after it (1 = tomorrow). */
+export function studioDateKey(offsetDays = 0, now: Date = new Date()): string {
+  const today = new Date(`${studioNow(now).dateKey}T00:00:00.000Z`);
+  today.setUTCDate(today.getUTCDate() + offsetDays);
+  return today.toISOString().slice(0, 10);
+}
+
+/** The studio's today in the form calendar days are stored in (midnight UTC), for comparing with them. */
+export function studioTodayStart(now: Date = new Date()): Date {
+  return new Date(`${studioDateKey(0, now)}T00:00:00.000Z`);
+}
+
+/** The studio's current year, for invoice, order, project and proposal numbers. */
+export function studioYear(now: Date = new Date()): number {
+  return Number(studioDateKey(0, now).slice(0, 4));
+}
+
+/** Whether a due date's day has fully passed for the studio. On the due day itself, nothing is late. */
+export function isPastDue(due: Date | string, now: Date = new Date()): boolean {
+  return studioNow(new Date(due)).dateKey < studioNow(now).dateKey;
 }

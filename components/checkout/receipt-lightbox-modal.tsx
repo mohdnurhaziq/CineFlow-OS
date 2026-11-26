@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, Calendar, User, Hash } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatStudioDateTime } from "@/lib/slot-time";
 
 interface ReceiptLightboxModalProps {
   isOpen: boolean;
@@ -167,11 +167,7 @@ export function ReceiptLightboxModal({
                     <div>
                       <span className="text-[10px] text-zinc-400 block">Submitted</span>
                       <span className="text-zinc-300">
-                        {new Date(submittedAt).toLocaleString("en-US", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                          timeZone: STUDIO_TIME_ZONE,
-                        })}
+                        {formatStudioDateTime(submittedAt)}
                       </span>
                     </div>
                   </div>

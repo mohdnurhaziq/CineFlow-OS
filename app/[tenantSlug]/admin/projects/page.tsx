@@ -7,7 +7,7 @@ import { Inbox, Images } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { PROJECT_STAGE_LABELS } from "@/lib/projects/constants";
-import { formatSlotDate } from "@/lib/slot-time";
+import { formatSlotDate, studioTodayStart } from "@/lib/slot-time";
 import { PROJECT_LIST_TABS, countAdminProjects, loadAdminProjects, type ProjectListTab } from "@/lib/projects/list";
 import { catchUpShotStages } from "@/lib/projects/stage";
 import { levelAtLeast } from "@/lib/auth/access";
@@ -99,7 +99,7 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
             </thead>
             <tbody className="divide-y divide-zinc-800">
               {projects.map((p) => {
-                const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z").getTime();
+                const today = studioTodayStart().getTime();
                 const next = p.callSheets.find((c) => c.shootDate.getTime() >= today);
                 const files = p.deliverables.reduce((n, d) => n + d._count.items, 0);
                 return (

@@ -11,6 +11,7 @@ import { applyInvoicePayment } from "@/lib/bookings/payment-approval";
 import { sendNotification } from "@/lib/notifications";
 import { formatMoney } from "@/lib/money";
 import { studioUrl } from "@/lib/domain-name";
+import { studioDateKey, formatStudioDate } from "@/lib/slot-time";
 
 /**
  * Invoice actions for the studio. Recording or cancelling a payment needs the "record payments"
@@ -140,7 +141,7 @@ async function remind(data: z.output<typeof Base>): Promise<Result> {
     return fail("NOTHING_DUE", "There is nothing for the client to pay on this invoice right now.");
   }
   if (!invoice.client.email) return fail("NO_EMAIL", "This client has no email address.");
-  const due = invoice.dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const due = formatStudioDate(invoice.dueDate);
   await sendNotification({
     event: "STUDIO_UPDATE",
     studioName: invoice.tenant.name,
@@ -177,7 +178,7 @@ export async function createInvoice(input: z.input<typeof CreateSchema>): Promis
     const client = await db.user.findFirst({ where: { id: data.clientId, tenantId: data.tenantId, role: "CLIENT" } });
     if (!client) return fail("CLIENT_NOT_FOUND", "Client not found.");
     const due = new Date(`${data.dueDate}T00:00:00.000Z`);
-    if (due.getTime() < new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z").getTime()) {
+    if (data.dueDate < studioDateKey()) {
       return fail("DUE_IN_PAST", "The due date can't be in the past.");
     }
 

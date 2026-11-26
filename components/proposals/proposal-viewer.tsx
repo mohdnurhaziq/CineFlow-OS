@@ -9,7 +9,7 @@ import { SignaturePad } from "./signature-pad";
 import { SignedAcceptanceView } from "./signed-acceptance-view";
 import { acceptProposal, declineProposal } from "@/lib/actions/proposals";
 import { disciplineLabel } from "@/lib/labels";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatStudioDate } from "@/lib/slot-time";
 
 interface ProposalViewerProps {
   tenant: {
@@ -364,7 +364,7 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
             {viewerIsClient ? "You declined this proposal" : "The client declined this proposal"}
           </div>
           <p className="text-xs text-zinc-400">
-            {new Date(declined.at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: STUDIO_TIME_ZONE })}
+            {formatStudioDate(declined.at)}
           </p>
           {declined.reason && <p className="text-sm text-zinc-300 whitespace-pre-line">&ldquo;{declined.reason}&rdquo;</p>}
           {viewerIsClient && (

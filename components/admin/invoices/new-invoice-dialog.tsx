@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { createInvoice } from "@/lib/actions/admin-invoices";
 import { useDialog } from "@/lib/use-dialog";
 import { studioPath } from "@/lib/domain-name";
+import { studioDateKey } from "@/lib/slot-time";
 
 interface NewInvoiceButtonProps {
   tenantId: string;
@@ -20,7 +21,7 @@ const field =
   "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
 
 function inDays(days: number) {
-  return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+  return studioDateKey(days);
 }
 
 /** "New invoice" for anything outside bookings and proposals: extra hours, prints, a reshoot. Owner only. */

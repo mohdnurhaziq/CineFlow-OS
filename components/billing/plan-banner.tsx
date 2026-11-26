@@ -1,6 +1,7 @@
 import { Lock, Clock } from "lucide-react";
 import type { PlanStatus } from "@/lib/billing/state";
 import { addDays } from "@/lib/billing/state";
+import { studioDateKey } from "@/lib/slot-time";
 
 const dayLabel = (key: string) =>
   new Date(`${key}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -26,7 +27,7 @@ export function PlanBanner({ status, contactEmail, today }: { status: PlanStatus
     tone = "warn";
     text = <>Your plan ended on {dayLabel(status.endsOn)}. Pay by {dayLabel(status.graceEndsOn)} to keep your studio open.{contact}</>;
   } else if (status.state === "TRIAL" && status.endsOn) {
-    const now = today ?? new Date().toISOString().slice(0, 10);
+    const now = today ?? studioDateKey();
     if (status.endsOn <= addDays(now, 7)) {
       tone = "info";
       text = <>Your trial ends on {dayLabel(status.endsOn)}.{contact}</>;

@@ -13,6 +13,7 @@ import { loadFramedPrints } from "@/lib/prints/gallery";
 import { printsOffered } from "@/lib/billing/guard";
 import { clientVisibleProposalWhere } from "@/lib/proposals/status";
 import { studioPath } from "@/lib/domain-name";
+import { studioTodayStart } from "@/lib/slot-time";
 
 interface AccountPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -53,8 +54,7 @@ export default async function ClientAccountPage({ params, searchParams }: Accoun
   // Release slots whose QR/cash deposit went unpaid for 24 hours, so the client sees it.
   await expireUnpaidDeposits(tenant.id);
 
-  const startOfToday = new Date();
-  startOfToday.setUTCHours(0, 0, 0, 0);
+  const startOfToday = studioTodayStart();
 
   const [bookings, invoices, proposals, projects] = await Promise.all([
     db.clientBooking.findMany({

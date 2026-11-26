@@ -26,7 +26,7 @@ import {
 import { useDialog } from "@/lib/use-dialog";
 import { humanize, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatStudioDate } from "@/lib/slot-time";
 import type { PrintOrderPreview } from "@/lib/prints/order-preview";
 
 export interface AdminVerificationConsoleProps {
@@ -414,10 +414,7 @@ export function AdminVerificationConsole({
                   <td className="py-3 text-zinc-400">{item.verifiedBy || "—"}</td>
                   <td className="py-3 text-zinc-400">
                     {item.paidAt
-                      ? new Date(item.paidAt).toLocaleDateString("en-US", {
-                          dateStyle: "medium",
-                          timeZone: STUDIO_TIME_ZONE,
-                        })
+                      ? formatStudioDate(item.paidAt)
                       : "—"}
                   </td>
                 </tr>

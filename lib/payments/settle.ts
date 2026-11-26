@@ -9,6 +9,7 @@ import { sendNotification } from "@/lib/notifications";
 import { findSuccessfulPayment, toSen, type ToyyibpayCredentials } from "@/lib/payments/toyyibpay";
 import { clientInvite } from "@/lib/bookings/calendar-invites";
 import { notifyShootConfirmed } from "@/lib/bookings/assignment-emails";
+import { formatDay } from "@/lib/slot-time";
 
 /**
  * Settlement of online (Toyyibpay) invoices. Not a "use server" module: it must
@@ -214,7 +215,7 @@ export async function settleToyyibpayBill(billCode: string): Promise<SettleOutco
           clientEmail: confirmed.clientEmail,
           clientPhone: confirmed.clientPhone || undefined,
           packageName: confirmed.packageName || "Studio Production Session",
-          slotDate: result.slot?.date ? new Date(result.slot.date).toLocaleDateString("en-US", { dateStyle: "medium" }) : "Scheduled Date",
+          slotDate: result.slot?.date ? formatDay(result.slot.date) : "Scheduled Date",
           startTime: result.slot?.startTime ?? "",
           endTime: result.slot?.endTime ?? "",
           depositAmount: invoice.amount,

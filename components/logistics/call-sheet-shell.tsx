@@ -92,7 +92,7 @@ export function CallSheetShell({
           year: "numeric",
           month: "long",
           day: "numeric",
-        }, "en-US")
+        })
       : String(callSheet.shootDate);
 
   const tenantSlug = callSheet.project.tenant.slug;

@@ -635,11 +635,11 @@ export function GearDashboard({
 
                     const startStr =
                       res.startDate instanceof Date
-                        ? formatSlotDate(res.startDate, { month: "short", day: "numeric" }, "en-US")
+                        ? formatSlotDate(res.startDate, { day: "numeric", month: "short" })
                         : String(res.startDate);
                     const endStr =
                       res.endDate instanceof Date
-                        ? formatSlotDate(res.endDate, { month: "short", day: "numeric" }, "en-US")
+                        ? formatSlotDate(res.endDate, { day: "numeric", month: "short" })
                         : String(res.endDate);
 
                     return (

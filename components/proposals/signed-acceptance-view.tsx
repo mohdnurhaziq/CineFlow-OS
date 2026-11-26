@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle2, CreditCard } from "lucide-react";
 import confetti from "canvas-confetti";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatStudioDateTime } from "@/lib/slot-time";
 import { studioPath } from "@/lib/domain-name";
 
 interface SignedAcceptanceViewProps {
@@ -55,11 +55,7 @@ export function SignedAcceptanceView({
   }, [isInitialSigning]);
 
   const signedDateStr = signedAt
-    ? new Date(signedAt).toLocaleString("en-US", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: STUDIO_TIME_ZONE,
-      })
+    ? formatStudioDateTime(signedAt)
     : "Recently Signed";
 
   return (

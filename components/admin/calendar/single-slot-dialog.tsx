@@ -12,7 +12,7 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
 import { toast } from "sonner";
-import { formatSlotDate } from "@/lib/slot-time";
+import { formatSlotDate, studioDateKey } from "@/lib/slot-time";
 
 export interface BookingSlotRow {
   id: string;
@@ -103,9 +103,7 @@ export function SingleSlotDialog({
       setStatus(slotToEdit.status === "BLOCKED" ? "BLOCKED" : "AVAILABLE");
     } else {
       // Default to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      setDate(tomorrow.toISOString().split("T")[0] || "");
+      setDate(studioDateKey(1));
       setStartTime("10:00 AM");
       setEndTime("11:30 AM");
       setCategory(categories[0]?.slug || "STUDIO_PORTRAIT");

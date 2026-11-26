@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Clock, Calendar, ShieldCheck, AlertCircle } from "lucide-react";
 import { milestoneLabel } from "@/lib/labels";
 import { SLOT_HOLD_NUDGE_SECONDS } from "@/lib/bookings/hold";
-import { STUDIO_TIME_ZONE, formatSlotDate } from "@/lib/slot-time";
+import { formatStudioDate, formatDay } from "@/lib/slot-time";
 
 interface OrderSummaryCardProps {
   tenantName: string;
@@ -73,7 +73,7 @@ export function OrderSummaryCard({
   const isUrgent = secondsLeft !== null && secondsLeft < SLOT_HOLD_NUDGE_SECONDS;
 
   const slotDateStr = slot?.date
-    ? formatSlotDate(slot.date, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, "en-US")
+    ? formatDay(slot.date)
     : null;
 
   return (
@@ -206,10 +206,7 @@ export function OrderSummaryCard({
 
               <div className="text-[11px] text-zinc-400 pt-1 border-t border-zinc-800/80">
                 Due Date:{" "}
-                {new Date(invoice.dueDate).toLocaleDateString("en-US", {
-                  dateStyle: "medium",
-                  timeZone: STUDIO_TIME_ZONE,
-                })}
+                {formatStudioDate(invoice.dueDate)}
               </div>
             </div>
 

@@ -13,6 +13,7 @@ import { parseTimeToMinutes } from "@/lib/utils/time";
 import type { CategoryOption } from "./single-slot-dialog";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { studioDateKey } from "@/lib/slot-time";
 
 interface BatchGeneratorDialogProps {
   isOpen: boolean;
@@ -50,17 +51,8 @@ export function BatchGeneratorDialog({
   packages = [],
 }: BatchGeneratorDialogProps) {
   // Dates default: tomorrow to 7 days ahead
-  const defaultStart: string = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0] || "";
-  }, []);
-
-  const defaultEnd: string = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().split("T")[0] || "";
-  }, []);
+  const defaultStart: string = useMemo(() => studioDateKey(1), []);
+  const defaultEnd: string = useMemo(() => studioDateKey(7), []);
 
   const [startDate, setStartDate] = useState<string>(defaultStart);
   const [endDate, setEndDate] = useState<string>(defaultEnd);

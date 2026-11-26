@@ -17,6 +17,7 @@ import {
 import { errorMessageOf } from "@/lib/action-error";
 import { isOpenProposal, OPEN_PROPOSAL_STATUSES } from "@/lib/proposals/status";
 import { studioPath } from "@/lib/domain-name";
+import { studioYear } from "@/lib/slot-time";
 
 /** Why a proposal that isn't open can't be signed or declined, in the client's words. */
 function closedProposalMessage(status: string): string {
@@ -169,7 +170,7 @@ export async function acceptProposal(input: SignProposalInput) {
       });
 
       if (!project) {
-        const year = new Date().getFullYear();
+        const year = studioYear();
         let projectNumber = "";
         let attempts = 0;
         const maxAttempts = 10;

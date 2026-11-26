@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { studioYear } from "@/lib/slot-time";
 
 type Tx = Prisma.TransactionClient;
 
@@ -189,7 +190,7 @@ export async function provisionProjectForBooking(
   }
 
   // 5. Determine Project Attributes
-  const year = new Date().getFullYear();
+  const year = studioYear();
   const projectNumber = await generateProjectNumber(tx, year);
   const words = booking.category.replace(/[-_]+/g, " ").trim();
   const categoryLabel = booking.packageName || words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();

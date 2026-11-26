@@ -19,7 +19,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
 import { BookingActions } from "@/components/admin/bookings/booking-actions";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatDay, formatStudioDateTime } from "@/lib/slot-time";
 import { BookingTeamSection, type BookingTeamControls } from "@/components/admin/bookings/booking-team-section";
 import type { AssignableMember } from "@/lib/team/members";
 import type { BookingActionPowers } from "@/lib/auth/page-powers";
@@ -97,13 +97,7 @@ export function formatSessionDate(date: string | null): string {
   if (!date) return "No date";
   const d = new Date(`${date}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatDay(d);
 }
 
 export function formatPaymentMethod(method: string | null): string {
@@ -126,18 +120,6 @@ function titleCase(value: string): string {
     .replace(/[_-]+/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-/** In the studio's time zone, so the booking page renders the same text on the server (UTC) and in the browser. */
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: STUDIO_TIME_ZONE,
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -446,7 +428,7 @@ export function BookingDetailsBody({
             {inv.verifiedBy && (
               <Row label="Verified by">
                 {inv.verifiedBy}
-                {inv.paidAt && <span className="text-zinc-500"> · {formatDateTime(inv.paidAt)}</span>}
+                {inv.paidAt && <span className="text-zinc-500"> · {formatStudioDateTime(inv.paidAt)}</span>}
               </Row>
             )}
             <Row label="Receipt">
@@ -509,7 +491,7 @@ export function BookingDetailsBody({
               <Row label="Verified by">
                 {booking.balanceInvoice.verifiedBy}
                 {booking.balanceInvoice.paidAt && (
-                  <span className="text-zinc-500"> · {formatDateTime(booking.balanceInvoice.paidAt)}</span>
+                  <span className="text-zinc-500"> · {formatStudioDateTime(booking.balanceInvoice.paidAt)}</span>
                 )}
               </Row>
             )}
@@ -541,7 +523,7 @@ export function BookingDetailsBody({
           </a>
         </p>
       )}
-      <p className="text-[11px] font-mono text-zinc-500">Booked on {formatDateTime(booking.createdAt)}</p>
+      <p className="text-[11px] font-mono text-zinc-500">Booked on {formatStudioDateTime(booking.createdAt)}</p>
     </div>
   );
 }

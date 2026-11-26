@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { resolveInvoiceBooking } from "@/lib/bookings/invoice-booking";
 import { markPrintOrderPaid } from "@/lib/prints/orders";
+import { studioYear } from "@/lib/slot-time";
 
 /**
  * Follow-up invoices issued when a payment is confirmed.
@@ -28,7 +29,7 @@ const FINAL_BALANCE_DUE_DAYS = 30;
  * starting again each year. Must run inside the transaction that creates the invoice.
  */
 export async function nextInvoiceNumber(tx: Tx, tenantId: string, now: Date = new Date()): Promise<string> {
-  const year = now.getFullYear();
+  const year = studioYear(now);
   // Bumping the counter first locks the studio's row, so two invoices created at the same
   // moment can never be given the same number.
   const bumped = await tx.tenant.update({
@@ -181,7 +182,7 @@ async function issueProjectFinalBalance(tx: Tx, retainer: PaidInvoice) {
  */
 export async function nextPrintOrderNumber(tx: Tx, tenantId: string, now: Date = new Date()): Promise<string> {
   void tenantId; // Kept for symmetry with nextInvoiceNumber; see the note above.
-  const prefix = `PO-${now.getFullYear()}-`;
+  const prefix = `PO-${studioYear(now)}-`;
   const rows = await tx.printOrder.findMany({
     where: { orderNumber: { startsWith: prefix } },
     select: { orderNumber: true },

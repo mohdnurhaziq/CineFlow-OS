@@ -15,6 +15,7 @@ import type { ClientAccountStatus } from "@/lib/client-directory-labels";
 import { ClientAccountBadge } from "@/components/admin/clients/client-account-badge";
 import { ClientDetailsDialog } from "@/components/admin/clients/client-details-dialog";
 import { studioPath } from "@/lib/domain-name";
+import { studioDateKey } from "@/lib/slot-time";
 
 type Filter = "ALL" | ClientAccountStatus | "OWING";
 
@@ -100,7 +101,7 @@ export function ClientsDirectory({
     const url = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff) + csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${tenantSlug}-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `${tenantSlug}-clients-${studioDateKey()}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();

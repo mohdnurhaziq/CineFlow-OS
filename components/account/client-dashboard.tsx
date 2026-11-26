@@ -39,7 +39,7 @@ import { clientPayAction, clientPayLabel, clientPayState, isOwed } from "@/lib/i
 import { categoryName } from "@/lib/bookings/category-name";
 import { BOOKING_MILESTONES, PROPOSAL_MILESTONES, billSums, invoiceBookingId, invoiceProposalId } from "@/lib/invoices/bill-groups";
 import { cn } from "@/lib/utils";
-import { STUDIO_TIME_ZONE, formatSlotDate } from "@/lib/slot-time";
+import { formatSlotDate, formatStudioDate, formatDay } from "@/lib/slot-time";
 import { studioPath } from "@/lib/domain-name";
 
 type BookingRow = ClientBooking & {
@@ -187,16 +187,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
   };
   // Dates read the same on the server and in the browser, whatever the viewer's time zone:
   // otherwise the page renders one day on the server, another in the browser.
-  const LONG_DAY: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric", year: "numeric" };
-  /** A moment (paid, due) as the studio's calendar date. */
-  const formatDate = (d: Date | string) => new Date(d).toLocaleDateString("en-US", { ...LONG_DAY, timeZone: STUDIO_TIME_ZONE });
-  /** A shoot or session day, stored as a calendar day. */
-  const formatDay = (d: Date | string) => formatSlotDate(d, LONG_DAY, "en-US");
-
+  // A moment (paid, due) is written with formatStudioDate; a shoot or session day, stored as a
+  // calendar day, with formatDay.
   const formatShortDate = (d: Date | string) => ({
-    month: formatSlotDate(d, { month: "short" }, "en-US").toUpperCase(),
+    month: formatSlotDate(d, { month: "short" }).toUpperCase(),
     day: new Date(d).getUTCDate(),
-    weekday: formatSlotDate(d, { weekday: "short" }, "en-US"),
+    weekday: formatSlotDate(d, { weekday: "short" }),
   });
 
   // Financial calculations
@@ -223,13 +219,13 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
     const urgent = state !== "DUE" || first.status === "OVERDUE" || soon;
     const others = unpaidInvoices.length > 1 ? ` You have ${unpaidInvoices.length} invoices to pay in all.` : "";
     let headline = `${money(first.amount)} to pay`;
-    let message = `Your ${what} is due ${formatDate(first.dueDate)}.${others}`;
+    let message = `Your ${what} is due ${formatStudioDate(first.dueDate)}.${others}`;
     if (state === "AWAITING_PAYMENT" && first.paymentMethod === "CASH") {
       headline = `Pay ${money(first.amount)} at the studio`;
-      message = `Bring your ${what} to the studio by ${formatDate(first.dueDate)} to keep your booking.${others}`;
+      message = `Bring your ${what} to the studio by ${formatStudioDate(first.dueDate)} to keep your booking.${others}`;
     } else if (state === "AWAITING_PAYMENT") {
       headline = `Upload your payment slip`;
-      message = `Transfer ${money(first.amount)} for your ${what}, then upload the slip by ${formatDate(first.dueDate)} to keep your booking.${others}`;
+      message = `Transfer ${money(first.amount)} for your ${what}, then upload the slip by ${formatStudioDate(first.dueDate)} to keep your booking.${others}`;
     } else if (state === "REJECTED") {
       headline = `Your payment slip wasn't accepted`;
       message = `${first.rejectionReason ? `The studio said: ${first.rejectionReason}. ` : ""}Please upload a new slip for your ${what}.${others}`;
@@ -453,7 +449,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700 font-semibold">
-                      Due {formatDate(nextPayment.invoice.dueDate)}
+                      Due {formatStudioDate(nextPayment.invoice.dueDate)}
                     </span>
                   )}
                 </div>
@@ -1461,8 +1457,8 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 <div className="text-[11px] text-zinc-400 font-mono flex flex-wrap items-center gap-x-3 gap-y-0.5">
                                   <span>
                                     {isPaid && inv.paidAt
-                                      ? `Paid ${formatDate(inv.paidAt)}`
-                                      : `Due ${formatDate(inv.dueDate)}`}
+                                      ? `Paid ${formatStudioDate(inv.paidAt)}`
+                                      : `Due ${formatStudioDate(inv.dueDate)}`}
                                   </span>
                                   {inv.paymentMethod && isPaid && (
                                     <span className="text-zinc-500">· {paymentMethodLabel(inv.paymentMethod)}</span>
@@ -1564,8 +1560,8 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               <div className="text-[11px] text-zinc-400 font-mono flex flex-wrap items-center gap-x-3 gap-y-0.5">
                                 <span>
                                   {isPaid && inv.paidAt
-                                    ? `Paid ${formatDate(inv.paidAt)}`
-                                    : `Due ${formatDate(inv.dueDate)}`}
+                                    ? `Paid ${formatStudioDate(inv.paidAt)}`
+                                    : `Due ${formatStudioDate(inv.dueDate)}`}
                                 </span>
                                 {inv.project && <span>Project: {inv.project.title}</span>}
                               </div>

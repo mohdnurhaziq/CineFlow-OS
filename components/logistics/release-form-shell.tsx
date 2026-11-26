@@ -15,7 +15,7 @@ import {
 import { ReleaseSignaturePad } from "./release-signature-pad";
 import { submitDigitalRelease } from "@/lib/actions/logistics";
 import { errorMessageOf } from "@/lib/action-error";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatStudioDateTime } from "@/lib/slot-time";
 
 export interface ExistingRelease {
   id: string;
@@ -388,14 +388,7 @@ export function ReleaseFormShell({
                 {releases.map((rel) => {
                   const signedDate =
                     rel.signedAt instanceof Date
-                      ? rel.signedAt.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                          hour: "2-digit",
-                          timeZone: STUDIO_TIME_ZONE,
-                          minute: "2-digit",
-                        })
+                      ? formatStudioDateTime(rel.signedAt)
                       : String(rel.signedAt);
 
                   return (

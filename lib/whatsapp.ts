@@ -3,6 +3,8 @@
  * Generates formatted markdown dispatch messages and https://wa.me/?text=... links
  */
 
+import { formatSlotDate } from "@/lib/slot-time";
+
 export interface CallSheetWithDetails {
   id: string;
   title: string;
@@ -63,17 +65,13 @@ export function parseCrewJson(crewJson?: string | null): CrewMember[] {
 }
 
 /**
- * Formats a Date into a human-readable date string (e.g., "Sunday, November 15, 2026").
+ * Formats a Date into a human-readable date string (e.g., "Sunday 15 November 2026").
  */
 function formatShootDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   if (isNaN(d.getTime())) return String(date);
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // A shoot day, stored as a calendar day.
+  return formatSlotDate(d, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
 /**

@@ -21,7 +21,7 @@ import { PhotoUploader } from "./photo-uploader";
 import { DeliverPanel } from "./deliver-panel";
 import { formatMoney } from "@/lib/money";
 import { invoiceStatusLabel, milestoneLabel, reservationStatusLabel } from "@/lib/labels";
-import { formatSlotDate } from "@/lib/slot-time";
+import { formatSlotDate, studioDateKey } from "@/lib/slot-time";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ShotListHud, type ShotItemData } from "@/components/logistics/shot-list-hud";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
@@ -166,7 +166,7 @@ export function ProjectWorkspace({
     }, {})
   );
   // Without a booking, the header shows the next planned shoot day (or the last one, once all have passed).
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = studioDateKey();
   const nextSheet = project.callSheets.find((c) => c.shootDate.slice(0, 10) >= todayKey) ?? project.callSheets.at(-1);
   const nextShootDay = nextSheet ? { date: nextSheet.shootDate, time: nextSheet.generalCallTime } : null;
 

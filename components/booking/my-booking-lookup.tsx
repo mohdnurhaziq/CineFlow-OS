@@ -19,6 +19,7 @@ import {
 import { lookupMyBooking, type MyBookingView } from "@/lib/actions/my-booking";
 import { formatMoney } from "@/lib/money";
 import { studioPath } from "@/lib/domain-name";
+import { formatDay, formatStudioDate } from "@/lib/slot-time";
 
 interface MyBookingLookupProps {
   tenantSlug: string;
@@ -64,15 +65,6 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
   const [currency, setCurrency] = useState("USD");
 
   const money = (amount: number) => formatMoney(currency, amount);
-
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(undefined, {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      timeZone: "UTC",
-    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,7 +212,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
               <div className="flex items-center gap-2 p-3 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-zinc-200">
                 <CalendarClock className="size-4 text-amber-400 flex-shrink-0" />
                 <span>
-                  {formatDate(booking.slot.date)} · {booking.slot.startTime} – {booking.slot.endTime}
+                  {formatDay(booking.slot.date)} · {booking.slot.startTime} – {booking.slot.endTime}
                 </span>
               </div>
             )}
@@ -238,7 +230,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
                     <div className="space-y-0.5">
                       <div className="font-mono text-zinc-200">{inv.invoiceNumber}</div>
                       <div className="text-zinc-500">
-                        {humanize(inv.milestoneType)} · due {formatDate(inv.dueDate)}
+                        {humanize(inv.milestoneType)} · due {formatStudioDate(inv.dueDate)}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

@@ -14,6 +14,7 @@ import { clientInvitePath, issueClientInvite } from "@/lib/auth/invite";
 import { PROJECT_STAGES } from "@/lib/projects/constants";
 import { studioPath, studioUrl } from "@/lib/domain-name";
 import { requireFeature } from "@/lib/billing/guard";
+import { studioYear } from "@/lib/slot-time";
 
 /**
  * Studio-side management of proposals and the projects they turn into: create a proposal
@@ -93,7 +94,7 @@ async function emailProposalToClient(
 }
 
 async function nextProposalNumber(): Promise<string> {
-  const year = new Date().getFullYear();
+  const year = studioYear();
   const prefix = `PR-${year}-`;
   const rows = await db.proposal.findMany({ where: { proposalNumber: { startsWith: prefix } }, select: { proposalNumber: true } });
   const max = rows.reduce((m, r) => {

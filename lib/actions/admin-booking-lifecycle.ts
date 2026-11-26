@@ -8,7 +8,7 @@ import { assertCanWorkOn, requireAccess, requireOwnOrManage } from "@/lib/auth/a
 import { actionErrorMessage } from "@/lib/action-error";
 import { BALANCE_DUE_AFTER_SESSION_DAYS } from "@/lib/bookings/billing";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
-import { isSlotInPast, minutesOfDay, slotDateKey } from "@/lib/slot-time";
+import { isSlotInPast, minutesOfDay, slotDateKey, studioTodayStart } from "@/lib/slot-time";
 import { sendNotification } from "@/lib/notifications";
 import { sendBookingConfirmation } from "@/lib/bookings/confirmation-email";
 import { notifyAssignees, sessionText } from "@/lib/bookings/assignment-emails";
@@ -160,7 +160,7 @@ export async function listRescheduleOptions(input: z.input<typeof Base>): Promis
     await requireAccess(data.tenantId, "bookings", "MANAGE");
     const booking = await db.clientBooking.findFirst({ where: { id: data.bookingId, tenantId: data.tenantId } });
     if (!booking) return { success: false, error: "NOT_FOUND", message: "Booking not found." };
-    const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+    const today = studioTodayStart();
     const slots = await db.bookingSlot.findMany({
       where: { tenantId: data.tenantId, status: "AVAILABLE", date: { gte: new Date(today.getTime() - DAY_MS) } },
       orderBy: [{ date: "asc" }],

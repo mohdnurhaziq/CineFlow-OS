@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, CheckCircle, Clock, FileText, Loader2, Send, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { deleteDraftProposal, sendProposal } from "@/lib/actions/admin-projects";
-import { STUDIO_TIME_ZONE } from "@/lib/slot-time";
+import { formatStudioDate } from "@/lib/slot-time";
 import { studioPath } from "@/lib/domain-name";
 
 export interface ProposalRow {
@@ -131,7 +131,7 @@ export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSe
           </thead>
           <tbody className="divide-y divide-zinc-800/60 font-sans text-xs">
             {proposals.map((p) => {
-              const createdDate = new Date(p.createdAt).toISOString().split("T")[0];
+              const createdDate = formatStudioDate(p.createdAt);
               const selectedAddOnsCount = p.addOns?.filter((a) => a.isSelected).length || 0;
 
               return (
@@ -189,7 +189,7 @@ export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSe
                     {p.status === "DECLINED" && (p.declinedAt || p.declineReason) && (
                       <div className="mt-1 text-[10px] text-zinc-400 max-w-[14rem] mx-auto">
                         {p.declinedAt &&
-                          new Date(p.declinedAt).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: STUDIO_TIME_ZONE })}
+                          formatStudioDate(p.declinedAt)}
                         {p.declineReason && <span className="block italic text-zinc-300 break-words">&ldquo;{p.declineReason}&rdquo;</span>}
                       </div>
                     )}
