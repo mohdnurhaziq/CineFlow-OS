@@ -180,9 +180,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/create-studio/page.tsx": {
-    "mtime": 1795719589.0775614,
-    "seen": 1795720272.4951124,
-    "ast_hash": "4363467116790cc2191db711d720060b",
+    "mtime": 1795722848.630621,
+    "seen": 1795723567.6100347,
+    "ast_hash": "b4f0d66803e265d3907a247319e6848b",
     "semantic_hash": ""
   },
   "app/(saas)/error.tsx": {
@@ -984,9 +984,9 @@
     "semantic_hash": ""
   },
   "lib/actions/onboarding.ts": {
-    "mtime": 1795719810.2879524,
-    "seen": 1795720272.560155,
-    "ast_hash": "aedb4411d7355dc5d4feabc0283bc618",
+    "mtime": 1795722362.3869877,
+    "seen": 1795723567.892629,
+    "ast_hash": "fb3976c1930a2b7a0aba04ee08095c68",
     "semantic_hash": ""
   },
   "lib/actions/proposals.ts": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "lib/notifications.ts": {
-    "mtime": 1795715866.0849094,
-    "seen": 1795717905.2626984,
-    "ast_hash": "28ed55c9fc70a1e2faa2e2c797981aba",
+    "mtime": 1795721593.1930723,
+    "seen": 1795723567.9729278,
+    "ast_hash": "63e9696f0f531704230a6b10ddbbf4e6",
     "semantic_hash": ""
   },
   "lib/solar.ts": {
@@ -1104,9 +1104,9 @@
     "semantic_hash": ""
   },
   "lib/validations/onboarding.ts": {
-    "mtime": 1795669760.269518,
-    "seen": 1795672087.015775,
-    "ast_hash": "fb91b7bf4c42199d5a2505a53a5dae4f",
+    "mtime": 1795721593.1881964,
+    "seen": 1795723568.0156941,
+    "ast_hash": "824e728c871a4882ce8df52a8f2db198",
     "semantic_hash": ""
   },
   "lib/validations/proposal-templates.ts": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/runner.ts": {
-    "mtime": 1795719413.7682996,
-    "seen": 1795720272.6040034,
-    "ast_hash": "272f4be173462c5e35d80833b4eb7a12",
+    "mtime": 1795721496.9386964,
+    "seen": 1795723568.0648003,
+    "ast_hash": "f530f72ffe4edafed98cadc2a0b6e5a0",
     "semantic_hash": ""
   },
   "tests/e2e/test-harness.ts": {
@@ -2316,9 +2316,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier10-authorization.test.ts": {
-    "mtime": 1795630823.8289583,
-    "seen": 1795631802.6755831,
-    "ast_hash": "c45ed152f276660ee037d3b9dfb84231",
+    "mtime": 1795721593.1964428,
+    "seen": 1795723568.0655334,
+    "ast_hash": "f35a88195b8e1c3d438de396be597378",
     "semantic_hash": ""
   },
   "tests/e2e/run.mjs": {
@@ -4176,15 +4176,15 @@
     "semantic_hash": ""
   },
   "components/super-admin/invite-requests-panel.tsx": {
-    "mtime": 1795517773.2336283,
-    "seen": 1795544287.5822506,
-    "ast_hash": "e9278222157542deec1ae4307eb248ba",
+    "mtime": 1795721715.9242053,
+    "seen": 1795723567.8480976,
+    "ast_hash": "65aa8626de5180c726af236385809282",
     "semantic_hash": ""
   },
   "lib/actions/invite-requests.ts": {
-    "mtime": 1795517773.2378175,
-    "seen": 1795544287.5923147,
-    "ast_hash": "1cb58c7e5f267a53cc4cd9a094fdf6ba",
+    "mtime": 1795722409.4811778,
+    "seen": 1795723567.8904595,
+    "ast_hash": "6be7c4924798e3235caf3889d3428cb5",
     "semantic_hash": ""
   },
   "lib/landing/contact.ts": {
@@ -4218,9 +4218,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier39-landing-page.test.ts": {
-    "mtime": 1795636339.892771,
-    "seen": 1795637156.1281252,
-    "ast_hash": "854a22748386b1658d8cb25e3d0dc158",
+    "mtime": 1795721593.2037306,
+    "seen": 1795723568.0959654,
+    "ast_hash": "d351218e7330db3936657e549e752757",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-24-landing-page-redesign.md": {
@@ -4854,9 +4854,9 @@
     "semantic_hash": ""
   },
   "docs/08_GO_LIVE_CHECKLIST.md": {
-    "mtime": 1795709175.0013845,
-    "seen": 1795709798.3518367,
-    "ast_hash": "84b1d0cf8176b3c7cf4d793911f7c48f",
+    "mtime": 1795721793.747084,
+    "seen": 1795723568.1911209,
+    "ast_hash": "76c77e5b7c47fc2e0614d660d069d3a9",
     "semantic_hash": ""
   },
   "docs/AUDIT_2026-11-26.md": {
@@ -4989,6 +4989,30 @@
     "mtime": 1795719775.9756856,
     "seen": 1795720272.6166961,
     "ast_hash": "55190090672036bc06895ee2c709cca8",
+    "semantic_hash": ""
+  },
+  "lib/invites.ts": {
+    "mtime": 1795722386.4246635,
+    "seen": 1795723567.9630265,
+    "ast_hash": "8c8aa4eaccddeefd6617bcf20f1cd2ca",
+    "semantic_hash": ""
+  },
+  "tests/e2e/.t52-only.ts": {
+    "mtime": 1795721496.9366107,
+    "seen": 1795723568.0559976,
+    "ast_hash": "bed0a538bf0d5b258e65c970404dcf9c",
+    "semantic_hash": ""
+  },
+  "tests/e2e/tier52-invite-approval.test.ts": {
+    "mtime": 1795722824.7041273,
+    "seen": 1795723568.107146,
+    "ast_hash": "1a6a0ea1d6d8843850c7048d1b826280",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-11-27-invite-approval-design.md": {
+    "mtime": 1795721418.0158253,
+    "seen": 1795723568.2166324,
+    "ast_hash": "3b3c2379ba32597bd448058975d50b72",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {

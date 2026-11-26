@@ -50,7 +50,7 @@ setting. Never commit the real `.env`.
 | `NEXT_PUBLIC_APP_URL` | `https://cineflow-os.my` |
 | `NEXT_PUBLIC_APP_DOMAIN` | `cineflow-os.my` |
 | `NEXT_PUBLIC_STUDIO_SUBDOMAINS` | `true` |
-| `STUDIO_SIGNUP_CODE` | A long random code you give to invited studios. Empty means sign-up is closed. |
+| `STUDIO_SIGNUP_CODE` | **Leave it empty.** Sign-up is then closed to the public, and you let studios in by approving their invite request (section 3b). If you set it (a long random code), anyone with the code can also sign up. |
 | Email (pick one) | **Resend** (the domain is already verified in DNS): `RESEND_API_KEY=` and `RESEND_FROM_EMAIL="CineFlow OS <hello@cineflow-os.my>"`. Or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`). Production will not start without one, and with Resend it also refuses to start if `RESEND_FROM_EMAIL` is missing or is a test address (`resend.dev`, `example.com`), because clients would get nothing. |
 | `PLATFORM_CONTACT_EMAIL` | Optional. Defaults to `hello@cineflow-os.my`, which is what the landing page, Privacy Policy and Terms show. |
 | `BACKUP_DIR` | Point it inside a Google Drive or OneDrive folder so a copy leaves the PC. |
@@ -91,6 +91,23 @@ node scripts/ops.mjs create-super-admin <your email>
 ```
 
 It prints a password once. Sign in at `https://cineflow-os.my/super-admin/login`.
+
+---
+
+## 3b. Letting studios in
+
+You only share `cineflow-os.my`.
+
+1. They press **Request an invite** and fill in the form. Every super-admin gets an email.
+2. In `https://cineflow-os.my/super-admin`, press **Approve** (or **Reject**, with or without a short
+   note to them).
+3. Approve emails them a **Create your studio** button. The link works once, only for their email, for
+   14 days. Until they sign up you can **Resend email**, **Copy link** (to send it yourself, for example
+   on WhatsApp) or **Cancel invite**.
+4. When they've made their studio, the card shows **Joined**.
+
+This needs the email settings in section 2. If an email can't be sent, the console says so and gives you
+the link to send by hand.
 
 ---
 

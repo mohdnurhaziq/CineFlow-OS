@@ -37,6 +37,7 @@ const PUBLIC_ACTIONS: Record<string, string> = {
   "client-auth.registerClient": "client sign-up",
   "invite-requests.submitInviteRequest": "the landing page form's action (calls requestInvite)",
   "invite-requests.requestInvite": "the landing page's invite request form (rate limited, honeypot)",
+  "onboarding.checkInvite": "reads a personal invite link before sign-up (needs the unguessable token; rate limited)",
   "booking.holdBookingSlot": "public booking flow",
   "booking.releaseBookingSlot": "public booking flow (session-scoped)",
   "booking.createClientBooking": "public booking flow",

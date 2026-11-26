@@ -858,7 +858,15 @@ model InviteRequest {
   kind       String    // PHOTO, VIDEO, BOTH
   message    String?
   createdAt  DateTime  @default(now())
-  handledAt  DateTime?
+  handledAt  DateTime? // From before approving existed: "marked handled". Kept as a note.
+  status     String    @default("PENDING") // PENDING, APPROVED, REJECTED. Joined is joinedAt.
+  decidedAt  DateTime?
+  // The approved person's single-use invite: only a hash of the link's token is kept.
+  inviteTokenHash String?   @unique
+  inviteExpiresAt DateTime?
+  invitedByEmail  Boolean   @default(false) // The live link went only to their inbox, so using it proves the email.
+  joinedAt         DateTime?
+  joinedTenantSlug String?
 
   @@index([createdAt])
   @@index([email])

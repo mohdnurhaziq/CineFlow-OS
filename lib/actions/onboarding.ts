@@ -3,8 +3,9 @@
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import type { Login } from "@prisma/client";
-import { verifyLoginPassword } from "@/lib/auth/login";
+import { verifyLoginPassword, createLoginFromProof } from "@/lib/auth/login";
 import { sendStudioWelcome } from "@/lib/onboarding/welcome";
+import { emailAlreadyInUse, findUsableInvite } from "@/lib/invites";
 import { googleConfigured } from "@/lib/auth/google";
 import { SIGNUP_TICKET, SIGNUP_TICKET_COOKIE, isSuperAdminEmail, loginForGoogle, type SignupTicket } from "@/lib/auth/google-flow";
 import { cookies } from "next/headers";
@@ -91,11 +92,26 @@ export interface OnboardStudioResult {
 const SIGNUP_HOUR = 60 * 60 * 1000;
 const TOO_MANY_SIGNUPS = "Too many tries from here. Please try again later.";
 
+const INVITE_GONE = "This invite link no longer works. It may have expired, been used, or been replaced by a newer one.";
+
+export type InviteCheck =
+  | { valid: true; email: string; name: string; studioName: string; kind: string }
+  | { valid: false; message: string };
+
+/**
+ * What a personal invite link is for, so the sign-up form can be filled in. Only whoever holds a good
+ * link learns anything. Limited per visitor (30 an hour).
+ */
+export async function checkInvite(token: string): Promise<InviteCheck> {
+  const ip = await requestIp();
+  if (ip && isRateLimited(`studio-invite:${ip}`, 30, SIGNUP_HOUR)) return { valid: false, message: TOO_MANY_SIGNUPS };
+  const invite = await findUsableInvite(token);
+  if (!invite) return { valid: false, message: INVITE_GONE };
+  return { valid: true, email: invite.email, name: invite.name, studioName: invite.studioName, kind: invite.kind };
+}
+
 export async function onboardStudio(formData: OnboardStudioInput): Promise<OnboardStudioResult> {
   const status = await studioSignupStatus();
-  if (!status.open) {
-    return { success: false, error: "Studio sign-up is closed during the beta. Ask us for an invite." };
-  }
   // Honest people make mistakes (a taken address, a typo), so what is tightly limited is what can be
   // abused: new studios and wrong invite codes (5 an hour each from one visitor; the first step's
   // own check has its separate limit). All attempts together have a generous ceiling.
@@ -103,7 +119,16 @@ export async function onboardStudio(formData: OnboardStudioInput): Promise<Onboa
   if (ip && (isRateLimited(`studio-signup:${ip}`, 30, SIGNUP_HOUR) || attemptCount(`studio-created:${ip}`) >= 5)) {
     return { success: false, error: TOO_MANY_SIGNUPS };
   }
-  if (status.needsCode) {
+  // A personal invite opens sign-up even while it is closed to everyone else, and needs no code.
+  let invite: Awaited<ReturnType<typeof findUsableInvite>> = null;
+  if (formData.inviteToken) {
+    invite = await findUsableInvite(formData.inviteToken);
+    if (!invite) return { success: false, error: INVITE_GONE, field: "invite" };
+  }
+  if (!invite && !status.open) {
+    return { success: false, error: "Studio sign-up is closed during the beta. Ask us for an invite." };
+  }
+  if (!invite && status.needsCode) {
     if (ip && attemptCount(`studio-signup-wrong-code:${ip}`) >= 5) return { success: false, error: TOO_MANY_SIGNUPS };
     if (!signupCodeMatches(formData.signupCode)) {
       if (ip) countAttempt(`studio-signup-wrong-code:${ip}`, SIGNUP_HOUR);
@@ -145,6 +170,10 @@ export async function onboardStudio(formData: OnboardStudioInput): Promise<Onboa
     return { success: false, error: "Password must be at least 8 characters", field: "password" };
   }
   const ownerEmail = ticket ? ticket.email : data.ownerEmail;
+  // Checked before anything is made for the email.
+  if (invite && ownerEmail.trim().toLowerCase() !== invite.email) {
+    return { success: false, field: "ownerEmail", error: `This invite is for ${invite.email}. Use that email, or sign in with that Google account.` };
+  }
 
   let login: Login | null = null;
   if (ticket) {
@@ -171,11 +200,25 @@ export async function onboardStudio(formData: OnboardStudioInput): Promise<Onboa
     login = check.ok ? check.login : null;
   }
 
+  // The link CineFlow emailed was used with a password: that proves the inbox, unless the email has
+  // other accounts to take over. Looked up before this studio's own account exists.
+  const inviteProvesEmail = !!invite?.invitedByEmail && !ticket && !login && !(await emailAlreadyInUse(ownerEmail));
+
   try {
     const result = await db.$transaction(async (tx) => {
       // 0. Explicit Transaction Guard: Reject reserved platform slugs
       if (RESERVED_SLUGS.has(data.slug.toLowerCase())) {
         throw new Error("RESERVED_SLUG");
+      }
+
+      // The invite is used up here, with the studio or not at all: of two sign-ups racing on one
+      // link, only one gets past this.
+      if (invite) {
+        const claimed = await tx.inviteRequest.updateMany({
+          where: { id: invite.id, inviteTokenHash: invite.inviteTokenHash, status: "APPROVED", joinedAt: null, inviteExpiresAt: { gt: new Date() } },
+          data: { joinedAt: new Date(), joinedTenantSlug: data.slug },
+        });
+        if (claimed.count !== 1) throw new Error("INVITE_USED");
       }
 
       // 1. Uniqueness Checks
@@ -402,8 +445,18 @@ export async function onboardStudio(formData: OnboardStudioInput): Promise<Onboa
         ownerName: owner.name,
         studioName: tenant.name,
         trialEndsAt: tenant.trialEndsAt!,
+        passwordHash,
       };
     });
+
+    if (inviteProvesEmail && result.passwordHash) {
+      try {
+        login = (await createLoginFromProof(result.ownerEmail, result.passwordHash, { takeUpUserId: result.ownerId })).login;
+      } catch (err) {
+        // The studio is made either way; they can confirm the email from the welcome message.
+        console.error("Could not confirm the invited email:", err);
+      }
+    }
 
     // Automatically authenticate the new studio owner
     if (login) {
@@ -438,6 +491,9 @@ export async function onboardStudio(formData: OnboardStudioInput): Promise<Onboa
     };
   } catch (error) {
     console.error("Onboarding transaction error:", error);
+    if (errorMessageOf(error) === "INVITE_USED") {
+      return { success: false, error: INVITE_GONE, field: "invite" };
+    }
     if (errorMessageOf(error) === "RESERVED_SLUG") {
       return { success: false, error: "Studio URL slug is reserved for platform operations.", field: "slug" };
     }

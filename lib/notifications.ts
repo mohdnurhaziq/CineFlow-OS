@@ -21,6 +21,7 @@ export type NotificationEvent =
   | "TEAM_INVITE"
   | "ONE_LOGIN_CONFIRM"
   | "STUDIO_WELCOME"
+  | "STUDIO_INVITE"
   | "SHOOT_ASSIGNED"
   | "SHOOT_CHANGED";
 
@@ -186,6 +187,20 @@ export interface StudioWelcomePayload {
   confirmExpiresMinutes: number;
 }
 
+/** A super-admin approved an invite request: a personal sign-up link (a credential: email only, never logged). */
+export interface StudioInvitePayload {
+  event: "STUDIO_INVITE";
+  studioName: string;
+  studioSlug: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: undefined;
+  /** The studio name they asked about. */
+  requestedStudio: string;
+  inviteUrl: string;
+  expiresOn: string;
+}
+
 /** A studio added someone to its team: a set-password link (a credential: email only, never logged). */
 export interface TeamInvitePayload {
   event: "TEAM_INVITE";
@@ -250,6 +265,7 @@ export type NotificationPayload =
   | StudioUpdatePayload
   | PasswordResetPayload
   | OneLoginConfirmPayload
+  | StudioInvitePayload
   | StudioWelcomePayload
   | TeamInvitePayload
   | ShootAssignedPayload
@@ -296,6 +312,7 @@ const REDACTED_AS: Partial<Record<string, string>> = {
   TEAM_INVITE: "team invite",
   ONE_LOGIN_CONFIRM: "one sign-in link",
   STUDIO_WELCOME: "studio welcome",
+  STUDIO_INVITE: "studio invite",
 };
 
 /** Resend's sender when RESEND_FROM_EMAIL isn't set. */
@@ -732,6 +749,23 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
       whatsappText = "";
       break;
     }
+    case "STUDIO_INVITE": {
+      emailSubject = "You're approved: create your studio on CineFlow OS";
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>Your invite request for <strong>${esc(payload.requestedStudio)}</strong> is approved. Create your studio and start your free trial.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${esc(payload.inviteUrl)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">
+            Create your studio
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #a1a1aa;">This link is just for you: it works once, only with this email address, and expires on ${esc(payload.expiresOn)}. Please don't forward it. If you didn't ask for an invite, you can ignore this email.</p>
+      `;
+      emailText = `Your invite request for ${payload.requestedStudio} is approved. Create your studio: ${payload.inviteUrl} (just for you: works once, only with this email address, expires on ${payload.expiresOn}; please don't forward it). If you didn't ask for an invite, ignore this email.`;
+      // Deliberately no WhatsApp text: this link is a credential.
+      whatsappText = "";
+      break;
+    }
     case "TEAM_INVITE": {
       emailSubject = `You're invited to join ${payload.studioName} on CineFlow`;
       bodyHtml = `
@@ -847,7 +881,7 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
 
   // The log keeps recent sends for auditing; reset and invite links are credentials, so never keep them.
   notificationLog.push(
-    payload.event === "PASSWORD_RESET" || payload.event === "TEAM_INVITE" || payload.event === "ONE_LOGIN_CONFIRM" || payload.event === "STUDIO_WELCOME"
+    payload.event === "PASSWORD_RESET" || payload.event === "TEAM_INVITE" || payload.event === "ONE_LOGIN_CONFIRM" || payload.event === "STUDIO_WELCOME" || payload.event === "STUDIO_INVITE"
       ? {
           ...result,
           emailHtml: `[redacted: ${REDACTED_AS[payload.event] ?? "password reset"}]`,

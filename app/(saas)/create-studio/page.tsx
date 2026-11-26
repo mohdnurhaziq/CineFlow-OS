@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { PasswordVisibilityToggle } from "@/components/auth/password-visibility-toggle";
 import { toast } from "sonner";
-import { checkSignupCode, checkSlugAvailability, googleAvailable, onboardStudio, readGoogleTicket, studioSignupStatus } from "@/lib/actions/onboarding";
+import { checkInvite, checkSignupCode, checkSlugAvailability, googleAvailable, onboardStudio, readGoogleTicket, studioSignupStatus } from "@/lib/actions/onboarding";
 import { GoogleButton, OrDivider } from "@/components/auth/google-button";
 import { googleErrorMessage } from "@/lib/auth/google-messages";
 import { platformUrl } from "@/lib/domain-name";
@@ -127,6 +127,11 @@ export default function CreateStudioPage() {
     };
   }, [formData.slug]);
 
+  // A personal invite link (from an approved invite request): it opens sign-up for that email, with no code.
+  const [invite, setInvite] = useState<{ token: string; email: string } | null>(null);
+  const [inviteState, setInviteState] = useState<"none" | "checking" | "dead">("none");
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+
   /** Why the server last refused, kept on screen until the answer it was about changes. */
   const [submitError, setSubmitError] = useState<{ message: string; field?: string } | null>(null);
   useEffect(() => {
@@ -180,13 +185,13 @@ export default function CreateStudioPage() {
     slugStatus.available !== false &&
     formData.name.trim().length >= 2 &&
     formData.slug.trim().length >= 3 &&
-    (!signup?.needsCode || (formData.signupCode ?? "").trim().length > 0);
+    (!signup?.needsCode || invite !== null || (formData.signupCode ?? "").trim().length > 0);
 
   // A wrong invite code is caught here, not after the whole form is filled in.
   const [codeError, setCodeError] = useState<string | null>(null);
   const [codeChecking, setCodeChecking] = useState(false);
   const continueFromStep1 = async () => {
-    if (signup?.needsCode) {
+    if (signup?.needsCode && !invite) {
       setCodeChecking(true);
       try {
         const res = await checkSignupCode(formData.signupCode ?? "");
@@ -249,9 +254,12 @@ export default function CreateStudioPage() {
     }
   }, [draftReady, currentStep, formData, addressEdited, googleSignedIn]);
 
-  // On arrival: bring back what was typed. Coming back from Google, the ticket says who the owner is.
+  // On arrival: bring back what was typed. An invite link says who it is for; coming back from
+  // Google, the ticket says who the owner is.
   useEffect(() => {
-    const returned = new URLSearchParams(window.location.search).get("google");
+    const params = new URLSearchParams(window.location.search);
+    const returned = params.get("google");
+    const linked = params.get("invite");
     let draft: ReturnType<typeof parseDraft> = null;
     try {
       draft = parseDraft(window.sessionStorage.getItem(SAVE_KEY));
@@ -269,31 +277,67 @@ export default function CreateStudioPage() {
       setCurrentStep(step);
     };
 
-    const reason = returned ? googleErrorMessage(returned) : null;
-    if (reason) {
-      setGoogleMessage(reason);
-      show(Math.min(reachableStep(draft?.step ?? 1, false), 3));
-      setDraftReady(true);
-      return;
-    }
-    if (!returned && !draft?.google) {
-      // The password isn't kept, so the review waits until it is typed again.
-      show(draft && hasStudio ? reachableStep(draft.step, false) : 1);
-      setDraftReady(true);
-      return;
-    }
-    readGoogleTicket()
-      .then((who) => {
-        if (!who) {
-          if (returned) setGoogleMessage(googleErrorMessage("failed"));
-          show(draft && hasStudio ? reachableStep(draft.step, false) : 1);
-          return;
-        }
-        setGoogleSignedIn(true);
-        setFormData((prev) => ({ ...prev, ownerEmail: who.email, ownerName: prev.ownerName || who.name || "" }));
-        // Straight back from Google: the owner step. After a refresh: where they were.
-        show(returned ? 3 : reachableStep(draft?.step ?? 3, true));
-      })
+    /** The invite the sign-up is under: from the link just opened, or kept from before. */
+    const openInvite = async (): Promise<string | null> => {
+      const token = linked ?? draft?.form.inviteToken;
+      if (!token) return null;
+      setInviteState("checking");
+      const info = await checkInvite(token).catch(() => ({ valid: false as const, message: "" }));
+      if (!info.valid) {
+        // A dead link just opened says so; one only remembered is quietly forgotten.
+        setInviteState(linked ? "dead" : "none");
+        setInviteMessage(info.message || null);
+        setFormData((prev) => ({ ...prev, inviteToken: undefined }));
+        return null;
+      }
+      setInvite({ token, email: info.email });
+      setInviteState("none");
+      // Filled in from their request; anything they have typed already stays.
+      setFormData((prev) => {
+        const name = prev.name || info.studioName;
+        const kind = info.kind === "PHOTO" ? "PHOTOGRAPHY" : info.kind === "VIDEO" ? "VIDEOGRAPHY" : "HYBRID";
+        return {
+          ...prev,
+          inviteToken: token,
+          ownerEmail: info.email,
+          ownerName: prev.ownerName || info.name,
+          name,
+          slug: prev.slug || slugFromName(name),
+          discipline: prev.name ? prev.discipline : (kind as OnboardStudioInput["discipline"]),
+        };
+      });
+      return info.email;
+    };
+
+    void (async () => {
+      const invitedEmail = await openInvite();
+      const reason = returned ? googleErrorMessage(returned) : null;
+      if (reason) {
+        setGoogleMessage(reason);
+        show(Math.min(reachableStep(draft?.step ?? 1, false), 3));
+        return;
+      }
+      if (!returned && !draft?.google) {
+        // The password isn't kept, so the review waits until it is typed again.
+        show(draft && hasStudio ? reachableStep(draft.step, false) : 1);
+        return;
+      }
+      const who = await readGoogleTicket();
+      if (!who) {
+        if (returned) setGoogleMessage(googleErrorMessage("failed"));
+        show(draft && hasStudio ? reachableStep(draft.step, false) : 1);
+        return;
+      }
+      if (invitedEmail && who.email.toLowerCase() !== invitedEmail) {
+        setGoogleMessage(`This invite is for ${invitedEmail}. Choose that Google account, or use a password.`);
+        show(3);
+        return;
+      }
+      setGoogleSignedIn(true);
+      setFormData((prev) => ({ ...prev, ownerEmail: who.email, ownerName: prev.ownerName || who.name || "" }));
+      // Straight back from Google: the owner step. After a refresh: where they were.
+      show(returned ? 3 : reachableStep(draft?.step ?? 3, true));
+    })()
       .catch(() => setGoogleMessage(googleErrorMessage("failed")))
       .finally(() => setDraftReady(true));
   }, []);
@@ -319,12 +363,40 @@ export default function CreateStudioPage() {
       goToStep(stepForField(res.field));
       if (res.field === "slug") setSlugStatus({ slug: formData.slug, available: false, error: "Not available" });
       if (/Google sign-in expired/.test(message)) setGoogleSignedIn(false);
+      if (res.field === "invite") {
+        setInviteState("dead");
+        setInviteMessage(message);
+      }
       setSubmitError({ message, field: res.field });
     });
   };
 
+  if (inviteState !== "none") {
+    return (
+      <div className="min-h-[70vh] bg-[#09090b] text-[#fafafa] flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-[#121215] border border-zinc-800 text-center space-y-3">
+          {inviteState === "checking" ? (
+            <p role="status" className="text-sm text-zinc-300">
+              Checking your invite…
+            </p>
+          ) : (
+            <>
+              <h1 className="text-xl font-bold tracking-tight text-white">This invite link doesn&apos;t work any more</h1>
+              <p className="text-sm text-zinc-400">
+                {inviteMessage?.startsWith("Too many") ? inviteMessage : "It may have expired, been used, or been replaced by a newer one. Check for a newer email from us, or ask for an invite again."}
+              </p>
+              <Link href="/#invite" className="inline-flex min-h-11 items-center text-sm text-amber-400 underline underline-offset-2 hover:text-amber-300">
+                Back to CineFlow OS
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Production without an invite code: sign-up is closed during the beta.
-  if (signup && !signup.open) {
+  if (signup && !signup.open && !invite) {
     return (
       <div className="min-h-[70vh] bg-[#09090b] text-[#fafafa] flex items-center justify-center px-4 py-16">
         <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-[#121215] border border-zinc-800 text-center space-y-3">
@@ -426,7 +498,7 @@ export default function CreateStudioPage() {
 
                 <div className="space-y-4">
                   {/* Invite code: during the beta, sign-up needs the code we hand out */}
-                  {signup?.needsCode && (
+                  {signup?.needsCode && !invite && (
                     <div className="space-y-1.5">
                       <label htmlFor="signup-code" className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
                         Invite code *
@@ -757,8 +829,8 @@ export default function CreateStudioPage() {
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerEmail: e.target.value }))}
                         onBlur={() => setEmailTouched(true)}
                         aria-invalid={(emailTouched && formData.ownerEmail !== "" && !isFullEmail(formData.ownerEmail)) || submitError?.field === "ownerEmail" ? true : undefined}
-                        // Google confirmed this address: it is the owner's, and can't be changed here.
-                        readOnly={googleSignedIn}
+                        // Google confirmed this address, or the invite was sent to it: it can't be changed here.
+                        readOnly={googleSignedIn || invite !== null}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500 read-only:text-zinc-400"
                         required
                       />
@@ -789,6 +861,7 @@ export default function CreateStudioPage() {
                         />
                         <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
                       </div>
+                      {invite && <p className="text-xs text-zinc-400">Your invite is for this email.</p>}
                       {(formData.password ?? "").length > 0 && (formData.password ?? "").length < 8 && (
                         <p className="text-xs text-rose-300">{8 - (formData.password ?? "").length} more characters needed</p>
                       )}
