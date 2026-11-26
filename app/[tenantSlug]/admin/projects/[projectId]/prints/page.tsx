@@ -11,6 +11,7 @@ import { adminPageAccess } from "@/lib/auth/admin-page";
 import { canAccessProject } from "@/lib/auth/access-guard";
 import { NoAccess } from "@/components/admin/no-access";
 import { studioPath } from "@/lib/domain-name";
+import { studioAdminName } from "@/lib/labels";
 
 interface AdminProjectPrintsPageProps {
   params: Promise<{ tenantSlug: string; projectId: string }>;
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: AdminProjectPrintsPageProps):
     where: { id: projectId, tenant: { slug: tenantSlug } },
     select: { title: true, tenant: { select: { name: true } } },
   });
-  return { title: project ? `Framed prints · ${project.title} | ${project.tenant.name} Studio Admin` : "Framed prints" };
+  return { title: project ? `Framed prints · ${project.title} | ${studioAdminName(project.tenant.name)}` : "Framed prints" };
 }
 
 /**

@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!tenant) return { title: "Studio Not Found" };
 
-  const title = `${tenant.name} — ${tenant.tagline || "Creative Production Studio"}`;
+  const title = tenant.tagline ? `${tenant.name} — ${tenant.tagline}` : tenant.name;
   const description =
     tenant.bio ||
     `Explore portfolio, campaign categories, and booking sessions for ${tenant.name}.`;
@@ -158,7 +158,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
     name: tenant.name,
-    description: tenant.bio || tenant.tagline,
+    description: tenant.bio || tenant.tagline || undefined,
     url: studioPath(tenant.slug),
     image: tenant.logoUrl,
     priceRange: "$$$",

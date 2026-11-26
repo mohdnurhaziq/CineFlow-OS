@@ -9,6 +9,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { SHOWCASE_PLACEHOLDER, showcaseCover } from "@/lib/showcase/cover";
+import { studioAdminName } from "@/lib/labels";
 
 interface AdminVisualizerPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -17,7 +18,7 @@ interface AdminVisualizerPageProps {
 export async function generateMetadata({ params }: AdminVisualizerPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Wall Art Preview | ${tenant.name} Studio Admin` : "Wall Art Preview" };
+  return { title: tenant ? `Wall Art Preview | ${studioAdminName(tenant.name)}` : "Wall Art Preview" };
 }
 
 /**

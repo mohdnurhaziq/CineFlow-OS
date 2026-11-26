@@ -14,6 +14,7 @@ import { loadAssignableFor } from "@/lib/team/members";
 import { bookingActionPowers } from "@/lib/auth/page-powers";
 import { BookingDetailView } from "@/components/admin/bookings/booking-detail-view";
 import { studioPath } from "@/lib/domain-name";
+import { studioAdminName } from "@/lib/labels";
 
 interface BookingPageProps {
   params: Promise<{ tenantSlug: string; bookingId: string }>;
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: BookingPageProps): Promise<Me
     select: { trackingCode: true, clientName: true, tenant: { select: { name: true } } },
   });
   return {
-    title: booking ? `${booking.trackingCode} · ${booking.clientName} | ${booking.tenant.name} Studio Admin` : "Booking",
+    title: booking ? `${booking.trackingCode} · ${booking.clientName} | ${studioAdminName(booking.tenant.name)}` : "Booking",
   };
 }
 

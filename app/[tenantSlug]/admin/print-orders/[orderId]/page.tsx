@@ -17,6 +17,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { studioPath } from "@/lib/domain-name";
+import { studioAdminName } from "@/lib/labels";
 
 interface PrintOrderPageProps {
   params: Promise<{ tenantSlug: string; orderId: string }>;
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: PrintOrderPageProps): Promise
     where: { id: orderId, tenant: { slug: tenantSlug } },
     select: { orderNumber: true, tenant: { select: { name: true } } },
   });
-  return { title: order ? `${order.orderNumber} | ${order.tenant.name} Studio Admin` : "Print order" };
+  return { title: order ? `${order.orderNumber} | ${studioAdminName(order.tenant.name)}` : "Print order" };
 }
 
 const INVOICE_STATE: Record<string, string> = { PAID: "paid", VOID: "cancelled", PENDING_VERIFICATION: "payment being checked" };

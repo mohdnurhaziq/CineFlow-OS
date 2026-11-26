@@ -10,6 +10,7 @@ import { ProposalAdminDashboard } from "@/components/admin/proposals/proposal-ad
 import type { ProposalAddOnTemplateRow } from "@/components/admin/proposals/addon-template-dialog";
 import type { ProposalRow } from "@/components/admin/proposals/proposals-list";
 import { PlanPanel } from "@/components/billing/plan-panel";
+import { studioAdminName } from "@/lib/labels";
 
 interface ProposalsPageProps {
   params: Promise<{
@@ -25,7 +26,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Proposals Not Found" };
 
   return {
-    title: `Proposals | ${tenant.name} Studio Admin`,
+    title: `Proposals | ${studioAdminName(tenant.name)}`,
     description: "Manage proposal add-on options, pricing units, and monitor client quote status.",
   };
 }

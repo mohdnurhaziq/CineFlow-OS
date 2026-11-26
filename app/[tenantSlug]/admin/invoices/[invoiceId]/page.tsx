@@ -13,6 +13,7 @@ import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { studioPath } from "@/lib/domain-name";
+import { studioAdminName } from "@/lib/labels";
 
 interface AdminInvoicePageProps {
   params: Promise<{ tenantSlug: string; invoiceId: string }>;
@@ -21,7 +22,7 @@ interface AdminInvoicePageProps {
 export async function generateMetadata({ params }: AdminInvoicePageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Invoice | ${tenant.name} Studio Admin` : "Invoice" };
+  return { title: tenant ? `Invoice | ${studioAdminName(tenant.name)}` : "Invoice" };
 }
 
 // Invoices VIEW. Recording or cancelling a payment needs recordPayments; a reminder Invoices MANAGE.

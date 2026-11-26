@@ -11,6 +11,7 @@ import { NoAccess } from "@/components/admin/no-access";
 import { parseZoneStates } from "@/lib/prints/zones";
 import type { FramesTab } from "@/components/admin/frames/frames-manager";
 import { PlanPanel } from "@/components/billing/plan-panel";
+import { studioAdminName } from "@/lib/labels";
 
 interface FramesPageProps {
   params: Promise<{
@@ -27,7 +28,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Frames Not Found" };
 
   return {
-    title: `Frames & Prints | ${tenant.name} Studio Admin`,
+    title: `Frames & Prints | ${studioAdminName(tenant.name)}`,
     description: "Manage custom frame moldings, dimensions, and wall art visualizer options.",
   };
 }

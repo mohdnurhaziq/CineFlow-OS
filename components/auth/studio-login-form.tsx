@@ -189,7 +189,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder="Your password"
               className="w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors font-mono"
             />
             <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />

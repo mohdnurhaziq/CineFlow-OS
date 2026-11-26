@@ -14,6 +14,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { studioPath } from "@/lib/domain-name";
+import { studioAdminName } from "@/lib/labels";
 
 interface ProjectsPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -25,7 +26,7 @@ const TAB_LABELS: Record<ProjectListTab, string> = { productions: "Productions",
 export async function generateMetadata({ params }: ProjectsPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Galleries | ${tenant.name} Studio Admin` : "Galleries" };
+  return { title: tenant ? `Galleries | ${studioAdminName(tenant.name)}` : "Galleries" };
 }
 
 // Galleries access; at "Only their own", the list holds only the projects they lead or are assigned to.

@@ -16,6 +16,7 @@ import { countUnassignedUpcoming } from "@/lib/bookings/schedule";
 import { studioNow } from "@/lib/slot-time";
 import { DashboardTour } from "@/components/admin/onboarding/dashboard-tour";
 import { studioUrl } from "@/lib/domain-name";
+import { studioAdminName } from "@/lib/labels";
 
 interface AdminPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -24,7 +25,7 @@ interface AdminPageProps {
 export async function generateMetadata({ params }: AdminPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Overview | ${tenant.name} Studio Admin` : "Studio Admin" };
+  return { title: tenant ? `Overview | ${studioAdminName(tenant.name)}` : "Studio Admin" };
 }
 
 /**

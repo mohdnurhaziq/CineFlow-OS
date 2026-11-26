@@ -9,6 +9,7 @@ import { NoAccess } from "@/components/admin/no-access";
 import { MySchedule } from "@/components/admin/schedule/my-schedule";
 import { loadSchedule } from "@/lib/bookings/schedule";
 import { studioNow } from "@/lib/slot-time";
+import { studioAdminName } from "@/lib/labels";
 
 interface SchedulePageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: SchedulePageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `My schedule | ${tenant.name} Studio Admin` : "My schedule" };
+  return { title: tenant ? `My schedule | ${studioAdminName(tenant.name)}` : "My schedule" };
 }
 
 // Any team member (and the owner): their own assigned sessions, never anyone else's.

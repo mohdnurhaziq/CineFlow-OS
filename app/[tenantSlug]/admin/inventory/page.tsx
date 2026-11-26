@@ -13,6 +13,7 @@ import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { bundleWithRates, seesGearRates, withRate } from "@/lib/gear/rates";
 import { PlanPanel } from "@/components/billing/plan-panel";
+import { studioAdminName } from "@/lib/labels";
 
 interface InventoryPageProps {
   params: Promise<{
@@ -28,7 +29,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Inventory Not Found" };
 
   return {
-    title: `Gear & Fleet | ${tenant.name} Studio Admin`,
+    title: `Gear & Fleet | ${studioAdminName(tenant.name)}`,
     description: "Manage equipment fleet, kit bundle recipes, and pre/post-shoot inspection condition logs.",
   };
 }

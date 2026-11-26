@@ -177,7 +177,7 @@ export async function onboardStudio(formData: OnboardStudioInput) {
           slug: data.slug,
           discipline: data.discipline,
           currency: data.currency,
-          tagline: data.tagline || `${data.name} — Creative Production Studio`,
+          tagline: data.tagline?.trim() || null,
           // Left blank, the public page shows no bio: never made-up words under the studio's name.
           bio: data.bio?.trim() || null,
           brandColor: data.brandColor || "#f59e0b",

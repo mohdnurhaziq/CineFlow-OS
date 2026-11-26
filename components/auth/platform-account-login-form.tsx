@@ -92,7 +92,7 @@ export function PlatformAccountLoginForm({ googleEnabled = false, googleError = 
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder="Your password"
               className={cn(inputClass, "pr-10 font-mono")}
             />
             <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />

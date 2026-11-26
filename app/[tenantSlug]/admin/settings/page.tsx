@@ -11,6 +11,7 @@ import { ensureStudioRoles, parseAccess } from "@/lib/auth/access";
 import { NoAccess } from "@/components/admin/no-access";
 import { loadTeamMembers, type TeamMemberRow } from "@/lib/team/members";
 import { hasFeature } from "@/lib/billing/guard";
+import { studioAdminName } from "@/lib/labels";
 
 interface SettingsPageProps {
   params: Promise<{
@@ -27,7 +28,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Settings Not Found" };
 
   return {
-    title: `Settings | ${tenant.name} Studio Admin`,
+    title: `Settings | ${studioAdminName(tenant.name)}`,
     description: "Your studio, how clients pay you, and how their photos are delivered.",
   };
 }

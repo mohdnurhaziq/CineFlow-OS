@@ -2,7 +2,7 @@ import { PageShell } from "@/components/ui/page";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { milestoneInstallmentLabel } from "@/lib/labels";
+import { milestoneInstallmentLabel, studioAdminName } from "@/lib/labels";
 import { InvoicesConsole, type InvoiceRow } from "@/components/admin/invoices/invoices-console";
 import { NewInvoiceButton } from "@/components/admin/invoices/new-invoice-dialog";
 import { levelAtLeast } from "@/lib/auth/access";
@@ -16,7 +16,7 @@ interface InvoicesPageProps {
 export async function generateMetadata({ params }: InvoicesPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Invoices | ${tenant.name} Studio Admin` : "Invoices" };
+  return { title: tenant ? `Invoices | ${studioAdminName(tenant.name)}` : "Invoices" };
 }
 
 // Invoices VIEW. A new invoice sets a price: the setPrices permission.

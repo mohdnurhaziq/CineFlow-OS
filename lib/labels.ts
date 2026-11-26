@@ -98,3 +98,10 @@ export const RESERVATION_STATUS_LABELS: Record<string, string> = {
   RETURNED: "Returned",
 };
 export const reservationStatusLabel = lookup(RESERVATION_STATUS_LABELS);
+
+/** The studio's admin, for a browser tab: "Lumina CineWorks Studio Admin", and "Haz Studio Admin" rather than "Haz Studio Studio Admin". */
+export function studioAdminName(name: string | undefined): string {
+  const studio = name?.trim();
+  if (!studio) return "Studio Admin";
+  return /\bstudios?$/i.test(studio) ? `${studio} Admin` : `${studio} Studio Admin`;
+}

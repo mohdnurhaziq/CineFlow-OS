@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { formatStudioDate, loadClientProfile } from "@/lib/client-directory";
 import { formatSlotDate } from "@/lib/slot-time";
 import { formatMoney } from "@/lib/money";
-import { humanize, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
+import { humanize, invoiceStatusLabel, milestoneLabel, studioAdminName } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { ClientContactCard } from "@/components/admin/clients/client-contact-card";
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: ClientPageProps): Promise<Met
     where: { id: clientId, role: "CLIENT", tenant: { slug: tenantSlug } },
     select: { name: true, tenant: { select: { name: true } } },
   });
-  return { title: client ? `${client.name} | ${client.tenant?.name} Studio Admin` : "Client" };
+  return { title: client ? `${client.name} | ${studioAdminName(client.tenant?.name)}` : "Client" };
 }
 
 /** A timestamp in the studio's time zone; a booking's "YYYY-MM-DD" target date as that calendar day. */

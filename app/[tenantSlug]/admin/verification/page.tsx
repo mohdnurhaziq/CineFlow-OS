@@ -8,6 +8,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { loadPrintOrderPreviews } from "@/lib/prints/order-preview";
+import { studioAdminName } from "@/lib/labels";
 
 interface VerificationPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: VerificationPageProps): Promi
   if (!tenant) return { title: "Verification" };
 
   return {
-    title: `Verification | ${tenant.name} Studio Admin`,
+    title: `Verification | ${studioAdminName(tenant.name)}`,
     description: "Audit offline QR receipts and cash counter orders to lock slots and unlock project deliverables.",
   };
 }

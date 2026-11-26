@@ -380,7 +380,7 @@ export function CheckoutShell({
                       <Mail className="absolute left-3.5 top-2.5 size-4 text-zinc-500" />
                       <input
                         type="email"
-                        placeholder="maya@example.com"
+                        placeholder="e.g. maya@example.com"
                         value={clientInfo.email}
                         onChange={(e) => setClientInfo((prev) => ({ ...prev, email: e.target.value }))}
                       readOnly={identityLocked}
@@ -398,7 +398,7 @@ export function CheckoutShell({
                       <Phone className="absolute left-3.5 top-2.5 size-4 text-zinc-500" />
                       <input
                         type="tel"
-                        placeholder="+60 12-345 6789"
+                        placeholder="e.g. +60 12-345 6789"
                         value={clientInfo.phone}
                         onChange={(e) => setClientInfo((prev) => ({ ...prev, phone: e.target.value }))}
                       readOnly={identityLocked}

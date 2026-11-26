@@ -11,6 +11,7 @@ import { loadBookableSlots } from "@/lib/bookings/bookable-slots";
 import { loadAssignableFor } from "@/lib/team/members";
 import { bookingActionPowers } from "@/lib/auth/page-powers";
 import { studioNow } from "@/lib/slot-time";
+import { studioAdminName } from "@/lib/labels";
 
 interface BookingsPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: BookingsPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Bookings | ${tenant.name} Studio Admin` : "Bookings" };
+  return { title: tenant ? `Bookings | ${studioAdminName(tenant.name)}` : "Bookings" };
 }
 
 // Bookings access; at "Only their own", the list holds only the bookings they are assigned to.

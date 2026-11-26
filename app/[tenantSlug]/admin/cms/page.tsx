@@ -7,6 +7,7 @@ import type { ShowcaseItemRow, CategoryOption, PackageOption } from "@/component
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { studioAdminName } from "@/lib/labels";
 
 interface CmsPageProps {
   params: Promise<{
@@ -22,7 +23,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "CMS Not Found" };
 
   return {
-    title: `Showcase CMS | ${tenant.name} Studio Admin`,
+    title: `Showcase CMS | ${studioAdminName(tenant.name)}`,
     description: "Manage published portfolio films, campaigns, gallery covers, and featured showcases.",
   };
 }

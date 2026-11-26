@@ -264,7 +264,7 @@ export function BookForCustomerDialog({
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Maya Lin"
+                    placeholder="e.g. Maya Lin"
                     required
                     className={inputClass}
                   />
@@ -276,7 +276,7 @@ export function BookForCustomerDialog({
                       type="email"
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
-                      placeholder="maya@example.com"
+                      placeholder="e.g. maya@example.com"
                       required
                       className={inputClass}
                     />
@@ -287,7 +287,7 @@ export function BookForCustomerDialog({
                       type="tel"
                       value={newPhone}
                       onChange={(e) => setNewPhone(e.target.value)}
-                      placeholder="+60 12-345 6789"
+                      placeholder="e.g. +60 12-345 6789"
                       required
                       className={inputClass}
                     />

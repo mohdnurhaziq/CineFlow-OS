@@ -7,6 +7,7 @@ import { ClientsDirectory } from "@/components/admin/clients/clients-directory";
 import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
+import { studioAdminName } from "@/lib/labels";
 
 interface ClientsPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: ClientsPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Clients | ${tenant.name} Studio Admin` : "Clients" };
+  return { title: tenant ? `Clients | ${studioAdminName(tenant.name)}` : "Clients" };
 }
 
 // Clients VIEW.

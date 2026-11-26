@@ -9,6 +9,7 @@ import { NoAccess } from "@/components/admin/no-access";
 import { ServicesDashboard } from "@/components/admin/services/services-dashboard";
 import type { PackageRow } from "@/components/admin/services/package-dialog";
 import type { CategoryRow } from "@/components/admin/services/category-dialog";
+import { studioAdminName } from "@/lib/labels";
 
 interface ServicesPageProps {
   params: Promise<{
@@ -24,7 +25,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Services Not Found" };
 
   return {
-    title: `Services | ${tenant.name} Studio Admin`,
+    title: `Services | ${studioAdminName(tenant.name)}`,
     description: "Manage service packages, pricing, deliverables, and campaign categories.",
   };
 }

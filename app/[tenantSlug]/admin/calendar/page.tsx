@@ -9,6 +9,7 @@ import { bookingActionPowers } from "@/lib/auth/page-powers";
 import { NoAccess } from "@/components/admin/no-access";
 import { CalendarAdminDashboard } from "@/components/admin/calendar/calendar-admin-dashboard";
 import type { BookingSlotRow, CategoryOption } from "@/components/admin/calendar/single-slot-dialog";
+import { studioAdminName } from "@/lib/labels";
 
 interface CalendarPageProps {
   params: Promise<{
@@ -24,7 +25,7 @@ export async function generateMetadata({
   if (!tenant) return { title: "Calendar Not Found" };
 
   return {
-    title: `Calendar | ${tenant.name} Studio Admin`,
+    title: `Calendar | ${studioAdminName(tenant.name)}`,
     description: "Manage shooting availability, time windows, batch scheduling, and slot lease holds.",
   };
 }

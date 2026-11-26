@@ -8,6 +8,7 @@ import { levelAtLeast } from "@/lib/auth/access";
 import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { PlanPanel } from "@/components/billing/plan-panel";
+import { studioAdminName } from "@/lib/labels";
 
 interface PrintOrdersPageProps {
   params: Promise<{ tenantSlug: string }>;
@@ -16,7 +17,7 @@ interface PrintOrdersPageProps {
 export async function generateMetadata({ params }: PrintOrdersPageProps): Promise<Metadata> {
   const { tenantSlug } = await params;
   const tenant = await db.tenant.findUnique({ where: { slug: tenantSlug }, select: { name: true } });
-  return { title: tenant ? `Print orders | ${tenant.name} Studio Admin` : "Print orders" };
+  return { title: tenant ? `Print orders | ${studioAdminName(tenant.name)}` : "Print orders" };
 }
 
 // Print orders VIEW.

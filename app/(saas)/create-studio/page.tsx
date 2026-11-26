@@ -265,7 +265,7 @@ export default function CreateStudioPage() {
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
+            className="inline-flex min-h-11 sm:min-h-0 items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="size-3.5" />
             Back to Platform
@@ -532,7 +532,7 @@ export default function CreateStudioPage() {
                           type="button"
                           key={color.hex}
                           onClick={() => setFormData((prev) => ({ ...prev, brandColor: color.hex }))}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                          className={`flex min-h-11 sm:min-h-0 items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                             formData.brandColor === color.hex
                               ? "border-white bg-zinc-800 text-white"
                               : "border-zinc-800 bg-[#18181b] text-zinc-400 hover:border-zinc-700"
@@ -573,7 +573,7 @@ export default function CreateStudioPage() {
                         type="button"
                         disabled={logoUploading}
                         onClick={() => logoInputRef.current?.click()}
-                        className={buttonVariants({ variant: "secondary" })}
+                        className={`${buttonVariants({ variant: "secondary" })} min-h-11 sm:min-h-0`}
                       >
                         {logoUploading ? (
                           <Loader2 className="size-3.5 animate-spin" />
@@ -597,11 +597,11 @@ export default function CreateStudioPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 flex items-center justify-between">
+                <div className="pt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(1)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
+                    className="inline-flex min-h-11 items-center justify-center whitespace-nowrap px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
                   >
                     ← Back to Step 1
                   </button>
@@ -641,7 +641,7 @@ export default function CreateStudioPage() {
                       <User className="absolute left-3.5 top-3 size-4 text-zinc-500" />
                       <input
                         type="text"
-                        placeholder="Maya Lin"
+                        placeholder="e.g. Maya Lin"
                         value={formData.ownerName}
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerName: e.target.value }))}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
@@ -659,7 +659,7 @@ export default function CreateStudioPage() {
                       <Mail className="absolute left-3.5 top-3 size-4 text-zinc-500" />
                       <input
                         type="email"
-                        placeholder="maya@veloxcinema.com"
+                        placeholder="e.g. maya@veloxcinema.com"
                         value={formData.ownerEmail}
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerEmail: e.target.value }))}
                         // Google confirmed this address: it is the owner's, and can't be changed here.
@@ -685,7 +685,7 @@ export default function CreateStudioPage() {
                         <Lock className="absolute left-3.5 top-3 size-4 text-zinc-500" />
                         <input
                           type={showPassword ? "text" : "password"}
-                          placeholder="••••••••••••"
+                          placeholder="At least 8 characters"
                           value={formData.password}
                           onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                           className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm focus:outline-none focus:border-amber-500"
@@ -707,7 +707,7 @@ export default function CreateStudioPage() {
                       <Phone className="absolute left-3.5 top-3 size-4 text-zinc-500" />
                       <input
                         type="tel"
-                        placeholder="+60 12-345 6789"
+                        placeholder="e.g. +60 12-345 6789"
                         value={formData.ownerPhone}
                         onChange={(e) => setFormData((prev) => ({ ...prev, ownerPhone: e.target.value }))}
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-sm font-mono focus:outline-none focus:border-amber-500"
@@ -716,11 +716,11 @@ export default function CreateStudioPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 flex items-center justify-between">
+                <div className="pt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
+                    className="inline-flex min-h-11 items-center justify-center whitespace-nowrap px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
                   >
                     ← Back to Step 2
                   </button>
@@ -831,11 +831,11 @@ export default function CreateStudioPage() {
                   .
                 </p>
 
-                <div className="pt-4 flex items-center justify-between">
+                <div className="pt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
+                    className="inline-flex min-h-11 items-center justify-center whitespace-nowrap px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white"
                   >
                     ← Back to Step 3
                   </button>
@@ -897,8 +897,8 @@ export default function CreateStudioPage() {
                     <h3 className="text-lg font-bold text-white tracking-tight">
                       {formData.name || "Your Studio Name"}
                     </h3>
-                    <p className="text-xs text-zinc-400 line-clamp-1">
-                      {formData.tagline || "Your cinematic tagline will display here."}
+                    <p className="text-xs text-zinc-400 line-clamp-2">
+                      {formData.tagline || "Your tagline will show here. Leave it blank to show none."}
                     </p>
                   </div>
                 </div>
