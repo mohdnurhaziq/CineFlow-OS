@@ -250,7 +250,7 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
 
               <span
                 className={cn(
-                  "text-[10px] font-mono px-2 py-0.5 rounded border uppercase",
+                  "text-[11px] font-mono px-2 py-0.5 rounded border uppercase",
                   booking.depositPaid
                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -275,7 +275,7 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">Session Date & Time</span>
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">Session Date & Time</span>
                   <p className="text-base font-bold text-white font-mono">
                     {booking.slot ? `${booking.slot.startTime} – ${booking.slot.endTime}` : "Time to be confirmed"}
                   </p>
@@ -291,8 +291,8 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
 
                 <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-zinc-500 block">Venue / Location</span>
-                    <a href={locationMapUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-amber-400 hover:underline inline-flex items-center gap-1">
+                    <span className="text-[11px] font-mono uppercase text-zinc-400 block">Venue / Location</span>
+                    <a href={locationMapUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-amber-400 hover:underline inline-flex items-center gap-1">
                       <span>Maps</span>
                       <ExternalLink className="size-2.5" />
                     </a>
@@ -300,7 +300,7 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
                   <p className="text-sm font-bold text-white line-clamp-1">{locationName}</p>
                   <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">{locationAddress}</p>
                   {booking.project?.callSheets?.[0]?.parkingNotes && (
-                    <p className="text-[11px] font-mono text-zinc-500 pt-0.5">
+                    <p className="text-[11px] font-mono text-zinc-400 pt-0.5">
                       🚗 {booking.project.callSheets[0].parkingNotes}
                     </p>
                   )}
@@ -317,14 +317,14 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">Deliverables Expected</span>
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">Deliverables Expected</span>
                   <p className="font-semibold text-zinc-200">
                     {booking.package?.deliverables || "Standard digital softcopy"}
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">Turnaround Time</span>
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">Turnaround Time</span>
                   <p className="font-semibold text-zinc-200">
                     {booking.package?.turnaround || "5–7 business days"}
                   </p>
@@ -365,7 +365,7 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
                         <span className="font-bold text-white">{p.quantity}x {p.sizeName}</span>
                         <span className="text-zinc-400 ml-2">Frame: {p.frameName}</span>
                       </div>
-                      {p.note && <span className="text-[10px] font-mono text-zinc-500">{p.note}</span>}
+                      {p.note && <span className="text-[11px] font-mono text-zinc-400">{p.note}</span>}
                     </div>
                   ))}
                 </div>
@@ -386,7 +386,7 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
                 <div>
                   <p className="text-base font-bold text-white">{booking.clientName}</p>
                   <p className="text-xs font-mono text-zinc-400">{booking.clientPhone}</p>
-                  <p className="text-xs text-zinc-500">{booking.clientEmail}</p>
+                  <p className="text-xs text-zinc-400">{booking.clientEmail}</p>
                 </div>
 
                 <div className="flex flex-col gap-2 pt-1">
@@ -436,7 +436,7 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
                 {booking.assignments.map((a) => (
                   <div key={a.userId} className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 flex items-center justify-between text-xs font-mono">
                     <span className="font-semibold text-white">{a.user.name}</span>
-                    <span className="text-[10px] text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
+                    <span className="text-[11px] text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
                       {a.user.teamRole?.name || (a.user.role === "STUDIO_OWNER" ? "Studio Owner" : "Photographer")}
                     </span>
                   </div>
@@ -453,9 +453,9 @@ export default async function AdminShootDetailPage({ params }: ShootPageProps) {
                 </div>
 
                 <div className="text-xs space-y-1">
-                  <span className="text-zinc-500 font-mono block">Project #{booking.project.projectNumber}</span>
+                  <span className="text-zinc-400 font-mono block">Project #{booking.project.projectNumber}</span>
                   <p className="font-semibold text-white">{booking.project.title}</p>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 inline-block uppercase">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 inline-block uppercase">
                     Status: {booking.project.status}
                   </span>
                 </div>

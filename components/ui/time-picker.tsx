@@ -65,7 +65,7 @@ export function TimePicker({ value, onChange, placeholder = "Select time", class
         <button
           type="button"
           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm font-mono text-left focus:outline-none focus:border-amber-500 hover:border-zinc-600 transition-colors ${
-            parts ? "text-white" : "text-zinc-500"
+            parts ? "text-white" : "text-zinc-400"
           } ${className}`}
         >
           <Clock className="size-4 shrink-0 text-amber-400" />
@@ -82,7 +82,7 @@ export function TimePicker({ value, onChange, placeholder = "Select time", class
         >
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <div className="text-[10px] font-mono uppercase text-zinc-500 text-center mb-1">Hour</div>
+              <div className="text-[11px] font-mono uppercase text-zinc-400 text-center mb-1">Hour</div>
               <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
                 {HOURS.map((h) => (
                   <button
@@ -98,7 +98,7 @@ export function TimePicker({ value, onChange, placeholder = "Select time", class
             </div>
 
             <div>
-              <div className="text-[10px] font-mono uppercase text-zinc-500 text-center mb-1">Min</div>
+              <div className="text-[11px] font-mono uppercase text-zinc-400 text-center mb-1">Min</div>
               <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
                 {minutes.map((m) => (
                   <button
@@ -114,7 +114,7 @@ export function TimePicker({ value, onChange, placeholder = "Select time", class
             </div>
 
             <div>
-              <div className="text-[10px] font-mono uppercase text-zinc-500 text-center mb-1">AM/PM</div>
+              <div className="text-[11px] font-mono uppercase text-zinc-400 text-center mb-1">AM/PM</div>
               <div className="space-y-0.5">
                 {(["AM", "PM"] as const).map((m) => (
                   <button

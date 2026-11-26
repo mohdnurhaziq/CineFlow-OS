@@ -36,7 +36,7 @@ interface ClientAuthPanelProps {
 }
 
 const inputClass =
-  "w-full pl-9 py-2 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 placeholder-zinc-500";
+  "w-full pl-9 py-2 rounded-lg border border-zinc-700 bg-[#18181b] text-white text-xs focus:outline-none focus:border-amber-500 placeholder-zinc-400";
 
 /**
  * Text input with a visible label (placeholders disappear while typing, so they can't be the label).
@@ -58,7 +58,7 @@ function Field({
         {label}
       </label>
       <div className="relative">
-        <Icon className="absolute left-3 top-2.5 size-4 text-zinc-500 pointer-events-none" aria-hidden="true" />
+        <Icon className="absolute left-3 top-2.5 size-4 text-zinc-400 pointer-events-none" aria-hidden="true" />
         <input
           id={id}
           type={isPassword && showPassword ? "text" : type}

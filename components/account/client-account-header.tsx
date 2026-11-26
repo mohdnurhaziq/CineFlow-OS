@@ -59,14 +59,14 @@ export function ClientAccountHeader({ tenant, client, badges, switcher = [] }: C
                 <span className="font-bold text-sm tracking-tight text-white group-hover:text-amber-400 transition-colors truncate">
                   {tenant.name}
                 </span>
-                <span className="text-[10px] font-mono text-amber-400/90 uppercase tracking-widest">
+                <span className="text-[11px] font-mono text-amber-400/90 uppercase whitespace-nowrap tracking-normal sm:tracking-widest">
                   Client portal
                 </span>
               </div>
             </Link>
 
             {tenant.discipline && (
-              <span className="hidden lg:inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700/80 truncate">
+              <span className="hidden lg:inline-block px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700/80 truncate">
                 {disciplineLabel(tenant.discipline)}
               </span>
             )}

@@ -1,10 +1,10 @@
 import { Package } from "lucide-react";
 import type { PackageRange } from "@/lib/bookings/package-range";
+import { formatMoney } from "@/lib/money";
 
 /** Shown in the slot dialogs instead of fee/deposit fields when the category is priced by packages. */
 export function PackagePricingNote({ range, currency }: { range: PackageRange; currency: string }) {
-  const money = (n: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+  const money = (n: number) => formatMoney(currency, n);
   const priceText =
     range.minPrice === range.maxPrice ? money(range.minPrice) : `${money(range.minPrice)} – ${money(range.maxPrice)}`;
 
@@ -15,7 +15,7 @@ export function PackagePricingNote({ range, currency }: { range: PackageRange; c
         <p className="text-zinc-200">
           Priced by your {range.count === 1 ? "package" : `${range.count} packages`}: {priceText}
         </p>
-        <p className="text-zinc-500 mt-0.5">
+        <p className="text-zinc-400 mt-0.5">
           {range.count === 1 ? "Clients book this package" : "Clients pick a package when they book"}. Its price and
           deposit apply, so there&apos;s no slot fee to set. Change prices in Services.
         </p>

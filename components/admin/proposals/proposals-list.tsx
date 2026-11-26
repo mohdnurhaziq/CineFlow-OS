@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { deleteDraftProposal, sendProposal } from "@/lib/actions/admin-projects";
 import { formatStudioDate } from "@/lib/slot-time";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 export interface ProposalRow {
   id: string;
@@ -98,10 +99,7 @@ function DraftActions({ tenantId, proposalId }: { tenantId: string; proposalId: 
 
 export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSend }: ProposalsListProps) {
   const formatPrice = (val: number) => {
-    return `${currency === "MYR" ? "RM" : "$"}${val.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+    return formatMoney(currency, val);
   };
 
   if (proposals.length === 0) {
@@ -139,7 +137,7 @@ export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSe
                   {/* Proposal Number */}
                   <td className="px-4 py-3 font-mono">
                     <span className="font-bold text-amber-400">{p.proposalNumber}</span>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">{createdDate}</div>
+                    <div className="text-[11px] text-zinc-400 mt-0.5">{createdDate}</div>
                   </td>
 
                   {/* Client Details */}
@@ -151,7 +149,7 @@ export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSe
                   {/* Title & Addons */}
                   <td className="px-4 py-3">
                     <div className="text-zinc-200 font-medium">{p.title}</div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">
+                    <div className="text-[11px] text-zinc-400 mt-0.5">
                       {selectedAddOnsCount > 0 ? `${selectedAddOnsCount} add-on(s) selected` : "Base package only"}
                     </div>
                   </td>
@@ -159,7 +157,7 @@ export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSe
                   {/* Pricing */}
                   <td className="px-4 py-3 font-mono">
                     <div className="text-white font-bold">{formatPrice(p.totalPrice)}</div>
-                    <div className="text-[10px] text-zinc-500">
+                    <div className="text-[11px] text-zinc-400">
                       {p.depositPercentage}% deposit: {formatPrice(p.depositAmount)}
                     </div>
                   </td>
@@ -167,27 +165,27 @@ export function ProposalsList({ proposals, tenantId, tenantSlug, currency, canSe
                   {/* Status */}
                   <td className="px-4 py-3 text-center">
                     {p.status === "ACCEPTED" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         <CheckCircle className="size-3" /> Signed & Accepted
                       </span>
                     )}
                     {(p.status === "SENT" || p.status === "VIEWED") && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                         <Clock className="size-3" /> Awaiting Signature
                       </span>
                     )}
                     {p.status === "DRAFT" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
                         <FileText className="size-3" /> Draft
                       </span>
                     )}
                     {p.status === "DECLINED" && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-red-500/10 text-red-400 border border-red-500/20">
                         <XCircle className="size-3" /> Declined
                       </span>
                     )}
                     {p.status === "DECLINED" && (p.declinedAt || p.declineReason) && (
-                      <div className="mt-1 text-[10px] text-zinc-400 max-w-[14rem] mx-auto">
+                      <div className="mt-1 text-[11px] text-zinc-400 max-w-[14rem] mx-auto">
                         {p.declinedAt &&
                           formatStudioDate(p.declinedAt)}
                         {p.declineReason && <span className="block italic text-zinc-300 break-words">&ldquo;{p.declineReason}&rdquo;</span>}

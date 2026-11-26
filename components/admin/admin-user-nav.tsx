@@ -58,12 +58,12 @@ export function AdminUserNav({ tenantSlug, user, roleLabel, switcher = [] }: Adm
   return (
     <div data-tour="account" className="flex items-center gap-2.5">
       <div className="flex items-center gap-2">
-        <div className="size-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-amber-400">
+        <div className="size-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[11px] font-bold text-amber-400">
           {initials}
         </div>
         <div className="hidden md:flex flex-col text-left">
           <span className="text-xs font-medium text-white line-clamp-1">{user.name}</span>
-          <span className="text-[9px] font-mono text-zinc-400 uppercase">{roleLabel ?? user.role.replace(/_/g, " ")}</span>
+          <span className="text-[11px] font-mono text-zinc-400 uppercase">{roleLabel ?? user.role.replace(/_/g, " ")}</span>
         </div>
       </div>
 

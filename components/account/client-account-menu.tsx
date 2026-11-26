@@ -99,12 +99,12 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo, switche
       >
         <span
           aria-hidden
-          className="size-6 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold flex items-center justify-center"
+          className="size-6 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-bold flex items-center justify-center"
         >
           {initials(client.name)}
         </span>
         <span className="hidden sm:inline max-w-[10rem] truncate">{client.name}</span>
-        <span className="hidden sm:inline text-zinc-500">· My account</span>
+        <span className="hidden sm:inline text-zinc-400">· My account</span>
       </Link>
       <SessionMenu tenantSlug={tenantSlug} entries={switcher} />
       <button
@@ -120,7 +120,7 @@ export function ClientAccountMenu({ tenantSlug, client, staff, returnTo, switche
         }
         title="Sign out"
         aria-label="Sign out"
-        className="inline-flex items-center justify-center px-2 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 self-stretch border-l border-zinc-800 rounded-r-lg text-zinc-500 hover:text-white hover:bg-zinc-800/60 disabled:opacity-50 transition-colors"
+        className="inline-flex items-center justify-center px-2 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 self-stretch border-l border-zinc-800 rounded-r-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 disabled:opacity-50 transition-colors"
       >
         <LogOut className="size-3.5" />
       </button>

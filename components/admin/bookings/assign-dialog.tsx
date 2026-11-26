@@ -90,7 +90,7 @@ export function AssignDialog({ isOpen, onClose, people, excludeIds = [], title, 
                 />
                 <span className="min-w-0">
                   <span className="block text-zinc-100 truncate">{p.name}</span>
-                  <span className="block text-[11px] text-zinc-500 truncate">{p.roleName}</span>
+                  <span className="block text-[11px] text-zinc-400 truncate">{p.roleName}</span>
                 </span>
               </label>
             ))}

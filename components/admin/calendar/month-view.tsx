@@ -82,7 +82,7 @@ export function MonthView({ shown, onShowMonth, summaries, selectedDay, onSelect
       <div role="grid" aria-label={monthLabel(shown.year, shown.month)} className="space-y-1">
         <div role="row" className="grid grid-cols-7 gap-1">
           {WEEKDAYS.map((d) => (
-            <div key={d} role="columnheader" className="text-center text-[10px] font-mono uppercase tracking-wider text-zinc-500 py-1">
+            <div key={d} role="columnheader" className="text-center text-[11px] font-mono uppercase tracking-wider text-zinc-400 py-1">
               {d.slice(0, 2)}
             </div>
           ))}
@@ -116,7 +116,7 @@ export function MonthView({ shown, onShowMonth, summaries, selectedDay, onSelect
                     <span
                       className={cn(
                         "text-xs font-mono tabular-nums leading-none",
-                        isToday ? "text-amber-400 font-bold" : s ? "text-zinc-100" : "text-zinc-500"
+                        isToday ? "text-amber-400 font-bold" : s ? "text-zinc-100" : "text-zinc-400"
                       )}
                     >
                       {Number(key.slice(8))}
@@ -137,7 +137,7 @@ export function MonthView({ shown, onShowMonth, summaries, selectedDay, onSelect
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[10px] font-mono text-zinc-400" aria-hidden="true">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[11px] font-mono text-zinc-400" aria-hidden="true">
         <Legend className="bg-emerald-400" label="Open" />
         <Legend className="bg-purple-400" label="Booked" />
         <Legend className="bg-amber-400" label="Held / to check" />
@@ -149,7 +149,7 @@ export function MonthView({ shown, onShowMonth, summaries, selectedDay, onSelect
 
 function Count({ value, className }: { value: number; className: string }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-mono tabular-nums text-zinc-300 leading-none">
+    <span className="inline-flex items-center gap-0.5 text-[11px] font-mono tabular-nums text-zinc-300 leading-none">
       <span className={cn("size-1.5 rounded-full", className)} />
       {value}
     </span>

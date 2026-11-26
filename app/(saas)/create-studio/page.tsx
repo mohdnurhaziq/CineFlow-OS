@@ -559,7 +559,7 @@ export default function CreateStudioPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={formData.logoUrl} alt="Studio logo" className="size-full object-contain" />
                         ) : (
-                          <Camera className="size-5 text-zinc-600" />
+                          <Camera className="size-5 text-zinc-400" />
                         )}
                       </div>
                       <input
@@ -593,7 +593,7 @@ export default function CreateStudioPage() {
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-500">PNG, JPG or WebP, up to 5MB.</p>
+                    <p className="text-[11px] text-zinc-400">PNG, JPG or WebP, up to 5MB.</p>
                   </div>
                 </div>
 
@@ -638,7 +638,7 @@ export default function CreateStudioPage() {
                       Owner Full Name *
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3.5 top-3 size-4 text-zinc-500" />
+                      <User className="absolute left-3.5 top-3 size-4 text-zinc-400" />
                       <input
                         type="text"
                         placeholder="e.g. Maya Lin"
@@ -656,7 +656,7 @@ export default function CreateStudioPage() {
                       Owner Email Address *
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-3 size-4 text-zinc-500" />
+                      <Mail className="absolute left-3.5 top-3 size-4 text-zinc-400" />
                       <input
                         type="email"
                         placeholder="e.g. maya@veloxcinema.com"
@@ -682,7 +682,7 @@ export default function CreateStudioPage() {
                         Password (min 8 chars) *
                       </label>
                       <div className="relative">
-                        <Lock className="absolute left-3.5 top-3 size-4 text-zinc-500" />
+                        <Lock className="absolute left-3.5 top-3 size-4 text-zinc-400" />
                         <input
                           type={showPassword ? "text" : "password"}
                           placeholder="At least 8 characters"
@@ -704,7 +704,7 @@ export default function CreateStudioPage() {
                       Contact Mobile (for WhatsApp dispatch)
                     </label>
                     <div className="relative">
-                      <Phone className="absolute left-3.5 top-3 size-4 text-zinc-500" />
+                      <Phone className="absolute left-3.5 top-3 size-4 text-zinc-400" />
                       <input
                         type="tel"
                         placeholder="e.g. +60 12-345 6789"
@@ -772,7 +772,7 @@ export default function CreateStudioPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-sm text-white">{tier.name}</span>
                           {tier.id === "PRO" && (
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500 text-black font-bold">
+                            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500 text-black font-bold">
                               RECOMMENDED
                             </span>
                           )}
@@ -916,7 +916,7 @@ export default function CreateStudioPage() {
                 {/* Badges */}
                 <div className="flex items-center gap-2">
                   <span
-                    className="text-[10px] font-mono px-2 py-0.5 rounded-full border"
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-full border"
                     style={{
                       borderColor: `${formData.brandColor}50`,
                       backgroundColor: `${formData.brandColor}15`,
@@ -925,10 +925,10 @@ export default function CreateStudioPage() {
                   >
                     {disciplineLabel(formData.discipline)}
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
                     Currency: {formData.currency}
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
                     Plan after the trial: {PLANS[formData.subscriptionTier as keyof typeof PLANS]?.name ?? formData.subscriptionTier}
                   </span>
                 </div>

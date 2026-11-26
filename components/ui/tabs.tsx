@@ -39,7 +39,7 @@ export function chipClass(active: boolean, className?: string) {
 /** The count inside a chip. `alert` highlights a count that needs attention (e.g. awaiting verification). */
 export function chipCountClass(active: boolean, alert = false) {
   return cn(
-    "px-1.5 rounded-full text-[10px] tabular-nums",
+    "px-1.5 rounded-full text-[11px] tabular-nums",
     alert ? "bg-blue-500 text-white" : active ? "bg-amber-500/20 text-amber-300" : "bg-zinc-800 text-zinc-400"
   );
 }

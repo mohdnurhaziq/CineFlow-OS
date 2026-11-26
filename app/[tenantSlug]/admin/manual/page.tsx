@@ -43,7 +43,7 @@ export default async function ManualIndexPage({ params }: ManualPageProps) {
                     <p className="text-sm font-semibold text-white group-hover:text-amber-400 transition-colors">{topic.title}</p>
                     <p className="text-xs leading-relaxed text-zinc-400 max-w-2xl">{topic.summary}</p>
                   </div>
-                  <ArrowRight className="size-4 shrink-0 mt-0.5 text-zinc-500 group-hover:text-amber-400 transition-colors" aria-hidden="true" />
+                  <ArrowRight className="size-4 shrink-0 mt-0.5 text-zinc-400 group-hover:text-amber-400 transition-colors" aria-hidden="true" />
                 </Link>
               </li>
             ))}

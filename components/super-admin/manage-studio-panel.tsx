@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import {  } from "lucide-react";
 import {
   changeStudioPlan,
   closeStudio,
@@ -14,6 +14,8 @@ import {
 } from "@/lib/actions/super-admin";
 import { PLANS, PLAN_CODES, asPlanCode, type PlanCode } from "@/lib/billing/plans";
 import type { TenantSummaryItem } from "@/components/super-admin/super-admin-view";
+import { formatMoney } from "@/lib/money";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 type Payment = Awaited<ReturnType<typeof getStudioPayments>>[number];
 
@@ -84,9 +86,7 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
             <h2 id="manage-title" className="text-base font-bold text-white truncate">{studio.name}</h2>
             <p className="text-xs text-zinc-400 font-mono truncate">{studio.slug} · {PLANS[asPlanCode(studio.subscriptionTier)].name} plan</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         <div className="p-5 space-y-6">
@@ -136,7 +136,7 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
             >
               Record payment
             </button>
-            <p className="text-[11px] text-zinc-500">Sets the plan, and moves &ldquo;paid until&rdquo; to that day if it&apos;s later than today&apos;s.</p>
+            <p className="text-[11px] text-zinc-400">Sets the plan, and moves &ldquo;paid until&rdquo; to that day if it&apos;s later than today&apos;s.</p>
           </section>
 
           <section aria-labelledby="hist-h" className="space-y-2">
@@ -149,9 +149,9 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
               <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800 text-xs">
                 {payments.map((p) => (
                   <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2">
-                    <span className="font-mono text-white">RM {p.amount.toFixed(2)}</span>
+                    <span className="font-mono text-white">{formatMoney("MYR", p.amount)}</span>
                     <span className="text-zinc-300">{PLANS[asPlanCode(p.plan)].name} · until {new Date(p.paidUntil).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kuala_Lumpur" })}</span>
-                    <span className="text-zinc-500">{METHODS.find((m) => m[0] === p.method)?.[1]}{p.reference ? ` · ${p.reference}` : ""} · {new Date(p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kuala_Lumpur" })}</span>
+                    <span className="text-zinc-400">{METHODS.find((m) => m[0] === p.method)?.[1]}{p.reference ? ` · ${p.reference}` : ""} · {new Date(p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kuala_Lumpur" })}</span>
                   </li>
                 ))}
               </ul>
@@ -164,7 +164,7 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
               <button type="button" disabled={pending || plan === asPlanCode(studio.subscriptionTier)} onClick={() => run(() => changeStudioPlan({ tenantId: studio.id, plan }))} className={`${btn} bg-zinc-800 text-white hover:bg-zinc-700`}>
                 Switch to {PLANS[plan].name}
               </button>
-              <p className="text-[11px] text-zinc-500">Uses the plan chosen above, with no payment.</p>
+              <p className="text-[11px] text-zinc-400">Uses the plan chosen above, with no payment.</p>
             </div>
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-white">Free trial</h3>
@@ -189,7 +189,7 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-zinc-500">Paused studios cannot change anything and take no new online bookings; clients keep their galleries and can still pay.</p>
+            <p className="text-[11px] text-zinc-400">Paused studios cannot change anything and take no new online bookings; clients keep their galleries and can still pay.</p>
             <div className="pt-2 space-y-2">
               <label htmlFor="close-slug" className={label}>Close the studio: type its address ({studio.slug})</label>
               <div className="flex gap-2">
@@ -198,7 +198,7 @@ export function ManageStudioPanel({ studio, onClose }: { studio: TenantSummaryIt
                   Close studio
                 </button>
               </div>
-              <p className="text-[11px] text-zinc-500">Its website and admin stop opening. Nothing is deleted.</p>
+              <p className="text-[11px] text-zinc-400">Its website and admin stop opening. Nothing is deleted.</p>
             </div>
           </section>
         </div>

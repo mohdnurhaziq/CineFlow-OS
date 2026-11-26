@@ -39,7 +39,7 @@ type Mode = null | "cancel" | "reschedule";
 
 const quiet = buttonVariants({ variant: "secondary" });
 const input =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500";
 
 /** What the studio can do with a booking from here: move, cancel, close out, and upload the photos. */
 export function BookingActions({
@@ -107,7 +107,7 @@ export function BookingActions({
 
   return (
     <section className="px-5 pb-5 space-y-3" aria-label="Booking actions">
-      <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Actions</div>
+      <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Actions</div>
 
       {mode === null && (
         <div className="flex flex-wrap gap-2">
@@ -172,7 +172,7 @@ export function BookingActions({
                 <XCircle className="size-3.5" /> Cancel booking
               </button>
             ) : (
-              <p className="text-[11px] text-zinc-500 self-center">Cancelling a paid booking needs the record-payments permission.</p>
+              <p className="text-[11px] text-zinc-400 self-center">Cancelling a paid booking needs the record-payments permission.</p>
             ))}
         </div>
       )}
@@ -183,7 +183,7 @@ export function BookingActions({
             Why is it being cancelled? The client sees this.
           </label>
           <textarea id="cancel-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} className={input} />
-          <p className="text-[11px] text-zinc-500">
+          <p className="text-[11px] text-zinc-400">
             The slot reopens and anything unpaid is cancelled.
             {booking.depositPaid ? " The paid deposit stays on record: refund it outside the app if needed." : ""}
           </p>

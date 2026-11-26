@@ -2,7 +2,7 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useMemo } from "react";
-import { X, AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
+import { AlertCircle, Loader2, Sparkles, Check } from "lucide-react";
 import { batchGenerateBookingSlots } from "@/lib/actions/admin-calendar";
 import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
 import { packageRangeFor } from "@/lib/bookings/package-range";
@@ -14,6 +14,7 @@ import type { CategoryOption } from "./single-slot-dialog";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
 import { studioDateKey } from "@/lib/slot-time";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface BatchGeneratorDialogProps {
   isOpen: boolean;
@@ -192,13 +193,7 @@ export function BatchGeneratorDialog({
               Rapidly generate recurring shooting blocks across customized date ranges
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -251,7 +246,7 @@ export function BatchGeneratorDialog({
               <label className="text-xs font-mono text-zinc-400">
                 Operating Days *
               </label>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400">
+              <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
                 <button
                   type="button"
                   onClick={() => setPreset("ALL")}
@@ -289,7 +284,7 @@ export function BatchGeneratorDialog({
                     className={`flex-1 py-1.5 text-xs font-mono rounded-lg border transition-all ${
                       isSelected
                         ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold"
-                        : "bg-zinc-900 text-zinc-500 border-zinc-800 hover:border-zinc-700"
+                        : "bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700"
                     }`}
                   >
                     {d.label}
@@ -378,7 +373,7 @@ export function BatchGeneratorDialog({
                 value={campaignTitle}
                 onChange={(e) => setCampaignTitle(e.target.value)}
                 placeholder="e.g. Peak Weekend Sessions"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>
@@ -398,7 +393,7 @@ export function BatchGeneratorDialog({
                   min="0"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
 
@@ -412,7 +407,7 @@ export function BatchGeneratorDialog({
                   min="0"
                   value={depositRequired}
                   onChange={(e) => setDepositRequired(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
             </div>
@@ -422,7 +417,7 @@ export function BatchGeneratorDialog({
             </p>
           )}
 
-          <p className="text-[11px] text-zinc-500">
+          <p className="text-[11px] text-zinc-400">
             Times that overlap an existing slot, or have already passed, are skipped automatically.
           </p>
 

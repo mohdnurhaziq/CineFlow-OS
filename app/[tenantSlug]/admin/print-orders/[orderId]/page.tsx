@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Download, ExternalLink, Frame, MapPin, Store } from "lucide-react";
 import { db } from "@/lib/db";
-import { formatCurrency } from "@/lib/utils";
 import { formatStudioDate } from "@/lib/slot-time";
 import { loadItemPhotos } from "@/lib/prints/gallery";
 import { orderAddressLines } from "@/lib/prints/order-preview";
@@ -18,6 +17,7 @@ import { adminPageAccess } from "@/lib/auth/admin-page";
 import { NoAccess } from "@/components/admin/no-access";
 import { studioPath } from "@/lib/domain-name";
 import { studioAdminName } from "@/lib/labels";
+import { formatMoney } from "@/lib/money";
 
 interface PrintOrderPageProps {
   params: Promise<{ tenantSlug: string; orderId: string }>;
@@ -56,7 +56,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
   if (!order) notFound();
 
   const photoById = await loadItemPhotos(order.items.map((i) => i.deliverableItemId));
-  const money = (n: number) => formatCurrency(n, tenant.currency);
+  const money = (n: number) => formatMoney(tenant.currency, n);
   const ship = order.fulfilment === "SHIP";
   const address = orderAddressLines(order);
   // The full-resolution master, through the gallery download route (same access checks as the gallery).
@@ -71,7 +71,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
         title={<span className="font-mono">{order.orderNumber}</span>}
         badge={
           <span
-            className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-mono border ${PRINT_ORDER_STATUS_STYLES[order.status] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
+            className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-mono border ${PRINT_ORDER_STATUS_STYLES[order.status] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
           >
             {printOrderStatusLabel(order.status)}
           </span>
@@ -112,7 +112,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
                     <p className="text-xs text-zinc-400">
                       {item.frameName} · {MAT_BOARD_LABELS[item.matBoardType] ?? item.matBoardType}
                     </p>
-                    <p className="text-[11px] font-mono text-zinc-500">
+                    <p className="text-[11px] font-mono text-zinc-400">
                       {item.kind === "INCLUDED" ? `Included${item.upgradeAmount > 0 ? ` + ${money(item.upgradeAmount)} upgrade` : ""}` : money(item.lineAmount)}
                     </p>
                     <PrintFitNote
@@ -135,7 +135,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
                       <Download /> <span className="hidden sm:inline">Full-res</span>
                     </a>
                   ) : (
-                    <span className="self-center text-[11px] text-zinc-500 text-right max-w-24">Original file not available</span>
+                    <span className="self-center text-[11px] text-zinc-400 text-right max-w-24">Original file not available</span>
                   )}
                 </li>
               );
@@ -159,7 +159,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
           </dl>
           {order.notes && (
             <div className="pt-3 border-t border-zinc-800">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Notes</p>
+              <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-400">Notes</p>
               <p className="text-xs text-zinc-300 whitespace-pre-line mt-1">{order.notes}</p>
             </div>
           )}
@@ -222,7 +222,7 @@ export default async function AdminPrintOrderPage({ params }: PrintOrderPageProp
                 <ExternalLink className="size-3" />
               </Link>
             ) : (
-              <p className="text-xs text-zinc-500">No invoice: only included prints, nothing to pay.</p>
+              <p className="text-xs text-zinc-400">No invoice: only included prints, nothing to pay.</p>
             )}
           </section>
         </div>

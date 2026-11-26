@@ -2,6 +2,7 @@
 
 import { Clock, Loader2 } from "lucide-react";
 import { minutesOfDay, sessionBlock } from "@/lib/slot-time";
+import { formatMoney } from "@/lib/money";
 
 export interface BookingSlotItem {
   id: string;
@@ -43,12 +44,11 @@ export function CinemaSlotGrid({
   depositLabel,
   pendingSlotId = null,
 }: CinemaSlotGridProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   if (slots.length === 0) {
     return (
       <div className="py-16 text-center rounded-2xl border border-zinc-800 bg-[#121215] space-y-3">
-        <Clock className="size-8 mx-auto text-zinc-500" />
+        <Clock className="size-8 mx-auto text-zinc-400" />
         <h4 className="text-base font-bold text-white">No Upcoming Slots</h4>
         <p className="text-xs text-zinc-400 max-w-sm mx-auto">
           The studio has no upcoming sessions open for this category. Please select another category or contact the studio on WhatsApp.
@@ -124,39 +124,39 @@ export function CinemaSlotGrid({
 
                 {/* Top Badge */}
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono font-bold tracking-tight text-zinc-400">
+                  <span className="text-[11px] font-mono font-bold tracking-tight text-zinc-400">
                     {categoryLabel(slot.category)}
                   </span>
 
                   {isPending && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
                       <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
                       SELECTING
                     </span>
                   )}
 
                   {isHeldByMe && !isPending && (
-                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500 text-black animate-pulse">
+                    <span className="text-[11px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500 text-black animate-pulse">
                       SELECTED
                     </span>
                   )}
                   {isHeldByOther && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
+                    <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400">
                       ON HOLD
                     </span>
                   )}
                   {isBooked && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400">
+                    <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400">
                       BOOKED
                     </span>
                   )}
                   {isBlocked && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400">
+                    <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400">
                       UNAVAILABLE
                     </span>
                   )}
                   {isAvailable && !isHeldByMe && !isPending && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">
+                    <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">
                       AVAILABLE
                     </span>
                   )}
@@ -172,13 +172,13 @@ export function CinemaSlotGrid({
 
                 {/* Deposit / Price */}
                 <div className="mt-3 pt-2 border-t border-zinc-800/80 flex items-baseline justify-between text-xs font-mono">
-                  <span className="text-[10px] text-zinc-400">Deposit:</span>
+                  <span className="text-[11px] text-zinc-400">Deposit:</span>
                   <span
                     className={`font-bold tabular-nums ${
                       isHeldByMe ? "text-amber-400" : isAvailable ? "text-zinc-200" : "text-zinc-400"
                     }`}
                   >
-                    {depositLabel ? depositLabel(slot) : `${currencySymbol}${slot.depositRequired.toLocaleString("en-US")}`}
+                    {depositLabel ? depositLabel(slot) : formatMoney(currency, slot.depositRequired)}
                   </span>
                 </div>
               </button>

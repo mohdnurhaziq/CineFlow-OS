@@ -83,16 +83,16 @@ export function ForceReleaseDialog({
 
           <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-mono space-y-1">
             <div className="flex justify-between">
-              <span className="text-zinc-500">Date:</span>
+              <span className="text-zinc-400">Date:</span>
               <span className="text-white">{dateStr}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-500">Time:</span>
+              <span className="text-zinc-400">Time:</span>
               <span className="text-white">{slot.startTime} – {slot.endTime}</span>
             </div>
             {slot.heldBySessionId && (
               <div className="flex justify-between">
-                <span className="text-zinc-500">Session:</span>
+                <span className="text-zinc-400">Session:</span>
                 <span className="text-zinc-400 truncate max-w-[200px]">{slot.heldBySessionId}</span>
               </div>
             )}

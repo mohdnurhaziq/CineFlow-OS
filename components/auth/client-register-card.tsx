@@ -36,7 +36,7 @@ export function ClientRegisterCard({
   return (
     <div className="w-full max-w-md p-8 rounded-2xl bg-[#121215] border border-zinc-800 shadow-2xl space-y-5">
       <div className="space-y-2 text-center">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Client Account</span>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">Client Account</span>
         <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         <p className="text-xs text-zinc-400">
           {inviteToken
@@ -60,7 +60,7 @@ export function ClientRegisterCard({
         onSuccess={() => router.replace(next || studioPath(tenantSlug, "/account"))}
       />
 
-      <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
+      <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
         <Link href={studioPath(tenantSlug)} className="hover:text-zinc-300 transition-colors">
           ← Back to studio website
         </Link>

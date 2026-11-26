@@ -1,6 +1,7 @@
 "use client";
 
 import { Layers, DollarSign, Camera, Wrench } from "lucide-react";
+import { formatMoney } from "@/lib/money";
 
 interface GearKpiSummaryProps {
   totalItems: number;
@@ -29,7 +30,7 @@ export function GearKpiSummary({
         <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
           {totalItems}
         </div>
-        <div className="text-[11px] text-zinc-500 mt-1">Pieces of equipment</div>
+        <div className="text-[11px] text-zinc-400 mt-1">Pieces of equipment</div>
       </div>
 
       {/* Daily Fleet Valuation */}
@@ -40,9 +41,9 @@ export function GearKpiSummary({
           <DollarSign className="size-4 text-emerald-400" />
         </div>
         <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono tracking-tight">
-          {currency} {totalDailyValue.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          {formatMoney(currency, totalDailyValue)}
         </div>
-        <div className="text-[11px] text-zinc-500 mt-1">All items at their day rate</div>
+        <div className="text-[11px] text-zinc-400 mt-1">All items at their day rate</div>
       </div>
       )}
 
@@ -66,14 +67,14 @@ export function GearKpiSummary({
       }`}>
         <div className="flex items-center justify-between text-xs font-mono mb-2 text-zinc-400">
           <span className={maintenanceCount > 0 ? "text-amber-300" : ""}>In Maintenance</span>
-          <Wrench className={`size-4 ${maintenanceCount > 0 ? "text-amber-400" : "text-zinc-500"}`} />
+          <Wrench className={`size-4 ${maintenanceCount > 0 ? "text-amber-400" : "text-zinc-400"}`} />
         </div>
         <div className={`text-2xl sm:text-3xl font-extrabold font-mono tracking-tight ${
           maintenanceCount > 0 ? "text-amber-400" : "text-white"
         }`}>
           {maintenanceCount}
         </div>
-        <div className="text-[11px] text-zinc-500 mt-1">Flagged or being repaired</div>
+        <div className="text-[11px] text-zinc-400 mt-1">Flagged or being repaired</div>
       </div>
     </div>
   );

@@ -62,16 +62,16 @@ export function ShowcaseFooter({ tenant, studioLead, payments }: ShowcaseFooterP
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {payments.online && (
               <span className="flex items-center gap-1 whitespace-nowrap">
-                <CreditCard className="size-3 text-zinc-500" /> Pay online
+                <CreditCard className="size-3 text-zinc-400" /> Pay online
               </span>
             )}
             {(payments.qr || payments.bank) && (
               <span className="flex items-center gap-1 whitespace-nowrap">
-                <QrCode className="size-3 text-zinc-500" /> {payments.qr ? "Pay by QR transfer" : "Pay by bank transfer"}
+                <QrCode className="size-3 text-zinc-400" /> {payments.qr ? "Pay by QR transfer" : "Pay by bank transfer"}
               </span>
             )}
             <span className="flex items-center gap-1 whitespace-nowrap">
-              <ShieldCheck className="size-3 text-zinc-500" /> Your private online gallery
+              <ShieldCheck className="size-3 text-zinc-400" /> Your private online gallery
             </span>
           </div>
 

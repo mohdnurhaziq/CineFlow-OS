@@ -2,10 +2,11 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
-import { X, MessageSquare, Loader2, Check } from "lucide-react";
+import { MessageSquare, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { submitRetouchNote } from "@/lib/actions/vault";
 import { useDialog } from "@/lib/use-dialog";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface RetouchNotesModalProps {
   isOpen: boolean;
@@ -65,12 +66,7 @@ export function RetouchNotesModal({
             </h3>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Content */}
@@ -83,7 +79,7 @@ export function RetouchNotesModal({
               </div>
               <div className="overflow-hidden">
                 <span className="text-xs font-semibold text-white truncate block">{itemTitle}</span>
-                <span className="text-[10px] font-mono text-zinc-400">
+                <span className="text-[11px] font-mono text-zinc-400">
                   Targeted production asset feedback
                 </span>
               </div>
@@ -93,7 +89,7 @@ export function RetouchNotesModal({
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex justify-between">
               <span>Specific Revision Instructions</span>
-              <span className="text-[10px] font-mono text-zinc-500 font-normal">
+              <span className="text-[11px] font-mono text-zinc-400 font-normal">
                 {note.length} / 1000 chars
               </span>
             </label>
@@ -112,7 +108,7 @@ export function RetouchNotesModal({
                   onClick={() =>
                     setNote((prev) => (prev ? `${prev}\n• ${chip}: ` : `• ${chip}: `))
                   }
-                  className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors cursor-pointer"
+                  className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors cursor-pointer"
                 >
                   + {chip}
                 </button>

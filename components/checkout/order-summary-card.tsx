@@ -5,6 +5,7 @@ import { Clock, Calendar, ShieldCheck, AlertCircle } from "lucide-react";
 import { milestoneLabel } from "@/lib/labels";
 import { SLOT_HOLD_NUDGE_SECONDS } from "@/lib/bookings/hold";
 import { formatStudioDate, formatDay } from "@/lib/slot-time";
+import { formatMoney } from "@/lib/money";
 
 interface OrderSummaryCardProps {
   tenantName: string;
@@ -44,7 +45,6 @@ export function OrderSummaryCard({
   onHoldExpired,
   awaitingPackage = false,
 }: OrderSummaryCardProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   // Time left on the slot's brief reservation (never shown as a clock; see the nudge below)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(() => {
@@ -81,7 +81,7 @@ export function OrderSummaryCard({
       {/* Top Banner */}
       <div className="p-5 border-b border-zinc-800 bg-[#15151a] flex items-center justify-between">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 block mb-0.5">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400 block mb-0.5">
             ORDER SUMMARY
           </span>
           <h3 className="text-base font-bold text-white tracking-tight">{tenantName}</h3>
@@ -95,10 +95,10 @@ export function OrderSummaryCard({
           <div className="space-y-4">
             <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/50 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-mono text-[10px] uppercase text-zinc-400">
+                <span className="font-mono text-[11px] uppercase text-zinc-400">
                   {slot.category} {slot.campaignTitle ? `// ${slot.campaignTitle}` : ""}
                 </span>
-                <span className="text-emerald-400 text-[10px] font-mono uppercase flex items-center gap-1">
+                <span className="text-emerald-400 text-[11px] font-mono uppercase flex items-center gap-1">
                   <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" />
                   Reserved Slot
                 </span>
@@ -110,7 +110,7 @@ export function OrderSummaryCard({
               </div>
 
               <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
-                <Clock className="size-3.5 text-zinc-500 shrink-0" />
+                <Clock className="size-3.5 text-zinc-400 shrink-0" />
                 <span>
                   {slot.startTime} – {slot.endTime} (Production Session)
                 </span>
@@ -143,18 +143,14 @@ export function OrderSummaryCard({
               <div className="flex justify-between text-zinc-400">
                 <span>Session Price:</span>
                 <span className="font-mono tabular-nums text-white">
-                  {currencySymbol}
-                  {slot.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  {formatMoney(currency, slot.price)}
                 </span>
               </div>
 
               <div className="flex justify-between text-zinc-400">
                 <span>Balance (invoiced once deposit is paid):</span>
                 <span className="font-mono tabular-nums text-zinc-400">
-                  {currencySymbol}
-                  {Math.max(0, slot.price - slot.depositRequired).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatMoney(currency, Math.max(0, slot.price - slot.depositRequired))}
                 </span>
               </div>
               </>
@@ -163,7 +159,7 @@ export function OrderSummaryCard({
               <div className="pt-3 border-t border-zinc-800 flex justify-between items-baseline">
                 <div>
                   <span className="text-sm font-bold text-white block">Deposit Due Now</span>
-                  <span className="text-[10px] text-amber-400/80 font-mono">
+                  <span className="text-[11px] text-amber-400/80 font-mono">
                     Locks studio crew &amp; equipment calendar
                   </span>
                 </div>
@@ -172,8 +168,7 @@ export function OrderSummaryCard({
                     <span className="text-sm">Choose a package</span>
                   ) : (
                     <>
-                      {currencySymbol}
-                      {slot.depositRequired.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {formatMoney(currency, slot.depositRequired)}
                     </>
                   )}
                 </div>
@@ -187,10 +182,10 @@ export function OrderSummaryCard({
           <div className="space-y-4">
             <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-mono text-[10px] uppercase text-amber-400">
+                <span className="font-mono text-[11px] uppercase text-amber-400">
                   {milestoneLabel(invoice.milestoneType)}
                 </span>
-                <span className="text-zinc-400 font-mono text-[10px]">
+                <span className="text-zinc-400 font-mono text-[11px]">
                   {invoice.invoiceNumber}
                 </span>
               </div>
@@ -213,7 +208,7 @@ export function OrderSummaryCard({
             <div className="pt-3 border-t border-zinc-800 flex justify-between items-baseline">
               <div>
                 <span className="text-sm font-bold text-white block">Amount due</span>
-                <span className="text-[10px] text-emerald-400 font-mono">
+                <span className="text-[11px] text-emerald-400 font-mono">
                   {invoice.milestoneType === "FINAL_BALANCE_50" || invoice.milestoneType === "BOOKING_BALANCE"
                     ? "Unlocks your full-resolution downloads"
                     : invoice.milestoneType === "BOOKING_DEPOSIT"
@@ -222,8 +217,7 @@ export function OrderSummaryCard({
                 </span>
               </div>
               <div className="text-2xl font-bold font-mono tabular-nums text-amber-400">
-                {currencySymbol}
-                {invoice.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {formatMoney(currency, invoice.amount)}
               </div>
             </div>
           </div>

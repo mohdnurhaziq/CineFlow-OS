@@ -47,13 +47,13 @@ export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes, canMana
           <NotebookPen className="size-3.5 text-amber-400" aria-hidden="true" />
           Studio notes
         </span>
-        <span className="flex items-center gap-1 normal-case tracking-normal text-[11px] text-zinc-500">
+        <span className="flex items-center gap-1 normal-case tracking-normal text-[11px] text-zinc-400">
           <Lock className="size-3" aria-hidden="true" />
           Only your team sees these
         </span>
       </h2>
       {!canManage ? (
-        <p className="p-4 text-sm text-zinc-300 whitespace-pre-wrap">{notes.trim() || <span className="text-zinc-500">No notes yet.</span>}</p>
+        <p className="p-4 text-sm text-zinc-300 whitespace-pre-wrap">{notes.trim() || <span className="text-zinc-400">No notes yet.</span>}</p>
       ) : (
       <div className="p-4 space-y-3">
         <label htmlFor={`notes-${clientId}`} className="sr-only">
@@ -69,7 +69,7 @@ export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes, canMana
           maxLength={MAX_LENGTH}
           rows={4}
           placeholder="Preferences, reminders, anything the team should know before the next session…"
-          className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors resize-y"
+          className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors resize-y"
         />
         <div className="flex items-center justify-between gap-3">
           <span
@@ -80,7 +80,7 @@ export function ClientNotesCard({ tenantId, tenantSlug, clientId, notes, canMana
             {status?.text ?? ""}
           </span>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-mono text-zinc-500 tabular-nums">
+            <span className="text-[11px] font-mono text-zinc-400 tabular-nums">
               {value.length.toLocaleString("en-US")}/{MAX_LENGTH.toLocaleString("en-US")}
             </span>
             <button

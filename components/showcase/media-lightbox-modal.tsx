@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Camera, Aperture, Sliders, ChevronLeft, ChevronRight } from "lucide-react";
+import { Camera, Aperture, Sliders, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 import { showcaseCover } from "@/lib/showcase/cover";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface LightboxItem {
   id: string;
@@ -89,12 +90,7 @@ export function MediaLightboxModal({ item, onClose, brandColor }: MediaLightboxM
             )}
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Image Display Area with Navigation Arrows */}

@@ -211,13 +211,13 @@ export function CmsManager({
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search portfolio by title, brand, or client name..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+            className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
           />
         </div>
 
@@ -300,7 +300,7 @@ export function CmsManager({
 
                   {/* Top Badges */}
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-black/60 backdrop-blur-md text-white border border-white/10 flex items-center gap-1">
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-black/60 backdrop-blur-md text-white border border-white/10 flex items-center gap-1">
                       {item.discipline === "VIDEOGRAPHY" ? (
                         <Film className="size-3 text-amber-400" />
                       ) : item.discipline === "PHOTOGRAPHY" ? (
@@ -312,7 +312,7 @@ export function CmsManager({
                     </span>
 
                     {item.videoEmbedUrl && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/30 backdrop-blur-md text-blue-300 border border-blue-400/30 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-blue-500/30 backdrop-blur-md text-blue-300 border border-blue-400/30 flex items-center gap-1">
                         <Video className="size-3" /> Reel
                       </span>
                     )}
@@ -335,7 +335,7 @@ export function CmsManager({
 
                   {/* Bottom Image Overlay Text */}
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 text-left">
-                    <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider block">
+                    <span className="text-[11px] font-mono text-amber-400 font-bold uppercase tracking-wider block">
                       {catObj?.badgeIcon ? `${catObj.badgeIcon} ` : ""}
                       {catObj?.name || item.category}
                     </span>
@@ -353,14 +353,14 @@ export function CmsManager({
                     </div>
 
                     {pkgObj && (
-                      <div className="text-[11px] text-zinc-500 mt-1 truncate">
+                      <div className="text-[11px] text-zinc-400 mt-1 truncate">
                         Linked: {pkgObj.name}
                       </div>
                     )}
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60">
-                    <span className="text-[10px] font-mono text-zinc-400">
+                    <span className="text-[11px] font-mono text-zinc-400">
                       Sort: {item.sortOrder}
                     </span>
 

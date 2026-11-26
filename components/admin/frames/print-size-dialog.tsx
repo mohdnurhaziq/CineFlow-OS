@@ -2,10 +2,11 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createPrintSize, updatePrintSize } from "@/lib/actions/admin-frames";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface PrintSizeRow {
   id: string;
@@ -170,13 +171,7 @@ export function PrintSizeDialog({
               Available sizes scale to scale in the living room visualizer
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -199,7 +194,7 @@ export function PrintSizeDialog({
                 value={code}
                 onChange={(e) => handleCodeChange(e.target.value)}
                 placeholder="12R"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors uppercase"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors uppercase"
               />
             </div>
 
@@ -215,7 +210,7 @@ export function PrintSizeDialog({
                 value={basePrice}
                 onChange={(e) => setBasePrice(e.target.value)}
                 placeholder="85"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>
@@ -230,7 +225,7 @@ export function PrintSizeDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="12R (12 x 18 in)"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 
@@ -247,7 +242,7 @@ export function PrintSizeDialog({
                 value={widthInches}
                 onChange={(e) => handleWidthChange(e.target.value)}
                 placeholder="12"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
@@ -263,7 +258,7 @@ export function PrintSizeDialog({
                 value={heightInches}
                 onChange={(e) => handleHeightChange(e.target.value)}
                 placeholder="18"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>

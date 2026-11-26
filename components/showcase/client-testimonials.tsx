@@ -55,7 +55,7 @@ export function ClientTestimonials() {
 
             <div className="pt-3 border-t border-zinc-800/80">
               <div className="text-xs font-bold text-white">{t.client}</div>
-              <div className="text-[10px] font-mono text-zinc-400">{t.campaign}</div>
+              <div className="text-[11px] font-mono text-zinc-400">{t.campaign}</div>
             </div>
           </div>
         ))}

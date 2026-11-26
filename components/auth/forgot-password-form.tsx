@@ -41,7 +41,7 @@ export function ForgotPasswordForm({ tenantSlug, tenantName, initialEmail = "" }
         <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mx-auto mb-3">
           {sentMessage ? <MailCheck className="size-6" aria-hidden="true" /> : <KeyRound className="size-6" aria-hidden="true" />}
         </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">{sentMessage ? "Check your email" : "Forgot password"}</span>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">{sentMessage ? "Check your email" : "Forgot password"}</span>
         <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
         {!sentMessage && (
           <p className="text-xs text-zinc-400">Enter the email you use for {tenantName} and we&apos;ll send you a link to choose a new password.</p>
@@ -82,7 +82,7 @@ export function ForgotPasswordForm({ tenantSlug, tenantName, initialEmail = "" }
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors"
             />
           </div>
           <button

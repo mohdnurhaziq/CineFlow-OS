@@ -19,7 +19,7 @@ export const PRINT_ORDER_STATUS_STYLES: Record<string, string> = {
   SHIPPED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   COLLECTED: "bg-zinc-800 text-zinc-300 border-zinc-700",
   DELIVERED: "bg-zinc-800 text-zinc-300 border-zinc-700",
-  CANCELLED: "bg-zinc-800 text-zinc-500 border-zinc-700",
+  CANCELLED: "bg-zinc-800 text-zinc-400 border-zinc-700",
 };
 
 export function printOrderStatusLabel(status: string): string {

@@ -13,7 +13,7 @@ import type { AssignableMember } from "@/lib/team/members";
 import { AssignDialog } from "./assign-dialog";
 import { emailNote } from "./assign-email-note";
 import { NewBookingDialog } from "./new-booking-dialog";
-import { formatCurrency, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
 import type { BookingActionPowers } from "@/lib/auth/page-powers";
 import {
@@ -23,6 +23,7 @@ import {
   formatSessionDate,
   formatPaymentMethod,
 } from "./booking-details-dialog";
+import { formatMoney } from "@/lib/money";
 
 export type FilterId = "upcoming" | "unassigned" | "verify" | "confirmed" | "past" | "cancelled" | "all";
 
@@ -183,7 +184,7 @@ export function BookingsConsole({
         )}
         <label className="relative block w-full sm:w-72">
           <span className="sr-only">Search bookings</span>
-          <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="size-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="search"
             value={query}
@@ -192,7 +193,7 @@ export function BookingsConsole({
               setTicked(new Set());
             }}
             placeholder="Name, email, phone or code"
-            className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+            className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
           />
         </label>
           </>
@@ -265,7 +266,7 @@ export function BookingsConsole({
           )}
           <div
             className={cn(
-              "flex-1 grid gap-4 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-500",
+              "flex-1 grid gap-4 py-2.5 border-b border-zinc-800 text-[11px] font-mono uppercase tracking-widest text-zinc-400",
               canManage ? "pr-5" : "px-5",
               columns
             )}
@@ -281,12 +282,12 @@ export function BookingsConsole({
 
         {visible.length === 0 ? (
           <div className="py-14 px-6 text-center space-y-2">
-            <Inbox className="size-8 text-zinc-600 mx-auto" />
+            <Inbox className="size-8 text-zinc-400 mx-auto" />
             <p className="text-sm text-zinc-300">
               {query ? "No bookings match your search." : "No bookings here yet."}
             </p>
             {!query && filter === "upcoming" && (
-              <p className="text-xs text-zinc-500">New bookings from your booking page will appear here.</p>
+              <p className="text-xs text-zinc-400">New bookings from your booking page will appear here.</p>
             )}
           </div>
         ) : (
@@ -317,7 +318,7 @@ export function BookingsConsole({
 
                   <span className="min-w-0 col-span-2 md:col-span-1">
                     <span className="block text-xs text-zinc-200 truncate">{b.clientName}</span>
-                    <span className="block text-[11px] text-zinc-500 truncate">{b.clientEmail}</span>
+                    <span className="block text-[11px] text-zinc-400 truncate">{b.clientEmail}</span>
                   </span>
 
                   <span className="hidden md:block text-[11px] font-mono text-amber-400/90 truncate">{b.trackingCode}</span>
@@ -325,14 +326,14 @@ export function BookingsConsole({
                   <span className="min-w-0 col-span-2 md:col-span-1 text-[11px] text-zinc-400">
                     {b.money && (
                       <>
-                        <span className="text-zinc-200">{formatCurrency(b.depositAmount, currency)}</span>
-                        <span className="text-zinc-500"> · {formatPaymentMethod(b.paymentMethod)}</span>
+                        <span className="text-zinc-200">{formatMoney(currency, b.depositAmount)}</span>
+                        <span className="text-zinc-400"> · {formatPaymentMethod(b.paymentMethod)}</span>
                       </>
                     )}
                   </span>
 
                   <span className="min-w-0 col-span-2 md:col-span-1 text-[11px] text-zinc-400 truncate">
-                    <span className="md:hidden text-zinc-500">Team: </span>
+                    <span className="md:hidden text-zinc-400">Team: </span>
                     {b.assignees.length > 0 ? b.assignees.map((a) => a.name.split(" ")[0]).join(", ") : "—"}
                   </span>
 

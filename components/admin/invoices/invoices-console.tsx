@@ -5,9 +5,9 @@ import { PageHeader } from "@/components/ui/page";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Receipt, Search, Inbox } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import { formatStudioDate } from "@/lib/slot-time";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 export interface InvoiceRow {
   id: string;
@@ -73,7 +73,7 @@ export function InvoicesConsole({
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [invoices]);
 
-  const money = (n: number) => formatCurrency(n, currency);
+  const money = (n: number) => formatMoney(currency, n);
   const sum = (statuses: string[]) => invoices.filter((i) => statuses.includes(i.status)).reduce((t, i) => t + i.amount, 0);
   const totals = {
     outstanding: sum(["PENDING", "OVERDUE"]),
@@ -118,7 +118,7 @@ export function InvoicesConsole({
           { label: "Collected", value: totals.collected, tone: "text-emerald-400" },
         ].map((t) => (
           <div key={t.label} className="p-4 rounded-2xl border border-zinc-800 bg-[#0d0d10]">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">{t.label}</div>
+            <div className="text-[11px] font-mono uppercase tracking-widest text-zinc-400">{t.label}</div>
             <div className={`mt-1 text-xl font-bold font-mono tabular-nums ${t.tone}`}>{money(t.value)}</div>
           </div>
         ))}
@@ -166,20 +166,20 @@ export function InvoicesConsole({
           </label>
           <label className="relative block sm:w-64">
             <span className="sr-only">Search invoices</span>
-            <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="size-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Number, client, booking or project"
-              className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
             />
           </label>
         </div>
       </div>
 
       <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] overflow-hidden">
-        <div className={`hidden md:grid ${COLS} gap-4 px-5 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-500`}>
+        <div className={`hidden md:grid ${COLS} gap-4 px-5 py-2.5 border-b border-zinc-800 text-[11px] font-mono uppercase tracking-widest text-zinc-400`}>
           <span>Invoice</span>
           <span>Client</span>
           <span>For</span>
@@ -190,7 +190,7 @@ export function InvoicesConsole({
 
         {visible.length === 0 ? (
           <div className="py-14 px-6 text-center space-y-2">
-            <Inbox className="size-8 text-zinc-600 mx-auto" />
+            <Inbox className="size-8 text-zinc-400 mx-auto" />
             <p className="text-sm text-zinc-300">{query || type !== "all" ? "No invoices match." : "No invoices here yet."}</p>
           </div>
         ) : (
@@ -205,19 +205,19 @@ export function InvoicesConsole({
                   >
                     <span className="min-w-0">
                       <span className="block text-xs font-mono text-white">{inv.invoiceNumber}</span>
-                      <span className="block text-[11px] text-zinc-500">Issued {day(inv.issuedAt)}</span>
+                      <span className="block text-[11px] text-zinc-400">Issued {day(inv.issuedAt)}</span>
                     </span>
                     <span className="md:hidden justify-self-end">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-mono border ${style.className}`}>{style.label}</span>
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-mono border ${style.className}`}>{style.label}</span>
                     </span>
                     <span className="min-w-0 col-span-2 md:col-span-1">
                       <span className="block text-xs text-zinc-200 truncate">{inv.clientName}</span>
-                      <span className="block text-[11px] text-zinc-500 truncate">{inv.clientEmail}</span>
+                      <span className="block text-[11px] text-zinc-400 truncate">{inv.clientEmail}</span>
                     </span>
                     <span className="min-w-0 col-span-2 md:col-span-1">
                       <span className="block text-xs text-zinc-200 font-medium">{inv.typeLabel}</span>
                       {inv.reference && (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800/80 text-zinc-300 border border-zinc-700/60 truncate max-w-full">
+                        <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[11px] font-mono bg-zinc-800/80 text-zinc-300 border border-zinc-700/60 truncate max-w-full">
                           {inv.reference}
                         </span>
                       )}
@@ -227,7 +227,7 @@ export function InvoicesConsole({
                     </span>
                     <span className="text-xs font-mono tabular-nums text-white md:text-right">{money(inv.amount)}</span>
                     <span className="hidden md:block justify-self-end">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-mono border whitespace-nowrap ${style.className}`}>
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-mono border whitespace-nowrap ${style.className}`}>
                         {style.label}
                       </span>
                     </span>

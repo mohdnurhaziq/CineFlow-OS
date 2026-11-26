@@ -11,6 +11,7 @@ import { ClientAuthPanel } from "@/components/auth/client-auth-panel";
 import { logoutAction } from "@/lib/auth/session";
 import { PackagePicker, packagesFor, type BookingPackageOption } from "./package-picker";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 interface BookingIntakeModalProps {
   isOpen: boolean;
@@ -78,7 +79,6 @@ export function BookingIntakeModal({
   const needsPackage = offered.length > 0;
   const depositDue = chosen ? chosen.depositPrice : needsPackage ? null : slot.depositRequired;
 
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
   const slotDateStr = formatSlotDate(slot.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
   // Not a <form> submit: the account panel inside this dialog has its own <form>,
@@ -142,7 +142,7 @@ export function BookingIntakeModal({
           {/* Top Header */}
           <div className="shrink-0 px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
             <div className="space-y-0.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400">
                 {clientAccount ? "Booking summary" : "Your details"}
               </span>
               <Dialog.Title className="text-base font-bold text-white tracking-tight">
@@ -180,7 +180,7 @@ export function BookingIntakeModal({
                 </div>
 
                 <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/60 font-mono text-xs space-y-1.5">
-                  <div className="text-zinc-400 uppercase text-[10px]">Booking reference</div>
+                  <div className="text-zinc-400 uppercase text-[11px]">Booking reference</div>
                   <div className="text-base font-black text-amber-400 tracking-wider">{confirmedCode}</div>
                   <div className="text-[11px] text-zinc-400 pt-2 border-t border-zinc-800">
                     {slotDateStr} • {slot.startTime} – {slot.endTime}
@@ -216,18 +216,18 @@ export function BookingIntakeModal({
                 {/* Slot Summary Pill */}
                 <div className="p-3 rounded-xl border border-zinc-800 bg-[#16161b] flex items-center justify-between text-xs font-mono">
                   <div className="space-y-0.5">
-                    <div className="text-zinc-400 text-[10px] uppercase">{categoryName ?? slot.category}</div>
+                    <div className="text-zinc-400 text-[11px] uppercase">{categoryName ?? slot.category}</div>
                     <div className="text-white font-bold">
                       {slotDateStr} • {slot.startTime}
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <div className="text-zinc-400 text-[10px] uppercase">Deposit due now</div>
+                    <div className="text-zinc-400 text-[11px] uppercase">Deposit due now</div>
                     <div className="text-amber-400 font-bold tabular-nums">
                       {depositDue === null
                         ? "Choose a package"
-                        : `${currencySymbol}${depositDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                        : formatMoney(currency, depositDue)}
                     </div>
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export function BookingIntakeModal({
                   {clientAccount ? (
                     <div className="p-3 rounded-xl border border-zinc-800 bg-[#16161b] flex items-center justify-between gap-3 text-xs">
                       <div className="min-w-0 space-y-0.5">
-                        <div className="text-zinc-400 text-[10px] uppercase font-mono">Booking as</div>
+                        <div className="text-zinc-400 text-[11px] uppercase font-mono">Booking as</div>
                         <div className="text-white font-semibold truncate">{clientAccount.name}</div>
                         <div className="text-zinc-400 truncate">{clientAccount.email}</div>
                       </div>

@@ -135,12 +135,12 @@ export function ManualQa({ question, children }: { question: string; children: R
 export function ManualContents({ items }: { items: { id: string; title: string }[] }) {
   return (
     <nav aria-label="On this page" className="rounded-xl border border-zinc-800 bg-[#121215] p-4">
-      <p className="text-[10px] font-mono uppercase tracking-widest text-amber-400 mb-2">On this page</p>
+      <p className="text-[11px] font-mono uppercase tracking-widest text-amber-400 mb-2">On this page</p>
       <ol className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
         {items.map((item, i) => (
           <li key={item.id}>
             <a href={`#${item.id}`} className="text-zinc-300 hover:text-white transition-colors">
-              <span className="font-mono text-xs text-zinc-500 mr-2">{String(i + 1).padStart(2, "0")}</span>
+              <span className="font-mono text-xs text-zinc-400 mr-2">{String(i + 1).padStart(2, "0")}</span>
               {item.title}
             </a>
           </li>

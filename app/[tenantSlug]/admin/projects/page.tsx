@@ -73,9 +73,9 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
 
       {projects.length === 0 ? (
         <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-10 text-center space-y-2">
-          <Inbox className="size-8 text-zinc-600 mx-auto" />
+          <Inbox className="size-8 text-zinc-400 mx-auto" />
           <p className="text-sm text-zinc-300">No {tab === "all" ? "galleries" : TAB_LABELS[tab].toLowerCase()} yet.</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-400">
             Every confirmed booking gets a gallery automatically: sessions (convocation, portrait, Raya) under Sessions, productions
             (weddings, commercial, events) here. Signed{" "}
             <Link href={studioPath(tenant.slug, "/admin/proposals")} className="text-amber-400 hover:underline">
@@ -109,14 +109,14 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
                         {p.title}
                       </Link>
                       <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                        <span className="text-[11px] font-mono text-zinc-500">{p.projectNumber}</span>
+                        <span className="text-[11px] font-mono text-zinc-400">{p.projectNumber}</span>
                         {p.booking && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          <span className="px-1.5 py-0.2 rounded text-[11px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
                             Booking {p.booking.trackingCode}
                           </span>
                         )}
                         {p.proposal && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                          <span className="px-1.5 py-0.2 rounded text-[11px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20">
                             Proposal {p.proposal.proposalNumber}
                           </span>
                         )}
@@ -135,7 +135,7 @@ export default async function AdminProjectsPage({ params, searchParams }: Projec
                     {p.money && (
                       <td className="px-4 py-3 text-right font-mono text-zinc-200">
                         {formatMoney(tenant.currency, p.money.budget)}
-                        <div className="text-[10px] text-zinc-500">{p.money.isFinalBalancePaid ? "Fully paid" : "Balance open"}</div>
+                        <div className="text-[11px] text-zinc-400">{p.money.isFinalBalancePaid ? "Fully paid" : "Balance open"}</div>
                       </td>
                     )}
                   </tr>

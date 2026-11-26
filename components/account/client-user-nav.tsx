@@ -76,7 +76,7 @@ export function ClientUserNav({ tenantSlug, client, switcher = [] }: ClientUserN
             <span className="text-xs font-semibold text-white max-w-[120px] truncate leading-tight">
               {client.name}
             </span>
-            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider leading-tight">
+            <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider leading-tight">
               Client
             </span>
           </div>
@@ -97,7 +97,7 @@ export function ClientUserNav({ tenantSlug, client, switcher = [] }: ClientUserN
             <div className="px-3 py-2.5 border-b border-zinc-800/80 mb-1">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-white truncate">{client.name}</span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   <UserCheck className="size-2.5" />
                   Verified
                 </span>
@@ -165,7 +165,7 @@ export function ClientUserNav({ tenantSlug, client, switcher = [] }: ClientUserN
                   <Globe className="size-3.5 text-zinc-400" />
                   <span>Studio website</span>
                 </span>
-                <span className="text-[10px] font-mono text-zinc-500">Public</span>
+                <span className="text-[11px] font-mono text-zinc-400">Public</span>
               </Link>
             </DropdownMenu.Item>
 

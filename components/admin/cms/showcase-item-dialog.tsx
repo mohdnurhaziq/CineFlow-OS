@@ -3,7 +3,6 @@
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import {
-  X,
   Plus,
   Edit2,
   AlertCircle,
@@ -21,6 +20,7 @@ import { disciplineLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
 import { toast } from "sonner";
 import { SHOWCASE_PLACEHOLDER, editableShowcasePhotos, showcaseCover } from "@/lib/showcase/cover";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -324,13 +324,7 @@ export function ShowcaseItemDialog({
               Portfolio items are featured on the public studio landing page and campaigns
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -353,7 +347,7 @@ export function ShowcaseItemDialog({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Aurora Haute Couture — Fall Narrative"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
@@ -367,7 +361,7 @@ export function ShowcaseItemDialog({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="e.g. Aurora Apparel"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>
@@ -496,7 +490,7 @@ export function ShowcaseItemDialog({
                       }
                     }}
                     placeholder="/uploads/showcase/aurora-cover.jpg"
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-xs text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-xs text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500"
                   />
                 </div>
               </div>
@@ -535,7 +529,7 @@ export function ShowcaseItemDialog({
                         {/* Top Badges */}
                         <div className="absolute top-1.5 left-1.5">
                           {isCover && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500 text-black shadow-md flex items-center gap-0.5">
+                            <span className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500 text-black shadow-md flex items-center gap-0.5">
                               <Star className="size-2.5 fill-black" /> Cover
                             </span>
                           )}
@@ -556,7 +550,7 @@ export function ShowcaseItemDialog({
                             <button
                               type="button"
                               onClick={() => setAsCover(url)}
-                              className="w-full py-1 rounded bg-amber-500/90 hover:bg-amber-500 text-[10px] font-mono font-bold text-black text-center transition-colors shadow"
+                              className="w-full py-1 rounded bg-amber-500/90 hover:bg-amber-500 text-[11px] font-mono font-bold text-black text-center transition-colors shadow"
                             >
                               Set as Cover
                             </button>
@@ -582,7 +576,7 @@ export function ShowcaseItemDialog({
                 value={videoEmbedUrl}
                 onChange={(e) => setVideoEmbedUrl(e.target.value)}
                 placeholder="https://player.vimeo.com/video/... or upload a video file"
-                className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
               <input
                 ref={videoInputRef}
@@ -605,7 +599,7 @@ export function ShowcaseItemDialog({
                 {isUploadingVideo ? "Uploading…" : "Upload Video"}
               </button>
             </div>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-zinc-400">
               Paste an external Vimeo / YouTube embed URL, or upload an MP4/MOV file (up to 200 MB).
             </p>
           </div>
@@ -637,7 +631,7 @@ export function ShowcaseItemDialog({
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>

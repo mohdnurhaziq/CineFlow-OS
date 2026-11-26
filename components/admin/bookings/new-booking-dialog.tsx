@@ -3,7 +3,7 @@
 import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarPlus, X } from "lucide-react";
+import { ArrowRight, CalendarPlus } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 import { formatSlotDate, slotDateKey } from "@/lib/slot-time";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
@@ -11,6 +11,7 @@ import { BookForCustomerDialog, type ClientOption } from "@/components/admin/cal
 import type { BookingSlotRow, CategoryOption } from "@/components/admin/calendar/single-slot-dialog";
 import type { BookingPackageOption } from "@/components/booking/package-picker";
 import { studioPath } from "@/lib/domain-name";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface NewBookingDialogProps {
   isOpen: boolean;
@@ -120,17 +121,10 @@ export function NewBookingDialog({
               <h2 id="new-booking-dialog-title" className="text-base font-bold text-white tracking-tight">
                 New booking
               </h2>
-              <p className="text-[11px] font-mono text-zinc-500">Step 1 of 2 · Pick a session</p>
+              <p className="text-[11px] font-mono text-zinc-400">Step 1 of 2 · Pick a session</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         <div className="p-5 space-y-4">
@@ -199,10 +193,10 @@ export function NewBookingDialog({
                               {s.startTime} – {s.endTime}
                             </span>
                             {category === "all" && (
-                              <span className="block text-[10px] text-zinc-500 mt-0.5">{categoryLabel(s.category)}</span>
+                              <span className="block text-[11px] text-zinc-400 mt-0.5">{categoryLabel(s.category)}</span>
                             )}
                             {s.campaignTitle && (
-                              <span className="block text-[10px] text-zinc-500 mt-0.5">{s.campaignTitle}</span>
+                              <span className="block text-[11px] text-zinc-400 mt-0.5">{s.campaignTitle}</span>
                             )}
                           </label>
                         );

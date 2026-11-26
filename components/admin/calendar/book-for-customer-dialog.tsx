@@ -2,12 +2,13 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
-import { X, UserPlus, Users, Search, Loader2, AlertCircle, Check, CalendarCheck, ArrowLeft } from "lucide-react";
+import { UserPlus, Users, Search, Loader2, AlertCircle, Check, CalendarCheck, ArrowLeft } from "lucide-react";
 import { createBookingForCustomer } from "@/lib/actions/admin-bookings";
 import type { BookingSlotRow } from "./single-slot-dialog";
 import { PackagePicker, packagesFor, type BookingPackageOption } from "@/components/booking/package-picker";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface ClientOption {
   id: string;
@@ -34,7 +35,7 @@ interface BookForCustomerDialogProps {
 }
 
 const inputClass =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors";
 const labelClass = "text-xs font-mono text-zinc-400 block mb-1";
 
 export function BookForCustomerDialog({
@@ -154,14 +155,7 @@ export function BookForCustomerDialog({
             <CalendarCheck className="size-5 text-amber-400" />
             <h2 id="book-for-customer-dialog-title" className="text-base font-bold text-white tracking-tight">Book for Customer</h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-5">
@@ -217,7 +211,7 @@ export function BookForCustomerDialog({
             {mode === "EXISTING" ? (
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-400" />
                   <input
                     type="text"
                     value={search}
@@ -228,7 +222,7 @@ export function BookForCustomerDialog({
                 </div>
                 <div className="max-h-44 overflow-y-auto rounded-lg border border-zinc-800 divide-y divide-zinc-800/70">
                   {filteredClients.length === 0 ? (
-                    <div className="p-3 text-xs text-zinc-500 text-center">
+                    <div className="p-3 text-xs text-zinc-400 text-center">
                       {clients.length === 0
                         ? "No customer accounts yet. Create a new customer."
                         : "No customers match your search."}
@@ -293,7 +287,7 @@ export function BookForCustomerDialog({
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-zinc-500">
+                <p className="text-[11px] text-zinc-400">
                   If this email already has an account at your studio, the booking is linked to it. Otherwise a
                   new account is created that the customer can claim by signing up with the same email.
                 </p>
@@ -323,7 +317,7 @@ export function BookForCustomerDialog({
               <option value="VIDEOGRAPHY">Videography</option>
               <option value="HYBRID">Photo &amp; video</option>
             </select>
-            {chosenPackage?.discipline && <p className="text-[11px] text-zinc-500 mt-1">Set by the package.</p>}
+            {chosenPackage?.discipline && <p className="text-[11px] text-zinc-400 mt-1">Set by the package.</p>}
           </div>
 
           <div>

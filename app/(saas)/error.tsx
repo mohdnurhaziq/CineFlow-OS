@@ -28,7 +28,7 @@ export default function SaasError({
         </div>
 
         <div className="space-y-2">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
             CineFlow OS Notice
           </span>
           <h2 className="text-2xl font-bold tracking-tight text-white">Temporary Disruption</h2>
@@ -39,7 +39,7 @@ export default function SaasError({
 
         {error.digest && (
           <div className="p-2.5 rounded bg-zinc-900 border border-zinc-800 text-left">
-            <div className="text-[9px] font-mono uppercase text-zinc-500">Digest</div>
+            <div className="text-[11px] font-mono uppercase text-zinc-400">Digest</div>
             <code className="text-[11px] font-mono text-zinc-300 break-all">{error.digest}</code>
           </div>
         )}

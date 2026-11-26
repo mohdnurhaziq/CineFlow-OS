@@ -17,7 +17,7 @@ export function ClientAccountBadge({ status }: { status: ClientAccountStatus }) 
   return (
     <span
       title={TITLES[status]}
-      className={cn("shrink-0 px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-wide", STYLES[status])}
+      className={cn("shrink-0 px-1.5 py-0.5 rounded border text-[11px] font-mono uppercase tracking-wide", STYLES[status])}
     >
       {CLIENT_ACCOUNT_STATUS_LABELS[status]}
     </span>

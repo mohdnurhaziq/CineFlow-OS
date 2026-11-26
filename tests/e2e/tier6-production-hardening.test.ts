@@ -88,7 +88,7 @@ export async function runTier6ProductionHardeningTests(harness: TestHarness) {
     harness.assert(result.emailSubject.includes("Lumina Cine"), "Subject includes studio name");
     harness.assert(result.emailHtml.includes("Elena Rostova"), "Email HTML addresses client");
     harness.assert(result.emailHtml.includes("Signature Editorial"), "Email HTML lists package");
-    harness.assert(result.emailHtml.includes("USD 500.00"), "Email HTML lists deposit");
+    harness.assert(result.emailHtml.includes("$500.00"), "Email HTML lists deposit");
     harness.assert(result.whatsappUrl !== undefined, "WhatsApp dispatch URL generated");
     harness.assert(
       result.whatsappUrl!.startsWith("https://wa.me/60123456789"),
@@ -152,7 +152,7 @@ export async function runTier6ProductionHardeningTests(harness: TestHarness) {
 
     harness.assert(proposalResult.success, "Proposal signed notification dispatched");
     harness.assert(proposalResult.emailHtml.includes("PROP-APEX-001"), "HTML includes proposal ref");
-    harness.assert(proposalResult.emailHtml.includes("MYR 1200.00"), "HTML includes retainer due");
+    harness.assert(proposalResult.emailHtml.includes("RM 1,200.00"), "HTML includes retainer due");
 
     const vaultResult = await sendNotification({
       event: "VAULT_UNLOCKED",

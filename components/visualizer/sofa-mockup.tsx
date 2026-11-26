@@ -184,12 +184,12 @@ export function SofaMockup({ widthPx }: SofaMockupProps) {
       </svg>
 
       {/* Architectural Scale Anchor Label */}
-      <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-zinc-400 font-semibold tracking-wider uppercase">
-        <span className="text-zinc-600">|</span>
-        <span className="text-zinc-500">←</span>
+      <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] sm:text-[11px] font-mono text-zinc-400 font-semibold tracking-wider uppercase">
+        <span className="text-zinc-400">|</span>
+        <span className="text-zinc-400">←</span>
         <span className="px-1 text-zinc-300">84&quot; (213 cm) Living Room Scale Anchor</span>
-        <span className="text-zinc-500">→</span>
-        <span className="text-zinc-600">|</span>
+        <span className="text-zinc-400">→</span>
+        <span className="text-zinc-400">|</span>
       </div>
     </div>
   );

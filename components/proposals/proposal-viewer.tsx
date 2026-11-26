@@ -10,6 +10,7 @@ import { SignedAcceptanceView } from "./signed-acceptance-view";
 import { acceptProposal, declineProposal } from "@/lib/actions/proposals";
 import { disciplineLabel } from "@/lib/labels";
 import { formatStudioDate } from "@/lib/slot-time";
+import { formatMoney } from "@/lib/money";
 
 interface ProposalViewerProps {
   tenant: {
@@ -63,7 +64,6 @@ interface ProposalViewerProps {
 }
 
 export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: ProposalViewerProps) {
-  const currencySymbol = tenant.currency === "MYR" ? "RM " : "$";
 
   // Initially selected add-ons
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(() => {
@@ -222,10 +222,10 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+            <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
               PROPOSAL
             </span>
-            <span className="text-xs font-mono text-zinc-500">#{proposal.proposalNumber}</span>
+            <span className="text-xs font-mono text-zinc-400">#{proposal.proposalNumber}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{proposal.title}</h1>
         </div>
@@ -243,19 +243,19 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
       {/* 2. Executive Overview Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#121215] space-y-1">
-          <div className="text-[10px] font-mono uppercase text-zinc-500">Client Organization</div>
+          <div className="text-[11px] font-mono uppercase text-zinc-400">Client Organization</div>
           <div className="font-semibold text-white">{proposal.client.name}</div>
           <div className="text-xs font-mono text-zinc-400 truncate">{proposal.client.email}</div>
         </div>
 
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#121215] space-y-1">
-          <div className="text-[10px] font-mono uppercase text-zinc-500">Studio Director</div>
+          <div className="text-[11px] font-mono uppercase text-zinc-400">Studio Director</div>
           <div className="font-semibold text-white">{proposal.studio.name}</div>
           <div className="text-xs font-mono text-zinc-400 truncate">{tenant.name}</div>
         </div>
 
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#121215] space-y-1">
-          <div className="text-[10px] font-mono uppercase text-zinc-500">Payments</div>
+          <div className="text-[11px] font-mono uppercase text-zinc-400">Payments</div>
           <div className="font-semibold text-amber-400 font-mono">50% deposit / 50% on delivery</div>
           <div className="text-xs text-zinc-400">Final files unlock when paid in full</div>
         </div>
@@ -263,7 +263,7 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
 
       {/* 3. Base Scope & Production Narrative */}
       <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] space-y-3 shadow-md">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
           CORE PRODUCTION SCOPE
         </span>
         <h3 className="text-base font-bold text-white">Baseline Deliverables &amp; Crew Allocation</h3>
@@ -312,7 +312,7 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
           {/* Dynamically Injected Addenda */}
           {hasDrone && (
             <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-200 space-y-1 animate-fadeIn">
-              <span className="font-mono text-[10px] uppercase font-bold text-amber-400 block">
+              <span className="font-mono text-[11px] uppercase font-bold text-amber-400 block">
                 Addendum A (FAA Airspace &amp; Drone Flight Clearance)
               </span>
               <p className="text-xs leading-relaxed">
@@ -323,7 +323,7 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
 
           {hasRawSsd && (
             <div className="p-3.5 rounded-xl border border-blue-500/30 bg-blue-950/20 text-blue-200 space-y-1 animate-fadeIn">
-              <span className="font-mono text-[10px] uppercase font-bold text-blue-400 block">
+              <span className="font-mono text-[11px] uppercase font-bold text-blue-400 block">
                 Addendum B (Archival Negatives &amp; Data Custody)
               </span>
               <p className="text-xs leading-relaxed">
@@ -334,7 +334,7 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
 
           {hasSecondCam && (
             <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/20 text-emerald-200 space-y-1 animate-fadeIn">
-              <span className="font-mono text-[10px] uppercase font-bold text-emerald-400 block">
+              <span className="font-mono text-[11px] uppercase font-bold text-emerald-400 block">
                 Addendum C (Second Unit Cinematographer Operations)
               </span>
               <p className="text-xs leading-relaxed">
@@ -345,7 +345,7 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
 
           {hasRush && (
             <div className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-950/20 text-purple-200 space-y-1 animate-fadeIn">
-              <span className="font-mono text-[10px] uppercase font-bold text-purple-400 block">
+              <span className="font-mono text-[11px] uppercase font-bold text-purple-400 block">
                 Addendum D (Faster editing turnaround)
               </span>
               <p className="text-xs leading-relaxed">
@@ -388,14 +388,13 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
             <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
               Sign to accept
             </span>
-            <span className="text-[10px] font-mono text-zinc-500 block">
+            <span className="text-[11px] font-mono text-zinc-400 block">
               Draw your signature below
             </span>
           </div>
 
           <span className="text-xs font-mono text-amber-400 font-bold tabular-nums">
-            Deposit due: {currencySymbol}
-            {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            Deposit due: {formatMoney(tenant.currency, depositAmount)}
           </span>
         </div>
 
@@ -462,8 +461,7 @@ export function ProposalViewer({ tenant, proposal, viewerIsClient = false }: Pro
             ) : (
               <>
                 <FileCheck className="size-4" />
-                Sign &amp; accept ({currencySymbol}
-                {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })} deposit)
+                Sign &amp; accept ({formatMoney(tenant.currency, depositAmount)} deposit)
               </>
             )}
           </button>

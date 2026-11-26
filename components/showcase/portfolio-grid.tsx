@@ -94,7 +94,7 @@ export function PortfolioGrid({
   if (items.length === 0) {
     return (
       <div className="py-16 text-center rounded-2xl border border-zinc-800 bg-[#121215] space-y-3">
-        <Camera className="size-8 mx-auto text-zinc-500" />
+        <Camera className="size-8 mx-auto text-zinc-400" />
         <h4 className="text-base font-bold text-white">No Portfolio Works in this Category</h4>
         <p className="text-xs text-zinc-400 max-w-sm mx-auto">
           The studio is curating new deliverables for this campaign. Check out other categories or explore our service packages below.
@@ -134,7 +134,7 @@ export function PortfolioGrid({
 
               {/* Discipline / Media Type Badge */}
               <div className="absolute top-3 left-3">
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-white">
+                <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-white">
                   {isVideo ? <Film className="size-3 text-cyan-400" /> : <Camera className="size-3 text-amber-400" />}
                   <span>{categoryName(categories, item.category)}</span>
                 </span>

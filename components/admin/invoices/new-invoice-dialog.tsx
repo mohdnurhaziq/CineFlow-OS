@@ -3,12 +3,13 @@
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createInvoice } from "@/lib/actions/admin-invoices";
 import { useDialog } from "@/lib/use-dialog";
 import { studioPath } from "@/lib/domain-name";
 import { studioDateKey } from "@/lib/slot-time";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface NewInvoiceButtonProps {
   tenantId: string;
@@ -18,7 +19,7 @@ interface NewInvoiceButtonProps {
 }
 
 const field =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500";
 
 function inDays(days: number) {
   return studioDateKey(days);
@@ -84,9 +85,7 @@ export function NewInvoiceButton({ tenantId, tenantSlug, currency, clients }: Ne
               <h2 id="new-invoice-title" className="text-base font-bold text-white">
                 New invoice
               </h2>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <X className="size-4" />
-              </button>
+              <DialogCloseButton onClick={() => setOpen(false)} />
             </div>
             <form onSubmit={submit} className="space-y-3">
               <label className="block space-y-1">

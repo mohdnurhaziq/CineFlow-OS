@@ -42,6 +42,7 @@ import { useRouter } from "next/navigation";
 import { checkoutWindow } from "@/lib/gear/checkout-window";
 import { toast } from "sonner";
 import { formatSlotDate } from "@/lib/slot-time";
+import { formatMoney } from "@/lib/money";
 
 interface GearDashboardProps {
   tenantId: string;
@@ -294,13 +295,13 @@ export function GearDashboard({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[#0d0d10] border border-zinc-800">
             {/* Search */}
             <div className="relative flex-1 max-w-md">
-              <Search className="size-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="size-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by asset name, SKU, or serial..."
-                className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
               />
             </div>
 
@@ -337,7 +338,7 @@ export function GearDashboard({
           <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-900/80 border-b border-zinc-800 text-zinc-400 font-mono uppercase text-[10px] tracking-wider">
+                <thead className="bg-zinc-900/80 border-b border-zinc-800 text-zinc-400 font-mono uppercase text-[11px] tracking-wider">
                   <tr>
                     <th className="py-3 px-4">Asset / Equipment</th>
                     <th className="py-3 px-3">SKU & Serial</th>
@@ -352,7 +353,7 @@ export function GearDashboard({
                 <tbody className="divide-y divide-zinc-800/80">
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-zinc-500 font-mono text-xs">
+                      <td colSpan={8} className="py-12 text-center text-zinc-400 font-mono text-xs">
                         No equipment assets found matching your filter criteria.
                       </td>
                     </tr>
@@ -369,14 +370,14 @@ export function GearDashboard({
                         >
                           <td className="py-3.5 px-4 font-semibold text-white">
                             <div>{item.name}</div>
-                            <div className="text-[10px] font-mono text-zinc-500">
+                            <div className="text-[11px] font-mono text-zinc-400">
                               {disciplineLabel(item.discipline)}
                             </div>
                           </td>
-                          <td className="py-3.5 px-3 font-mono text-zinc-300">
+                          <td className="py-3.5 px-3 font-mono text-zinc-300 whitespace-nowrap">
                             <span className="font-bold text-amber-400">{item.sku}</span>
                             {item.serialNumber && (
-                              <div className="text-[10px] text-zinc-500">
+                              <div className="text-[11px] text-zinc-400">
                                 S/N: {item.serialNumber}
                               </div>
                             )}
@@ -386,7 +387,7 @@ export function GearDashboard({
                           </td>
                           <td className="py-3.5 px-3">
                             <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-mono font-medium ${
                                 item.condition === "EXCELLENT"
                                   ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                                   : item.condition === "GOOD"
@@ -401,7 +402,7 @@ export function GearDashboard({
                           </td>
                           <td className="py-3.5 px-3">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold border ${
                                 isAvail
                                   ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                                   : isOnShoot
@@ -436,7 +437,7 @@ export function GearDashboard({
                           </td>
                           {showRates && (
                             <td className="py-3.5 px-3 font-mono font-bold text-emerald-400">
-                              {currency} {item.dailyRate || 0}
+                              {formatMoney(currency, item.dailyRate || 0)}
                             </td>
                           )}
                           <td className="py-3.5 px-3 font-mono text-zinc-400 text-[11px]">
@@ -502,7 +503,7 @@ export function GearDashboard({
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {bundles.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-zinc-500 font-mono text-xs rounded-2xl border border-dashed border-zinc-800">
+              <div className="col-span-full py-12 text-center text-zinc-400 font-mono text-xs rounded-2xl border border-dashed border-zinc-800">
                 No kit bundles configured yet. Create a bundle recipe to assemble modular BOMs.
               </div>
             ) : (
@@ -527,17 +528,17 @@ export function GearDashboard({
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700">
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700">
                           {disciplineLabel(bundle.discipline)}
                         </span>
 
                         {isReady ? (
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                             <CheckCircle2 className="size-3" />
                             <span>100% READY</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
                             <AlertTriangle className="size-3" />
                             <span>PARTIAL ({availableItems}/{totalItems})</span>
                           </span>
@@ -552,12 +553,12 @@ export function GearDashboard({
                       </p>
 
                       <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs font-mono">
-                        <span className="text-zinc-500">
+                        <span className="text-zinc-400">
                           {totalItems} Constituent BOM Items
                         </span>
                         {showRates && (
                           <span className="font-bold text-emerald-400">
-                            {currency} {valuation} / day
+                            {formatMoney(currency, valuation)} / day
                           </span>
                         )}
                       </div>
@@ -609,7 +610,7 @@ export function GearDashboard({
         <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-900/80 border-b border-zinc-800 text-zinc-400 font-mono uppercase text-[10px] tracking-wider">
+              <thead className="bg-zinc-900/80 border-b border-zinc-800 text-zinc-400 font-mono uppercase text-[11px] tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Project</th>
                   <th className="py-3 px-4">Equipment Item</th>
@@ -622,7 +623,7 @@ export function GearDashboard({
               <tbody className="divide-y divide-zinc-800/80">
                 {reservations.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-zinc-500 font-mono text-xs">
+                    <td colSpan={6} className="py-12 text-center text-zinc-400 font-mono text-xs">
                       No shoot reservations recorded.
                     </td>
                   </tr>
@@ -646,13 +647,13 @@ export function GearDashboard({
                       <tr key={res.id} className="hover:bg-zinc-900/50 transition-colors">
                         <td className="py-3.5 px-4 font-semibold text-white">
                           <div>{res.project.title}</div>
-                          <div className="text-[10px] font-mono text-amber-400">
+                          <div className="text-[11px] font-mono text-amber-400">
                             {res.project.projectNumber}
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-zinc-200">{res.item.name}</div>
-                          <div className="text-[10px] font-mono text-zinc-500">
+                          <div className="text-[11px] font-mono text-zinc-400">
                             {res.item.sku} • condition: {conditionLabel(res.item.condition)}
                           </div>
                         </td>
@@ -661,7 +662,7 @@ export function GearDashboard({
                         </td>
                         <td className="py-3.5 px-3">
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold border ${
                               isCheckedOut
                                 ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"
                                 : isReserved
@@ -693,24 +694,24 @@ export function GearDashboard({
                               <div className="text-zinc-300 font-mono text-[11px] truncate max-w-xs">
                                 {res.inspection.inspectorName}
                               </div>
-                              <div className="text-zinc-500 text-[10px] truncate max-w-xs">
+                              <div className="text-zinc-400 text-[11px] truncate max-w-xs">
                                 {res.inspection.checkoutCondition}
                               </div>
                               {res.inspection.checkinCondition && (
-                                <div className="text-emerald-400 text-[10px] truncate max-w-xs">
+                                <div className="text-emerald-400 text-[11px] truncate max-w-xs">
                                   {res.inspection.checkinCondition}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <span className="text-zinc-500 font-mono text-[10px]">
+                            <span className="text-zinc-400 font-mono text-[11px]">
                               Pending Pre-Inspection
                             </span>
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           {isReserved && checkout && !checkout.open && (
-                            <span className="text-[11px] text-zinc-500">{checkout.message}</span>
+                            <span className="text-[11px] text-zinc-400">{checkout.message}</span>
                           )}
                           {isReserved && checkout?.open && (
                             <button
@@ -741,7 +742,7 @@ export function GearDashboard({
                           )}
 
                           {isReturned && (
-                            <span className="text-[11px] font-mono text-zinc-500 flex items-center justify-end gap-1">
+                            <span className="text-[11px] font-mono text-zinc-400 flex items-center justify-end gap-1">
                               <ShieldCheck className="size-3.5 text-emerald-400" />
                               <span>Audit Finalized</span>
                             </span>

@@ -1,6 +1,7 @@
 import { errorMessageOf } from "./action-error";
 import { deliverViaSmtp, smtpConfigFromEnv } from "./email/smtp";
 import type { CalendarInvite } from "./calendar/ics";
+import { formatMoney } from "@/lib/money";
 /**
  * CineFlow OS Multi-Channel Transactional Notification Engine
  * Supports Responsive HTML Email and WhatsApp Dispatch
@@ -430,7 +431,7 @@ function wrapEmailTemplate(studioName: string, title: string, bodyContent: strin
                     </span>
                   </td>
                   <td align="right">
-                    <span style="font-size: 11px; color: #71717a; font-family: monospace;">CINEFLOW OS</span>
+                    <span style="font-size: 11px; color: #a1a1aa; font-family: monospace;">CINEFLOW OS</span>
                   </td>
                 </tr>
               </table>
@@ -449,9 +450,9 @@ function wrapEmailTemplate(studioName: string, title: string, bodyContent: strin
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 24px 32px; border-top: 1px solid #27272a; background-color: #0d0d10; font-size: 12px; color: #71717a; text-align: center;">
+            <td style="padding: 24px 32px; border-top: 1px solid #27272a; background-color: #0d0d10; font-size: 12px; color: #a1a1aa; text-align: center;">
               <p style="margin: 0 0 6px 0;">This transmission was dispatched securely via <strong>${esc(studioName)}</strong> powered by CineFlow OS.</p>
-              <p style="margin: 0; font-size: 11px; color: #52525b;">Automated transactional notice • No reply required</p>
+              <p style="margin: 0; font-size: 11px; color: #a1a1aa;">Automated transactional notice • No reply required</p>
             </td>
           </tr>
         </table>
@@ -501,11 +502,11 @@ export async function sendNotification(
         <p>${unpaid ? `We&apos;ve received your booking. It&apos;s confirmed once your deposit is paid. ${esc(nextStep)}` : "Your booking is confirmed."}</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
-            ${payload.trackingCode ? `<tr><td style="color: #71717a; padding: 4px 0;">Booking Ref:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.trackingCode)}</td></tr>` : ""}
-            <tr><td style="color: #71717a; padding: 4px 0;">Package:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.packageName)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Date:</td><td style="color: #ffffff; text-align: right;">${esc(payload.slotDate)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Time Window:</td><td style="color: #ffffff; text-align: right;">${esc(payload.startTime)} - ${esc(payload.endTime)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">${depositLabel}:</td><td style="color: ${depositColor}; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositAmount.toFixed(2))}</td></tr>
+            ${payload.trackingCode ? `<tr><td style="color: #a1a1aa; padding: 4px 0;">Booking Ref:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.trackingCode)}</td></tr>` : ""}
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Package:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.packageName)}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Date:</td><td style="color: #ffffff; text-align: right;">${esc(payload.slotDate)}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Time Window:</td><td style="color: #ffffff; text-align: right;">${esc(payload.startTime)} - ${esc(payload.endTime)}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">${depositLabel}:</td><td style="color: ${depositColor}; font-weight: bold; text-align: right;">${esc(formatMoney(payload.currency, payload.depositAmount))}</td></tr>
           </table>
         </div>
         ${
@@ -519,23 +520,23 @@ export async function sendNotification(
         }
         <p>The studio will be in touch with the details for your session.</p>
       `;
-      emailText = `${unpaid ? `Booking received by ${payload.studioName}. It's confirmed once your deposit is paid. ${nextStep}` : `Booking confirmed with ${payload.studioName}!`}\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\n${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\n${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
-      whatsappText = `*${payload.studioName} — ${unpaid ? "Booking received" : "Booking confirmed!"}*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is ${unpaid ? `booked. ${nextStep}` : "confirmed."}${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} ${depositLabel}: ${payload.currency} ${payload.depositAmount.toFixed(2)}.${payload.bookingUrl ? `\n\n📅 ${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
+      emailText = `${unpaid ? `Booking received by ${payload.studioName}. It's confirmed once your deposit is paid. ${nextStep}` : `Booking confirmed with ${payload.studioName}!`}\n\nPackage: ${payload.packageName}\nDate: ${payload.slotDate} (${payload.startTime} - ${payload.endTime})\n${depositLabel}: ${formatMoney(payload.currency, payload.depositAmount)}${payload.trackingCode ? `\nBooking Ref: ${payload.trackingCode}` : ""}${payload.bookingUrl ? `\n${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
+      whatsappText = `*${payload.studioName} — ${unpaid ? "Booking received" : "Booking confirmed!"}*\n\nHi ${payload.clientName}, your shoot for *${payload.packageName}* on *${payload.slotDate}* (${payload.startTime} - ${payload.endTime}) is ${unpaid ? `booked. ${nextStep}` : "confirmed."}${payload.trackingCode ? ` Booking Ref: *${payload.trackingCode}*.` : ""} ${depositLabel}: ${formatMoney(payload.currency, payload.depositAmount)}.${payload.bookingUrl ? `\n\n📅 ${payload.bookingLinkLabel || "View my booking"}: ${payload.bookingUrl}` : ""}`;
       break;
     }
 
     case "PAYMENT_APPROVED": {
       const receiptLink = payload.receiptUrl;
-      emailSubject = `Payment Verified: Invoice #${payload.invoiceNumber} (${payload.currency} ${payload.amount.toFixed(2)})`;
+      emailSubject = `Payment Verified: Invoice #${payload.invoiceNumber} (${formatMoney(payload.currency, payload.amount)})`;
       bodyHtml = `
         <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
         <p>Your recent payment proof for invoice <strong>${esc(payload.invoiceNumber)}</strong> has been audited and verified by our accounting team.</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
-            <tr><td style="color: #71717a; padding: 4px 0;">Invoice #:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.invoiceNumber)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Project:</td><td style="color: #ffffff; text-align: right;">${esc(payload.projectTitle)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Milestone:</td><td style="color: #ffffff; text-align: right;">${esc(payload.milestoneType.replace(/_/g, " "))}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Amount Settled:</td><td style="color: #10b981; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.amount.toFixed(2))}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Invoice #:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.invoiceNumber)}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Project:</td><td style="color: #ffffff; text-align: right;">${esc(payload.projectTitle)}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Milestone:</td><td style="color: #ffffff; text-align: right;">${esc(payload.milestoneType.replace(/_/g, " "))}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Amount Settled:</td><td style="color: #10b981; font-weight: bold; text-align: right;">${esc(formatMoney(payload.currency, payload.amount))}</td></tr>
           </table>
         </div>
         ${
@@ -549,8 +550,8 @@ export async function sendNotification(
         }
         <p style="color: #10b981; font-weight: bold;">Status: 100% PAID & VERIFIED</p>
       `;
-      emailText = `Payment Verified for ${payload.invoiceNumber}: ${payload.currency} ${payload.amount.toFixed(2)} for ${payload.projectTitle}.${receiptLink ? ` View receipt: ${receiptLink}` : ""}`;
-      whatsappText = `*${payload.studioName} — Payment Verified*\n\nHi ${payload.clientName}, your payment for Invoice *#${payload.invoiceNumber}* (${payload.currency} ${payload.amount.toFixed(2)}) has been verified. Thank you!${receiptLink ? `\n\n📄 View Receipt: ${receiptLink}` : ""}`;
+      emailText = `Payment Verified for ${payload.invoiceNumber}: ${formatMoney(payload.currency, payload.amount)} for ${payload.projectTitle}.${receiptLink ? ` View receipt: ${receiptLink}` : ""}`;
+      whatsappText = `*${payload.studioName} — Payment Verified*\n\nHi ${payload.clientName}, your payment for Invoice *#${payload.invoiceNumber}* (${formatMoney(payload.currency, payload.amount)}) has been verified. Thank you!${receiptLink ? `\n\n📄 View Receipt: ${receiptLink}` : ""}`;
       break;
     }
 
@@ -585,14 +586,14 @@ export async function sendNotification(
         <p>Thank you for countersigning Proposal <strong>${esc(payload.proposalNumber)}</strong> for <strong>${esc(payload.projectTitle)}</strong>.</p>
         <div style="background-color: #18181c; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table width="100%" style="font-size: 13px; font-family: monospace;">
-            <tr><td style="color: #71717a; padding: 4px 0;">Proposal Ref:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.proposalNumber)}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">Total Production:</td><td style="color: #ffffff; text-align: right;">${esc(payload.currency)} ${esc(payload.totalPrice.toFixed(2))}</td></tr>
-            <tr><td style="color: #71717a; padding: 4px 0;">50% Retainer Due:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(payload.currency)} ${esc(payload.depositRequired.toFixed(2))}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Proposal Ref:</td><td style="color: #ffffff; font-weight: bold; text-align: right;">${esc(payload.proposalNumber)}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">Total Production:</td><td style="color: #ffffff; text-align: right;">${esc(formatMoney(payload.currency, payload.totalPrice))}</td></tr>
+            <tr><td style="color: #a1a1aa; padding: 4px 0;">50% Retainer Due:</td><td style="color: #f59e0b; font-weight: bold; text-align: right;">${esc(formatMoney(payload.currency, payload.depositRequired))}</td></tr>
           </table>
         </div>
         <p>Our production team has moved the project into Pre-Production.</p>
       `;
-      emailText = `Proposal Signed for ${payload.projectTitle}. Total: ${payload.currency} ${payload.totalPrice.toFixed(2)}`;
+      emailText = `Proposal Signed for ${payload.projectTitle}. Total: ${formatMoney(payload.currency, payload.totalPrice)}`;
       whatsappText = `*${payload.studioName} — Contract Executed*\n\nHi ${payload.clientName}, Proposal *#${payload.proposalNumber}* is officially signed. Our directors are preparing your production call sheets.`;
       break;
     }
@@ -621,7 +622,7 @@ export async function sendNotification(
       ].filter(Boolean);
       const what = parts.join(" and ") || "your files";
       const due = payload.balanceDue;
-      const dueLabel = due ? `${due.currency} ${due.amount.toFixed(2)}` : "";
+      const dueLabel = due ? `${formatMoney(due.currency, due.amount)}` : "";
       const nextStep = payload.unlocked
         ? `You can view and download the full-resolution files now.${due ? ` The remaining balance of ${dueLabel} is still due.` : ""}`
         : `You can view watermarked previews and pick your favourites now. Full-resolution downloads unlock once the remaining balance${due ? ` of ${dueLabel}` : ""} is paid.`;

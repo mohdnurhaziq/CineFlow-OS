@@ -1,10 +1,12 @@
 "use client";
 
-import { X, CheckCircle2, AlertTriangle, Package, Check, Clock } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Package, Check, Clock } from "lucide-react";
 import type { KitBundleRow } from "./kit-bundle-dialog";
 import { useDialog } from "@/lib/use-dialog";
 import { conditionLabel, gearStatusLabel } from "@/lib/labels";
 import { disciplineLabel } from "@/lib/labels";
+import { formatMoney } from "@/lib/money";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface KitBundleBomViewerProps {
   bundle: KitBundleRow | null;
@@ -40,16 +42,16 @@ export function KitBundleBomViewer({
         <div className="flex items-start justify-between pb-4 border-b border-zinc-800">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
                 {disciplineLabel(bundle.discipline)}
               </span>
               {isReady ? (
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                   <CheckCircle2 className="size-3" />
                   <span>100% READY TO DISPATCH</span>
                 </span>
               ) : (
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
                   <AlertTriangle className="size-3" />
                   <span>PARTIAL / CONFLICT DETECTED</span>
                 </span>
@@ -62,27 +64,21 @@ export function KitBundleBomViewer({
             <p className="text-xs text-zinc-400 mt-1">{bundle.description}</p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Pricing Summary */}
         <div className={`grid ${showRates ? "grid-cols-2" : "grid-cols-1"} gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs font-mono`}>
           {showRates && (
           <div>
-            <span className="text-zinc-500 block">Package Daily Rate:</span>
+            <span className="text-zinc-400 block">Package Daily Rate:</span>
             <span className="text-sm font-bold text-emerald-400">
-              {currency} {bundle.dailyRate || aggregateValuation} / day
+              {formatMoney(currency, bundle.dailyRate || aggregateValuation)} / day
             </span>
           </div>
           )}
           <div>
-            <span className="text-zinc-500 block">Readiness Ratio:</span>
+            <span className="text-zinc-400 block">Readiness Ratio:</span>
             <span className="text-sm font-bold text-white">
               {availableItems} / {totalItems} constituent items available
             </span>
@@ -108,7 +104,7 @@ export function KitBundleBomViewer({
                   <div className="flex-1">
                     <div className="font-semibold text-white flex items-center gap-2">
                       <span>{item.name}</span>
-                      <span className="text-[10px] font-mono text-zinc-400">
+                      <span className="text-[11px] font-mono text-zinc-400">
                         x{bItem.quantity}
                       </span>
                     </div>
@@ -119,7 +115,7 @@ export function KitBundleBomViewer({
 
                   <div className="shrink-0 text-right">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold border ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border ${
                         isItemAvail
                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                           : "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"
@@ -138,8 +134,8 @@ export function KitBundleBomViewer({
                       )}
                     </span>
                     {showRates && (
-                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5">
-                        {currency} {(item.dailyRate || 0) * bItem.quantity} / day
+                      <div className="text-[11px] font-mono text-zinc-400 mt-0.5">
+                        {formatMoney(currency, (item.dailyRate || 0) * bItem.quantity)} / day
                       </div>
                     )}
                   </div>

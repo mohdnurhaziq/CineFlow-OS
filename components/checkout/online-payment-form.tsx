@@ -1,6 +1,7 @@
 "use client";
 
 import { Lock, Loader2, ShieldCheck, FlaskConical } from "lucide-react";
+import { formatMoney } from "@/lib/money";
 
 interface OnlinePaymentFormProps {
   amount: number;
@@ -16,7 +17,6 @@ interface OnlinePaymentFormProps {
  * on the gateway's own hosted page, where the client picks FPX online banking or a card.
  */
 export function OnlinePaymentForm({ amount, currency, isSubmitting, mode, onPay }: OnlinePaymentFormProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   return (
     <div className="space-y-6">
@@ -31,7 +31,7 @@ export function OnlinePaymentForm({ amount, currency, isSubmitting, mode, onPay 
             : "This studio has no payment gateway connected. This button marks the payment as successful without charging anything."}
         </p>
         {mode === "SIMULATED" && (
-          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-amber-400">
+          <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-amber-400">
             <FlaskConical className="size-3" /> Not a real charge
           </div>
         )}
@@ -51,8 +51,7 @@ export function OnlinePaymentForm({ amount, currency, isSubmitting, mode, onPay 
         ) : (
           <>
             <Lock className="size-4" />
-            Pay {currencySymbol}
-            {amount.toLocaleString("en-US", { minimumFractionDigits: 2 })} {mode === "GATEWAY" ? "securely" : "(simulated)"}
+            Pay {formatMoney(currency, amount)} {mode === "GATEWAY" ? "securely" : "(simulated)"}
           </>
         )}
       </button>

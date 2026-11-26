@@ -5,6 +5,7 @@ import { QrCode, Copy, Check, Upload, X, Loader2, AlertCircle } from "lucide-rea
 import { toast } from "sonner";
 
 import { errorMessageOf } from "../../lib/action-error";
+import { formatMoney } from "@/lib/money";
 interface QrPaymentFormProps {
   amount: number;
   currency: string;
@@ -25,7 +26,6 @@ export function QrPaymentForm({
   isSubmitting,
   onSubmit,
 }: QrPaymentFormProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   const [copied, setCopied] = useState(false);
   const [paymentReference, setPaymentReference] = useState("");
@@ -97,7 +97,7 @@ export function QrPaymentForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* QR Code Container */}
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#16161b] flex flex-col items-center justify-center text-center space-y-3">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-amber-400">
             Scan with Banking / eWallet App
           </div>
 
@@ -112,21 +112,20 @@ export function QrPaymentForm({
             ) : (
               <div className="size-36 flex flex-col items-center justify-center text-zinc-400">
                 <QrCode className="size-16 text-zinc-900" />
-                <span className="text-[10px] text-zinc-500 font-mono mt-1">DuitNow / PayNow</span>
+                <span className="text-[11px] text-zinc-400 font-mono mt-1">DuitNow / PayNow</span>
               </div>
             )}
           </div>
 
           <div className="text-xs font-mono font-bold text-white tabular-nums">
-            Amount: {currencySymbol}
-            {amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            Amount: {formatMoney(currency, amount)}
           </div>
         </div>
 
         {/* Bank Details Container */}
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#16161b] flex flex-col justify-between space-y-3">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 mb-1">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1">
               Direct Wire / Instant Transfer
             </div>
             <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300 whitespace-pre-wrap leading-relaxed">
@@ -175,7 +174,7 @@ export function QrPaymentForm({
                   <span className="text-xs font-medium text-white truncate block">
                     Receipt Slip Uploaded
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                  <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
                     <Check className="size-3" /> Ready for verification
                   </span>
                 </div>
@@ -184,7 +183,9 @@ export function QrPaymentForm({
               <button
                 type="button"
                 onClick={() => setProofUrl(null)}
-                className="p-1.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                aria-label="Remove this slip"
+                title="Remove this slip"
+                className="grid size-11 shrink-0 place-items-center rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white"
               >
                 <X className="size-4" />
               </button>
@@ -211,7 +212,7 @@ export function QrPaymentForm({
                     </div>
                     <div>
                       <span className="text-xs font-semibold text-white">Click or drag receipt slip</span>
-                      <span className="text-[10px] text-zinc-400 block mt-0.5 font-mono">
+                      <span className="text-[11px] text-zinc-400 block mt-0.5 font-mono">
                         Supports PNG, JPG, WebP, PDF (Max 10MB)
                       </span>
                     </div>
@@ -263,7 +264,7 @@ export function QrPaymentForm({
             </>
           )}
         </button>
-        <p className="text-[10px] text-zinc-500 text-center mt-2 font-mono">
+        <p className="text-[11px] text-zinc-400 text-center mt-2 font-mono">
           Your slot is held while the studio checks your transfer.
         </p>
       </div>

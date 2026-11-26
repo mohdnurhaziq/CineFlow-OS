@@ -11,6 +11,7 @@ import { ManageStudioPanel } from "@/components/super-admin/manage-studio-panel"
 import { InviteRequestsPanel } from "@/components/super-admin/invite-requests-panel";
 import type { InviteRequestRow } from "@/lib/actions/invite-requests";
 import type { HealthItem, HealthState } from "@/lib/ops/system-health";
+import { formatMoney } from "@/lib/money";
 
 export interface TenantSummaryItem {
   id: string;
@@ -61,7 +62,7 @@ const STATE_STYLE: Record<PlanState, { label: string; chip: string }> = {
   CLOSED: { label: "Closed", chip: "bg-zinc-800 text-zinc-400 border-zinc-700" },
 };
 
-const money = (n: number) => `RM ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n: number) => formatMoney("MYR", n);
 const day = (key: string | null) =>
   key ? new Date(`${key}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
 const when = (d: Date | string | null) =>
@@ -97,7 +98,7 @@ export function SuperAdminView({ metrics, tenants, invites = [], health }: Super
               <ArrowLeft className="size-3.5" aria-hidden="true" />
               Platform
             </Link>
-            <span className="text-zinc-600">/</span>
+            <span className="text-zinc-400">/</span>
             <span className="text-amber-400 uppercase tracking-wider">Super-admin</span>
           </div>
           <div className="flex items-center gap-3">
@@ -169,14 +170,14 @@ export function SuperAdminView({ metrics, tenants, invites = [], health }: Super
         <section aria-label="Studios" className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" aria-hidden="true" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" aria-hidden="true" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search studios by name or address"
                 aria-label="Search studios"
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
               />
             </div>
             <select
@@ -250,8 +251,7 @@ export function SuperAdminView({ metrics, tenants, invites = [], health }: Super
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-300">{t.bookingCount}</td>
                     <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-amber-400 font-semibold">
-                      {t.currency === "MYR" ? "RM " : "$"}
-                      {t.totalPaidRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {formatMoney(t.currency, t.totalPaidRevenue)}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-zinc-400">{when(t.lastActive)}</td>
                     <td className="px-4 py-3 text-right">

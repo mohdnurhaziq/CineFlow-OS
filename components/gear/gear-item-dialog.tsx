@@ -2,13 +2,14 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
-import { X, Plus, Edit2, AlertCircle } from "lucide-react";
+import { Plus, Edit2, AlertCircle } from "lucide-react";
 import { createGearItem, updateGearItem } from "@/lib/actions/gear";
 import { useDialog } from "@/lib/use-dialog";
 import { conditionLabel } from "@/lib/labels";
 import { disciplineLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
 import type { CreateGearItemInput } from "@/lib/validations/gear";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface InventoryItemRow {
   id: string;
@@ -153,13 +154,7 @@ export function GearItemDialog({
               Maintain hardware serial numbers and operational availability
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}

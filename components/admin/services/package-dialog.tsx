@@ -8,6 +8,7 @@ import { useDialog } from "@/lib/use-dialog";
 import { disciplineLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
 import { includedPrintCount } from "@/lib/prints/pricing";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface IncludedPrintLine {
   printSizeId: string;
@@ -233,13 +234,7 @@ export function PackageDialog({
               Configure production tier scope, pricing, turnaround, and deliverables
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -261,7 +256,7 @@ export function PackageDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Cinematic Brand Hero Campaign"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 
@@ -314,7 +309,7 @@ export function PackageDialog({
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="2500"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
@@ -333,7 +328,7 @@ export function PackageDialog({
                   // Suggest half the price, the usual studio deposit, without pre-filling a number.
                   parseFloat(price) > 0 ? `e.g. ${Math.round(parseFloat(price) / 2)}` : "e.g. 1250"
                 }
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
@@ -347,7 +342,7 @@ export function PackageDialog({
                 value={turnaround}
                 onChange={(e) => setTurnaround(e.target.value)}
                 placeholder="7 Business Days"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>
@@ -362,7 +357,7 @@ export function PackageDialog({
               value={deliverables}
               onChange={(e) => setDeliverables(e.target.value)}
               placeholder="e.g. 1x 90s Master Video, 3x 9:16 Social Cuts, 25 High-Res Stills"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 
@@ -376,7 +371,7 @@ export function PackageDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detailed description of coverage hours, crew count, post-production color grading, and deliverables..."
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors resize-none"
             />
           </div>
 
@@ -433,7 +428,7 @@ export function PackageDialog({
                     type="button"
                     onClick={() => removePrint(i)}
                     aria-label={`Remove print line ${i + 1}`}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    className="grid size-10 shrink-0 place-items-center rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                   >
                     <X className="size-3.5" />
                   </button>

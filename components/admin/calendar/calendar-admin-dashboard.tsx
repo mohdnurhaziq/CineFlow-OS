@@ -258,7 +258,7 @@ export function CalendarAdminDashboard({
       {/* Status KPI Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-3.5 rounded-2xl border border-zinc-800 bg-[#0d0d10]">
-          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
+          <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block">
             Total Slots
           </span>
           <span className="text-xl font-bold font-mono text-white mt-1 block">
@@ -267,7 +267,7 @@ export function CalendarAdminDashboard({
         </div>
 
         <div className="p-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
-          <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider block flex items-center gap-1">
+          <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider block flex items-center gap-1">
             <CheckCircle className="size-3" /> Available
           </span>
           <span className="text-xl font-bold font-mono text-emerald-400 mt-1 block">
@@ -280,7 +280,7 @@ export function CalendarAdminDashboard({
             ? "border-amber-500/40 bg-amber-500/10 shadow-lg shadow-amber-500/10"
             : "border-zinc-800 bg-[#0d0d10]"
         }`}>
-          <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider block flex items-center gap-1">
+          <span className="text-[11px] font-mono text-amber-400 uppercase tracking-wider block flex items-center gap-1">
             <Clock className="size-3" /> In Hold
           </span>
           <span className="text-xl font-bold font-mono text-amber-400 mt-1 block">
@@ -289,7 +289,7 @@ export function CalendarAdminDashboard({
         </div>
 
         <div className="p-3.5 rounded-2xl border border-blue-500/20 bg-blue-500/5">
-          <span className="text-[10px] font-mono text-blue-400 uppercase tracking-wider block flex items-center gap-1">
+          <span className="text-[11px] font-mono text-blue-400 uppercase tracking-wider block flex items-center gap-1">
             <UserCheck className="size-3" /> Awaiting verification
           </span>
           <span className="text-xl font-bold font-mono text-blue-400 mt-1 block">
@@ -298,7 +298,7 @@ export function CalendarAdminDashboard({
         </div>
 
         <div className="p-3.5 rounded-2xl border border-purple-500/20 bg-purple-500/5">
-          <span className="text-[10px] font-mono text-purple-400 uppercase tracking-wider block flex items-center gap-1">
+          <span className="text-[11px] font-mono text-purple-400 uppercase tracking-wider block flex items-center gap-1">
             <Calendar className="size-3" /> Booked
           </span>
           <span className="text-xl font-bold font-mono text-purple-400 mt-1 block">
@@ -307,7 +307,7 @@ export function CalendarAdminDashboard({
         </div>
 
         <div className="p-3.5 rounded-2xl border border-zinc-800 bg-[#0d0d10]">
-          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block flex items-center gap-1">
+          <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block flex items-center gap-1">
             <Lock className="size-3" /> Blocked
           </span>
           <span className="text-xl font-bold font-mono text-zinc-400 mt-1 block">
@@ -338,13 +338,13 @@ export function CalendarAdminDashboard({
           ))}
         </div>
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by time, campaign, client name..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+            className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
           />
         </div>
 

@@ -2,7 +2,7 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createSingleBookingSlot, updateBookingSlot } from "@/lib/actions/admin-calendar";
 import { slotDepositWithinFee, SLOT_DEPOSIT_ERROR } from "@/lib/validations/calendar";
 import { packageRangeFor } from "@/lib/bookings/package-range";
@@ -13,6 +13,7 @@ import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
 import { toast } from "sonner";
 import { formatSlotDate, studioDateKey } from "@/lib/slot-time";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface BookingSlotRow {
   id: string;
@@ -206,13 +207,7 @@ export function SingleSlotDialog({
               Specify session date, operating hours, and baseline session fee
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -274,7 +269,7 @@ export function SingleSlotDialog({
                 value={campaignTitle}
                 onChange={(e) => setCampaignTitle(e.target.value)}
                 placeholder="e.g. Golden Hour Session"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>
@@ -294,7 +289,7 @@ export function SingleSlotDialog({
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
 
@@ -310,7 +305,7 @@ export function SingleSlotDialog({
                   value={depositRequired}
                   onChange={(e) => setDepositRequired(e.target.value)}
                   placeholder="50"
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
             </div>

@@ -35,7 +35,7 @@ export function GoogleButton({ href, label = "Continue with Google", className, 
 /** The "or" line between a password form and the Google button. */
 export function OrDivider() {
   return (
-    <div className="flex items-center gap-3 text-[11px] font-mono uppercase tracking-widest text-zinc-500" role="separator">
+    <div className="flex items-center gap-3 text-[11px] font-mono uppercase tracking-widest text-zinc-400" role="separator">
       <span className="h-px flex-1 bg-zinc-800" />
       or
       <span className="h-px flex-1 bg-zinc-800" />

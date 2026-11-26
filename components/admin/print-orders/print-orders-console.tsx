@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Frame, Inbox, Search } from "lucide-react";
 import { chipClass, chipCountClass, chipListClass } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page";
-import { formatCurrency } from "@/lib/utils";
 import { formatStudioDate } from "@/lib/slot-time";
 import { PRINT_ORDER_STATUS_STYLES, printOrderStatusLabel } from "@/lib/prints/status";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 export interface PrintOrderRow {
   id: string;
@@ -81,19 +81,19 @@ export function PrintOrdersConsole({ tenantSlug, currency, orders }: { tenantSlu
         </div>
         <label className="relative block sm:w-64">
           <span className="sr-only">Search print orders</span>
-          <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="size-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Order, client or gallery"
-            className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+            className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
           />
         </label>
       </div>
 
       <div className="rounded-2xl border border-zinc-800 bg-[#0d0d10] overflow-hidden">
-        <div className={`hidden md:grid ${COLS} gap-4 px-5 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-500`}>
+        <div className={`hidden md:grid ${COLS} gap-4 px-5 py-2.5 border-b border-zinc-800 text-[11px] font-mono uppercase tracking-widest text-zinc-400`}>
           <span>Order</span>
           <span>Client</span>
           <span>Prints</span>
@@ -104,7 +104,7 @@ export function PrintOrdersConsole({ tenantSlug, currency, orders }: { tenantSlu
 
         {visible.length === 0 ? (
           <div className="py-14 px-6 text-center space-y-2">
-            <Inbox className="size-8 text-zinc-600 mx-auto" />
+            <Inbox className="size-8 text-zinc-400 mx-auto" />
             <p className="text-sm text-zinc-300">{query ? "No print orders match." : "No print orders here yet."}</p>
           </div>
         ) : (
@@ -112,7 +112,7 @@ export function PrintOrdersConsole({ tenantSlug, currency, orders }: { tenantSlu
             {visible.map((o) => {
               const badge = (
                 <span
-                  className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-mono border whitespace-nowrap ${PRINT_ORDER_STATUS_STYLES[o.status] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
+                  className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-mono border whitespace-nowrap ${PRINT_ORDER_STATUS_STYLES[o.status] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
                 >
                   {printOrderStatusLabel(o.status)}
                 </span>
@@ -125,12 +125,12 @@ export function PrintOrdersConsole({ tenantSlug, currency, orders }: { tenantSlu
                   >
                     <span className="min-w-0">
                       <span className="block text-xs font-mono text-white">{o.orderNumber}</span>
-                      <span className="block text-[11px] text-zinc-500">Placed {formatStudioDate(o.createdAt)}</span>
+                      <span className="block text-[11px] text-zinc-400">Placed {formatStudioDate(o.createdAt)}</span>
                     </span>
                     <span className="md:hidden justify-self-end">{badge}</span>
                     <span className="min-w-0 col-span-2 md:col-span-1">
                       <span className="block text-xs text-zinc-200 truncate">{o.clientName}</span>
-                      <span className="block text-[11px] text-zinc-500 truncate">{o.projectTitle}</span>
+                      <span className="block text-[11px] text-zinc-400 truncate">{o.projectTitle}</span>
                     </span>
                     <span className="flex items-center gap-2 min-w-0 col-span-2 md:col-span-1">
                       <span className="flex -space-x-2 shrink-0">
@@ -144,7 +144,7 @@ export function PrintOrdersConsole({ tenantSlug, currency, orders }: { tenantSlu
                       </span>
                     </span>
                     <span className="text-[11px] text-zinc-400">{o.fulfilment === "SHIP" ? "Delivery" : "Pickup"}</span>
-                    <span className="text-xs font-mono tabular-nums text-white md:text-right">{formatCurrency(o.totalAmount, currency)}</span>
+                    <span className="text-xs font-mono tabular-nums text-white md:text-right">{formatMoney(currency, o.totalAmount)}</span>
                     <span className="hidden md:block justify-self-end">{badge}</span>
                   </Link>
                 </li>

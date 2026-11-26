@@ -2,10 +2,11 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createCampaignCategory, updateCampaignCategory } from "@/lib/actions/admin-services";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface CategoryRow {
   id: string;
@@ -164,13 +165,7 @@ export function CategoryDialog({
               Categories group packages, portfolio showcases, and booking slots
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -192,7 +187,7 @@ export function CategoryDialog({
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g. Convocation Specials"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 
@@ -206,7 +201,7 @@ export function CategoryDialog({
               value={slug}
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
               placeholder="convocation-specials"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
             <p className="text-[11px] text-zinc-400 mt-1">Lowercase letters, numbers, and hyphens only</p>
           </div>
@@ -250,7 +245,7 @@ export function CategoryDialog({
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
@@ -270,7 +265,7 @@ export function CategoryDialog({
           <div>
             <fieldset className="space-y-1.5">
               <legend className="text-xs font-mono text-zinc-400 mb-1">Kind of job</legend>
-              <p className="text-[11px] text-zinc-500">Every confirmed booking gets a gallery for its photos. This decides how it is listed.</p>
+              <p className="text-[11px] text-zinc-400">Every confirmed booking gets a gallery for its photos. This decides how it is listed.</p>
               <div className="grid sm:grid-cols-2 gap-2">
                 {[
                   { value: false, title: "Session", body: "Quick shoots: convocation, portrait, Raya. Listed under Sessions." },
@@ -308,7 +303,7 @@ export function CategoryDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief summary of category scope..."
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors resize-none"
             />
           </div>
 

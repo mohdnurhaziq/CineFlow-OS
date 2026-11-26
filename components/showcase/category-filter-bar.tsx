@@ -45,7 +45,7 @@ export function CategoryFilterBar({
           <span>✨ All Works</span>
           {counts["all"] !== undefined && (
             <span
-              className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+              className={`text-[11px] font-mono px-1.5 py-0.2 rounded ${
                 selectedCategory === "all" ? "bg-black/20 text-black font-bold" : "bg-zinc-800 text-zinc-400"
               }`}
             >
@@ -83,11 +83,11 @@ export function CategoryFilterBar({
               <span>{cat.name}</span>
               {count !== undefined && (
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                  className={`text-[11px] font-mono px-1.5 py-0.2 rounded ${
                     isSelected
                       ? "bg-black/20 text-black font-bold"
                       : count === 0
-                        ? "bg-zinc-900 text-zinc-600"
+                        ? "bg-zinc-900 text-zinc-400"
                         : "bg-zinc-800 text-zinc-400"
                   }`}
                 >

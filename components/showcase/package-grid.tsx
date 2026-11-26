@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, Calendar, Clock, Sparkles, Frame } from "lucide-react";
 import { disciplineLabel, humanize } from "@/lib/labels";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 export interface ServicePackageItem {
   id: string;
@@ -37,7 +38,6 @@ export function PackageGrid({
     return null;
   }
 
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   return (
     <div className="space-y-8 pt-12 border-t border-zinc-800">
@@ -71,7 +71,7 @@ export function PackageGrid({
               }`}
             >
               {pkg.isFeatured && (
-                <div className="absolute -top-3 left-6 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500 text-black text-[10px] font-bold tracking-tight shadow-md">
+                <div className="absolute -top-3 left-6 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500 text-black text-[11px] font-bold tracking-tight shadow-md">
                   FEATURED SESSION
                 </div>
               )}
@@ -79,7 +79,7 @@ export function PackageGrid({
               <div className="space-y-6">
                 {/* Header */}
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
                     {disciplineLabel(pkg.discipline)} · {humanize(pkg.category)}
                   </span>
                   <h3 className="text-lg font-bold text-white tracking-tight">{pkg.name}</h3>
@@ -91,16 +91,14 @@ export function PackageGrid({
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs text-zinc-400">Price</span>
                     <span className="font-mono text-2xl font-black text-white tabular-nums">
-                      {currencySymbol}
-                      {pkg.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {formatMoney(currency, pkg.price)}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-mono pt-1 border-t border-zinc-800/80">
                     <span className="text-amber-400">Deposit to book:</span>
                     <span className="text-amber-400 font-bold tabular-nums">
-                      {currencySymbol}
-                      {pkg.depositPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {formatMoney(currency, pkg.depositPrice)}
                     </span>
                   </div>
                 </div>
@@ -114,7 +112,7 @@ export function PackageGrid({
 
                 {/* Turnaround Badge */}
                 <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-                  <Clock className="size-3.5 text-zinc-500" />
+                  <Clock className="size-3.5 text-zinc-400" />
                   <span>Ready in: {pkg.turnaround}</span>
                 </div>
 

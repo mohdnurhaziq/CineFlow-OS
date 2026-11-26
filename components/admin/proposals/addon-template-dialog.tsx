@@ -2,13 +2,14 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { Plus, Edit2, AlertCircle, Loader2, Sparkles } from "lucide-react";
 import {
   createProposalAddOnTemplate,
   updateProposalAddOnTemplate,
 } from "@/lib/actions/admin-proposals";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface ProposalAddOnTemplateRow {
   id: string;
@@ -156,13 +157,7 @@ export function AddOnTemplateDialog({
               Add-ons are offered to clients in dynamic quotes and proposal contracts
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -184,7 +179,7 @@ export function AddOnTemplateDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Drone 4K Aerial Coverage"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 
@@ -218,7 +213,7 @@ export function AddOnTemplateDialog({
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="450"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>
@@ -233,7 +228,7 @@ export function AddOnTemplateDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detailed explanation of what this option includes (e.g. FAA-certified pilot, dual battery sets, raw 10-bit log footage)..."
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors resize-none"
             />
           </div>
 

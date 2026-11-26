@@ -51,8 +51,8 @@ export function OneLoginInvite() {
   };
 
   return (
-    <section aria-label="Confirm your email" className="relative rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 pr-11 sm:p-5 sm:pr-12">
-      <button type="button" onClick={dismiss} aria-label="Dismiss" className="absolute right-2 top-2 rounded-lg p-2 text-zinc-400 hover:text-white">
+    <section aria-label="Confirm your email" className="relative rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 pr-12 sm:p-5 sm:pr-14">
+      <button type="button" onClick={dismiss} aria-label="Dismiss" className="absolute right-1 top-1 grid size-11 place-items-center rounded-lg text-zinc-400 hover:text-white">
         <X className="size-4" aria-hidden="true" />
       </button>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

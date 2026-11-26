@@ -10,6 +10,7 @@ import type { AdminVerificationConsoleProps } from "./admin-verification-console
 import type { PrintOrderPreview } from "@/lib/prints/order-preview";
 import { PrintOrderPreviewDialog } from "@/components/admin/print-orders/print-order-preview-dialog";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 export type PendingItem = AdminVerificationConsoleProps["pendingInvoices"][number];
 
@@ -19,7 +20,6 @@ interface VerificationQueueProps {
   tenantSlug: string;
   /** ISO currency code, for the print order preview. */
   currency: string;
-  currencySymbol: string;
   /** The approvePayments permission: shows Approve and Reject. */
   canApprovePayments: boolean;
   isPending: boolean;
@@ -28,8 +28,6 @@ interface VerificationQueueProps {
   onReject: (item: PendingItem) => void;
   onZoom: (item: PendingItem) => void;
 }
-
-const money = (symbol: string, n: number) => `${symbol}${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
 // Studio time zone, so the server (UTC) and the browser render the same text.
 const submittedAt = (d: Date | string) =>
@@ -44,7 +42,7 @@ function MethodBadge({ method, short = false }: { method: string | null; short?:
         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
         : "bg-zinc-800 text-zinc-300 border-zinc-700";
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold border whitespace-nowrap ${cls}`}>
+    <span className={`px-1.5 py-0.5 rounded text-[11px] uppercase font-bold border whitespace-nowrap ${cls}`}>
       {short && method === "QR_CODE" ? "QR" : short && method === "CASH" ? "Cash" : method ? paymentMethodLabel(method) : "Not chosen"}
     </span>
   );
@@ -78,7 +76,6 @@ export function VerificationQueue({
   items,
   tenantSlug,
   currency,
-  currencySymbol,
   canApprovePayments,
   isPending,
   categoryName,
@@ -125,7 +122,7 @@ export function VerificationQueue({
     <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start">
       {/* List */}
       <div className={`${reviewOpen ? "hidden lg:block" : "block"} rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden`}>
-        <div className="px-4 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+        <div className="px-4 py-2.5 border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400">
           Waiting ({queue.length}) · oldest first
         </div>
         <ul className="divide-y divide-zinc-800/70 lg:max-h-[70vh] lg:overflow-y-auto" aria-label="Payments waiting for verification">
@@ -148,7 +145,7 @@ export function VerificationQueue({
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-white truncate">{item.client.name}</span>
                     </div>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-mono text-zinc-500 min-w-0">
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 min-w-0">
                       <span className="truncate">{item.booking?.trackingCode ?? item.invoiceNumber}</span>
                       <span aria-hidden="true">·</span>
                       <span className="whitespace-nowrap">{milestoneLabel(item.milestoneType)}</span>
@@ -156,7 +153,7 @@ export function VerificationQueue({
                   </div>
                   <div className="shrink-0 text-right space-y-1">
                     <div className="text-xs font-bold font-mono tabular-nums text-amber-400">
-                      {money(currencySymbol, item.amount)}
+                      {formatMoney(currency, item.amount)}
                     </div>
                     <MethodBadge method={item.paymentMethod} short />
                   </div>
@@ -187,24 +184,24 @@ export function VerificationQueue({
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" /> All payments
             </button>
-            <span className="ml-auto text-[11px] font-mono text-zinc-500">
+            <span className="ml-auto text-[11px] font-mono text-zinc-400">
               {position} of {queue.length}
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
             <span className="font-bold text-white">{selected.invoiceNumber}</span>
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <span className="px-2 py-0.5 rounded text-[11px] uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
               {milestoneLabel(selected.milestoneType)}
             </span>
             <MethodBadge method={selected.paymentMethod} />
-            <span className="text-zinc-500 text-[11px] sm:ml-auto">{submittedAt(selected.createdAt)}</span>
+            <span className="text-zinc-400 text-[11px] sm:ml-auto">{submittedAt(selected.createdAt)}</span>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto]">
             <div className="space-y-4 text-xs min-w-0">
               <div className="space-y-1">
-                <div className="text-[10px] font-mono uppercase text-zinc-500">Client</div>
+                <div className="text-[11px] font-mono uppercase text-zinc-400">Client</div>
                 <div className="text-base font-semibold text-white break-words">{selected.client.name}</div>
                 <div className="text-zinc-400 text-[11px] font-mono break-all">
                   {selected.client.email}
@@ -223,7 +220,7 @@ export function VerificationQueue({
               </div>
 
               <div className="space-y-1">
-                <div className="text-[10px] font-mono uppercase text-zinc-500">
+                <div className="text-[11px] font-mono uppercase text-zinc-400">
                   {selected.project ? "Linked project" : "Booking"}
                 </div>
                 {selected.booking ? (
@@ -270,7 +267,7 @@ export function VerificationQueue({
 
               {selected.paymentReference && (
                 <div className="text-[11px] font-mono text-zinc-400 bg-zinc-900/60 p-2 rounded-lg border border-zinc-800/80 break-words">
-                  <span className="text-zinc-500 uppercase">Payment note / ref: </span>
+                  <span className="text-zinc-400 uppercase">Payment note / ref: </span>
                   <span className="text-white font-medium">{selected.paymentReference}</span>
                 </div>
               )}
@@ -287,7 +284,7 @@ export function VerificationQueue({
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={selected.paymentProofUrl} alt={`Receipt for ${selected.invoiceNumber}`} className="size-full object-contain" />
-                  <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/70 py-1 text-[10px] font-mono text-amber-400">
+                  <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/70 py-1 text-[11px] font-mono text-amber-400">
                     <Eye className="size-3" aria-hidden="true" /> Zoom receipt
                   </span>
                 </button>
@@ -297,7 +294,7 @@ export function VerificationQueue({
                   <span className="text-[11px] text-zinc-400 mt-1.5">Paid at the cash desk. Check your till.</span>
                 </div>
               ) : (
-                <div className="w-full rounded-xl border border-dashed border-zinc-700 p-3 text-[11px] text-zinc-500 text-center">
+                <div className="w-full rounded-xl border border-dashed border-zinc-700 p-3 text-[11px] text-zinc-400 text-center">
                   No receipt attached
                 </div>
               )}
@@ -306,13 +303,13 @@ export function VerificationQueue({
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-zinc-800 pt-4">
             <div>
-              <div className="text-[10px] font-mono uppercase text-zinc-500">Amount due</div>
+              <div className="text-[11px] font-mono uppercase text-zinc-400">Amount due</div>
               <div className="text-2xl font-bold font-mono tabular-nums text-amber-400">
-                {money(currencySymbol, selected.amount)}
+                {formatMoney(currency, selected.amount)}
               </div>
             </div>
             {!canApprovePayments ? (
-              <p className="text-[11px] text-zinc-500 sm:max-w-[14rem] sm:text-right">
+              <p className="text-[11px] text-zinc-400 sm:max-w-[14rem] sm:text-right">
                 Approving or rejecting a payment needs the approve-payments permission.
               </p>
             ) : (

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  X,
   User,
   Mail,
   Phone,
@@ -30,6 +29,7 @@ import { toast } from "sonner";
 import { ClientAccountBadge } from "@/components/admin/clients/client-account-badge";
 import { getClientQuickProfile, type QuickClientProfile } from "@/lib/actions/admin-clients";
 import type { ClientDirectoryRow } from "@/lib/client-directory";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface ClientDetailsDialogProps {
   isOpen: boolean;
@@ -187,14 +187,7 @@ export function ClientDetailsDialog({
               <span>Full Profile</span>
               <ExternalLink className="size-3" />
             </Link>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-              aria-label="Close"
-            >
-              <X className="size-4" />
-            </button>
+            <DialogCloseButton onClick={onClose} />
           </div>
         </div>
 
@@ -205,7 +198,7 @@ export function ClientDetailsDialog({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
               <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900 border border-zinc-800">
                 <div className="flex items-center gap-2 text-zinc-300 truncate">
-                  <Mail className="size-3.5 text-zinc-500 shrink-0" />
+                  <Mail className="size-3.5 text-zinc-400 shrink-0" />
                   <span className="truncate">{clientRow.email}</span>
                 </div>
                 <button
@@ -220,7 +213,7 @@ export function ClientDetailsDialog({
 
               <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900 border border-zinc-800">
                 <div className="flex items-center gap-2 text-zinc-300 truncate">
-                  <Phone className="size-3.5 text-zinc-500 shrink-0" />
+                  <Phone className="size-3.5 text-zinc-400 shrink-0" />
                   <span>{clientRow.phone || "No phone added"}</span>
                 </div>
                 {clientRow.phone && (
@@ -249,7 +242,7 @@ export function ClientDetailsDialog({
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-1 border-t border-zinc-800/60">
+            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1 border-t border-zinc-800/60">
               <span>Client since: {clientRow.clientSinceDate}</span>
               <span>Last active: {clientRow.lastActivityLabel}</span>
             </div>
@@ -258,30 +251,30 @@ export function ClientDetailsDialog({
           {/* Quick Stat Tiles */}
           <div className={cn("grid grid-cols-2 gap-2.5", showMoney ? "sm:grid-cols-4" : "sm:grid-cols-2")}>
             <div className="p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/80">
-              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Bookings</span>
+              <span className="text-[11px] font-mono uppercase text-zinc-400 block">Bookings</span>
               <span className="text-xl font-bold font-mono text-white mt-0.5 block tabular-nums">{bookingsCount}</span>
             </div>
             <div className="p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/80">
-              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Galleries</span>
+              <span className="text-[11px] font-mono uppercase text-zinc-400 block">Galleries</span>
               <span className="text-xl font-bold font-mono text-white mt-0.5 block tabular-nums">{projectsCount}</span>
             </div>
             {showMoney && (
               <>
                 <div className="p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/80">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">Total Paid</span>
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">Total Paid</span>
                   <span className="text-xl font-bold font-mono text-white mt-0.5 block tabular-nums">
                     {formatMoney(currency, paidAmount)}
                   </span>
                 </div>
                 <div className="p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/80">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">Balance Due</span>
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">Balance Due</span>
                   <span
                     className={cn(
                       "text-xl font-bold font-mono mt-0.5 block tabular-nums",
                       outstandingAmount > 0 ? "text-amber-400 font-black" : "text-zinc-400"
                     )}
                   >
-                    {outstandingAmount > 0 ? formatMoney(currency, outstandingAmount) : "RM 0.00"}
+                    {outstandingAmount > 0 ? formatMoney(currency, outstandingAmount) : formatMoney(currency, 0)}
                   </span>
                 </div>
               </>
@@ -358,7 +351,7 @@ export function ClientDetailsDialog({
               {activeTab === "bookings" && (
                 <div className="space-y-2">
                   {(!profile || profile.bookings.length === 0) ? (
-                    <div className="py-8 text-center text-xs font-mono text-zinc-500 border border-dashed border-zinc-800/80 rounded-xl">
+                    <div className="py-8 text-center text-xs font-mono text-zinc-400 border border-dashed border-zinc-800/80 rounded-xl">
                       No bookings recorded for this client.
                     </div>
                   ) : (
@@ -378,7 +371,7 @@ export function ClientDetailsDialog({
                                 <span className="font-mono text-xs font-bold text-white">{b.trackingCode}</span>
                                 <span
                                   className={cn(
-                                    "px-1.5 py-0.5 rounded text-[10px] font-mono border font-semibold",
+                                    "px-1.5 py-0.5 rounded text-[11px] font-mono border font-semibold",
                                     statusConfig.badgeClass
                                   )}
                                 >
@@ -416,7 +409,7 @@ export function ClientDetailsDialog({
               {activeTab === "galleries" && (
                 <div className="space-y-2">
                   {(!profile || profile.projects.length === 0) ? (
-                    <div className="py-8 text-center text-xs font-mono text-zinc-500 border border-dashed border-zinc-800/80 rounded-xl">
+                    <div className="py-8 text-center text-xs font-mono text-zinc-400 border border-dashed border-zinc-800/80 rounded-xl">
                       No galleries or deliverables for this client yet.
                     </div>
                   ) : (
@@ -429,7 +422,7 @@ export function ClientDetailsDialog({
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-bold text-white">{p.title}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono border bg-zinc-800 text-zinc-300 border-zinc-700">
+                              <span className="px-1.5 py-0.5 rounded text-[11px] font-mono border bg-zinc-800 text-zinc-300 border-zinc-700">
                                 {humanize(p.status)}
                               </span>
                             </div>
@@ -456,7 +449,7 @@ export function ClientDetailsDialog({
               {showMoney && activeTab === "invoices" && (
                 <div className="space-y-2">
                   {(!profile || profile.invoices.length === 0) ? (
-                    <div className="py-8 text-center text-xs font-mono text-zinc-500 border border-dashed border-zinc-800/80 rounded-xl">
+                    <div className="py-8 text-center text-xs font-mono text-zinc-400 border border-dashed border-zinc-800/80 rounded-xl">
                       No invoices issued for this client yet.
                     </div>
                   ) : (
@@ -476,7 +469,7 @@ export function ClientDetailsDialog({
                                 <span className="font-mono text-xs font-bold text-white">{inv.invoiceNumber}</span>
                                 <span
                                   className={cn(
-                                    "px-1.5 py-0.5 rounded text-[10px] font-mono border font-semibold",
+                                    "px-1.5 py-0.5 rounded text-[11px] font-mono border font-semibold",
                                     statusConfig.badgeClass
                                   )}
                                 >
@@ -514,7 +507,7 @@ export function ClientDetailsDialog({
                   {staffNotes ? (
                     <p className="text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed font-mono">{staffNotes}</p>
                   ) : (
-                    <p className="text-xs text-zinc-500 font-mono italic">
+                    <p className="text-xs text-zinc-400 font-mono italic">
                       No private staff notes on this client account. Open the full profile to add notes.
                     </p>
                   )}

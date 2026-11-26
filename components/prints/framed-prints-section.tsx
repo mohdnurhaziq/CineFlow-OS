@@ -12,6 +12,7 @@ import { errorMessageOf } from "@/lib/action-error";
 import { PRINT_ORDER_STATUS_STYLES, printOrderStatusLabel } from "@/lib/prints/status";
 import type { FramedPrintLine, FramedPrintOrder } from "@/lib/prints/gallery";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 interface FramedPrintsSectionProps {
   tenantId: string;
@@ -30,7 +31,6 @@ interface FramedPrintsSectionProps {
   staffOrderHref?: string;
 }
 
-const formatMoney = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
 
 /** A gallery's framed prints: what the package includes, ordering, and past print orders. */
 export function FramedPrintsSection({
@@ -135,7 +135,7 @@ export function FramedPrintsSection({
 
       {orders.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Your print orders</div>
+          <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Your print orders</div>
           <ul className="space-y-2">
             {orders.map((o) => (
               <li key={o.id} className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-3 space-y-2">
@@ -153,13 +153,13 @@ export function FramedPrintsSection({
                       <div className="text-sm font-semibold text-white font-mono">{o.orderNumber}</div>
                       <div className="text-xs text-zinc-400">
                         {o.itemCount} print{o.itemCount === 1 ? "" : "s"} · {o.fulfilment === "SHIP" ? "Shipping" : "Pickup"} ·{" "}
-                        {o.totalAmount > 0 ? `${currency} ${formatMoney(o.totalAmount)}` : "Free"}
+                        {o.totalAmount > 0 ? formatMoney(currency, o.totalAmount) : "Free"}
                       </div>
                     </div>
                   </div>
                   <span
                     className={cn(
-                      "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide uppercase border",
+                      "px-2.5 py-1 rounded-md text-[11px] font-mono font-bold tracking-wide uppercase border",
                       PRINT_ORDER_STATUS_STYLES[o.status] ?? "bg-zinc-800 text-zinc-300 border-zinc-700"
                     )}
                   >

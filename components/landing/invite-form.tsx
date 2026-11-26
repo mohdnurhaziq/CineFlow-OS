@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { submitInviteRequest, type InviteFormState } from "@/lib/actions/invite-requests";
 
 const field =
-  "w-full min-h-12 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-500 focus:border-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40";
+  "w-full min-h-12 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white placeholder:text-zinc-400 focus:border-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40";
 const label = "mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-zinc-400";
 
 function Submit() {

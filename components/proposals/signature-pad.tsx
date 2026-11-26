@@ -193,7 +193,7 @@ export function SignaturePad({ onSignatureChange, disabled = false }: SignatureP
       {/* Signature Canvas Box */}
       <div className="relative rounded-2xl border-2 border-dashed border-zinc-700 bg-[#0d0d10] overflow-hidden group focus-within:border-amber-500 transition-colors">
         {/* Subtle Signature Guideline */}
-        <div className="absolute inset-x-6 bottom-8 border-b border-zinc-800/80 pointer-events-none flex items-center justify-between text-[9px] font-mono uppercase tracking-widest text-zinc-600">
+        <div className="absolute inset-x-6 bottom-8 border-b border-zinc-800/80 pointer-events-none flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-zinc-400">
           <span>Sign with your finger, a pen or the mouse</span>
           <span>X — Signature</span>
         </div>
@@ -210,7 +210,7 @@ export function SignaturePad({ onSignatureChange, disabled = false }: SignatureP
 
         {/* Floating Indicator */}
         {hasSignature && (
-          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
             <CheckCircle2 className="size-3" />
             <span>Signed</span>
           </div>
@@ -219,7 +219,7 @@ export function SignaturePad({ onSignatureChange, disabled = false }: SignatureP
 
       {/* Control Buttons */}
       <div className="flex items-center justify-between text-xs">
-        <span className="text-[10px] text-zinc-500 font-mono">Draw your signature in the box</span>
+        <span className="text-[11px] text-zinc-400 font-mono">Draw your signature in the box</span>
 
         <div className="flex items-center gap-2">
           <button

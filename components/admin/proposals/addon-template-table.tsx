@@ -18,6 +18,7 @@ import {
 import type { ProposalAddOnTemplateRow } from "./addon-template-dialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { formatMoney } from "@/lib/money";
 
 interface AddOnTemplateTableProps {
   templates: ProposalAddOnTemplateRow[];
@@ -97,10 +98,7 @@ export function AddOnTemplateTable({
   };
 
   const formatPrice = (val: number, unit: string) => {
-    const formatted = `${currency === "MYR" ? "RM" : "$"}${val.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+    const formatted = formatMoney(currency, val);
     if (unit === "per_hour") return `${formatted} / hr`;
     if (unit === "per_day") return `${formatted} / day`;
     return formatted;
@@ -158,11 +156,11 @@ export function AddOnTemplateTable({
                       title="Toggle auto-select default"
                     >
                       {t.isDefault ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
                           <Sparkles className="size-3" /> Default
                         </span>
                       ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 hover:text-zinc-300">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 hover:text-zinc-300">
                           Optional
                         </span>
                       )}
@@ -177,11 +175,11 @@ export function AddOnTemplateTable({
                       title="Toggle active status"
                     >
                       {t.isActive ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
                           <CheckCircle className="size-3" /> Active
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 flex items-center gap-1">
                           <XCircle className="size-3" /> Disabled
                         </span>
                       )}

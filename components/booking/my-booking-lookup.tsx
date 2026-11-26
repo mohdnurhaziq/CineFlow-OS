@@ -43,7 +43,7 @@ const STATUS_STYLES: Record<string, string> = {
 function StatusBadge({ status }: { status: string }) {
   const style = STATUS_STYLES[status] ?? "bg-zinc-800 text-zinc-300 border-zinc-700";
   return (
-    <span className={`px-2 py-0.5 rounded-md border text-[10px] font-mono uppercase tracking-wide ${style}`}>
+    <span className={`px-2 py-0.5 rounded-md border text-[11px] font-mono uppercase tracking-wide ${style}`}>
       {status.replace(/_/g, " ")}
     </span>
   );
@@ -90,7 +90,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
   return (
     <div className="w-full max-w-2xl space-y-6">
       <div className="space-y-2 text-center">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
           Find your booking
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
@@ -128,7 +128,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors"
             />
           </div>
 
@@ -145,7 +145,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="BK-XXXXXXXX-XXXX"
-              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors font-mono uppercase"
+              className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors font-mono uppercase"
             />
           </div>
         </div>
@@ -175,7 +175,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
           <section className="p-5 rounded-2xl bg-[#121215] border border-zinc-800 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Booking</div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-zinc-400">Booking</div>
                 <div className="font-mono text-lg font-bold text-white">{booking.trackingCode}</div>
                 <div className="text-xs text-zinc-400">Hi {booking.clientName}</div>
               </div>
@@ -184,24 +184,24 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
 
             <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-xs">
               <div>
-                <dt className="text-zinc-500">Service</dt>
+                <dt className="text-zinc-400">Service</dt>
                 <dd className="text-zinc-200">
                   {humanize(booking.category)} · {humanize(booking.discipline)}
                 </dd>
               </div>
               <div>
-                <dt className="text-zinc-500">Package</dt>
+                <dt className="text-zinc-400">Package</dt>
                 <dd className="text-zinc-200">{booking.packageName ?? "None chosen"}</dd>
               </div>
               <div>
-                <dt className="text-zinc-500">Deposit</dt>
+                <dt className="text-zinc-400">Deposit</dt>
                 <dd className="text-zinc-200">
                   {money(booking.depositAmount)} ·{" "}
                   {booking.depositPaid ? "Paid" : "Awaiting payment / verification"}
                 </dd>
               </div>
               <div>
-                <dt className="text-zinc-500">Payment method</dt>
+                <dt className="text-zinc-400">Payment method</dt>
                 <dd className="text-zinc-200">
                   {booking.paymentMethod ? humanize(booking.paymentMethod) : "—"}
                 </dd>
@@ -229,7 +229,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
                   <li key={inv.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
                     <div className="space-y-0.5">
                       <div className="font-mono text-zinc-200">{inv.invoiceNumber}</div>
-                      <div className="text-zinc-500">
+                      <div className="text-zinc-400">
                         {humanize(inv.milestoneType)} · due {formatStudioDate(inv.dueDate)}
                       </div>
                     </div>
@@ -262,7 +262,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
                   <li key={p.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
                     <div className="space-y-0.5">
                       <div className="text-zinc-200">{p.title}</div>
-                      <div className="font-mono text-zinc-500">
+                      <div className="font-mono text-zinc-400">
                         {p.proposalNumber} · {money(p.totalPrice)}
                       </div>
                     </div>
@@ -289,7 +289,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
                   <li key={p.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
                     <div className="space-y-0.5">
                       <div className="text-zinc-200">{p.title}</div>
-                      <div className="font-mono text-zinc-500">
+                      <div className="font-mono text-zinc-400">
                         {p.projectNumber} ·{" "}
                         {p.filesReleased ? "Full-resolution photos ready" : "Full resolution unlocks after the balance"}
                       </div>
@@ -309,7 +309,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
           {booking.invoices.length === 0 &&
             booking.proposals.length === 0 &&
             booking.projects.length === 0 && (
-              <p className="text-center text-xs text-zinc-500">
+              <p className="text-center text-xs text-zinc-400">
                 No invoices, proposals or projects are linked to this booking yet. {tenantName} will
                 add them here as your booking progresses.
               </p>
@@ -320,7 +320,7 @@ export function MyBookingLookup({ tenantSlug, tenantName, initialCode = "" }: My
       <div className="text-center">
         <Link
           href={studioPath(tenantSlug)}
-          className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="text-xs font-mono text-zinc-400 hover:text-zinc-300 transition-colors"
         >
           ← Back to {tenantName}
         </Link>

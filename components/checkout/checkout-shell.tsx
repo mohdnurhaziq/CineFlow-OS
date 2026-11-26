@@ -307,7 +307,7 @@ export function CheckoutShell({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Page Title */}
       <div className="mb-8 space-y-1">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
           CHECKOUT · {tenant.name.toUpperCase()}
         </span>
         <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
@@ -347,7 +347,7 @@ export function CheckoutShell({
                 <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
                   Step 1: Your details
                 </span>
-                <span className="text-[10px] font-mono text-zinc-400">
+                <span className="text-[11px] font-mono text-zinc-400">
                   So the studio can reach you
                 </span>
               </div>
@@ -358,7 +358,7 @@ export function CheckoutShell({
                     Full Name *
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-2.5 size-4 text-zinc-500" />
+                    <User className="absolute left-3.5 top-2.5 size-4 text-zinc-400" />
                     <input
                       type="text"
                       placeholder="e.g. Maya Farhan"
@@ -377,7 +377,7 @@ export function CheckoutShell({
                       Email Address *
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-2.5 size-4 text-zinc-500" />
+                      <Mail className="absolute left-3.5 top-2.5 size-4 text-zinc-400" />
                       <input
                         type="email"
                         placeholder="e.g. maya@example.com"
@@ -395,7 +395,7 @@ export function CheckoutShell({
                       Mobile Phone *
                     </label>
                     <div className="relative">
-                      <Phone className="absolute left-3.5 top-2.5 size-4 text-zinc-500" />
+                      <Phone className="absolute left-3.5 top-2.5 size-4 text-zinc-400" />
                       <input
                         type="tel"
                         placeholder="e.g. +60 12-345 6789"

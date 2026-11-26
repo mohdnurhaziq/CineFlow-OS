@@ -75,7 +75,7 @@ export function PackagePicker({ packages, value, onChange, currency, allowNone =
                   <span className="text-sm font-bold font-mono tabular-nums text-white">{formatMoney(currency, p.price)}</span>
                 </span>
                 {p.description && <span className="block text-[11px] text-zinc-400">{p.description}</span>}
-                {p.deliverables && <span className="block text-[11px] text-zinc-500">{p.deliverables}</span>}
+                {p.deliverables && <span className="block text-[11px] text-zinc-400">{p.deliverables}</span>}
                 <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-mono">
                   <span className="text-amber-400">Deposit now {formatMoney(currency, p.depositPrice)}</span>
                   {balance > 0 && <span className="text-zinc-400">Balance after shoot {formatMoney(currency, balance)}</span>}

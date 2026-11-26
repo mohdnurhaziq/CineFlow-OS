@@ -94,7 +94,7 @@ export function PaymentConfirmationBanner({ tenantSlug, currency, confirmation: 
         type="button"
         onClick={() => router.replace(dismissHref, { scroll: false })}
         aria-label="Dismiss"
-        className="absolute top-3 right-3 inline-flex items-center justify-center size-9 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
+        className="absolute top-2 right-2 inline-flex items-center justify-center size-11 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
       >
         <X className="size-4" />
       </button>
@@ -117,7 +117,7 @@ export function PaymentConfirmationBanner({ tenantSlug, currency, confirmation: 
       <dl className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {rows.map((r) => (
           <div key={r.label} className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2 min-w-0">
-            <dt className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{r.label}</dt>
+            <dt className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">{r.label}</dt>
             <dd className={cn("mt-0.5 text-sm truncate tabular-nums", r.strong ? "font-bold text-white" : "text-zinc-200")}>{r.value}</dd>
           </div>
         ))}

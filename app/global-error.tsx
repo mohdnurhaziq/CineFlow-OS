@@ -38,7 +38,7 @@ export default function GlobalError({
 
           {error.digest && (
             <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 text-left">
-              <div className="text-[10px] font-mono uppercase text-zinc-500">Incident Digest</div>
+              <div className="text-[11px] font-mono uppercase text-zinc-400">Incident Digest</div>
               <code className="text-xs font-mono text-zinc-300 break-all">{error.digest}</code>
             </div>
           )}

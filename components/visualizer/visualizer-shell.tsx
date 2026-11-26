@@ -17,7 +17,8 @@ import {
 } from "./configurator-panel";
 import { CartDrawer } from "./cart-drawer";
 import { usePhotoSize } from "./use-photo-size";
-import { loadCart, money, priceLabel, priceLine, saveCart, type CartLine, type Catalog, type OrderingContext } from "./cart";
+import { loadCart, priceLabel, priceLine, saveCart, type CartLine, type Catalog, type OrderingContext } from "./cart";
+import { formatMoney } from "@/lib/money";
 
 interface VisualizerShellProps {
   tenantSlug: string;
@@ -232,7 +233,7 @@ export function VisualizerShell({
         className={cn(buttonVariants({ variant: activeLine ? "secondary" : "primary", size: "lg" }), "w-full min-h-12")}
       >
         <Plus className="size-4" />
-        <span>Add as paid print · {currency} {money(totalPrice)}</span>
+        <span>Add as paid print · {formatMoney(currency, totalPrice)}</span>
       </button>
     </div>
   ) : null;
@@ -311,7 +312,7 @@ export function VisualizerShell({
               );
             })}
           </div>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-400">
             Choose one to start from its size and frame. A bigger size or pricier frame costs only the difference.
           </p>
         </div>

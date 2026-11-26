@@ -18,7 +18,7 @@ const ERRORS: Record<string, string> = {
 };
 
 const inputClass =
-  "w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors";
+  "w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors";
 
 /** The one-login sign-in on the platform's page: email and password, then "Your studios". */
 export function PlatformAccountLoginForm({ googleEnabled = false, googleError = null }: { googleEnabled?: boolean; googleError?: string | null }) {
@@ -50,7 +50,7 @@ export function PlatformAccountLoginForm({ googleEnabled = false, googleError = 
   return (
     <div className="w-full max-w-md space-y-6 rounded-2xl border border-zinc-800 bg-[#121215] p-6 shadow-2xl sm:p-8">
       <div className="space-y-2 text-center">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Sign in</span>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">Sign in</span>
         <h1 className="text-2xl font-bold tracking-tight text-white">Your CineFlow sign-in</h1>
         <p className="text-xs text-zinc-400">
           One sign-in for every studio you work with or book. You can also sign in on a studio&apos;s own page.

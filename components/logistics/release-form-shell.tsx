@@ -380,7 +380,7 @@ export function ReleaseFormShell({
             </div>
 
             {releases.length === 0 ? (
-              <div className="text-center py-12 rounded-xl border border-dashed border-zinc-800 text-zinc-500 text-xs font-mono">
+              <div className="text-center py-12 rounded-xl border border-dashed border-zinc-800 text-zinc-400 text-xs font-mono">
                 No releases executed yet for this project.
               </div>
             ) : (
@@ -405,12 +405,12 @@ export function ReleaseFormShell({
                             {rel.signerRole || "Signatory"} • {rel.signerEmail}
                           </div>
                           {rel.collectedByName && (
-                            <div className="text-[11px] text-zinc-500">Collected by {rel.collectedByName}</div>
+                            <div className="text-[11px] text-zinc-400">Collected by {rel.collectedByName}</div>
                           )}
                         </div>
 
                         <span
-                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border shrink-0 ${
+                          className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md border shrink-0 ${
                             rel.releaseType === "TALENT"
                               ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
                               : "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
@@ -432,7 +432,7 @@ export function ReleaseFormShell({
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-1 border-t border-zinc-800/60">
+                      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1 border-t border-zinc-800/60">
                         <span className="flex items-center gap-1">
                           <Calendar className="size-3" />
                           <span>{signedDate}</span>

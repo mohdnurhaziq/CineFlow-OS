@@ -26,7 +26,7 @@ type Mode = null | "pay" | "void";
 const btn = "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50";
 const quiet = `${btn} border-zinc-700 text-zinc-200 hover:bg-zinc-800`;
 const field =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500";
 
 /** Record a payment, cancel the invoice, or remind the client. Shown above the invoice in the admin. */
 export function InvoiceAdminActions({
@@ -77,7 +77,7 @@ export function InvoiceAdminActions({
             </button>
           )}
           {canRecordPayments && !canRecordHere && (
-            <span className="text-[11px] text-zinc-500">A payment slip is waiting for review in Verification.</span>
+            <span className="text-[11px] text-zinc-400">A payment slip is waiting for review in Verification.</span>
           )}
           {remindable && canManage && (
             <button
@@ -95,7 +95,7 @@ export function InvoiceAdminActions({
             </button>
           )}
           {!canRecordPayments && (
-            <span className="text-[11px] text-zinc-500">Recording or cancelling a payment needs the record-payments permission.</span>
+            <span className="text-[11px] text-zinc-400">Recording or cancelling a payment needs the record-payments permission.</span>
           )}
         </div>
       )}

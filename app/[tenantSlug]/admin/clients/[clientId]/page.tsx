@@ -61,7 +61,7 @@ function statusTone(status: string): string {
 
 function StatusPill({ status, label }: { status: string; label: string }) {
   return (
-    <span className={cn("shrink-0 px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-wide", statusTone(status))}>
+    <span className={cn("shrink-0 px-1.5 py-0.5 rounded border text-[11px] font-mono uppercase tracking-wide", statusTone(status))}>
       {label}
     </span>
   );
@@ -85,9 +85,9 @@ function Section({
       <h2 className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 text-xs font-mono uppercase tracking-wider text-zinc-300">
         <Icon className="size-3.5 text-amber-400" aria-hidden="true" />
         {title}
-        <span className="text-zinc-500">{count}</span>
+        <span className="text-zinc-400">{count}</span>
       </h2>
-      {count === 0 ? <p className="px-4 py-5 text-xs text-zinc-500">{empty}</p> : <ul className="divide-y divide-zinc-800/80">{children}</ul>}
+      {count === 0 ? <p className="px-4 py-5 text-xs text-zinc-400">{empty}</p> : <ul className="divide-y divide-zinc-800/80">{children}</ul>}
     </section>
   );
 }
@@ -101,7 +101,7 @@ function Row({ href, title, meta, right }: { href?: string; title: React.ReactNo
       </div>
       <div className="flex items-center gap-2 shrink-0 text-xs font-mono text-zinc-300 tabular-nums">
         {right}
-        {href && <ChevronRight className="size-4 text-zinc-600 group-hover:text-amber-400 transition-colors" aria-hidden="true" />}
+        {href && <ChevronRight className="size-4 text-zinc-400 group-hover:text-amber-400 transition-colors" aria-hidden="true" />}
       </div>
     </>
   );
@@ -180,7 +180,7 @@ export default async function AdminClientPage({ params }: ClientPageProps) {
       <dl className={cn("grid grid-cols-2 gap-3", money ? "sm:grid-cols-4" : "sm:grid-cols-2")}>
         {stats.map((s) => (
           <div key={s.label} className="rounded-xl border border-zinc-800 bg-[#121215] px-4 py-3">
-            <dt className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{s.label}</dt>
+            <dt className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">{s.label}</dt>
             <dd className={cn("mt-1 text-lg font-bold tabular-nums", s.highlight ? "text-amber-400" : "text-white")}>{s.value}</dd>
           </div>
         ))}

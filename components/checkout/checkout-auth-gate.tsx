@@ -18,7 +18,7 @@ export function CheckoutAuthGate({ tenantSlug, tenantName }: CheckoutAuthGatePro
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md p-8 rounded-2xl bg-[#121215] border border-zinc-800 shadow-2xl space-y-5">
         <div className="space-y-2 text-center">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
             One quick step
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
@@ -33,7 +33,7 @@ export function CheckoutAuthGate({ tenantSlug, tenantName }: CheckoutAuthGatePro
         <div className="text-center">
           <Link
             href={studioPath(tenantSlug, "/book")}
-            className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="text-xs font-mono text-zinc-400 hover:text-zinc-300 transition-colors"
           >
             ← Back to calendar
           </Link>

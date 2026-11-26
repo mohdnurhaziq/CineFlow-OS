@@ -1,6 +1,7 @@
 import { priceCartLine, type MatBoardType, type PricedCartLine } from "@/lib/prints/pricing";
 import type { CartItemInput } from "@/lib/validations/print-orders";
 import type { FrameDesignOption, PrintSizeOption } from "./configurator-panel";
+import { formatMoney } from "@/lib/money";
 
 /** An included print of the project's booking, as Wall Art offers it. */
 export type IncludedLineOption = {
@@ -106,15 +107,11 @@ export function priceLine(line: Pick<CartLine, "kind" | "bookingIncludedPrintId"
   });
 }
 
-/** "Included", "Upgrade +RM 20" or "RM 120": what a cart line costs, in words. */
+/** "Included", "Upgrade +RM 20.00" or "RM 120.00": what a cart line costs, in words. */
 export function priceLabel(line: Pick<CartLine, "kind">, priced: PricedCartLine | null, currency: string): string {
   if (!priced) return "Unavailable";
-  if (line.kind === "INCLUDED") return priced.upgradeAmount > 0 ? `Upgrade +${currency} ${money(priced.upgradeAmount)}` : "Included";
-  return `${currency} ${money(priced.lineAmount)}`;
-}
-
-export function money(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+  if (line.kind === "INCLUDED") return priced.upgradeAmount > 0 ? `Upgrade +${formatMoney(currency, priced.upgradeAmount)}` : "Included";
+  return formatMoney(currency, priced.lineAmount);
 }
 
 /** The cart as the server action takes it. */

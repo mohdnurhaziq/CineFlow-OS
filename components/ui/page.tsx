@@ -74,7 +74,7 @@ export function PageHeader({ title, description, icon: Icon, eyebrow, badge, act
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
         <div className="min-w-0">
           {eyebrow ? (
-            <span className="block mb-1 text-[10px] font-mono uppercase tracking-widest text-amber-400">{eyebrow}</span>
+            <span className="block mb-1 text-[11px] font-mono uppercase tracking-widest text-amber-400">{eyebrow}</span>
           ) : null}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2 min-w-0">

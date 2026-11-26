@@ -8,7 +8,8 @@ import { placePrintOrder, quotePrintOrder } from "@/lib/actions/print-orders";
 import { MY_STATES } from "@/lib/prints/states";
 import type { PlaceOrderInput } from "@/lib/validations/print-orders";
 import { errorMessageOf } from "@/lib/action-error";
-import { money, priceLine, toCartItems, type CartLine, type Catalog, type OrderingContext, type ShippingAddress } from "./cart";
+import { priceLine, toCartItems, type CartLine, type Catalog, type OrderingContext, type ShippingAddress } from "./cart";
+import { formatMoney } from "@/lib/money";
 
 interface CheckoutStepProps {
   tenantId: string;
@@ -25,7 +26,7 @@ interface CheckoutStepProps {
 const EMPTY_ADDRESS: ShippingAddress = { recipientName: "", recipientPhone: "", line1: "", line2: "", postcode: "", city: "", state: "" };
 
 const fieldClass =
-  "w-full min-h-10 rounded-lg border border-zinc-800 bg-zinc-950 px-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/60";
+  "w-full min-h-10 rounded-lg border border-zinc-800 bg-zinc-950 px-3 text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:border-amber-500/60";
 
 export function CheckoutStep({ tenantId, tenantSlug, currency, ordering, cart, catalog, onBack, onPlaced }: CheckoutStepProps) {
   // Shipping goes only to states a zone covers, listed in the usual order.
@@ -183,7 +184,7 @@ export function CheckoutStep({ tenantId, tenantSlug, currency, ordering, cart, c
             );
           })}
         </div>
-        {!canShip && <p className="text-xs text-zinc-500">The studio doesn&apos;t ship prints yet. Collect them from the studio.</p>}
+        {!canShip && <p className="text-xs text-zinc-400">The studio doesn&apos;t ship prints yet. Collect them from the studio.</p>}
       </fieldset>
 
       {fulfilment === "SHIP" && (
@@ -232,7 +233,7 @@ export function CheckoutStep({ tenantId, tenantSlug, currency, ordering, cart, c
           </label>
           {zone && (
             <p className="text-xs text-zinc-400">
-              Shipping ({zone.name}): <span className="font-mono text-white">{currency} {money(zone.fee)}</span>
+              Shipping ({zone.name}): <span className="font-mono text-white">{formatMoney(currency, zone.fee)}</span>
             </p>
           )}
           <label className="flex items-center gap-2 text-xs text-zinc-300">
@@ -244,14 +245,14 @@ export function CheckoutStep({ tenantId, tenantSlug, currency, ordering, cart, c
 
       {/* Summary */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 space-y-1.5 text-sm">
-        <SummaryRow label={`Prints (${cart.length})`} value={`${currency} ${money(summary.prints)}`} />
-        {summary.upgrades > 0 && <SummaryRow label="Upgrades" value={`${currency} ${money(summary.upgrades)}`} />}
-        {summary.mats > 0 && <SummaryRow label="Mat boards" value={`${currency} ${money(summary.mats)}`} />}
-        {fulfilment === "SHIP" && <SummaryRow label="Shipping" value={zone ? `${currency} ${money(zone.fee)}` : "Choose a state"} />}
+        <SummaryRow label={`Prints (${cart.length})`} value={formatMoney(currency, summary.prints)} />
+        {summary.upgrades > 0 && <SummaryRow label="Upgrades" value={formatMoney(currency, summary.upgrades)} />}
+        {summary.mats > 0 && <SummaryRow label="Mat boards" value={formatMoney(currency, summary.mats)} />}
+        {fulfilment === "SHIP" && <SummaryRow label="Shipping" value={zone ? formatMoney(currency, zone.fee) : "Choose a state"} />}
         <div className="pt-2 mt-1 border-t border-zinc-800 flex items-center justify-between">
           <span className="font-semibold text-white">Total</span>
           <span className="font-mono font-bold text-lg text-white">
-            {currency} {money(total)}
+            {formatMoney(currency, total)}
           </span>
         </div>
         {total === 0 && <p className="text-xs text-emerald-400">Nothing to pay: these prints are included.</p>}
@@ -270,7 +271,7 @@ export function CheckoutStep({ tenantId, tenantSlug, currency, ordering, cart, c
         className={cn(buttonVariants({ size: "lg" }), "w-full")}
       >
         {placing && <Loader2 className="size-4 animate-spin" />}
-        {total > 0 ? `Confirm and pay ${currency} ${money(total)}` : "Confirm order"}
+        {total > 0 ? `Confirm and pay ${formatMoney(currency, total)}` : "Confirm order"}
       </button>
     </div>
   );

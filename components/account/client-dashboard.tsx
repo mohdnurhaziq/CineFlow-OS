@@ -444,11 +444,11 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                     {nextPayment.headline}
                   </span>
                   {nextPayment.urgent ? (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold uppercase">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold uppercase">
                       Action Required
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700 font-semibold">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700 font-semibold">
                       Due {formatStudioDate(nextPayment.invoice.dueDate)}
                     </span>
                   )}
@@ -485,7 +485,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   <span className="font-bold text-white text-sm">
                     Next Shoot: {nextShoot.projectTitle}
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold">
                     {shootDaysRemaining === 0
                       ? "Today!"
                       : shootDaysRemaining === 1
@@ -603,7 +603,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
               <div className="p-5 rounded-2xl bg-[#121215] border border-zinc-800/90 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">
                       Current booking
                     </span>
                     <span className="text-xs text-zinc-400 font-mono">
@@ -630,7 +630,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                       <p className="text-xs text-zinc-300 font-mono flex items-center gap-1.5 flex-wrap">
                         <CalendarClock className="size-3.5 text-amber-400" />
                         <span>Next shoot: {formatDay(spotlightNextShoot.shootDate)} · {spotlightNextShoot.generalCallTime}</span>
-                        <span className="text-zinc-500">· {spotlightNextShoot.locationName}</span>
+                        <span className="text-zinc-400">· {spotlightNextShoot.locationName}</span>
                       </p>
                     ) : (
                       <p className="text-xs text-zinc-400 font-mono">
@@ -671,12 +671,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         />
                         <div
                           className={cn(
-                            "text-[10px] font-mono truncate",
+                            "text-[11px] font-mono truncate",
                             idx === spotlightStageIndex
                               ? "text-amber-300 font-bold"
                               : idx < spotlightStageIndex
-                              ? "text-zinc-300"
-                              : "text-zinc-600"
+                              ? "text-zinc-200"
+                              : "text-zinc-400"
                           )}
                         >
                           {/* The current stage is named above; on a phone the strip shows bars only. */}
@@ -712,7 +712,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                   {bookings.length === 0 ? (
                     <div className="py-4 text-center space-y-2">
-                      <p className="text-xs text-zinc-500">No sessions booked right now.</p>
+                      <p className="text-xs text-zinc-400">No sessions booked right now.</p>
                       <Link
                         href={studioPath(tenant.slug, "/book")}
                         className="inline-flex items-center gap-1 text-xs font-mono text-amber-400 hover:underline"
@@ -733,7 +733,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             <div className="flex items-center gap-3">
                               {dateInfo && (
                                 <div className="size-10 rounded-lg bg-zinc-800 border border-zinc-700 flex flex-col items-center justify-center text-center flex-shrink-0 group-hover:border-amber-500/40 transition-colors">
-                                  <span className="text-[8px] uppercase text-amber-400 font-bold leading-none">
+                                  <span className="text-[11px] uppercase text-amber-400 font-bold leading-none">
                                     {dateInfo.month}
                                   </span>
                                   <span className="text-sm font-black text-white leading-tight">
@@ -744,14 +744,14 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               <div className="space-y-0.5">
                                 <div className="font-semibold text-white group-hover:text-amber-400 transition-colors flex items-center gap-1.5">
                                   <span>{categoryName(categories, b.category)}</span>
-                                  <ChevronRight className="size-3 text-zinc-500 group-hover:text-amber-400 transition-transform group-hover:translate-x-0.5" />
+                                  <ChevronRight className="size-3 text-zinc-400 group-hover:text-amber-400 transition-transform group-hover:translate-x-0.5" />
                                 </div>
                                 <div className="text-[11px] text-zinc-400">
                                   {b.slot ? `${b.slot.startTime} – ${b.slot.endTime}` : "Time confirmed"}
                                 </div>
                               </div>
                             </div>
-                            <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap", bookingBadge(b).className)}>
+                            <span className={cn("px-2 py-0.5 rounded text-[11px] font-bold border whitespace-nowrap", bookingBadge(b).className)}>
                               {bookingBadge(b).label}
                             </span>
                           </Link>
@@ -791,7 +791,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   </div>
 
                   {overviewBills.length === 0 ? (
-                    <p className="py-4 text-center text-xs text-zinc-500">No bills yet.</p>
+                    <p className="py-4 text-center text-xs text-zinc-400">No bills yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {overviewBills.slice(0, 3).map((bill) => {
@@ -814,15 +814,15 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 </div>
                               </div>
                               {bill.isFullyPaid ? (
-                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                   Settled
                                 </span>
                               ) : bill.balanceDue > 0 ? (
-                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                                   {money(bill.balanceDue)} due
                                 </span>
                               ) : bill.hasReview ? (
-                                <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                <span className="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                   Under review
                                 </span>
                               ) : null}
@@ -893,7 +893,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
             {projects.length === 0 ? (
               <div className="p-8 rounded-2xl bg-[#121215] border border-zinc-800 text-center space-y-2">
-                <Camera className="size-8 text-zinc-600 mx-auto" />
+                <Camera className="size-8 text-zinc-400 mx-auto" />
                 <h3 className="text-sm font-bold text-zinc-300">No active galleries yet</h3>
                 <p className="text-xs text-zinc-400 max-w-md mx-auto">
                   When you book a session, its gallery appears here.
@@ -926,7 +926,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="text-base font-bold text-white tracking-tight">{p.title}</h3>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700">
+                            <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700">
                               {p.projectNumber}
                             </span>
                           </div>
@@ -940,7 +940,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         <div className="flex items-center gap-2">
                           <span
                             className={cn(
-                              "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide uppercase border",
+                              "px-2.5 py-1 rounded-md text-[11px] font-mono font-bold tracking-wide uppercase border",
                               p.status === "DELIVERED"
                                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                                 : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -982,12 +982,12 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                 />
                                 <div
                                   className={cn(
-                                    "text-[10px] font-mono flex items-center gap-1 truncate",
+                                    "text-[11px] font-mono flex items-center gap-1 truncate",
                                     isCurrent
                                       ? "text-amber-300 font-bold"
                                       : isCompleted
-                                      ? "text-zinc-300"
-                                      : "text-zinc-600"
+                                      ? "text-zinc-200"
+                                      : "text-zinc-400"
                                   )}
                                 >
                                   {isCompleted ? (
@@ -1066,7 +1066,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             </div>
                           ) : (
                             <div className="text-xs text-zinc-400 flex items-center gap-1.5">
-                              <Clock className="size-3.5 text-zinc-500" />
+                              <Clock className="size-3.5 text-zinc-400" />
                               <span>Your photos will appear here once the studio uploads them.</span>
                             </div>
                           )}
@@ -1164,7 +1164,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             </div>
 
             {visibleBookings.length === 0 ? (
-              <p className="text-xs text-zinc-500 py-6 text-center">
+              <p className="text-xs text-zinc-400 py-6 text-center">
                 No bookings match this filter.
               </p>
             ) : (
@@ -1186,7 +1186,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex flex-col items-center justify-center text-center flex-shrink-0 group-hover:border-amber-500/40 hover:scale-105 transition-all"
                             title="View booking details"
                           >
-                            <span className="text-[9px] font-mono uppercase text-amber-400 font-bold leading-none">
+                            <span className="text-[11px] font-mono uppercase text-amber-400 font-bold leading-none">
                               {dateInfo.month}
                             </span>
                             <span className="text-base font-black text-white leading-tight font-mono">
@@ -1196,7 +1196,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                         ) : (
                           <Link
                             href={studioPath(tenant.slug, `/account/bookings/${b.id}`)}
-                            className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 flex-shrink-0 hover:border-zinc-700 hover:text-white transition-colors"
+                            className="size-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 flex-shrink-0 hover:border-zinc-700 hover:text-white transition-colors"
                             title="View booking details"
                           >
                             <CalendarClock className="size-5" />
@@ -1210,7 +1210,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                               className="font-bold text-white text-sm hover:text-amber-400 transition-colors inline-flex items-center gap-1 group/title"
                             >
                               <span>{categoryName(categories, b.category)}</span>
-                              <ChevronRight className="size-3 text-zinc-500 group-hover/title:text-amber-400 transition-transform group-hover/title:translate-x-0.5" />
+                              <ChevronRight className="size-3 text-zinc-400 group-hover/title:text-amber-400 transition-transform group-hover/title:translate-x-0.5" />
                             </Link>
                             <span className="text-[11px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">
                               {b.trackingCode}
@@ -1283,7 +1283,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                         <span
                           className={cn(
-                            "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold tracking-wide border uppercase",
+                            "px-2.5 py-1 rounded-md text-[11px] font-mono font-bold tracking-wide border uppercase",
                             statusInfo.className
                           )}
                         >
@@ -1341,7 +1341,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
             </div>
 
             {invoiceGroups.length === 0 && standaloneInvoices.length === 0 ? (
-              <p className="text-xs text-zinc-500 py-6 text-center">
+              <p className="text-xs text-zinc-400 py-6 text-center">
                 {invoiceFilter === "unpaid" ? "Great news! You have zero unpaid invoices or balances." : "No invoices recorded."}
               </p>
             ) : (
@@ -1361,7 +1361,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                             {group.title}
                           </span>
                           {group.trackingCode && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700">
+                            <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700">
                               {group.trackingCode}
                             </span>
                           )}
@@ -1450,7 +1450,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                     className="font-mono text-[11px] text-zinc-400 hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-0.5"
                                   >
                                     <span>{inv.invoiceNumber}</span>
-                                    <ArrowUpRight className="size-2.5 text-zinc-500" />
+                                    <ArrowUpRight className="size-2.5 text-zinc-400" />
                                   </Link>
                                 </div>
 
@@ -1461,7 +1461,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                       : `Due ${formatStudioDate(inv.dueDate)}`}
                                   </span>
                                   {inv.paymentMethod && isPaid && (
-                                    <span className="text-zinc-500">· {paymentMethodLabel(inv.paymentMethod)}</span>
+                                    <span className="text-zinc-400">· {paymentMethodLabel(inv.paymentMethod)}</span>
                                   )}
                                 </div>
 
@@ -1480,7 +1480,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               <span
                                 className={cn(
-                                  "px-2 py-0.5 rounded text-[10px] font-mono font-bold border whitespace-nowrap",
+                                  "px-2 py-0.5 rounded text-[11px] font-mono font-bold border whitespace-nowrap",
                                   isPaid
                                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                                     : isUnpaid
@@ -1550,7 +1550,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                                   className="font-mono text-xs font-bold text-white hover:text-amber-400 transition-colors underline decoration-zinc-700 underline-offset-2 flex items-center gap-1"
                                 >
                                   <span>{inv.invoiceNumber}</span>
-                                  <ArrowUpRight className="size-3 text-zinc-500" />
+                                  <ArrowUpRight className="size-3 text-zinc-400" />
                                 </Link>
                                 <span className="text-xs text-zinc-300 font-medium">
                                   · {getMilestoneLabel(inv.milestoneType)}
@@ -1580,7 +1580,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
                               <span
                                 className={cn(
-                                  "px-2 py-0.5 rounded text-[10px] font-mono font-bold border whitespace-nowrap",
+                                  "px-2 py-0.5 rounded text-[11px] font-mono font-bold border whitespace-nowrap",
                                   isPaid
                                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                                     : isUnpaid
@@ -1626,7 +1626,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                 <button
                   type="button"
                   onClick={() => setShowVoidInvoices(true)}
-                  className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="text-[11px] font-mono text-zinc-400 hover:text-zinc-300 transition-colors"
                 >
                   Show {voidInvoices.length} cancelled / void payment attempts
                 </button>
@@ -1666,7 +1666,7 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
                   <div className="flex items-center gap-3">
                     <span
                       className={cn(
-                        "px-2 py-0.5 rounded text-[10px] font-mono font-bold border uppercase",
+                        "px-2 py-0.5 rounded text-[11px] font-mono font-bold border uppercase",
                         p.status === "ACCEPTED"
                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                           : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -1691,10 +1691,10 @@ export function ClientDashboard({ tenant, client, bookings, invoices, proposals,
 
         {/* Footer */}
         <footer className="pt-6 border-t border-zinc-900 text-center space-y-1">
-          <p className="text-xs font-mono text-zinc-500">
+          <p className="text-xs font-mono text-zinc-400">
             Signed in as {client.email} · {tenant.name} Client Portal
           </p>
-          <p className="text-[11px] text-zinc-600">
+          <p className="text-[11px] text-zinc-400">
             Need to change something? Contact the studio.
           </p>
         </footer>

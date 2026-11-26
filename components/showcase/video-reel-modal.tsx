@@ -1,7 +1,8 @@
 "use client";
 
-import { X, Play, Volume2 } from "lucide-react";
+import { Play, Volume2 } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface VideoItem {
   id: string;
@@ -44,12 +45,7 @@ export function VideoReelModal({ item, onClose, brandColor }: VideoReelModalProp
             <span className="text-xs text-zinc-400 font-mono">• Client: {item.clientName}</span>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* 16:9 Cinema Video Container */}

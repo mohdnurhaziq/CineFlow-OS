@@ -313,18 +313,18 @@ export function CinemaBookingShell({
                       : "bg-[#121215] border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-white"
                   }`}
                 >
-                  <span className={`block text-[10px] font-mono uppercase tracking-wider ${active ? "text-black/70" : "text-zinc-500"}`}>
+                  <span className={`block text-[11px] font-mono uppercase tracking-wider ${active ? "text-black/70" : "text-zinc-400"}`}>
                     {formatSlotDate(day.key, { weekday: "short" })}
                   </span>
                   <span className="block text-lg font-black leading-tight tabular-nums">
                     {formatSlotDate(day.key, { day: "numeric" })}
                   </span>
-                  <span className={`block text-[10px] font-mono ${active ? "text-black/70" : "text-zinc-500"}`}>
+                  <span className={`block text-[11px] font-mono ${active ? "text-black/70" : "text-zinc-400"}`}>
                     {formatSlotDate(day.key, { month: "short" })}
                   </span>
                   <span
-                    className={`mt-1 block text-[10px] font-mono font-bold ${
-                      active ? "text-black" : full ? "text-zinc-600" : "text-emerald-400"
+                    className={`mt-1 block text-[11px] font-mono font-bold ${
+                      active ? "text-black" : full ? "text-zinc-400" : "text-emerald-400"
                     }`}
                   >
                     {full ? "Full" : `${day.open} open`}

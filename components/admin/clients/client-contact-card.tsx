@@ -28,7 +28,7 @@ interface ClientContactCardProps {
 }
 
 const inputClass =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors";
 
 export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLabel, bookingCount, canManage }: ClientContactCardProps) {
   const router = useRouter();
@@ -173,13 +173,13 @@ export function ClientContactCard({ tenantId, tenantSlug, client, clientSinceLab
                 )}
               </>
             ) : (
-              <span className="inline-flex items-center gap-2 text-zinc-500">
+              <span className="inline-flex items-center gap-2 text-zinc-400">
                 <Phone className="size-3.5" aria-hidden="true" />
                 No phone on file
               </span>
             )}
           </div>
-          <p className="text-xs font-mono text-zinc-500">Client since {clientSinceLabel}</p>
+          <p className="text-xs font-mono text-zinc-400">Client since {clientSinceLabel}</p>
         </>
       )}
     </div>

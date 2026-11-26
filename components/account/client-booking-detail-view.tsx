@@ -417,7 +417,7 @@ export function ClientBookingDetailView({
               <span>{statusInfo.label}</span>
             </div>
 
-            <span className="text-[11px] font-mono text-zinc-500">
+            <span className="text-[11px] font-mono text-zinc-400">
               Booked on {formatStudioDate(booking.createdAt)}
             </span>
           </div>
@@ -425,7 +425,7 @@ export function ClientBookingDetailView({
 
         {/* Lifecycle Stage Indicator */}
         <div className="pt-2 border-t border-zinc-800/80">
-          <div className="text-[11px] font-mono uppercase text-zinc-500 tracking-wider mb-3">
+          <div className="text-[11px] font-mono uppercase text-zinc-400 tracking-wider mb-3">
             Booking & Production Progress
           </div>
 
@@ -452,7 +452,7 @@ export function ClientBookingDetailView({
                 "p-3 rounded-xl border flex flex-col gap-1 transition-all",
                 isDepositPaid || isConfirmed
                   ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
-                  : "bg-zinc-900/60 border-zinc-800 text-zinc-500"
+                  : "bg-zinc-900/60 border-zinc-800 text-zinc-400"
               )}
             >
               <div className="flex items-center justify-between text-xs font-bold font-mono">
@@ -460,7 +460,7 @@ export function ClientBookingDetailView({
                 {isDepositPaid || isConfirmed ? (
                   <CheckCircle2 className="size-3.5 text-emerald-400" />
                 ) : (
-                  <Clock className="size-3.5 text-zinc-500" />
+                  <Clock className="size-3.5 text-zinc-400" />
                 )}
               </div>
               <span className="text-[11px] text-zinc-400 leading-tight">
@@ -476,7 +476,7 @@ export function ClientBookingDetailView({
                   ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
                   : isConfirmed
                   ? "bg-amber-500/5 border-amber-500/30 text-amber-400"
-                  : "bg-zinc-900/60 border-zinc-800 text-zinc-500"
+                  : "bg-zinc-900/60 border-zinc-800 text-zinc-400"
               )}
             >
               <div className="flex items-center justify-between text-xs font-bold font-mono">
@@ -498,7 +498,7 @@ export function ClientBookingDetailView({
                 "p-3 rounded-xl border flex flex-col gap-1 transition-all",
                 isDelivered
                   ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
-                  : "bg-zinc-900/60 border-zinc-800 text-zinc-500"
+                  : "bg-zinc-900/60 border-zinc-800 text-zinc-400"
               )}
             >
               <div className="flex items-center justify-between text-xs font-bold font-mono">
@@ -506,7 +506,7 @@ export function ClientBookingDetailView({
                 {isDelivered ? (
                   <Sparkles className="size-3.5 text-purple-400" />
                 ) : (
-                  <Layers className="size-3.5 text-zinc-500" />
+                  <Layers className="size-3.5 text-zinc-400" />
                 )}
               </div>
               <span className="text-[11px] text-zinc-400 leading-tight">
@@ -539,7 +539,7 @@ export function ClientBookingDetailView({
                   <Calendar className="size-5" />
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                     Session Date
                   </span>
                   <p className="text-sm font-bold text-white">
@@ -559,7 +559,7 @@ export function ClientBookingDetailView({
                   <Clock className="size-5" />
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                     Session Time
                   </span>
                   <p className="text-sm font-bold text-white">
@@ -567,7 +567,7 @@ export function ClientBookingDetailView({
                       ? `${booking.slot.startTime} – ${booking.slot.endTime}`
                       : "Time confirmed with studio"}
                   </p>
-                  <span className="text-[10px] font-mono text-zinc-500">
+                  <span className="text-[11px] font-mono text-zinc-400">
                     Studio timezone ({STUDIO_TIME_ZONE})
                   </span>
                 </div>
@@ -580,7 +580,7 @@ export function ClientBookingDetailView({
                 <MapPin className="size-5" />
               </div>
               <div className="space-y-1 flex-1">
-                <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                   Location & Studio
                 </span>
                 <p className="text-sm font-bold text-white">
@@ -593,7 +593,7 @@ export function ClientBookingDetailView({
                 </p>
 
                 {latestCallSheet?.parkingNotes && (
-                  <p className="text-[11px] font-mono text-zinc-500 pt-1">
+                  <p className="text-[11px] font-mono text-zinc-400 pt-1">
                     🚗 Parking: {latestCallSheet.parkingNotes}
                   </p>
                 )}
@@ -618,7 +618,7 @@ export function ClientBookingDetailView({
                 <User className="size-5" />
               </div>
               <div className="space-y-1 flex-1">
-                <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                   Studio Lead & Assigned Team
                 </span>
                 {booking.assignments.length > 0 ? (
@@ -626,7 +626,7 @@ export function ClientBookingDetailView({
                     {booking.assignments.map((a) => (
                       <div key={a.id} className="flex items-center gap-2">
                         <span className="text-sm font-bold text-white">{a.user.name}</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300">
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300">
                           {a.user.teamRole?.name || (a.user.role === "STUDIO_OWNER" ? "Studio Owner" : "Photographer")}
                         </span>
                       </div>
@@ -665,7 +665,7 @@ export function ClientBookingDetailView({
                   <span className="text-lg font-black text-white font-mono">
                     {money(sessionPrice)}
                   </span>
-                  <span className="text-[10px] font-mono text-zinc-500 block">
+                  <span className="text-[11px] font-mono text-zinc-400 block">
                     Total Session Price
                   </span>
                 </div>
@@ -680,7 +680,7 @@ export function ClientBookingDetailView({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800/60 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                     Deliverables
                   </span>
                   <p className="font-semibold text-zinc-200">
@@ -689,7 +689,7 @@ export function ClientBookingDetailView({
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800/60 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                  <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                     Turnaround Time
                   </span>
                   <p className="font-semibold text-zinc-200">
@@ -722,7 +722,7 @@ export function ClientBookingDetailView({
                         Frame: <strong className="text-zinc-200">{print.frameName}</strong>
                       </p>
                       {print.note && (
-                        <p className="text-[11px] text-zinc-500 font-mono">{print.note}</p>
+                        <p className="text-[11px] text-zinc-400 font-mono">{print.note}</p>
                       )}
                     </div>
 
@@ -734,7 +734,7 @@ export function ClientBookingDetailView({
                   </div>
                 ))}
 
-                <p className="text-[11px] text-zinc-500 font-mono pt-1">
+                <p className="text-[11px] text-zinc-400 font-mono pt-1">
                   💡 You can select and frame your photos directly inside your photo vault once your proofs are ready.
                 </p>
               </div>
@@ -785,7 +785,7 @@ export function ClientBookingDetailView({
                       className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1 text-center">
-                      <span className="text-[10px] text-white font-mono line-clamp-1">
+                      <span className="text-[11px] text-white font-mono line-clamp-1">
                         {item.title}
                       </span>
                     </div>
@@ -835,7 +835,7 @@ export function ClientBookingDetailView({
                   <span className="text-zinc-400 block">Initial Deposit</span>
                   <span
                     className={cn(
-                      "text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase",
+                      "text-[11px] font-mono px-1.5 py-0.5 rounded border uppercase",
                       isDepositPaid
                         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                         : "bg-amber-500/10 text-amber-400 border-amber-500/30"
@@ -855,7 +855,7 @@ export function ClientBookingDetailView({
                   <span className="text-zinc-400 block">Remaining Balance</span>
                   <span
                     className={cn(
-                      "text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase",
+                      "text-[11px] font-mono px-1.5 py-0.5 rounded border uppercase",
                       balanceRemaining === 0 || booking.project?.isFinalBalancePaid
                         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                         : "bg-amber-500/10 text-amber-400 border-amber-500/30"
@@ -873,7 +873,7 @@ export function ClientBookingDetailView({
 
               {/* Payment Method Badge */}
               <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs font-mono space-y-1">
-                <span className="text-[10px] uppercase text-zinc-500 block">
+                <span className="text-[11px] uppercase text-zinc-400 block">
                   Payment Method
                 </span>
                 <p className="font-semibold text-zinc-200">
@@ -898,7 +898,7 @@ export function ClientBookingDetailView({
             </div>
 
             {booking.invoices.length === 0 ? (
-              <p className="text-xs text-zinc-500 py-2">
+              <p className="text-xs text-zinc-400 py-2">
                 No invoices have been generated for this booking yet.
               </p>
             ) : (
@@ -920,7 +920,7 @@ export function ClientBookingDetailView({
                             </span>
                             <span
                               className={cn(
-                                "text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold",
+                                "text-[11px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold",
                                 invBadge.className
                               )}
                             >

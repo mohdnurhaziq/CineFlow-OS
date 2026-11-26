@@ -30,7 +30,7 @@ interface ResetPasswordFormProps {
 }
 
 const inputClass =
-  "w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors font-mono";
+  "w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors font-mono";
 
 export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcome = false, join = false, hasLogin = false, googleHref = null, googleError = null }: ResetPasswordFormProps) {
   const googleMessage = googleErrorMessage(googleError);
@@ -69,7 +69,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
         </div>
         {join ? (
           <>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">One sign-in</span>
+            <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">One sign-in</span>
             <h1 className="text-2xl font-bold tracking-tight text-white">Use one sign-in for all your studios</h1>
             <p className="text-sm text-zinc-400">Choose one password for every CineFlow studio you work with or book.</p>
           </>
@@ -80,7 +80,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
           </>
         ) : (
           <>
-            <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Choose a new password</span>
+            <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">Choose a new password</span>
             <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
           </>
         )}
@@ -161,7 +161,7 @@ export function ResetPasswordForm({ tenantSlug, tenantName, email, token, welcom
             </>
           )}
         </button>
-        {!welcome && !join && <p className="text-[11px] text-zinc-500 text-center">Saving signs you out on every other device.</p>}
+        {!welcome && !join && <p className="text-[11px] text-zinc-400 text-center">Saving signs you out on every other device.</p>}
       </form>
       {welcome && googleHref && (
         <div className="space-y-4">

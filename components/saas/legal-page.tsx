@@ -28,7 +28,7 @@ export function LegalPage({
           {sections.map((s, i) => (
             <li key={s.id}>
               <a href={`#${s.id}`} className="inline-flex min-h-11 items-center gap-2 text-zinc-300 hover:text-amber-400 sm:min-h-8">
-                <span className="font-mono text-xs text-zinc-500">{i + 1}.</span>
+                <span className="font-mono text-xs text-zinc-400">{i + 1}.</span>
                 {s.title}
               </a>
             </li>
@@ -62,7 +62,7 @@ export function LegalSection({ id, number, title, children }: { id: string; numb
 
 export function LegalList({ items }: { items: ReactNode[] }) {
   return (
-    <ul className="list-disc space-y-2 pl-5 marker:text-zinc-500">
+    <ul className="list-disc space-y-2 pl-5 marker:text-zinc-400">
       {items.map((item, i) => (
         <li key={i}>{item}</li>
       ))}

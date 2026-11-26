@@ -84,21 +84,21 @@ export function IncludedPrintsCard({
 
   return (
     <section className="rounded-2xl border border-zinc-800 bg-[#0d0d10] p-5 space-y-4" aria-label="Included prints">
-      <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Included prints</div>
+      <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Included prints</div>
 
       {lines.length === 0 ? (
-        <p className="text-xs text-zinc-500">This booking includes no framed prints.</p>
+        <p className="text-xs text-zinc-400">This booking includes no framed prints.</p>
       ) : (
         <ul className="divide-y divide-zinc-800/80">
           {lines.map((l) => (
             <li key={l.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
               <div className="min-w-0 flex-1">
                 <div className="text-sm text-white">
-                  {l.quantity} × {l.sizeName} <span className="text-zinc-500">({l.sizeCode})</span>, {l.frameName}
+                  {l.quantity} × {l.sizeName} <span className="text-zinc-400">({l.sizeCode})</span>, {l.frameName}
                 </div>
-                {l.note && <div className="text-xs text-zinc-500">{l.note}</div>}
+                {l.note && <div className="text-xs text-zinc-400">{l.note}</div>}
               </div>
-              <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400">
+              <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] uppercase tracking-wide text-zinc-400">
                 {SOURCE_LABEL[l.source] ?? l.source}
               </span>
               <span className="text-xs text-zinc-300 tabular-nums">
@@ -110,7 +110,7 @@ export function IncludedPrintsCard({
                   disabled={pending}
                   onClick={() => remove(l.id)}
                   aria-label="Remove this granted print"
-                  className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-red-400"
+                  className="inline-flex size-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-red-400"
                 >
                   <Trash2 className="size-3.5" />
                 </button>

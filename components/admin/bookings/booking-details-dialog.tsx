@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import {
-  X,
   CalendarCheck,
   Clock,
   Mail,
@@ -16,7 +15,6 @@ import {
   AlertCircle,
   Clapperboard,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import type { BookingDetails } from "@/lib/bookings/details";
 import { BookingActions } from "@/components/admin/bookings/booking-actions";
 import { formatDay, formatStudioDateTime } from "@/lib/slot-time";
@@ -24,6 +22,8 @@ import { BookingTeamSection, type BookingTeamControls } from "@/components/admin
 import type { AssignableMember } from "@/lib/team/members";
 import type { BookingActionPowers } from "@/lib/auth/page-powers";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 // ---------------------------------------------------------------------------
 // Shared presentation helpers (also used by the Bookings list)
@@ -85,7 +85,7 @@ export function BookingStageBadge({ booking }: { booking: BookingDetails }) {
   const style = STAGE_STYLE[bookingStage(booking)];
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium border whitespace-nowrap ${style.className}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium border whitespace-nowrap ${style.className}`}
     >
       {style.label}
     </span>
@@ -211,15 +211,7 @@ export function BookingDetailsDialog({
               Open full page <ExternalLink className="size-3" aria-hidden="true" />
             </Link>
           )}
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton ref={closeRef} onClick={onClose} />
         </div>
 
         {loading ? (
@@ -267,7 +259,7 @@ export function BookingDetailsDialog({
 function Section({ title, icon: Icon, children }: { title: string; icon: typeof Clock; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+      <h3 className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-400">
         <Icon className="size-3.5" />
         {title}
       </h3>
@@ -279,7 +271,7 @@ function Section({ title, icon: Icon, children }: { title: string; icon: typeof 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 px-3.5 py-2.5 text-xs">
-      <span className="text-zinc-500 shrink-0">{label}</span>
+      <span className="text-zinc-400 shrink-0">{label}</span>
       <span className="text-zinc-200 text-right min-w-0 break-words">{children}</span>
     </div>
   );
@@ -313,12 +305,12 @@ export function BookingDetailsBody({
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300">
           <span className="flex items-center gap-1.5">
-            <CalendarCheck className="size-3.5 text-zinc-500" />
+            <CalendarCheck className="size-3.5 text-zinc-400" />
             {formatSessionDate(booking.sessionDate)}
           </span>
           {booking.slot && (
             <span className="flex items-center gap-1.5 font-mono">
-              <Clock className="size-3.5 text-zinc-500" />
+              <Clock className="size-3.5 text-zinc-400" />
               {booking.slot.startTime} – {booking.slot.endTime}
             </span>
           )}
@@ -366,7 +358,7 @@ export function BookingDetailsBody({
               {booking.clientPhone}
             </a>
           ) : (
-            <span className="text-zinc-500">Not provided</span>
+            <span className="text-zinc-400">Not provided</span>
           )}
         </Row>
       </Section>
@@ -375,27 +367,27 @@ export function BookingDetailsBody({
         <Row label="Category">{titleCase(booking.category)}</Row>
         {booking.slot?.campaignTitle && <Row label="Campaign">{booking.slot.campaignTitle}</Row>}
         <Row label="Package">
-          {booking.packageName ?? <span className="text-zinc-500">None chosen</span>}
+          {booking.packageName ?? <span className="text-zinc-400">None chosen</span>}
         </Row>
         {booking.money && (
           <Row label="Session price">
             {booking.sessionPrice != null ? (
-              formatCurrency(booking.sessionPrice, currency)
+              formatMoney(currency, booking.sessionPrice)
             ) : (
-              <span className="text-zinc-500">Not set</span>
+              <span className="text-zinc-400">Not set</span>
             )}
           </Row>
         )}
         {!booking.slot && (
           <Row label="Slot">
-            <span className="text-zinc-500">Released</span>
+            <span className="text-zinc-400">Released</span>
           </Row>
         )}
       </Section>
 
       <Section title="Creative brief" icon={FileText}>
         <p className="px-3.5 py-2.5 text-xs text-zinc-300 whitespace-pre-wrap">
-          {booking.creativeBrief?.trim() || <span className="text-zinc-500">No brief provided.</span>}
+          {booking.creativeBrief?.trim() || <span className="text-zinc-400">No brief provided.</span>}
         </p>
       </Section>
 
@@ -403,7 +395,7 @@ export function BookingDetailsBody({
       {booking.money && (
       <Section title="Deposit & payment" icon={Receipt}>
         <Row label="Deposit">
-          {formatCurrency(booking.depositAmount, currency)}{" "}
+          {formatMoney(currency, booking.depositAmount)}{" "}
           <span
             className={
               booking.depositPaid
@@ -423,12 +415,12 @@ export function BookingDetailsBody({
               <Link href={studioPath(tenantSlug, `/admin/invoices/${inv.id}`)} className="font-mono text-amber-400 hover:underline">
                 {inv.invoiceNumber}
               </Link>{" "}
-              <span className="text-zinc-500">· {titleCase(inv.status)}</span>
+              <span className="text-zinc-400">· {titleCase(inv.status)}</span>
             </Row>
             {inv.verifiedBy && (
               <Row label="Verified by">
                 {inv.verifiedBy}
-                {inv.paidAt && <span className="text-zinc-500"> · {formatStudioDateTime(inv.paidAt)}</span>}
+                {inv.paidAt && <span className="text-zinc-400"> · {formatStudioDateTime(inv.paidAt)}</span>}
               </Row>
             )}
             <Row label="Receipt">
@@ -442,13 +434,13 @@ export function BookingDetailsBody({
                   View uploaded slip <ExternalLink className="size-3" />
                 </a>
               ) : (
-                <span className="text-zinc-500">None uploaded</span>
+                <span className="text-zinc-400">None uploaded</span>
               )}
             </Row>
           </>
         ) : (
           <Row label="Invoice">
-            <span className="text-zinc-500">No deposit invoice on record</span>
+            <span className="text-zinc-400">No deposit invoice on record</span>
           </Row>
         )}
       </Section>
@@ -459,7 +451,7 @@ export function BookingDetailsBody({
         {booking.balanceInvoice ? (
           <>
             <Row label="Amount">
-              {formatCurrency(booking.balanceInvoice.amount, currency)}{" "}
+              {formatMoney(currency, booking.balanceInvoice.amount)}{" "}
               <span
                 className={
                   booking.balanceInvoice.status === "PAID"
@@ -485,20 +477,20 @@ export function BookingDetailsBody({
               >
                 {booking.balanceInvoice.invoiceNumber}
               </Link>{" "}
-              <span className="text-zinc-500">· {titleCase(booking.balanceInvoice.status)}</span>
+              <span className="text-zinc-400">· {titleCase(booking.balanceInvoice.status)}</span>
             </Row>
             {booking.balanceInvoice.verifiedBy && (
               <Row label="Verified by">
                 {booking.balanceInvoice.verifiedBy}
                 {booking.balanceInvoice.paidAt && (
-                  <span className="text-zinc-500"> · {formatStudioDateTime(booking.balanceInvoice.paidAt)}</span>
+                  <span className="text-zinc-400"> · {formatStudioDateTime(booking.balanceInvoice.paidAt)}</span>
                 )}
               </Row>
             )}
           </>
         ) : (
           <Row label="Balance">
-            <span className="text-zinc-500">
+            <span className="text-zinc-400">
               {booking.sessionPrice == null
                 ? "No package price, so no balance invoice"
                 : booking.depositPaid
@@ -512,18 +504,18 @@ export function BookingDetailsBody({
 
       {booking.cancelReason && (
         <p className="text-xs text-zinc-400">
-          <span className="text-zinc-500">Cancelled:</span> {booking.cancelReason}
+          <span className="text-zinc-400">Cancelled:</span> {booking.cancelReason}
         </p>
       )}
       {booking.deliveryUrl && (
         <p className="text-xs">
-          <span className="text-zinc-500">Delivered: </span>
+          <span className="text-zinc-400">Delivered: </span>
           <a href={booking.deliveryUrl} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline break-all">
             {booking.deliveryUrl}
           </a>
         </p>
       )}
-      <p className="text-[11px] font-mono text-zinc-500">Booked on {formatStudioDateTime(booking.createdAt)}</p>
+      <p className="text-[11px] font-mono text-zinc-400">Booked on {formatStudioDateTime(booking.createdAt)}</p>
     </div>
   );
 }

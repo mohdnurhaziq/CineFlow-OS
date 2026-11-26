@@ -28,6 +28,7 @@ import { humanize, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { sameCategory } from "@/lib/bookings/pricing-shared";
 import { formatStudioDate } from "@/lib/slot-time";
 import type { PrintOrderPreview } from "@/lib/prints/order-preview";
+import { formatMoney } from "@/lib/money";
 
 export interface AdminVerificationConsoleProps {
   /** The signed-in staff member; the server records approvals and rejections under this name. */
@@ -102,7 +103,6 @@ export function AdminVerificationConsole({
   pendingInvoices: initialPending,
   historyInvoices: initialHistory,
 }: AdminVerificationConsoleProps) {
-  const currencySymbol = tenant.currency === "MYR" ? "RM " : "$";
 
   const [activeTab, setActiveTab] = useState<"ALL" | "QR" | "CASH" | "HISTORY">("ALL");
   const [searchTerm, setSearchTerm] = useState("");
@@ -218,7 +218,7 @@ export function AdminVerificationConsole({
           <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center gap-2">
             <User className="size-4 text-amber-400" />
             <div className="text-xs">
-              <span className="text-[10px] text-zinc-500 uppercase block font-mono">Verifying as</span>
+              <span className="text-[11px] text-zinc-400 uppercase block font-mono">Verifying as</span>
               <span className="text-white font-medium">{verifierName}</span>
             </div>
           </div>
@@ -231,7 +231,7 @@ export function AdminVerificationConsole({
         {/* Metric 1: Total Pending */}
         <div className="p-5 rounded-2xl bg-[#121215] border border-amber-500/20 shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400">
               Awaiting Verification
             </span>
             <Clock className="size-4 text-amber-400" />
@@ -245,7 +245,7 @@ export function AdminVerificationConsole({
         {/* Metric 2: QR Slip Uploads */}
         <div className="p-5 rounded-2xl bg-[#121215] border border-blue-500/20 shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-blue-400">
               QR Slip Uploads
             </span>
             <QrCode className="size-4 text-blue-400" />
@@ -259,7 +259,7 @@ export function AdminVerificationConsole({
         {/* Metric 3: Cash Counter Orders */}
         <div className="p-5 rounded-2xl bg-[#121215] border border-emerald-500/20 shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400">
               Cash Counter
             </span>
             <Banknote className="size-4 text-emerald-400" />
@@ -273,14 +273,13 @@ export function AdminVerificationConsole({
         {/* Metric 4: Total Volume Awaiting */}
         <div className="p-5 rounded-2xl bg-[#121215] border border-zinc-800 shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
               Pending Volume
             </span>
             <DollarSign className="size-4 text-zinc-400" />
           </div>
           <div className="text-2xl font-bold font-mono tabular-nums text-amber-400 tracking-tight">
-            {currencySymbol}
-            {totalPendingVolume.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {formatMoney(tenant.currency, totalPendingVolume)}
           </div>
           <p className="text-[11px] text-zinc-400 mt-1">Waiting to be confirmed</p>
         </div>
@@ -326,7 +325,7 @@ export function AdminVerificationConsole({
         {/* Search Input */}
         {activeTab !== "HISTORY" && (
           <div className="relative max-w-xs w-full">
-            <Search className="absolute left-3 top-2.5 size-4 text-zinc-500" />
+            <Search className="absolute left-3 top-2.5 size-4 text-zinc-400" />
             <input
               type="text"
               placeholder="Filter by invoice, client, ref..."
@@ -353,7 +352,6 @@ export function AdminVerificationConsole({
             items={filteredPending}
             tenantSlug={tenant.slug}
             currency={tenant.currency}
-            currencySymbol={currencySymbol}
             canApprovePayments={canApprovePayments}
             isPending={isPending}
             categoryName={categoryName}
@@ -378,7 +376,7 @@ export function AdminVerificationConsole({
         <div className="p-6 rounded-2xl border border-zinc-800 bg-[#121215] shadow-xl overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
             <thead>
-              <tr className="border-b border-zinc-800 text-zinc-400 text-[10px] uppercase">
+              <tr className="border-b border-zinc-800 text-zinc-400 text-[11px] uppercase">
                 <th className="pb-3 font-semibold">Invoice Number</th>
                 <th className="pb-3 font-semibold">Client</th>
                 <th className="pb-3 font-semibold">Milestone</th>
@@ -396,7 +394,7 @@ export function AdminVerificationConsole({
                   <td className="py-3 text-zinc-400">{milestoneLabel(item.milestoneType)}</td>
                   <td className="py-3">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                         item.status === "PAID"
                           ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
                           : item.status === "REJECTED"
@@ -408,8 +406,7 @@ export function AdminVerificationConsole({
                     </span>
                   </td>
                   <td className="py-3 text-white font-bold tabular-nums">
-                    {currencySymbol}
-                    {item.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {formatMoney(tenant.currency, item.amount)}
                   </td>
                   <td className="py-3 text-zinc-400">{item.verifiedBy || "—"}</td>
                   <td className="py-3 text-zinc-400">
@@ -454,7 +451,7 @@ export function AdminVerificationConsole({
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-mono uppercase text-zinc-400">
+              <label className="text-[11px] font-mono uppercase text-zinc-400">
                 Rejection Reason (Recorded on Audit Trail)
               </label>
               <select

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  X,
   ClipboardCheck,
   AlertTriangle,
   AlertCircle,
@@ -12,6 +11,7 @@ import { useDialog } from "@/lib/use-dialog";
 import { conditionLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
 import type { LogPostShootInspectionInput, LogPreShootInspectionInput } from "@/lib/validations/gear";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface ReservationWithDetails {
   id: string;
@@ -146,7 +146,7 @@ export function InspectionDialog({
         <div className="flex items-start justify-between pb-3 border-b border-zinc-800">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold">
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold">
                 {isPreShoot ? "PRE-SHOOT DISPATCH" : "POST-SHOOT CHECK-IN"}
               </span>
               <span className="text-xs text-zinc-400 font-mono">
@@ -166,13 +166,7 @@ export function InspectionDialog({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

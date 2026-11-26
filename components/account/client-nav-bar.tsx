@@ -101,12 +101,12 @@ export function ClientNavBar({ tenantSlug, badges }: ClientNavBarProps) {
                 : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-transparent"
             )}
           >
-            <Icon className={cn("size-3.5", isActive ? "text-amber-400" : "text-zinc-500")} />
+            <Icon className={cn("size-3.5", isActive ? "text-amber-400" : "text-zinc-400")} />
             <span>{tab.label}</span>
             {tab.badge !== null && tab.badge !== undefined && (
               <span
                 className={cn(
-                  "px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono tracking-tight",
+                  "px-1.5 py-0.2 rounded-full text-[11px] font-bold font-mono tracking-tight",
                   tab.badgeVariant === "action"
                     ? "bg-amber-500 text-black shadow-xs shadow-amber-500/50"
                     : "bg-zinc-800 text-zinc-300 border border-zinc-700/80"

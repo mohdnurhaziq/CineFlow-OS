@@ -55,7 +55,7 @@ export function ShowcaseNav({ tenant, studioLead, client = null, staff = null, s
                   {tenant.name}
                 </span>
                 <span
-                  className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded border"
+                  className="hidden sm:inline text-[11px] font-mono px-1.5 py-0.2 rounded border"
                   style={{
                     borderColor: `${brandColor}40`,
                     backgroundColor: `${brandColor}15`,

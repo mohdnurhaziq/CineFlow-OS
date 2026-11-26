@@ -17,7 +17,7 @@ export function SwitcherRow({ entry }: { entry: SwitcherEntry }) {
         <span className="block truncate text-[11px] font-mono uppercase tracking-wide text-zinc-400">{entry.roleLabel}</span>
       </span>
       {entry.current && (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-mono text-amber-300">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-mono text-amber-300">
           <Check className="size-3" aria-hidden="true" />
           Current
         </span>
@@ -57,7 +57,7 @@ export function SessionMenu({ tenantSlug, entries }: { tenantSlug: string; entri
         >
           {entries.length > 1 && (
             <>
-              <DropdownMenu.Label className="px-3 pb-1 pt-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400">Switch studio</DropdownMenu.Label>
+              <DropdownMenu.Label className="px-3 pb-1 pt-2 text-[11px] font-mono uppercase tracking-widest text-zinc-400">Switch studio</DropdownMenu.Label>
               {entries.map((entry) => (
                 <DropdownMenu.Item key={entry.tenantSlug} asChild>
                   <a href={entry.href} aria-current={entry.current ? "true" : undefined} className={item}>

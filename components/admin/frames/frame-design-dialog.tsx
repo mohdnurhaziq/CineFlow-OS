@@ -2,10 +2,11 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { X, Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Edit2, AlertCircle, Loader2 } from "lucide-react";
 import { createFrameDesign, updateFrameDesign } from "@/lib/actions/admin-frames";
 import { useDialog } from "@/lib/use-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface FrameDesignRow {
   id: string;
@@ -160,13 +161,7 @@ export function FrameDesignDialog({
               Configured moldings render dynamically in the interactive Wall Art Visualizer
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -188,7 +183,7 @@ export function FrameDesignDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Matte Black Minimalist"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 
@@ -203,7 +198,7 @@ export function FrameDesignDialog({
                 value={material}
                 onChange={(e) => setMaterial(e.target.value)}
                 placeholder="Solid Hardwood"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
@@ -219,7 +214,7 @@ export function FrameDesignDialog({
                 value={moldingWidth}
                 onChange={(e) => setMoldingWidth(e.target.value)}
                 placeholder="1.25"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>
@@ -242,7 +237,7 @@ export function FrameDesignDialog({
                 value={frameColor}
                 onChange={(e) => setFrameColor(e.target.value)}
                 placeholder="#18181b"
-                className="w-32 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-32 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
               <div className="flex gap-1.5 flex-wrap ml-auto">
                 {PRESET_COLORS.map((p) => (
@@ -270,7 +265,7 @@ export function FrameDesignDialog({
                 value={previewAsset}
                 onChange={(e) => setPreviewAsset(e.target.value)}
                 placeholder="/uploads/frames/matte-black.png"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
@@ -285,7 +280,7 @@ export function FrameDesignDialog({
                 value={priceOffset}
                 onChange={(e) => setPriceOffset(e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white font-mono placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
           </div>

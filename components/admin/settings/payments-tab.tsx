@@ -154,7 +154,7 @@ function OnlinePayments({
           <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">
             Card and FPX payments through your own Toyyibpay account. Without it, clients pay by bank transfer, QR or cash.
           </p>
-          <p className={`text-sm mt-3 ${configured ? "text-emerald-400" : "text-zinc-500"}`}>{configured ? "Connected" : "Not connected"}</p>
+          <p className={`text-sm mt-3 ${configured ? "text-emerald-400" : "text-zinc-400"}`}>{configured ? "Connected" : "Not connected"}</p>
         </div>
         <div className="space-y-5 min-w-0">
           {!supported ? (

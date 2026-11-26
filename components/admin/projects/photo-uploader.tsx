@@ -193,7 +193,7 @@ export function PhotoUploader({ projectId, albums }: { projectId: string; albums
                   <button type="button" onClick={() => void run([r])} className="inline-flex items-center gap-1 text-amber-400 hover:underline">
                     <RotateCcw className="size-3.5" /> Retry
                   </button>
-                  <button type="button" onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))} aria-label={`Dismiss ${r.file.name}`} className="text-zinc-400 hover:text-white">
+                  <button type="button" onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))} aria-label={`Dismiss ${r.file.name}`} className="grid size-10 shrink-0 place-items-center rounded-lg text-zinc-400 hover:text-white">
                     <X className="size-4" />
                   </button>
                 </span>
@@ -241,7 +241,7 @@ function VideoUpload({ projectId, album, onDone }: { projectId: string; album: s
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="space-y-1.5 block text-sm">
           <span className="text-zinc-200">Title</span>
-          <input name="title" placeholder="Highlight film" className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500" />
+          <input name="title" placeholder="Highlight film" className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500" />
         </label>
         <label className="space-y-1.5 block text-sm">
           <span className="text-zinc-200">Review copy</span>

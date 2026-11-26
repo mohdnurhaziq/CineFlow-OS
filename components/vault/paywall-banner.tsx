@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { Lock, ArrowRight, Sparkles } from "lucide-react";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 interface PaywallBannerProps {
   tenantSlug: string;
@@ -23,7 +24,6 @@ export function PaywallBanner({
   currency,
   filesReleased = false,
 }: PaywallBannerProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
   const checkoutUrl = studioPath(
     tenantSlug,
     `/checkout?projectId=${projectId}&type=FINAL_BALANCE${invoiceId ? `&invoiceId=${invoiceId}` : ""}`
@@ -38,7 +38,7 @@ export function PaywallBanner({
         {/* Left Information */}
         <div className="space-y-3 max-w-2xl">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
               <Lock className="size-3" />
               Final Balance Due
             </span>
@@ -58,12 +58,11 @@ export function PaywallBanner({
         {/* Right CTA & Price Box */}
         <div className="shrink-0 flex flex-col sm:items-end justify-between gap-3 p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
           <div>
-            <span className="text-[10px] font-mono uppercase text-zinc-400 block text-left sm:text-right">
+            <span className="text-[11px] font-mono uppercase text-zinc-400 block text-left sm:text-right">
               Balance due
             </span>
             <div className="text-3xl font-bold font-mono tabular-nums text-amber-400 tracking-tight text-left sm:text-right">
-              {currencySymbol}
-              {balanceAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              {formatMoney(currency, balanceAmount)}
             </div>
           </div>
 

@@ -54,7 +54,7 @@ export function BookingTeamSection({ booking, controls }: { booking: BookingDeta
   return (
     <section className="space-y-2" aria-label="Team">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-400">
           <Users className="size-3.5" />
           Team
         </h3>
@@ -71,13 +71,13 @@ export function BookingTeamSection({ booking, controls }: { booking: BookingDeta
       </div>
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 divide-y divide-zinc-800/70">
         {booking.assignees.length === 0 ? (
-          <p className="px-3.5 py-2.5 text-xs text-zinc-500">No one assigned yet.</p>
+          <p className="px-3.5 py-2.5 text-xs text-zinc-400">No one assigned yet.</p>
         ) : (
           booking.assignees.map((a) => (
             <div key={a.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-xs">
               <span className="min-w-0">
                 <span className="block text-zinc-200 truncate">{a.name}</span>
-                <span className="block text-[11px] text-zinc-500 truncate">{a.roleName}</span>
+                <span className="block text-[11px] text-zinc-400 truncate">{a.roleName}</span>
               </span>
               {canEdit && (
                 <button
@@ -85,7 +85,7 @@ export function BookingTeamSection({ booking, controls }: { booking: BookingDeta
                   onClick={() => remove(a)}
                   disabled={removing === a.id}
                   aria-label={`Remove ${a.name}`}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50"
+                  className="grid size-10 shrink-0 place-items-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50"
                 >
                   <X className="size-3.5" />
                 </button>

@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 import type { StudioAnalyticsData } from "@/lib/analytics/studio-analytics";
 import { conditionLabel, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
-import { formatCurrency as formatMoneyAmount } from "@/lib/utils";
 import { studioPath } from "@/lib/domain-name";
 import { gearNotes, gearPanelAllClear, revenueNote } from "@/lib/analytics/kpi-notes";
+import { formatMoney } from "@/lib/money";
 
 interface StudioDashboardProps {
   data: StudioAnalyticsData;
@@ -40,41 +40,41 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
   const gear = gearNotes({ total: kpis.gearTotalCount, maintenance: kpis.gearMaintenanceCount, utilization: kpis.gearUtilizationRate });
 
   // Same two-decimal money format as Invoices, Clients and Galleries.
-  const formatCurrency = (amount: number) => formatMoneyAmount(amount, currency);
+  const money = (amount: number) => formatMoney(currency, amount);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PAID":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-medium whitespace-nowrap bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="size-3" />
             {invoiceStatusLabel(status)}
           </span>
         );
       case "PENDING_VERIFICATION":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-medium whitespace-nowrap bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">
             <Clock className="size-3" />
             {invoiceStatusLabel(status)}
           </span>
         );
       case "PENDING":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
             <Clock className="size-3" />
             {invoiceStatusLabel(status)}
           </span>
         );
       case "OVERDUE":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-medium whitespace-nowrap bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <AlertTriangle className="size-3" />
             {invoiceStatusLabel(status)}
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-medium whitespace-nowrap bg-zinc-800 text-zinc-400 border border-zinc-700">
             {invoiceStatusLabel(status)}
           </span>
         );
@@ -156,14 +156,14 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums group-hover:text-emerald-300 transition-colors">
-              {formatCurrency(kpis.totalRevenue)}
+              {money(kpis.totalRevenue)}
             </div>
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="size-3.5 text-emerald-400" />
                 <span className={`font-mono ${kpis.totalRevenue > 0 ? "text-emerald-400" : "text-zinc-400"}`}>{revenueNote(kpis.totalRevenue)}</span>
               </div>
-              <span className="text-zinc-500 group-hover:text-emerald-400 font-mono text-[11px] flex items-center gap-0.5">
+              <span className="text-zinc-400 group-hover:text-emerald-400 font-mono text-[11px] flex items-center gap-0.5">
                 View <ChevronRight className="size-3" />
               </span>
             </div>
@@ -185,7 +185,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-400 tabular-nums">
-              {formatCurrency(kpis.pendingVerificationAmount)}
+              {money(kpis.pendingVerificationAmount)}
             </div>
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
               <span>{kpis.pendingVerificationCount} {kpis.pendingVerificationCount === 1 ? "proof" : "proofs"} queued</span>
@@ -222,7 +222,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
             </Link>
             <Link
               href={studioPath(tenant.slug, "/admin/projects")}
-              className="text-zinc-500 hover:text-zinc-300 hover:underline"
+              className="text-zinc-400 hover:text-zinc-300 hover:underline"
             >
               {kpis.completedProjectsCount} delivered
             </Link>
@@ -284,7 +284,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-zinc-900/60 text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-800/80">
+              <thead className="bg-zinc-900/60 text-zinc-400 uppercase text-[11px] tracking-wider border-b border-zinc-800/80">
                 <tr>
                   <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Invoice</th>
                   <th className="px-3 py-3 first:pl-5 last:pr-5 font-semibold">Client / Project</th>
@@ -296,7 +296,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
               <tbody className="divide-y divide-zinc-800/60">
                 {recentInvoices.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-zinc-500 font-mono">
+                    <td colSpan={5} className="px-5 py-8 text-center text-zinc-400 font-mono">
                       No milestone invoices issued yet.
                     </td>
                   </tr>
@@ -330,7 +330,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                         ) : null}
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5 text-right font-bold text-white tabular-nums whitespace-nowrap">
-                        {formatCurrency(inv.amount)}
+                        {money(inv.amount)}
                       </td>
                       <td className="px-3 py-3 first:pl-5 last:pr-5 text-center whitespace-nowrap">
                         {getStatusBadge(inv.status)}
@@ -391,10 +391,10 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
             >
               <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono uppercase">
                 <span>Total Pipeline Value</span>
-                <ChevronRight className="size-3 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="size-3 text-zinc-400 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
               </div>
               <div className="text-xl font-black text-white tabular-nums group-hover:text-amber-400 transition-colors">
-                {formatCurrency(proposalsSummary.totalPipelineValue)}
+                {money(proposalsSummary.totalPipelineValue)}
               </div>
             </Link>
 
@@ -406,7 +406,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 <div className="text-base font-bold text-emerald-400 tabular-nums">
                   {proposalsSummary.accepted}
                 </div>
-                <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">Signed</div>
+                <div className="text-[11px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">Signed</div>
               </Link>
               <Link
                 href={studioPath(tenant.slug, "/admin/proposals")}
@@ -415,7 +415,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 <div className="text-base font-bold text-amber-400 tabular-nums">
                   {proposalsSummary.sent}
                 </div>
-                <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">In Review</div>
+                <div className="text-[11px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">In Review</div>
               </Link>
               <Link
                 href={studioPath(tenant.slug, "/admin/proposals")}
@@ -424,7 +424,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                 <div className="text-base font-bold text-zinc-400 tabular-nums">
                   {proposalsSummary.draft}
                 </div>
-                <div className="text-[10px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">Draft</div>
+                <div className="text-[11px] text-zinc-400 uppercase mt-0.5 group-hover:text-zinc-200">Draft</div>
               </Link>
             </div>
           </div>
@@ -467,10 +467,10 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                         <span>{item.name}</span>
                         <ArrowUpRight className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                      <div className="text-[10px] text-zinc-500">{item.category} · {item.serialNumber || "No SN"}</div>
+                      <div className="text-[11px] text-zinc-400">{item.category} · {item.serialNumber || "No SN"}</div>
                     </div>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                         item.status === "MAINTENANCE"
                           ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
                           : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
@@ -507,7 +507,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
         </div>
 
         {upcomingCallSheets.length === 0 ? (
-          <div className="py-8 text-center text-zinc-500 text-xs font-mono">
+          <div className="py-8 text-center text-zinc-400 text-xs font-mono">
             No upcoming call sheets scheduled yet.
           </div>
         ) : (
@@ -542,27 +542,27 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
                     </h4>
                   )}
                   <div className="flex items-center gap-1 text-xs text-zinc-400 mt-2 font-mono">
-                    <MapPin className="size-3 text-zinc-500 flex-shrink-0" />
+                    <MapPin className="size-3 text-zinc-400 flex-shrink-0" />
                     <span className="truncate">{cs.locationName}</span>
                   </div>
                 </div>
 
                 <div className="pt-2 border-t border-zinc-800/60 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase truncate max-w-[140px]">
+                  <span className="text-[11px] font-mono text-zinc-400 uppercase truncate max-w-[140px]">
                     {cs.weatherSummary || "Scheduled Shoot"}
                   </span>
                   <div className="flex items-center gap-1.5">
                     {cs.projectId && (
                       <Link
                         href={studioPath(tenant.slug, `/admin/projects/${cs.projectId}`)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] font-mono text-zinc-200 hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[11px] font-mono text-zinc-200 hover:text-white transition-colors"
                       >
                         Project <ChevronRight className="size-3 text-zinc-400" />
                       </Link>
                     )}
                     <Link
                       href={studioPath(tenant.slug, `/set-hud/${cs.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-[10px] font-mono text-amber-300 transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-[11px] font-mono text-amber-300 transition-colors"
                     >
                       Set HUD <ArrowUpRight className="size-3 text-amber-400" />
                     </Link>

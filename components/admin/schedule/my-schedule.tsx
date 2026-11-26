@@ -135,7 +135,7 @@ export function MySchedule({
         <section key={day.date || "tbc"} className="space-y-3">
           <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
             <span>{dayHeading(day.date, today)}</span>
-            <span className="text-[10px] text-zinc-500">({day.sessions.length} sessions)</span>
+            <span className="text-[11px] text-zinc-400">({day.sessions.length} sessions)</span>
           </h2>
 
           <ul className="space-y-3">
@@ -176,7 +176,7 @@ export function MySchedule({
                     <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
                       <span
                         className={cn(
-                          "px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium border flex items-center gap-1 uppercase tracking-wide",
+                          "px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium border flex items-center gap-1 uppercase tracking-wide",
                           statusCfg.badgeClass
                         )}
                       >
@@ -186,7 +186,7 @@ export function MySchedule({
 
                       <span
                         className={cn(
-                          "px-2 py-0.5 rounded text-[10px] font-mono border uppercase",
+                          "px-2 py-0.5 rounded text-[11px] font-mono border uppercase",
                           s.depositPaid
                             ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                             : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -222,10 +222,10 @@ export function MySchedule({
                     {/* Deliverables preview */}
                     {s.package?.deliverables && (
                       <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
-                        <PackageIcon className="size-3.5 text-zinc-500 flex-shrink-0" />
+                        <PackageIcon className="size-3.5 text-zinc-400 flex-shrink-0" />
                         <span>Deliverables: <strong className="text-zinc-200">{s.package.deliverables}</strong></span>
                         {s.package.turnaround && (
-                          <span className="text-zinc-500 hidden sm:inline">({s.package.turnaround})</span>
+                          <span className="text-zinc-400 hidden sm:inline">({s.package.turnaround})</span>
                         )}
                       </div>
                     )}
@@ -240,7 +240,7 @@ export function MySchedule({
 
                   {/* Co-shooters / Crew */}
                   {s.others.length > 0 && (
-                    <p className="text-xs text-zinc-500 font-mono">
+                    <p className="text-xs text-zinc-400 font-mono">
                       Crew members: <span className="text-zinc-300">{s.others.join(", ")}</span>
                     </p>
                   )}
@@ -300,7 +300,7 @@ export function MySchedule({
 
                       <Link
                         href={studioPath(tenantSlug, `/admin/schedule/${s.bookingId}`)}
-                        className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:inline-flex items-center gap-0.5"
+                        className="text-[11px] font-mono text-zinc-400 hover:text-zinc-300 transition-colors hidden sm:inline-flex items-center gap-0.5"
                         title="Direct link to shoot page"
                       >
                         <span>Full Page</span>

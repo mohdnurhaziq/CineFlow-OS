@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  X,
   Clock,
   MapPin,
   Phone,
@@ -30,6 +29,7 @@ import { studioPath } from "@/lib/domain-name";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { ScheduleSession } from "@/lib/bookings/schedule";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface ShootDetailsDialogProps {
   session: ScheduleSession;
@@ -174,7 +174,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
               title="Click to copy tracking code"
             >
               <span>#{session.trackingCode}</span>
-              {copiedCode ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3 text-zinc-500" />}
+              {copiedCode ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3 text-zinc-400" />}
             </button>
 
             {session.serviceTier && (
@@ -194,14 +194,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
               <span>Full Page</span>
             </Link>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="size-8 rounded-lg border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
-              aria-label="Close dialog"
-            >
-              <X className="size-4" />
-            </button>
+            <DialogCloseButton onClick={onClose} />
           </div>
         </div>
 
@@ -233,7 +226,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
 
               <span
                 className={cn(
-                  "text-[10px] font-mono px-2 py-0.5 rounded border uppercase",
+                  "text-[11px] font-mono px-2 py-0.5 rounded border uppercase",
                   session.depositPaid
                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -261,7 +254,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
                     ⏰ Call Time: {session.callSheet.generalCallTime}
                   </p>
                 )}
-                <p className="text-[11px] font-mono text-zinc-500">
+                <p className="text-[11px] font-mono text-zinc-400">
                   Timezone: {STUDIO_TIME_ZONE}
                 </p>
               </div>
@@ -288,7 +281,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
                 <p className="text-sm font-bold text-white line-clamp-1">{locationName}</p>
                 <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">{locationAddress}</p>
                 {session.callSheet?.parkingNotes && (
-                  <p className="text-[11px] font-mono text-zinc-500 pt-0.5">
+                  <p className="text-[11px] font-mono text-zinc-400 pt-0.5">
                     🚗 {session.callSheet.parkingNotes}
                   </p>
                 )}
@@ -366,7 +359,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="p-3 rounded-lg bg-zinc-950/60 border border-zinc-850 space-y-1">
-                <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                   Expected Deliverables
                 </span>
                 <p className="font-semibold text-zinc-200">
@@ -375,7 +368,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
               </div>
 
               <div className="p-3 rounded-lg bg-zinc-950/60 border border-zinc-850 space-y-1">
-                <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+                <span className="text-[11px] font-mono uppercase text-zinc-400 block">
                   Promised Turnaround
                 </span>
                 <p className="font-semibold text-zinc-200">
@@ -421,7 +414,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
                       <span className="font-bold text-white">{print.quantity}x {print.sizeName}</span>
                       <span className="text-zinc-400 ml-2">Frame: {print.frameName}</span>
                     </div>
-                    {print.note && <span className="text-[10px] font-mono text-zinc-500">{print.note}</span>}
+                    {print.note && <span className="text-[11px] font-mono text-zinc-400">{print.note}</span>}
                   </div>
                 ))}
               </div>
@@ -442,7 +435,7 @@ ${session.brief ? `📝 *Client Notes:* "${session.brief}"\n` : ""}${session.oth
                   className="px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-850 flex items-center gap-1.5 text-xs font-mono"
                 >
                   <span className="font-semibold text-white">{a.name}</span>
-                  <span className="text-[10px] text-zinc-400 bg-zinc-900 px-1.5 py-0.2 rounded">
+                  <span className="text-[11px] text-zinc-400 bg-zinc-900 px-1.5 py-0.2 rounded">
                     {a.roleName}
                   </span>
                 </div>

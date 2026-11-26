@@ -109,7 +109,7 @@ export function CategoryList({
                     <span className="text-base">{cat.badgeIcon || "📸"}</span>
                     <span>{cat.name}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${
+                      className={`px-1.5 py-0.5 rounded text-[11px] font-mono border ${
                         cat.isProduction ? "bg-amber-500/10 text-amber-400 border-amber-500/25" : "bg-zinc-800 text-zinc-400 border-zinc-700"
                       }`}
                     >
@@ -130,7 +130,7 @@ export function CategoryList({
                       type="button"
                       disabled={!canEdit}
                       onClick={() => handleToggleActive(cat)}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono transition-colors"
                     >
                       {cat.isActive ? (
                         <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">

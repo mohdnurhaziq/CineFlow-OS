@@ -6,6 +6,7 @@ import { CheckCircle2, CreditCard } from "lucide-react";
 import confetti from "canvas-confetti";
 import { formatStudioDateTime } from "@/lib/slot-time";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 interface SignedAcceptanceViewProps {
   tenantSlug: string;
@@ -37,7 +38,6 @@ export function SignedAcceptanceView({
   projectNumber,
   isInitialSigning = false,
 }: SignedAcceptanceViewProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   useEffect(() => {
     if (isInitialSigning) {
@@ -67,7 +67,7 @@ export function SignedAcceptanceView({
         </div>
 
         <div className="space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-emerald-400 font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
             SIGNED
           </span>
           <h2 className="text-2xl font-bold tracking-tight text-white">
@@ -114,8 +114,7 @@ export function SignedAcceptanceView({
           <div className="flex justify-between items-center pt-2.5 border-t border-zinc-800 text-sm">
             <span className="text-zinc-300 font-sans font-bold">Deposit due:</span>
             <span className="font-bold text-amber-400 tabular-nums">
-              {currencySymbol}
-              {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              {formatMoney(currency, depositAmount)}
             </span>
           </div>
         </div>
@@ -123,7 +122,7 @@ export function SignedAcceptanceView({
         {/* Digital Signature Preview */}
         {clientSignature && (
           <div className="p-4 rounded-xl border border-zinc-800 bg-black/50 space-y-2">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
               Your signature
             </div>
             <div className="h-24 flex items-center justify-center p-2 rounded-lg bg-zinc-900/40 border border-zinc-800">
@@ -145,11 +144,10 @@ export function SignedAcceptanceView({
               className="w-full py-3.5 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-black font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
             >
               <CreditCard className="size-4" />
-              Pay the deposit ({currencySymbol}
-              {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })})
+              Pay the deposit ({formatMoney(currency, depositAmount)})
             </Link>
 
-            <p className="text-[10px] font-mono text-zinc-500 text-center">
+            <p className="text-[11px] font-mono text-zinc-400 text-center">
               By card, QR transfer, or cash at the studio.
             </p>
           </div>

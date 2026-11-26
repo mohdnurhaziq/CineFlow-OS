@@ -2,12 +2,13 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState } from "react";
-import { X, Plus, Trash2, PackagePlus, AlertCircle } from "lucide-react";
+import { Plus, Trash2, PackagePlus, AlertCircle } from "lucide-react";
 import { createKitBundle, updateKitBundle } from "@/lib/actions/gear";
 import type { InventoryItemRow } from "./gear-item-dialog";
 import { useDialog } from "@/lib/use-dialog";
 import { gearStatusLabel } from "@/lib/labels";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface KitBundleRow {
   id: string;
@@ -168,13 +169,7 @@ export function KitBundleDialog({
               Define reusable gear recipes with bill of materials verification
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
@@ -295,7 +290,7 @@ export function KitBundleDialog({
                     type="button"
                     onClick={() => handleRemoveItemRow(idx)}
                     disabled={selectedItems.length <= 1}
-                    className="p-1 text-zinc-500 hover:text-red-400 transition-colors disabled:opacity-30"
+                    className="p-1 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-30"
                   >
                     <Trash2 className="size-3.5" />
                   </button>

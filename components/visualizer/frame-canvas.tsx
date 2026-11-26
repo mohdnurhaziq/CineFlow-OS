@@ -151,15 +151,15 @@ export function FrameCanvas({
       {/* Floating Dimension Pill Badge */}
       {showDimensions && (
         <div className="mt-3 opacity-90 group-hover:opacity-100 transition-opacity">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-zinc-700 text-white text-[10px] sm:text-[11px] font-mono shadow-xl">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-zinc-700 text-white text-[11px] sm:text-[11px] font-mono shadow-xl">
             <span className="font-bold text-amber-400">
               {printWidthInches}&quot; × {printHeightInches}&quot; Print
             </span>
-            <span className="text-zinc-500">•</span>
+            <span className="text-zinc-400">•</span>
             <span className="text-zinc-300">
               {totalWidthInches.toFixed(1)}&quot; × {totalHeightInches.toFixed(1)}&quot; Frame
             </span>
-            <span className="text-zinc-500">•</span>
+            <span className="text-zinc-400">•</span>
             <span className="text-emerald-400 font-semibold">
               {percentOfSofa}% Sofa Width
             </span>

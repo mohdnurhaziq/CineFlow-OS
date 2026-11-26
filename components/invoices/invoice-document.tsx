@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { formatCurrency, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { formatSlotDate, formatStudioDate } from "@/lib/slot-time";
 import type { InvoiceDocument } from "@/lib/invoices/document";
+import { formatMoney } from "@/lib/money";
 
 /**
  * A printable invoice. Once paid it reads as a receipt. Rendered on a light "paper"
@@ -45,7 +46,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
   const status = invoiceStatus(doc);
   const style = STATUS[status] ?? { label: status, className: "text-zinc-600 border-zinc-400" };
   const isReceipt = status === "PAID";
-  const money = (n: number) => formatCurrency(n, doc.currency);
+  const money = (n: number) => formatMoney(doc.currency, n);
   const b = doc.booking;
   const balance = b && b.sessionPrice != null ? Math.max(0, b.sessionPrice - b.depositAmount) : null;
 
@@ -93,7 +94,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
             </div>
             {doc.verifiedBy && (
               <div className="text-left sm:text-right text-[11px] font-mono text-emerald-900 shrink-0">
-                <span className="block text-[9px] uppercase tracking-wider text-emerald-700 font-sans font-bold">Confirmed by</span>
+                <span className="block text-[11px] uppercase tracking-wider text-emerald-700 font-sans font-bold">Confirmed by</span>
                 <span>{doc.verifiedBy}</span>
               </div>
             )}
@@ -103,7 +104,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
         {/* Parties & dates */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
           <div className="space-y-0.5">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Billed to</div>
+            <div className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Billed to</div>
             <div className="font-semibold">{doc.client.name}</div>
             <div className="text-zinc-600">{doc.client.email}</div>
             {doc.client.phone && <div className="text-zinc-600">{doc.client.phone}</div>}
@@ -141,7 +142,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
         <section className="print-break-inside-avoid">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b-2 border-zinc-900 text-left text-[10px] uppercase tracking-widest text-zinc-500">
+              <tr className="border-b-2 border-zinc-900 text-left text-[11px] uppercase tracking-widest text-zinc-500">
                 <th className="py-2 font-bold">Description</th>
                 <th className="py-2 font-bold text-right">Amount</th>
               </tr>
@@ -177,7 +178,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
         {b && b.sessionPrice != null && (doc.milestoneType === "BOOKING_DEPOSIT" || doc.milestoneType === "BOOKING_BALANCE") && (
           <section className="rounded-xl bg-zinc-50 border border-zinc-200 p-4 text-xs space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="font-bold uppercase tracking-widest text-[10px] text-zinc-500">Session payment plan</span>
+              <span className="font-bold uppercase tracking-widest text-[11px] text-zinc-500">Session payment plan</span>
               <span className="font-mono font-bold text-zinc-900">{money(b.sessionPrice)}</span>
             </div>
             {b.packageName && <div className="text-[11px] text-zinc-500 font-medium">{b.packageName}</div>}
@@ -196,9 +197,9 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
                   >
                     <div className="flex items-center gap-2">
                       <span>{m.title}</span>
-                      <span className="text-[10px] font-mono text-zinc-500">({m.invoiceNumber})</span>
+                      <span className="text-[11px] font-mono text-zinc-500">({m.invoiceNumber})</span>
                       {m.isCurrent && (
-                        <span className="text-[9px] font-mono uppercase bg-amber-500 text-black px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-[11px] font-mono uppercase bg-amber-500 text-black px-1.5 py-0.5 rounded font-bold">
                           This invoice
                         </span>
                       )}
@@ -207,7 +208,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
                       <span className="font-mono tabular-nums">{money(m.amount)}</span>
                       <span
                         className={cn(
-                          "text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase",
+                          "text-[11px] font-mono font-bold px-1.5 py-0.5 rounded uppercase",
                           m.status === "PAID"
                             ? "bg-emerald-100 text-emerald-800"
                             : "bg-amber-100 text-amber-800"
@@ -231,7 +232,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
         {/* Payment */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 content-start">
-            <dt className="col-span-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Payment</dt>
+            <dt className="col-span-2 text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-1">Payment</dt>
             <dt className="text-zinc-500">Method</dt>
             <dd>{doc.paymentMethod ? method(doc.paymentMethod) : "Not paid yet"}</dd>
             {doc.verifiedBy && (
@@ -259,7 +260,7 @@ export function InvoiceDocumentView({ doc, actions }: { doc: InvoiceDocument; ac
           </dl>
           {!isReceipt && status !== "VOID" && doc.studio.bankDetails && (
             <div className="space-y-1">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Bank transfer details</div>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Bank transfer details</div>
               <p className="whitespace-pre-line text-zinc-700">{doc.studio.bankDetails}</p>
               <p className="text-xs text-zinc-500">Use {doc.invoiceNumber} as the payment reference.</p>
             </div>

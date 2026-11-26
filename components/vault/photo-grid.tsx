@@ -9,12 +9,12 @@ import {
   Download,
   Lock,
   Maximize2,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { RetouchNotesModal } from "./retouch-notes-modal";
 import { toggleClientFavorite } from "@/lib/actions/vault";
 import { useDialog } from "@/lib/use-dialog";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 export interface PhotoItem {
   id: string;
@@ -96,7 +96,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
       {/* Control Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 block">
             PHOTOS
           </span>
           <h3 className="text-xl font-bold text-white tracking-tight">
@@ -154,7 +154,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                 </>
               ) : (
                 <div
-                  className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-500 flex items-center gap-1.5"
+                  className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400 flex items-center gap-1.5"
                   title="Pay the balance to download all photos at once"
                 >
                   <Lock className="size-3 text-amber-400" />
@@ -169,7 +169,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
       {/* Photo Grid */}
       {displayedItems.length === 0 ? (
         <div className="p-12 text-center rounded-2xl border border-zinc-800 bg-[#121215] space-y-2">
-          <Heart className="size-8 text-zinc-600 mx-auto" />
+          <Heart className="size-8 text-zinc-400 mx-auto" />
           <h4 className="text-sm font-bold text-white">No Favorites Selected Yet</h4>
           <p className="text-xs text-zinc-400">
             Click the heart icon on any photo proof to curate your favorites.
@@ -194,7 +194,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                 {/* Watermark Overlay Banner if Unpaid */}
                 {!filesReleased && (
                   <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <span className="transform -rotate-12 px-3 py-1 rounded bg-black/60 backdrop-blur-xs border border-amber-500/30 text-[10px] font-mono tracking-widest text-amber-300 font-bold uppercase shadow-lg">
+                    <span className="transform -rotate-12 px-3 py-1 rounded bg-black/60 backdrop-blur-xs border border-amber-500/30 text-[11px] font-mono tracking-widest text-amber-300 font-bold uppercase shadow-lg">
                       Preview
                     </span>
                   </div>
@@ -254,7 +254,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                   <h4 className="text-sm font-semibold text-white truncate" title={item.title}>
                     {item.title}
                   </h4>
-                  <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 mt-0.5">
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400 mt-0.5">
                     {item.resolution && <span>{item.resolution}</span>}
                     {item.fileSize && (
                       <>
@@ -274,7 +274,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                     }`}
                     title={canMarkUp ? "Click to edit feedback" : undefined}
                   >
-                    <span className="font-mono text-[9px] uppercase font-bold text-amber-400 block">
+                    <span className="font-mono text-[11px] uppercase font-bold text-amber-400 block">
                       Your note:
                     </span>
                     {item.clientNotes}
@@ -295,7 +295,7 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
                   ) : (
                     <button
                       disabled
-                      className="w-full py-2 px-3 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-mono flex items-center justify-center gap-1.5 cursor-not-allowed opacity-60"
+                      className="w-full py-2 px-3 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono flex items-center justify-center gap-1.5 cursor-not-allowed opacity-60"
                       title="Pay the balance to download"
                     >
                       <Lock className="size-3.5" />
@@ -330,19 +330,13 @@ export function PhotoGrid({ items, projectId, filesReleased, canMarkUp }: PhotoG
           <div {...lightboxDialog} aria-labelledby="photo-lightbox-title" className="relative z-10 max-w-5xl w-full max-h-[90vh] bg-[#121215] border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
             <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 block">
                   PROOF INSPECTION
                 </span>
                 <h3 id="photo-lightbox-title" className="text-sm font-bold text-white">{lightboxItem.title}</h3>
               </div>
 
-              <button
-                onClick={() => setLightboxItem(null)}
-                aria-label="Close"
-                className="p-1.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white"
-              >
-                <X className="size-4" />
-              </button>
+              <DialogCloseButton onClick={() => setLightboxItem(null)} />
             </div>
 
             <div className="flex-1 overflow-auto bg-black p-6 flex items-center justify-center relative">

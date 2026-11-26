@@ -20,6 +20,7 @@ import {
   AddOnTemplateDialog,
   type ProposalAddOnTemplateRow,
 } from "./addon-template-dialog";
+import { formatMoney } from "@/lib/money";
 
 interface ProposalAdminDashboardProps {
   tenantId: string;
@@ -85,10 +86,7 @@ export function ProposalAdminDashboard({
     .reduce((sum, p) => sum + p.totalPrice, 0);
 
   const formatPrice = (val: number) => {
-    return `${currency === "MYR" ? "RM" : "$"}${val.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+    return formatMoney(currency, val);
   };
 
   return (
@@ -192,7 +190,7 @@ export function ProposalAdminDashboard({
 
       {/* Search Bar */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
         <input
           type="text"
           value={searchQuery}
@@ -202,7 +200,7 @@ export function ProposalAdminDashboard({
               ? "Search add-ons by name or description..."
               : "Search proposals by number, title, client..."
           }
-          className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+          className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
         />
       </div>
 

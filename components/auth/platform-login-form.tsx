@@ -40,7 +40,7 @@ export function PlatformLoginForm() {
   };
 
   const inputClass =
-    "w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors";
+    "w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors";
 
   return (
     <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-[#121215] border border-zinc-800 shadow-2xl space-y-6">
@@ -48,7 +48,7 @@ export function PlatformLoginForm() {
         <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mx-auto mb-3">
           <ShieldCheck className="size-6" />
         </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Platform sign-in</span>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">Platform sign-in</span>
         <h1 className="text-2xl font-bold tracking-tight text-white">CineFlow OS super-admin</h1>
         <p className="text-xs text-zinc-400">Studio teams and clients sign in on their studio&apos;s own page.</p>
       </div>
@@ -110,7 +110,7 @@ export function PlatformLoginForm() {
         </button>
       </form>
 
-      <p className="text-[11px] text-zinc-500 leading-relaxed">
+      <p className="text-[11px] text-zinc-400 leading-relaxed">
         Forgot the password? On the server, in the production folder, run this to set a new one:
         <code className="block mt-1.5 px-2.5 py-1.5 rounded bg-zinc-900 border border-zinc-800 font-mono text-zinc-300 break-words">
           node scripts/ops.mjs create-super-admin &lt;your email&gt;

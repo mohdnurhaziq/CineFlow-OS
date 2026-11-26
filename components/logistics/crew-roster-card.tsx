@@ -33,7 +33,7 @@ export function CrewRosterCard({ crewJson, generalCallTime }: CrewRosterCardProp
       </div>
 
       {crew.length === 0 ? (
-        <div className="text-center py-6 text-zinc-500 text-xs font-mono">
+        <div className="text-center py-6 text-zinc-400 text-xs font-mono">
           No individual crew calls configured. Follow general call time.
         </div>
       ) : (
@@ -66,7 +66,7 @@ export function CrewRosterCard({ crewJson, generalCallTime }: CrewRosterCardProp
 
                 {member.phone && (
                   <div className="mt-3 pt-2.5 border-t border-zinc-800/80 flex items-center justify-between text-xs">
-                    <span className="font-mono text-[11px] text-zinc-500 truncate mr-2">
+                    <span className="font-mono text-[11px] text-zinc-400 truncate mr-2">
                       {member.phone}
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">

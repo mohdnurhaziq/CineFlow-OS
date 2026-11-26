@@ -101,7 +101,7 @@ export function StudioTab({ tenant, host }: { tenant: StudioTenantData; host: st
               Studio address
             </label>
             <div className="flex items-stretch rounded-lg border border-zinc-700 bg-zinc-900 focus-within:border-amber-500 overflow-hidden">
-              <span className="px-3 flex items-center text-sm text-zinc-500 border-r border-zinc-700 select-none">{host}/</span>
+              <span className="px-3 flex items-center text-sm text-zinc-400 border-r border-zinc-700 select-none">{host}/</span>
               <input
                 id="studio-slug"
                 required
@@ -120,7 +120,7 @@ export function StudioTab({ tenant, host }: { tenant: StudioTenantData; host: st
           </div>
           <div>
             <label htmlFor="studio-domain" className={labelCls}>
-              Custom domain <span className="text-zinc-500 font-normal">(optional)</span>
+              Custom domain <span className="text-zinc-400 font-normal">(optional)</span>
             </label>
             <input
               id="studio-domain"

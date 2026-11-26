@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Printer, Copy, Check, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import type { InvoiceDocument } from "@/lib/invoices/document";
+import { formatMoney } from "@/lib/money";
 
 interface PrintButtonProps {
   doc?: InvoiceDocument;
@@ -32,7 +33,7 @@ export function PrintButton({ doc }: PrintButtonProps) {
     }
 
     const isPaid = doc.status === "PAID";
-    const money = `${doc.currency} ${doc.amount.toFixed(2)}`;
+    const money = formatMoney(doc.currency, doc.amount);
     const docUrl = window.location.href;
 
     const text = isPaid

@@ -39,6 +39,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { errorMessageOf } from "@/lib/action-error";
 import { ShippingZonesForm, type ShippingZoneRow } from "./shipping-zones-form";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
 
 export type FramesTab = "frames" | "sizes" | "shipping";
 
@@ -184,10 +185,7 @@ export function FramesManager({
   };
 
   const formatPrice = (val: number) => {
-    return `${currency === "MYR" ? "RM" : "$"}${val.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+    return formatMoney(currency, val);
   };
 
   // KPI Calculations
@@ -404,7 +402,7 @@ export function FramesManager({
                             />
                             <div>
                               <div className="font-bold text-white text-xs">{frame.name}</div>
-                              <div className="text-[10px] font-mono text-zinc-400">{frame.frameColor}</div>
+                              <div className="text-[11px] font-mono text-zinc-400">{frame.frameColor}</div>
                             </div>
                           </div>
                         </td>
@@ -425,11 +423,11 @@ export function FramesManager({
                             className="inline-flex items-center gap-1 transition-colors"
                           >
                             {frame.isAvailable ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
                                 <CheckCircle className="size-3" /> Available
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 flex items-center gap-1">
                                 <XCircle className="size-3" /> Hidden
                               </span>
                             )}
@@ -522,11 +520,11 @@ export function FramesManager({
                             className="inline-flex items-center gap-1 transition-colors"
                           >
                             {size.isAvailable ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
                                 <CheckCircle className="size-3" /> Available
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700 flex items-center gap-1">
                                 <XCircle className="size-3" /> Hidden
                               </span>
                             )}

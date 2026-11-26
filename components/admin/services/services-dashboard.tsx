@@ -29,6 +29,7 @@ import { CategoryDialog, type CategoryRow } from "./category-dialog";
 import { CategoryList } from "./category-list";
 import { disciplineLabel } from "@/lib/labels";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { formatMoney } from "@/lib/money";
 
 interface ServicesDashboardProps {
   tenantId: string;
@@ -160,10 +161,7 @@ export function ServicesDashboard({
   };
 
   const formatPrice = (val: number) => {
-    return `${currency === "MYR" ? "RM" : "$"}${val.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+    return formatMoney(currency, val);
   };
 
   return (
@@ -175,7 +173,7 @@ export function ServicesDashboard({
         actions={
           <>
           {!canSetPrices && activeTab === "packages" && (
-            <span className="text-[11px] text-zinc-500">Changing packages and prices needs the set-prices permission.</span>
+            <span className="text-[11px] text-zinc-400">Changing packages and prices needs the set-prices permission.</span>
           )}
           {activeTab === "packages" ? (
             canSetPrices && (
@@ -281,21 +279,21 @@ export function ServicesDashboard({
           {/* Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search packages by title, deliverables, or keywords..."
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
                 value={selectedDiscipline}
                 onChange={(e) => setSelectedDiscipline(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 focus:outline-none focus:border-amber-500 transition-colors"
+                className="min-w-0 flex-1 sm:flex-none px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 focus:outline-none focus:border-amber-500 transition-colors"
               >
                 <option value="ALL">All Disciplines</option>
                 <option value="PHOTOGRAPHY">Photography</option>
@@ -306,7 +304,7 @@ export function ServicesDashboard({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 focus:outline-none focus:border-amber-500 transition-colors"
+                className="min-w-0 flex-1 sm:flex-none px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 focus:outline-none focus:border-amber-500 transition-colors"
               >
                 <option value="ALL">All Categories</option>
                 {initialCategories.map((c) => (
@@ -353,7 +351,7 @@ export function ServicesDashboard({
                       {/* Top Badges & Actions */}
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700 flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700 flex items-center gap-1">
                             {pkg.discipline === "VIDEOGRAPHY" ? (
                               <Film className="size-3 text-amber-400" />
                             ) : pkg.discipline === "PHOTOGRAPHY" ? (
@@ -364,7 +362,7 @@ export function ServicesDashboard({
                             {disciplineLabel(pkg.discipline)}
                           </span>
 
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
                             {categoryObj?.badgeIcon ? `${categoryObj.badgeIcon} ` : ""}
                             {categoryObj?.name || pkg.category}
                           </span>
@@ -379,7 +377,7 @@ export function ServicesDashboard({
                             className={`p-1.5 rounded-lg transition-colors ${
                               pkg.isFeatured
                                 ? "text-amber-400 hover:bg-amber-500/20"
-                                : "text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800"
+                                : "text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
                             }`}
                           >
                             <Star className={`size-3.5 ${pkg.isFeatured ? "fill-amber-400" : ""}`} />
@@ -437,7 +435,7 @@ export function ServicesDashboard({
 
                       {/* Deliverables Scope */}
                       <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-300 space-y-1 mb-3">
-                        <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
+                        <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block">
                           Deliverables
                         </span>
                         <p className="line-clamp-2 text-zinc-300">{pkg.deliverables}</p>

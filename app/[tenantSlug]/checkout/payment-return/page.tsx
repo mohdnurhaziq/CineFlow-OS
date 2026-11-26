@@ -56,7 +56,7 @@ export default async function PaymentReturnPage({ params, searchParams }: Props)
       <StudioPageHeader tenantSlug={tenantSlug} staffView="website" />
       <main className="flex-1 flex items-center justify-center px-4 py-12">
       <div role="status" className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#121215] p-8 text-center space-y-4 shadow-2xl">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">Payment</span>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">Payment</span>
         <h1 className="text-2xl font-bold tracking-tight text-white">Payment status</h1>
         <p className="text-sm text-zinc-300">{message}</p>
         <div className="flex flex-col sm:flex-row justify-center gap-2 pt-2">

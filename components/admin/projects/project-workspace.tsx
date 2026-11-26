@@ -80,7 +80,7 @@ interface ProjectWorkspaceProps {
 }
 
 const field =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500";
 const small = "text-xs text-zinc-400";
 const primary = buttonVariants();
 const day = (iso: string) => formatSlotDate(iso, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
@@ -357,7 +357,7 @@ export function ProjectWorkspace({
                 <li key={r.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
                   <div>
                     <div className="text-white">
-                      {r.itemName} <span className="text-[11px] font-mono text-zinc-500">{r.sku}</span>
+                      {r.itemName} <span className="text-[11px] font-mono text-zinc-400">{r.sku}</span>
                     </div>
                     <div className="text-xs text-zinc-400">
                       {day(r.startDate)} – {day(r.endDate)} · {reservationStatusLabel(r.status)}
@@ -475,7 +475,7 @@ export function ProjectWorkspace({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={i.previewUrl} alt={i.title} className="aspect-[4/3] w-full object-cover" />
                     ) : (
-                      <div className="aspect-[4/3] flex items-center justify-center text-zinc-500">
+                      <div className="aspect-[4/3] flex items-center justify-center text-zinc-400">
                         <Film className="size-6" />
                       </div>
                     )}
@@ -553,7 +553,7 @@ export function ProjectWorkspace({
           <option value="SESSION">Session: photos and payments</option>
           <option value="PRODUCTION">Production: adds shoot days, shot list and gear</option>
         </select>
-        <span className="text-zinc-500">{project.projectNumber}</span>
+        <span className="text-zinc-400">{project.projectNumber}</span>
       </div>
       {confirmDialog}
     </div>

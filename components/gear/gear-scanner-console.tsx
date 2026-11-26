@@ -4,7 +4,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { useState, useRef, useEffect, useTransition } from "react";
 import {
   Scan,
-  X,
   Camera,
   Wrench,
   Clock,
@@ -20,6 +19,7 @@ import { toast } from "sonner";
 import type { InventoryItemRow } from "./gear-item-dialog";
 import type { ReservationWithDetails } from "./inspection-dialog";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface GearScannerConsoleProps {
   isOpen: boolean;
@@ -173,14 +173,7 @@ export function GearScannerConsole({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Barcode Input */}
@@ -197,10 +190,10 @@ export function GearScannerConsole({
               }}
               onKeyDown={handleKeyDown}
               placeholder="Scan barcode or type SKU (e.g. CAM-001)..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono tracking-wider shadow-inner"
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono tracking-wider shadow-inner"
             />
           </div>
-          <p className="text-[11px] text-zinc-500 font-mono">
+          <p className="text-[11px] text-zinc-400 font-mono">
             Compatible with handheld USB/Bluetooth laser barcode scanners and keyboard entry.
           </p>
         </div>
@@ -245,7 +238,7 @@ export function GearScannerConsole({
                   {matchedItem.status === "MAINTENANCE" && <Wrench className="size-3" />}
                   <span>{matchedItem.status}</span>
                 </span>
-                <div className="text-[10px] font-mono text-zinc-500 mt-1">
+                <div className="text-[11px] font-mono text-zinc-400 mt-1">
                   Condition: {conditionLabel(matchedItem.condition)}
                 </div>
               </div>
@@ -255,7 +248,7 @@ export function GearScannerConsole({
             {activeRes ? (
               <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-mono text-[10px] text-zinc-500 uppercase">Active Production:</span>
+                  <span className="font-mono text-[11px] text-zinc-400 uppercase">Active Production:</span>
                   <span className="font-mono text-amber-400 font-bold">{activeRes.project.projectNumber}</span>
                 </div>
                 <div className="text-xs font-semibold text-white">{activeRes.project.title}</div>
@@ -264,7 +257,7 @@ export function GearScannerConsole({
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-zinc-500 italic">No shoot reservation currently active for this asset.</p>
+              <p className="text-xs text-zinc-400 italic">No shoot reservation currently active for this asset.</p>
             )}
 
             {/* Quick Actions */}
@@ -335,11 +328,11 @@ export function GearScannerConsole({
             </div>
           </div>
         ) : scanCode.trim() ? (
-          <div className="py-8 text-center text-zinc-500 text-xs font-mono border border-dashed border-zinc-800 rounded-xl">
+          <div className="py-8 text-center text-zinc-400 text-xs font-mono border border-dashed border-zinc-800 rounded-xl">
             No equipment matching &quot;{scanCode}&quot; in studio fleet.
           </div>
         ) : (
-          <div className="py-8 text-center text-zinc-500 text-xs border border-dashed border-zinc-800 rounded-xl">
+          <div className="py-8 text-center text-zinc-400 text-xs border border-dashed border-zinc-800 rounded-xl">
             Ready for input. Scan a barcode or type a SKU above.
           </div>
         )}

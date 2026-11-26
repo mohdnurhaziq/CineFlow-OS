@@ -96,7 +96,7 @@ export function VaultShell({
             <span>{back.label}</span>
           </Link>
 
-          <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-400">
             YOUR GALLERY
           </span>
         </div>
@@ -108,11 +108,11 @@ export function VaultShell({
               <span className="font-mono text-xs text-amber-400 font-bold">
                 #{project.projectNumber}
               </span>
-              <span className="text-zinc-600">•</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
+              <span className="text-zinc-400">•</span>
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
                 {disciplineLabel(project.discipline)}
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
                 {project.category}
               </span>
             </div>
@@ -123,7 +123,7 @@ export function VaultShell({
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 font-sans pt-1">
               <div className="flex items-center gap-1.5">
-                <User className="size-3.5 text-zinc-500" />
+                <User className="size-3.5 text-zinc-400" />
                 <span>Client: <strong className="text-white">{project.client.name}</strong></span>
               </div>
               <span>•</span>
@@ -139,7 +139,7 @@ export function VaultShell({
               <div className="p-3.5 rounded-xl bg-zinc-800/60 border border-zinc-700 flex items-center gap-2.5">
                 {released ? <CheckCircle2 className="size-5 text-emerald-400" /> : <Lock className="size-5 text-zinc-400" />}
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
                     {released ? "FILES RELEASED" : "PREVIEWS ONLY"}
                   </span>
                   <span className="text-xs font-semibold text-white">
@@ -151,7 +151,7 @@ export function VaultShell({
               <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5">
                 <CheckCircle2 className="size-5 text-emerald-400" />
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold block">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold block">
                     PAID IN FULL
                   </span>
                   <span className="text-xs font-semibold text-white">
@@ -163,7 +163,7 @@ export function VaultShell({
               <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5">
                 <CheckCircle2 className="size-5 text-emerald-400" />
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
                     BALANCE DUE
                   </span>
                   <span className="text-xs font-semibold text-white">
@@ -175,7 +175,7 @@ export function VaultShell({
               <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5">
                 <Lock className="size-5 text-amber-400" />
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
                     DOWNLOADS LOCKED
                   </span>
                   <span className="text-xs font-semibold text-white">
@@ -217,10 +217,10 @@ export function VaultShell({
             ) : (
               <button
                 disabled
-                className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 font-mono text-xs flex items-center gap-2 cursor-not-allowed opacity-60"
+                className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-xs flex items-center gap-2 cursor-not-allowed opacity-60"
                 title="Pay the balance to download all photos"
               >
-                <Lock className="size-4 text-zinc-500" />
+                <Lock className="size-4 text-zinc-400" />
                 <span>Download all photos (locked)</span>
               </button>
             )
@@ -240,10 +240,10 @@ export function VaultShell({
             ) : (
               <button
                 disabled
-                className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 font-mono text-xs flex items-center gap-2 cursor-not-allowed opacity-60"
+                className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-xs flex items-center gap-2 cursor-not-allowed opacity-60"
                 title="Pay the balance to download the full-quality video"
               >
-                <Lock className="size-4 text-zinc-500" />
+                <Lock className="size-4 text-zinc-400" />
                 <span>Download video (locked)</span>
               </button>
             )

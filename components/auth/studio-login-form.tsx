@@ -114,7 +114,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
         <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mx-auto mb-3">
           <Film className="size-6" />
         </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+        <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
           Sign in
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-white">{tenantName}</h1>
@@ -165,7 +165,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors"
           />
         </div>
 
@@ -190,7 +190,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Your password"
-              className="w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors font-mono"
+              className="w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors font-mono"
             />
             <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
           </div>
@@ -236,7 +236,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
                 <ShieldCheck className="size-3 text-amber-400" />
                 Studio Owner
               </div>
-              <div className="text-[10px] text-zinc-500 truncate">{demo.owner}</div>
+              <div className="text-[11px] text-zinc-400 truncate">{demo.owner}</div>
             </button>
 
             <button
@@ -248,7 +248,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
                 <UserCheck className="size-3 text-blue-400" />
                 Staff / Photo
               </div>
-              <div className="text-[10px] text-zinc-500 truncate">{demo.staff}</div>
+              <div className="text-[11px] text-zinc-400 truncate">{demo.staff}</div>
             </button>
           </div>
         </div>
@@ -267,7 +267,7 @@ export function StudioLoginForm({ tenantSlug, tenantName, demo, googleEnabled = 
         </Link>
         <Link
           href={studioPath(tenantSlug)}
-          className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="text-xs font-mono text-zinc-400 hover:text-zinc-300 transition-colors"
         >
           ← Back to studio website
         </Link>

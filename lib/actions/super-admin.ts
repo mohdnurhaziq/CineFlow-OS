@@ -7,6 +7,7 @@ import { actionErrorMessage } from "@/lib/action-error";
 import { PLAN_CODES, PLANS } from "@/lib/billing/plans";
 import { addDays, planStatus, type PlanState } from "@/lib/billing/state";
 import { studioNow } from "@/lib/slot-time";
+import { formatMoney } from "@/lib/money";
 
 export interface PlatformMetrics {
   totalStudios: number;
@@ -259,7 +260,7 @@ export async function recordPlatformPayment(input: z.input<typeof RecordPaymentS
       db.tenant.update({ where: { id: v.tenantId }, data: { subscriptionTier: v.plan, paidUntil } }),
     ]);
     await resumeIfCovered(v.tenantId);
-    return { success: true, message: `Recorded RM ${v.amount.toFixed(2)}; ${PLANS[v.plan as keyof typeof PLANS].name} plan paid until ${v.paidUntil}.` };
+    return { success: true, message: `Recorded ${formatMoney("MYR", v.amount)}; ${PLANS[v.plan as keyof typeof PLANS].name} plan paid until ${v.paidUntil}.` };
   } catch (err) {
     return fail("RECORD_FAILED", err, "Could not record the payment.");
   }

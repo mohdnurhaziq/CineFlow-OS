@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ShoppingBag, Trash2, X } from "lucide-react";
+import { CheckCircle2, ShoppingBag, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { useDialog } from "@/lib/use-dialog";
@@ -10,6 +10,7 @@ import { CheckoutStep } from "./checkout-step";
 import { priceLabel, priceLine, type CartLine, type Catalog, type OrderingContext } from "./cart";
 import { MAT_BOARD_LABELS } from "@/lib/prints/status";
 import { formatPrintInches, printDimensionsFor } from "@/lib/prints/orientation";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 
 interface CartDrawerProps {
@@ -69,9 +70,7 @@ export function CartDrawer({ open, onClose, tenantId, tenantSlug, currency, orde
             <ShoppingBag className="size-5 text-amber-400" />
             {placed ? "Order placed" : step === "checkout" ? "Checkout" : `Your prints (${cart.length})`}
           </h2>
-          <button type="button" onClick={close} aria-label="Close" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={close} />
         </div>
 
         {placed ? (
@@ -123,7 +122,7 @@ export function CartDrawer({ open, onClose, tenantId, tenantSlug, currency, orde
                           : "Size unavailable"}{" "}
                         · {frame?.name ?? "Frame unavailable"}
                       </p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-zinc-400">
                         {MAT_BOARD_LABELS[line.matBoardType]} · {line.orientation === "PORTRAIT" ? "Portrait" : "Landscape"}
                       </p>
                       <p className={cn("text-xs font-mono font-semibold", line.kind === "INCLUDED" ? "text-emerald-400" : "text-white")}>

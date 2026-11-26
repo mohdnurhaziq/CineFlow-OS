@@ -36,7 +36,7 @@ export interface StudioTenantData {
 }
 
 export const inputCls =
-  "w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors";
+  "w-full px-3.5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 transition-colors";
 export const labelCls = "text-sm font-medium text-zinc-200 block mb-2";
 export const helpCls = "text-xs text-zinc-400 mt-1.5";
 
@@ -134,7 +134,7 @@ export function SettingsSection({
 export function SaveBar({ dirty, saving, onDiscard, label = "Save changes" }: { dirty: boolean; saving: boolean; onDiscard: () => void; label?: string }) {
   return (
     <div className="sticky bottom-0 z-10 -mx-4 sm:mx-0 px-4 sm:px-5 py-3 bg-[#0d0d10] border-t border-zinc-800 sm:rounded-b-2xl flex items-center gap-3">
-      <span className={`text-sm mr-auto ${dirty ? "text-amber-300" : "text-zinc-500"}`} aria-live="polite">
+      <span className={`text-sm mr-auto ${dirty ? "text-amber-300" : "text-zinc-400"}`} aria-live="polite">
         {dirty ? "You have unsaved changes" : "All changes saved"}
       </span>
       {dirty && (
@@ -237,7 +237,7 @@ export function ImageUploadField({
             // eslint-disable-next-line @next/next/no-img-element -- any URL the owner uploads or pastes
             <img src={value} alt="" className="size-full object-contain" />
           ) : (
-            <Upload className="size-5 text-zinc-600" aria-hidden />
+            <Upload className="size-5 text-zinc-400" aria-hidden />
           )}
         </div>
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleFile} className="hidden" aria-labelledby={`${id}-label`} />

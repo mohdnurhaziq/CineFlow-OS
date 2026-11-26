@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, Calendar, User, Hash } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, ExternalLink, Calendar, User, Hash } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 import { formatStudioDateTime } from "@/lib/slot-time";
+import { formatMoney } from "@/lib/money";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface ReceiptLightboxModalProps {
   isOpen: boolean;
@@ -33,7 +35,6 @@ export function ReceiptLightboxModal({
   const dialog = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.25, 2.5));
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.25, 0.75));
@@ -47,7 +48,7 @@ export function ReceiptLightboxModal({
         {/* Header Bar */}
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#15151a]">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
               PAYMENT PROOF AUDIT
             </span>
             <h3 id="receipt-lightbox-modal-title" className="text-sm font-bold text-white tracking-tight">
@@ -97,13 +98,7 @@ export function ReceiptLightboxModal({
               <ExternalLink className="size-4" />
             </a>
 
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-              title="Close modal"
-            >
-              <X className="size-4" />
-            </button>
+            <DialogCloseButton onClick={onClose} />
           </div>
         </div>
 
@@ -133,19 +128,18 @@ export function ReceiptLightboxModal({
               <div className="space-y-3 font-mono">
                 {amount !== undefined && (
                   <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800">
-                    <div className="text-[10px] text-zinc-400 uppercase">Amount Due</div>
+                    <div className="text-[11px] text-zinc-400 uppercase">Amount Due</div>
                     <div className="text-xl font-bold text-amber-400 tabular-nums">
-                      {currencySymbol}
-                      {amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {formatMoney(currency, amount)}
                     </div>
                   </div>
                 )}
 
                 {clientName && (
                   <div className="flex items-center gap-2 text-zinc-300">
-                    <User className="size-4 text-zinc-500 shrink-0" />
+                    <User className="size-4 text-zinc-400 shrink-0" />
                     <div>
-                      <span className="text-[10px] text-zinc-400 block">Client</span>
+                      <span className="text-[11px] text-zinc-400 block">Client</span>
                       <span className="font-sans font-medium text-white">{clientName}</span>
                     </div>
                   </div>
@@ -153,9 +147,9 @@ export function ReceiptLightboxModal({
 
                 {paymentReference && (
                   <div className="flex items-center gap-2 text-zinc-300">
-                    <Hash className="size-4 text-zinc-500 shrink-0" />
+                    <Hash className="size-4 text-zinc-400 shrink-0" />
                     <div>
-                      <span className="text-[10px] text-zinc-400 block">Payment Reference</span>
+                      <span className="text-[11px] text-zinc-400 block">Payment Reference</span>
                       <span className="text-white font-bold">{paymentReference}</span>
                     </div>
                   </div>
@@ -163,9 +157,9 @@ export function ReceiptLightboxModal({
 
                 {submittedAt && (
                   <div className="flex items-center gap-2 text-zinc-300">
-                    <Calendar className="size-4 text-zinc-500 shrink-0" />
+                    <Calendar className="size-4 text-zinc-400 shrink-0" />
                     <div>
-                      <span className="text-[10px] text-zinc-400 block">Submitted</span>
+                      <span className="text-[11px] text-zinc-400 block">Submitted</span>
                       <span className="text-zinc-300">
                         {formatStudioDateTime(submittedAt)}
                       </span>

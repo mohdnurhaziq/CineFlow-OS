@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink, MapPin, Store, X } from "lucide-react";
+import { ExternalLink, MapPin, Store } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { FrameCanvas } from "@/components/visualizer/frame-canvas";
 import { useDialog } from "@/lib/use-dialog";
-import { formatCurrency } from "@/lib/utils";
 import { formatPrintInches } from "@/lib/prints/orientation";
 import type { MatBoardType } from "@/lib/prints/pricing";
 import { MAT_BOARD_LABELS, PRINT_ORDER_STATUS_STYLES, printOrderStatusLabel } from "@/lib/prints/status";
 import type { PrintOrderPreview, PrintOrderPreviewItem } from "@/lib/prints/order-preview";
 import { PrintFitNote, usePrintFit } from "./print-fit";
 import { studioPath } from "@/lib/domain-name";
+import { formatMoney } from "@/lib/money";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface PrintOrderPreviewDialogProps {
   order: PrintOrderPreview;
@@ -52,7 +53,7 @@ function FramedItem({ item, money }: { item: PrintOrderPreviewItem; money: (n: n
             showDimensions={false}
           />
         ) : (
-          <span className="text-[11px] text-zinc-500 text-center">Photo no longer in the gallery</span>
+          <span className="text-[11px] text-zinc-400 text-center">Photo no longer in the gallery</span>
         )}
       </div>
       <div className="min-w-0 flex-1 space-y-0.5 text-xs">
@@ -75,7 +76,7 @@ function FramedItem({ item, money }: { item: PrintOrderPreviewItem; money: (n: n
 /** A print order's framed prints as the client chose them (fit, never cropped), with fulfilment and totals. */
 export function PrintOrderPreviewDialog({ order, tenantSlug, currency, onClose }: PrintOrderPreviewDialogProps) {
   const dialog = useDialog(true, onClose);
-  const money = (n: number) => formatCurrency(n, currency);
+  const money = (n: number) => formatMoney(currency, n);
   const ship = order.fulfilment === "SHIP";
 
   return (
@@ -92,14 +93,12 @@ export function PrintOrderPreviewDialog({ order, tenantSlug, currency, onClose }
               Framed prints · <span className="font-mono">{order.orderNumber}</span>
             </h2>
             <span
-              className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-mono border ${PRINT_ORDER_STATUS_STYLES[order.status] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
+              className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-mono border ${PRINT_ORDER_STATUS_STYLES[order.status] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
             >
               {printOrderStatusLabel(order.status)}
             </span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            <X />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         <ul className="divide-y divide-zinc-800/70" aria-label="Prints">

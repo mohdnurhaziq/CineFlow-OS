@@ -2,13 +2,14 @@
 
 import { buttonVariants } from "@/components/ui/button";
 import { useState, useEffect, useTransition } from "react";
-import { X, Video, Loader2, Camera, Sun, Film } from "lucide-react";
+import { Video, Loader2, Camera, Sun, Film } from "lucide-react";
 import { useDialog } from "@/lib/use-dialog";
 import { createShotItem, updateShotItem } from "@/lib/actions/logistics";
 import { toast } from "sonner";
 import { bareNumber } from "@/lib/labels";
 import type { ShotItemData } from "./shot-list-hud";
 import { errorMessageOf } from "@/lib/action-error";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface ShotDialogProps {
   isOpen: boolean;
@@ -183,14 +184,7 @@ export function ShotDialog({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="size-4" />
-          </button>
+          <DialogCloseButton onClick={onClose} />
         </div>
 
         {/* Form Body */}
@@ -208,7 +202,7 @@ export function ShotDialog({
                 value={sceneNumber}
                 onChange={(e) => setSceneNumber(e.target.value)}
                 placeholder="e.g. 1 or Ext. Garden"
-                className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono"
               />
             </div>
             <div className="space-y-1.5">
@@ -222,7 +216,7 @@ export function ShotDialog({
                 value={shotNumber}
                 onChange={(e) => setShotNumber(e.target.value)}
                 placeholder="e.g. 1A, Hero 1"
-                className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono"
               />
             </div>
           </div>
@@ -258,7 +252,7 @@ export function ShotDialog({
               value={framing}
               onChange={(e) => setFraming(e.target.value)}
               placeholder="Or enter custom framing..."
-              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
             />
           </div>
 
@@ -293,7 +287,7 @@ export function ShotDialog({
               value={cameraLens}
               onChange={(e) => setCameraLens(e.target.value)}
               placeholder="Or enter custom lens..."
-              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
             />
           </div>
 
@@ -328,7 +322,7 @@ export function ShotDialog({
               value={lightingSetup}
               onChange={(e) => setLightingSetup(e.target.value)}
               placeholder="Or enter lighting scheme..."
-              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
             />
           </div>
 
@@ -344,7 +338,7 @@ export function ShotDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Bride walks down aisle, smiling towards groom. Pull focus from father's hand to bride's reaction."
-              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500"
             />
           </div>
 

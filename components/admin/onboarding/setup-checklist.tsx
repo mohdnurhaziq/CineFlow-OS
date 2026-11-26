@@ -5,10 +5,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowRight, Check, Copy, PartyPopper, PlayCircle, X } from "lucide-react";
+import { ArrowRight, Check, Copy, PartyPopper, PlayCircle } from "lucide-react";
 import type { SetupChecklist as SetupChecklistData, SetupStepId } from "@/lib/onboarding/checklist";
 import { dismissSetupChecklist } from "@/lib/actions/onboarding-guide";
 import { studioPath } from "@/lib/domain-name";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface SetupChecklistProps {
   tenantSlug: string;
@@ -91,16 +92,7 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
       aria-labelledby="setup-guide-title"
       className="relative rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.06] to-transparent p-5 sm:p-6"
     >
-      <button
-        type="button"
-        onClick={close}
-        disabled={pending}
-        aria-label="Close setup guide"
-        title="Close setup guide"
-        className="absolute right-3 top-3 grid size-8 place-items-center rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-      >
-        <X className="size-4" />
-      </button>
+      <DialogCloseButton onClick={close} disabled={pending} label="Close setup guide" className="absolute right-3 top-3" />
 
       {checklist.allDone ? (
         <div className="flex items-start gap-3 pr-8">
@@ -172,11 +164,11 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
                     {step.done && <Check className="size-3" />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className={`block text-sm ${step.done ? "text-zinc-500 line-through" : "text-zinc-100"}`}>
+                    <span className={`block text-sm ${step.done ? "text-zinc-400 line-through" : "text-zinc-100"}`}>
                       {copy.label}
                       <span className="sr-only">{step.done ? " (done)" : " (to do)"}</span>
                     </span>
-                    {!step.done && <span className="block text-xs text-zinc-500 mt-0.5">{copy.hint}</span>}
+                    {!step.done && <span className="block text-xs text-zinc-400 mt-0.5">{copy.hint}</span>}
                   </span>
                 </>
               );
@@ -205,7 +197,7 @@ export function SetupChecklist({ tenantSlug, checklist, bookingUrl }: SetupCheck
                     {body}
                     {!step.done && (
                       <ArrowRight
-                        className="size-4 shrink-0 text-zinc-500 group-hover:text-amber-400 transition-colors"
+                        className="size-4 shrink-0 text-zinc-400 group-hover:text-amber-400 transition-colors"
                         aria-hidden="true"
                       />
                     )}

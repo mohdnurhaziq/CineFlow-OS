@@ -33,7 +33,7 @@ const MOVE_LABELS: Record<string, string> = {
 };
 
 const field =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500";
 
 /** Move the order along, add courier and tracking when it ships, or cancel it (confirmed in place). */
 export function PrintOrderActions({ tenantId, tenantSlug, orderId, status, fulfilment, paid, hasInvoice, canRecordPayments }: PrintOrderActionsProps) {

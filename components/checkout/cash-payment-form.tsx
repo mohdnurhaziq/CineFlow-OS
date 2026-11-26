@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Banknote, Clock, MapPin, Loader2 } from "lucide-react";
+import { formatMoney } from "@/lib/money";
 
 interface CashPaymentFormProps {
   amount: number;
@@ -16,7 +17,6 @@ export function CashPaymentForm({
   isSubmitting,
   onSubmit,
 }: CashPaymentFormProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
   const [cashNotes, setCashNotes] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,8 +69,7 @@ export function CashPaymentForm({
       <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 flex justify-between items-center text-xs">
         <span className="text-zinc-400">Cash Deposit Amount Due at Counter:</span>
         <span className="text-base font-bold font-mono tabular-nums text-amber-400">
-          {currencySymbol}
-          {amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          {formatMoney(currency, amount)}
         </span>
       </div>
 
@@ -93,7 +92,7 @@ export function CashPaymentForm({
             </>
           )}
         </button>
-        <p className="text-[10px] text-zinc-500 text-center mt-2 font-mono">
+        <p className="text-[11px] text-zinc-400 text-center mt-2 font-mono">
           The studio confirms your booking when they receive the cash, and you get a receipt.
         </p>
       </div>

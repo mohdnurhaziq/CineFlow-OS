@@ -129,13 +129,13 @@ export function ClientsDirectory({
         actions={
           <label className="relative w-full sm:w-80">
             <span className="sr-only">Search clients</span>
-            <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
+            <Search className="size-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search name, email or phone"
-              className="w-full pl-9 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-500 outline-none transition-colors"
+              className="w-full pl-9 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm text-white placeholder-zinc-400 outline-none transition-colors"
             />
           </label>
         }
@@ -164,13 +164,13 @@ export function ClientsDirectory({
         >
           <Download className="size-3.5 text-amber-400" aria-hidden="true" />
           Export CSV
-          <span className="text-[10px] text-zinc-500">{visible.length}</span>
+          <span className="text-[11px] text-zinc-400">{visible.length}</span>
         </button>
       </div>
 
       {clients.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-800 p-10 text-center space-y-2">
-          <Users className="size-8 text-zinc-600 mx-auto" aria-hidden="true" />
+          <Users className="size-8 text-zinc-400 mx-auto" aria-hidden="true" />
           <p className="text-sm font-semibold text-white">No clients yet</p>
           <p className="text-xs text-zinc-400">Clients appear here once they book or create an account.</p>
         </div>
@@ -191,7 +191,7 @@ export function ClientsDirectory({
         <div className="rounded-2xl border border-zinc-800 bg-[#121215] overflow-hidden">
           <div
             className={cn(
-              "hidden md:grid gap-4 px-4 py-2.5 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-wider text-zinc-500",
+              "hidden md:grid gap-4 px-4 py-2.5 border-b border-zinc-800 text-[11px] font-mono uppercase tracking-wider text-zinc-400",
               showMoney ? GRID_WITH_MONEY : GRID_NO_MONEY
             )}
           >
@@ -244,7 +244,7 @@ export function ClientsDirectory({
                     <span
                       className={cn(
                         "hidden md:block text-xs font-mono text-right tabular-nums",
-                        (c.outstanding ?? 0) > 0 ? "text-amber-400 font-semibold" : "text-zinc-500"
+                        (c.outstanding ?? 0) > 0 ? "text-amber-400 font-semibold" : "text-zinc-400"
                       )}
                     >
                       {(c.outstanding ?? 0) > 0 ? formatMoney(currency, c.outstanding ?? 0) : "—"}
@@ -269,7 +269,7 @@ export function ClientsDirectory({
                     <Link
                       href={studioPath(tenantSlug, `/admin/clients/${c.id}`)}
                       onClick={(e) => e.stopPropagation()}
-                      className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                       title="Open full client record"
                     >
                       <ChevronRight className="size-4" aria-hidden="true" />
@@ -284,7 +284,7 @@ export function ClientsDirectory({
                     {showMoney && (c.outstanding ?? 0) > 0 && (
                       <span className="text-amber-400 font-semibold">{formatMoney(currency, c.outstanding ?? 0)} due</span>
                     )}
-                    <span className="text-zinc-500">Active: {c.lastActivityLabel}</span>
+                    <span className="text-zinc-400">Active: {c.lastActivityLabel}</span>
                   </div>
                 </div>
               </li>

@@ -12,6 +12,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
+import { formatMoney } from "@/lib/money";
 
 export interface PrintSizeOption {
   id: string;
@@ -216,7 +217,7 @@ export function ConfiguratorPanel({
                 <span className="text-xs font-medium text-white">
                   Drop custom photo or browse
                 </span>
-                <span className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                <span className="text-[11px] text-zinc-400 font-mono mt-0.5">
                   JPEG, PNG, WebP up to 50MB
                 </span>
                 <input
@@ -260,7 +261,7 @@ export function ConfiguratorPanel({
                           {size.name}
                         </span>
                         {is16R && (
-                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-bold">
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-bold">
                             <Sparkles className="size-2.5" />
                             <span>GALLERY BESTSELLER</span>
                           </span>
@@ -273,9 +274,9 @@ export function ConfiguratorPanel({
 
                     <div className="text-right">
                       <div className="font-bold text-emerald-400 font-mono text-sm">
-                        {currency} {size.basePrice}
+                        {formatMoney(currency, size.basePrice)}
                       </div>
-                      <div className="text-[10px] text-zinc-500 font-mono">Base Print</div>
+                      <div className="text-[11px] text-zinc-400 font-mono">Base Print</div>
                     </div>
                   </button>
                 );
@@ -321,9 +322,9 @@ export function ConfiguratorPanel({
 
                     <div className="text-right">
                       <div className="font-bold text-amber-400 font-mono text-sm">
-                        {frame.priceOffset > 0 ? `+${currency} ${frame.priceOffset}` : "Included"}
+                        {frame.priceOffset > 0 ? `+${formatMoney(currency, frame.priceOffset)}` : "Included"}
                       </div>
-                      <div className="text-[10px] text-zinc-500 font-mono">Frame Markup</div>
+                      <div className="text-[11px] text-zinc-400 font-mono">Frame Markup</div>
                     </div>
                   </button>
                 );
@@ -357,7 +358,7 @@ export function ConfiguratorPanel({
                   </div>
                 </div>
                 <div className="text-right font-mono text-sm font-bold text-zinc-400">
-                  +{currency} 0
+                  +{formatMoney(currency, 0)}
                 </div>
               </button>
 
@@ -381,7 +382,7 @@ export function ConfiguratorPanel({
                   </div>
                 </div>
                 <div className="text-right font-mono text-sm font-bold text-amber-400">
-                  +{currency} {matBoardPrice}
+                  +{formatMoney(currency, matBoardPrice)}
                 </div>
               </button>
 
@@ -405,7 +406,7 @@ export function ConfiguratorPanel({
                   </div>
                 </div>
                 <div className="text-right font-mono text-sm font-bold text-amber-400">
-                  +{currency} {matBoardPrice}
+                  +{formatMoney(currency, matBoardPrice)}
                 </div>
               </button>
             </div>
@@ -417,16 +418,16 @@ export function ConfiguratorPanel({
       <div className="p-5 border-t border-zinc-800 bg-zinc-950/90 backdrop-blur-md space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+            <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">
               Framed Print Price
             </div>
             <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
-              {currency} {totalPrice.toFixed(2)}
+              {formatMoney(currency, totalPrice)}
             </div>
           </div>
 
           <div className="text-right">
-            <div className="text-[10px] font-mono text-zinc-400">
+            <div className="text-[11px] font-mono text-zinc-400">
               Exterior Frame Footprint
             </div>
             <div className="text-xs font-mono font-bold text-amber-400">

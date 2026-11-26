@@ -25,7 +25,7 @@ export function PasswordVisibilityToggle({
       aria-label={label}
       aria-pressed={visible}
       title={label}
-      className="absolute right-px top-1/2 -translate-y-1/2 grid size-10 place-items-center rounded-md text-zinc-500 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+      className="absolute right-px top-1/2 -translate-y-1/2 grid size-10 place-items-center rounded-md text-zinc-400 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
     >
       {visible ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
     </button>

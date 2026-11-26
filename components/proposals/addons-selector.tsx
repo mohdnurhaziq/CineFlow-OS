@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { formatMoney } from "@/lib/money";
 
 export interface AddOnItem {
   id: string;
@@ -27,13 +28,12 @@ export function AddonsSelector({
   currency,
   isReadOnly = false,
 }: AddonsSelectorProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 block">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 block">
             CUSTOMIZE PRODUCTION SCOPE
           </span>
           <h3 className="text-lg font-bold text-white tracking-tight">
@@ -68,7 +68,7 @@ export function AddonsSelector({
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-white">{addon.name}</span>
                     {isSelected && (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                      <span className="px-1.5 py-0.2 rounded text-[11px] font-mono uppercase font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                         Added
                       </span>
                     )}
@@ -81,8 +81,7 @@ export function AddonsSelector({
                 {/* Checkbox indicator & Price */}
                 <div className="shrink-0 text-right space-y-1.5">
                   <div className="font-mono text-sm font-bold text-white tabular-nums">
-                    +{currencySymbol}
-                    {addon.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    +{formatMoney(currency, addon.price)}
                   </div>
 
                   <div className="flex justify-end">
@@ -100,7 +99,7 @@ export function AddonsSelector({
               </div>
 
               {addon.unit && addon.unit !== "fixed" && (
-                <div className="mt-2 pt-2 border-t border-zinc-800/80 text-[10px] font-mono text-zinc-500">
+                <div className="mt-2 pt-2 border-t border-zinc-800/80 text-[11px] font-mono text-zinc-400">
                   Billing Unit: {addon.unit.replace(/_/g, " ").toUpperCase()}
                 </div>
               )}

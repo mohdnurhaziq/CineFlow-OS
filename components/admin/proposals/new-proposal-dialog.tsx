@@ -3,12 +3,13 @@
 import { buttonVariants } from "@/components/ui/button";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Loader2, Plus, X } from "lucide-react";
+import { Copy, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createProposal } from "@/lib/actions/admin-projects";
 import { DEFAULT_CONTRACT_TERMS } from "@/lib/projects/constants";
 import { useDialog } from "@/lib/use-dialog";
 import { formatMoney } from "@/lib/money";
+import { DialogCloseButton } from "@/components/ui/dialog-close-button";
 
 interface NewProposalButtonProps {
   tenantId: string;
@@ -20,7 +21,7 @@ interface NewProposalButtonProps {
 }
 
 const field =
-  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500";
+  "w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500";
 const label = "text-xs text-zinc-400";
 
 /** "New proposal": a quote the client reviews, picks extras on, and signs online. Owner only. */
@@ -110,9 +111,7 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
               <h2 id="new-proposal-title" className="text-base font-bold text-white">
                 {created ? (created.draft ? "Draft saved" : "Proposal sent") : "New proposal"}
               </h2>
-              <button type="button" onClick={close} aria-label="Close" className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <X className="size-4" />
-              </button>
+              <DialogCloseButton onClick={close} />
             </div>
 
             {created?.draft ? (
@@ -143,7 +142,7 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
                     <Copy className="size-4" />
                   </button>
                 </div>
-                <p className="text-xs text-zinc-500">When the client signs, the project appears under Projects and their deposit invoice is issued.</p>
+                <p className="text-xs text-zinc-400">When the client signs, the project appears under Projects and their deposit invoice is issued.</p>
                 <div className="flex justify-end">
                   <button type="button" onClick={close} className={buttonVariants()}>
                     Done
@@ -232,7 +231,7 @@ export function NewProposalButton({ tenantId, tenantSlug, currency, clients, cat
                             className="size-4 rounded border-zinc-600 text-amber-500 focus:ring-0"
                           />
                           {t.name}
-                          {t.isDefault && <span className="text-[10px] text-amber-400">pre-selected</span>}
+                          {t.isDefault && <span className="text-[11px] text-amber-400">pre-selected</span>}
                         </span>
                         <span className="font-mono text-zinc-400">{formatMoney(currency, t.price)}</span>
                       </label>

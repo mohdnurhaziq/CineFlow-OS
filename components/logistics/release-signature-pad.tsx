@@ -197,7 +197,7 @@ export function ReleaseSignaturePad({
       {/* Signature Canvas Box */}
       <div className="relative rounded-2xl border-2 border-dashed border-zinc-700 bg-[#0d0d10] overflow-hidden group focus-within:border-amber-500 transition-colors">
         {/* Subtle Signature Guideline */}
-        <div className="absolute inset-x-6 bottom-8 border-b border-zinc-800/80 pointer-events-none flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+        <div className="absolute inset-x-6 bottom-8 border-b border-zinc-800/80 pointer-events-none flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-zinc-400">
           <span>Sign with Stylus, Touch, or Mouse</span>
           <span>X — Legally Binding Release Signatory</span>
         </div>
@@ -214,7 +214,7 @@ export function ReleaseSignaturePad({
 
         {/* Floating Indicator */}
         {hasSignature && (
-          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
             <CheckCircle2 className="size-3" />
             <span>Digital Signature Verified</span>
           </div>
@@ -223,7 +223,7 @@ export function ReleaseSignaturePad({
 
       {/* Control Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1">
+        <span className="text-[11px] text-zinc-400 font-mono flex items-center gap-1">
           <ShieldCheck className="size-3 text-emerald-400" />
           <span>ESIGN & UETA Electronic Legal Signature Compliance</span>
         </span>

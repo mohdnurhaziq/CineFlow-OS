@@ -28,7 +28,7 @@ export function SolarHudStrip({
           <div>
             <h3 className="text-sm font-semibold text-white tracking-tight flex items-center gap-1.5">
               <span>Solar & Golden Hour Windows</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono font-medium">
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono font-medium">
                 NOAA Pure Math
               </span>
             </h3>
@@ -61,7 +61,7 @@ export function SolarHudStrip({
           <div className="text-lg font-bold text-white font-mono tracking-tight">
             {solarTimes.sunrise}
           </div>
-          <div className="text-[10px] text-zinc-500 mt-0.5">Civil Dawn: {solarTimes.dawn || "N/A"}</div>
+          <div className="text-[11px] text-zinc-400 mt-0.5">Civil Dawn: {solarTimes.dawn || "N/A"}</div>
         </div>
 
         {/* Morning Golden Hour */}
@@ -76,7 +76,7 @@ export function SolarHudStrip({
           <div className="text-sm sm:text-base font-bold text-amber-400 font-mono tracking-tight">
             {solarTimes.goldenHourMorning}
           </div>
-          <div className="text-[10px] text-amber-400/70 mt-0.5">Warm low-angle sidelight</div>
+          <div className="text-[11px] text-amber-400/70 mt-0.5">Warm low-angle sidelight</div>
         </div>
 
         {/* Evening Golden Hour */}
@@ -91,7 +91,7 @@ export function SolarHudStrip({
           <div className="text-sm sm:text-base font-bold text-amber-400 font-mono tracking-tight">
             {solarTimes.goldenHourEvening}
           </div>
-          <div className="text-[10px] text-amber-400/70 mt-0.5">Dramatic sunset rimlight</div>
+          <div className="text-[11px] text-amber-400/70 mt-0.5">Dramatic sunset rimlight</div>
         </div>
 
         {/* Sunset */}
@@ -103,7 +103,7 @@ export function SolarHudStrip({
           <div className="text-lg font-bold text-white font-mono tracking-tight">
             {solarTimes.sunset}
           </div>
-          <div className="text-[10px] text-zinc-500 mt-0.5">Civil Dusk: {solarTimes.dusk || "N/A"}</div>
+          <div className="text-[11px] text-zinc-400 mt-0.5">Civil Dusk: {solarTimes.dusk || "N/A"}</div>
         </div>
       </div>
     </div>

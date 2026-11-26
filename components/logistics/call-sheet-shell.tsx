@@ -114,7 +114,7 @@ export function CallSheetShell({
               <span className="text-xs font-mono text-zinc-400">
                 {callSheet.project.tenant.name}
               </span>
-              <span className="text-xs text-zinc-600">•</span>
+              <span className="text-xs text-zinc-400">•</span>
               <span className="text-xs font-mono text-emerald-400">
                 ON-SET ACTIVE COMPANION
               </span>
@@ -125,7 +125,7 @@ export function CallSheetShell({
             </h1>
             <p className="text-xs sm:text-sm text-zinc-300 mt-1 flex flex-wrap items-center gap-3">
               <span className="flex items-center gap-1.5">
-                <Calendar className="size-3.5 text-zinc-500" />
+                <Calendar className="size-3.5 text-zinc-400" />
                 <span>{formattedDate}</span>
               </span>
               <span className="flex items-center gap-1.5 font-mono text-amber-400 font-bold">
@@ -239,7 +239,7 @@ export function CallSheetShell({
               {callSheet.parkingNotes || "Free on-site parking at facility lot. Loading dock available for grip van."}
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center gap-1.5 text-[11px] font-mono text-zinc-500">
+          <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center gap-1.5 text-[11px] font-mono text-zinc-400">
             <Info className="size-3" />
             <span>Heavy equipment unload at Bay 2</span>
           </div>

@@ -80,7 +80,7 @@ export function DatePicker({
             type="button"
             title={title}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-sm font-mono text-left focus:outline-none focus:border-amber-500 hover:border-zinc-600 transition-colors ${
-              selected ? "text-white" : "text-zinc-500"
+              selected ? "text-white" : "text-zinc-400"
             } ${clearable && selected ? "pr-8" : ""} ${className}`}
           >
             <CalendarIcon className="size-4 shrink-0 text-amber-400" />
@@ -92,7 +92,7 @@ export function DatePicker({
             type="button"
             aria-label="Clear date"
             onClick={() => onChange("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-red-400"
+            className="absolute right-0 top-1/2 -translate-y-1/2 grid size-10 place-items-center rounded-lg text-zinc-400 hover:text-red-400"
           >
             <X className="size-3.5" />
           </button>
@@ -128,7 +128,7 @@ export function DatePicker({
 
           <div className="grid grid-cols-7 mb-1">
             {WEEKDAYS.map((d) => (
-              <div key={d} className="text-center text-[10px] font-mono uppercase text-zinc-500 py-1">
+              <div key={d} className="text-center text-[11px] font-mono uppercase text-zinc-400 py-1">
                 {d}
               </div>
             ))}
@@ -152,12 +152,12 @@ export function DatePicker({
                     isSelected
                       ? "bg-amber-500 text-black font-bold"
                       : disabled
-                      ? "text-zinc-700 cursor-not-allowed"
+                      ? "text-zinc-600 cursor-not-allowed"
                       : isToday(day)
                       ? "border border-amber-500/60 text-amber-300 hover:bg-zinc-800"
                       : inMonth
                       ? "text-zinc-200 hover:bg-zinc-800"
-                      : "text-zinc-600 hover:bg-zinc-800"
+                      : "text-zinc-400 hover:bg-zinc-800"
                   }`}
                 >
                   {format(day, "d")}

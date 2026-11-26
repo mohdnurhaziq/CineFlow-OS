@@ -68,11 +68,11 @@ export async function AdminHeader({ tenant, user }: AdminHeaderProps) {
                 <span className="font-bold text-sm tracking-tight text-white group-hover:text-amber-400 transition-colors">
                   {tenant.name}
                 </span>
-                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Studio admin</span>
+                <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">Studio admin</span>
               </div>
             </Link>
 
-            <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
+            <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
               {disciplineLabel(tenant.discipline)}
             </span>
           </div>

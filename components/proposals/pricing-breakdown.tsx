@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock, Lock } from "lucide-react";
+import { formatMoney } from "@/lib/money";
 
 interface PricingBreakdownProps {
   basePrice: number;
@@ -15,7 +16,6 @@ export function PricingBreakdown({
   currency,
   depositPercentage = 50.0,
 }: PricingBreakdownProps) {
-  const currencySymbol = currency === "MYR" ? "RM " : "$";
   const subtotal = Math.round((basePrice + addOnsTotal) * 100) / 100;
   const depositAmount = Math.round(((subtotal * depositPercentage) / 100) * 100) / 100;
   const finalBalance = Math.round((subtotal - depositAmount) * 100) / 100;
@@ -24,7 +24,7 @@ export function PricingBreakdown({
     <div className="rounded-2xl border border-zinc-800 bg-[#121215] p-6 space-y-6 shadow-xl">
       <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
         <div className="space-y-0.5">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-amber-400">
             UPDATES AS YOU CHOOSE
           </span>
           <h4 className="text-base font-bold text-white tracking-tight">
@@ -42,24 +42,21 @@ export function PricingBreakdown({
         <div className="flex justify-between items-center text-zinc-300">
           <span className="font-sans">Base Production Package:</span>
           <span className="tabular-nums font-bold text-white">
-            {currencySymbol}
-            {basePrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {formatMoney(currency, basePrice)}
           </span>
         </div>
 
         <div className="flex justify-between items-center text-zinc-300">
           <span className="font-sans">Selected Production Add-Ons:</span>
           <span className="tabular-nums font-bold text-amber-400">
-            +{currencySymbol}
-            {addOnsTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            +{formatMoney(currency, addOnsTotal)}
           </span>
         </div>
 
         <div className="pt-3 border-t border-zinc-800/80 flex justify-between items-center text-sm">
           <span className="font-sans font-bold text-white">Gross Production Subtotal:</span>
           <span className="tabular-nums font-black text-white text-base">
-            {currencySymbol}
-            {subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {formatMoney(currency, subtotal)}
           </span>
         </div>
       </div>
@@ -69,15 +66,14 @@ export function PricingBreakdown({
         {/* Milestone 1: 50% Deposit Due Now */}
         <div className="p-4 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-950/20 via-[#16161c] to-[#121215] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-mono text-[10px] uppercase font-bold text-amber-400">
+            <span className="font-mono text-[11px] uppercase font-bold text-amber-400">
               Payment 1 · When you sign
             </span>
             <Clock className="size-3.5 text-amber-400" />
           </div>
 
           <div className="text-2xl font-bold font-mono tabular-nums text-white">
-            {currencySymbol}
-            {depositAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {formatMoney(currency, depositAmount)}
           </div>
 
           <p className="text-[11px] text-zinc-400 leading-tight font-sans">
@@ -88,15 +84,14 @@ export function PricingBreakdown({
         {/* Milestone 2: 50% Balance on Delivery */}
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#16161b] space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-mono text-[10px] uppercase font-bold text-zinc-400">
+            <span className="font-mono text-[11px] uppercase font-bold text-zinc-400">
               Payment 2 · On delivery
             </span>
-            <Lock className="size-3.5 text-zinc-500" />
+            <Lock className="size-3.5 text-zinc-400" />
           </div>
 
           <div className="text-2xl font-bold font-mono tabular-nums text-zinc-300">
-            {currencySymbol}
-            {finalBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {formatMoney(currency, finalBalance)}
           </div>
 
           <p className="text-[11px] text-zinc-400 leading-tight font-sans">

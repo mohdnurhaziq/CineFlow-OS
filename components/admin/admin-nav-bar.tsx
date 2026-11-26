@@ -70,7 +70,7 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
                 aria-current={active ? "page" : undefined}
                 className={topLinkClass(active)}
               >
-                <LinkIcon className={cn("size-3.5", active ? "text-amber-400" : "text-zinc-500")} />
+                <LinkIcon className={cn("size-3.5", active ? "text-amber-400" : "text-zinc-400")} />
                 <span>{entry.label}</span>
               </Link>
             );
@@ -97,16 +97,16 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
                     : "text-zinc-400 hover:text-white hover:bg-zinc-800/60 border-transparent focus-visible:border-zinc-700"
                 )}
               >
-                <DomainIcon className={cn("size-3.5", isDomainActive ? "text-amber-400" : "text-zinc-500")} />
+                <DomainIcon className={cn("size-3.5", isDomainActive ? "text-amber-400" : "text-zinc-400")} />
                 <span>{domain.label}</span>
                 {badge !== null && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-black ml-0.5">
+                  <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-amber-500 text-black ml-0.5">
                     {badge}
                   </span>
                 )}
                 <ChevronDown
                   className={cn(
-                    "size-3 text-zinc-500 transition-transform duration-200 ml-0.5",
+                    "size-3 text-zinc-400 transition-transform duration-200 ml-0.5",
                     isOpen && "rotate-180 text-amber-400"
                   )}
                 />
@@ -118,9 +118,9 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
                   sideOffset={8}
                   className="z-50 min-w-[270px] max-w-[320px] rounded-xl border border-zinc-800 bg-[#121215]/98 backdrop-blur-xl p-1.5 shadow-2xl shadow-black/80 animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 focus:outline-none"
                 >
-                  <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-zinc-400 border-b border-zinc-800/80 mb-1 flex items-center justify-between">
+                  <div className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-zinc-400 border-b border-zinc-800/80 mb-1 flex items-center justify-between">
                     <span>{domain.label}</span>
-                    <span className="text-[9px] text-zinc-400 lowercase">{domain.items.length} tools</span>
+                    <span className="text-[11px] text-zinc-400 lowercase">{domain.items.length} tools</span>
                   </div>
 
                   <div className="space-y-0.5">
@@ -154,9 +154,9 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-semibold text-white tracking-tight">{sub.label}</span>
-                                {isLocked(sub.feature) && <Lock className="size-3 text-zinc-500 inline ml-1.5" aria-label="Not on your plan" />}
+                                {isLocked(sub.feature) && <Lock className="size-3 text-zinc-400 inline ml-1.5" aria-label="Not on your plan" />}
                                 {subBadge !== null && (
-                                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-black">
+                                  <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-amber-500 text-black">
                                     {subBadge}
                                   </span>
                                 )}
@@ -180,7 +180,7 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
       {/* Contextual Sub-Domain 1-Click Bar (Shown when inside Production, Finance, or Catalog) */}
       {activeDomain && (
         <div className="flex items-center gap-1 pt-1.5 pb-0.5 border-t border-zinc-800/50 overflow-x-auto scrollbar-none">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 mr-1.5 flex-shrink-0">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 mr-1.5 flex-shrink-0">
             {activeDomain.label}:
           </span>
           <div className="flex items-center gap-1">
@@ -200,11 +200,11 @@ export function AdminNavBar({ tenantSlug, access, isOwner, pendingVerificationCo
                       : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 border-transparent"
                   )}
                 >
-                  <SubIcon className={cn("size-3", isSubActive ? "text-amber-400" : "text-zinc-500")} />
+                  <SubIcon className={cn("size-3", isSubActive ? "text-amber-400" : "text-zinc-400")} />
                   <span>{sub.label}</span>
-                  {isLocked(sub.feature) && <Lock className="size-3 text-zinc-500" aria-label="Not on your plan" />}
+                  {isLocked(sub.feature) && <Lock className="size-3 text-zinc-400" aria-label="Not on your plan" />}
                   {subBadge !== null && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500 text-black">
+                    <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-amber-500 text-black">
                       {subBadge}
                     </span>
                   )}

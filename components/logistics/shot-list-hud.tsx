@@ -179,7 +179,7 @@ export function ShotListHud({
             <div>
               <h3 className="text-sm font-semibold text-white tracking-tight flex items-center gap-2">
                 <span>Visual Shot List HUD</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono">
                   {completed}/{total} Completed
                 </span>
               </h3>
@@ -205,7 +205,7 @@ export function ShotListHud({
               <div className="text-lg font-bold font-mono text-emerald-400 leading-none">
                 {percentage}%
               </div>
-              <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mt-0.5">
+              <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mt-0.5">
                 Target Progress
               </div>
             </div>
@@ -258,7 +258,7 @@ export function ShotListHud({
         {/* Scene Filter Selector */}
         {scenes.length > 1 && (
           <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-            <Filter className="size-3.5 text-zinc-500" />
+            <Filter className="size-3.5 text-zinc-400" />
             <span>Scene:</span>
             <select
               value={sceneFilter}
@@ -280,12 +280,12 @@ export function ShotListHud({
       <div className="space-y-3">
         {filteredShots.length === 0 ? (
           <div className="text-center py-12 px-4 rounded-xl border border-dashed border-zinc-800 space-y-3">
-            <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-500">
+            <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-400">
               <Film className="size-5" />
             </div>
             <div>
               <p className="text-sm font-medium text-zinc-300">No shots found</p>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-zinc-400 mt-0.5">
                 {total === 0
                   ? "Start planning your scene framing, lens optics, and lighting."
                   : "No shots match the selected filter."}
@@ -357,7 +357,7 @@ export function ShotListHud({
                             type="button"
                             onClick={() => handleOpenEdit(shot)}
                             title="Edit shot specs"
-                            className="p-1 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
+                            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
                           >
                             <Pencil className="size-3.5" />
                           </button>
@@ -365,7 +365,7 @@ export function ShotListHud({
                             type="button"
                             onClick={() => handleDeleteShot(shot)}
                             title="Delete shot"
-                            className="p-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            className="p-1 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
@@ -381,7 +381,7 @@ export function ShotListHud({
                     {/* Technical Lens & Lighting Specs */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
                       <div className="flex items-center gap-1.5 text-zinc-400">
-                        <span className="font-mono text-[11px] text-zinc-500 uppercase">
+                        <span className="font-mono text-[11px] text-zinc-400 uppercase">
                           Lens:
                         </span>
                         <span className="text-zinc-300 font-mono text-[11px]">
@@ -389,7 +389,7 @@ export function ShotListHud({
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-zinc-400">
-                        <span className="font-mono text-[11px] text-zinc-500 uppercase">
+                        <span className="font-mono text-[11px] text-zinc-400 uppercase">
                           Lighting:
                         </span>
                         <span className="text-zinc-300 text-[11px] truncate">
@@ -411,7 +411,7 @@ export function ShotListHud({
                         className={`min-h-[48px] min-w-[48px] px-3.5 py-2.5 rounded-xl text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none active:scale-95 ${
                           isPendingShot
                             ? "bg-zinc-800 text-white border-2 border-zinc-600 shadow-inner"
-                            : "bg-zinc-900 hover:bg-zinc-800/90 text-zinc-500 hover:text-zinc-300 border border-zinc-800"
+                            : "bg-zinc-900 hover:bg-zinc-800/90 text-zinc-400 hover:text-zinc-300 border border-zinc-800"
                         }`}
                       >
                         <Clock className="size-4 shrink-0" />
@@ -427,7 +427,7 @@ export function ShotListHud({
                         className={`min-h-[48px] min-w-[48px] px-3.5 py-2.5 rounded-xl text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none active:scale-95 ${
                           isInProgress
                             ? "bg-amber-500/20 text-amber-300 border-2 border-amber-500 shadow-amber-500/20 shadow-md font-bold"
-                            : "bg-zinc-900 hover:bg-zinc-800/90 text-zinc-500 hover:text-amber-400 border border-zinc-800"
+                            : "bg-zinc-900 hover:bg-zinc-800/90 text-zinc-400 hover:text-amber-400 border border-zinc-800"
                         }`}
                       >
                         <Loader2

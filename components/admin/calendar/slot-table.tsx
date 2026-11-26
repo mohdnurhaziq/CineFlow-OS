@@ -23,6 +23,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatSlotDate, isSlotInPast } from "@/lib/slot-time";
 import { holdIsRunning } from "@/lib/bookings/hold";
 import { errorMessageOf } from "@/lib/action-error";
+import { formatMoney } from "@/lib/money";
 
 interface SlotTableProps {
   slots: BookingSlotRow[];
@@ -153,10 +154,7 @@ export function SlotTable({
   };
 
   const formatPrice = (val: number) => {
-    return `${currency === "MYR" ? "RM" : "$"}${val.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+    return formatMoney(currency, val);
   };
 
   if (slots.length === 0) {
@@ -265,16 +263,19 @@ export function SlotTable({
 
                     {/* Date & Time */}
                     <td className="px-4 py-3 font-sans">
-                      <div className="font-bold text-white text-xs">{dateStr}</div>
-                      <div className="text-[11px] font-mono text-zinc-400 mt-0.5 flex items-center gap-1">
-                        <Clock className="size-3 text-amber-400" />
-                        {slot.startTime} – {slot.endTime}
+                      <div className="font-bold text-white text-xs whitespace-nowrap">{dateStr}</div>
+                      <div className="text-[11px] font-mono text-zinc-400 mt-0.5 flex items-start gap-1">
+                        <Clock className="size-3 mt-0.5 shrink-0 text-amber-400" />
+                        <span className="flex flex-wrap gap-x-1">
+                          <span className="whitespace-nowrap">{slot.startTime} –</span>
+                          <span className="whitespace-nowrap">{slot.endTime}</span>
+                        </span>
                       </div>
                     </td>
 
                     {/* Category */}
-                    <td className="px-4 py-3 font-sans">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700">
+                    <td className="px-4 py-3 font-sans whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-zinc-800 text-zinc-300 border border-zinc-700">
                         {categoryObj?.badgeIcon ? `${categoryObj.badgeIcon} ` : ""}
                         {categoryObj?.name || slot.category}
                       </span>
@@ -296,7 +297,7 @@ export function SlotTable({
                           <div className="text-white font-medium">
                             {slot.booking.sessionPrice != null ? formatPrice(slot.booking.sessionPrice) : "Price not set"}
                           </div>
-                          <div className="text-[10px] text-zinc-500">
+                          <div className="text-[11px] text-zinc-400">
                             Dep: {formatPrice(slot.booking.depositAmount ?? 0)}
                             {slot.booking.packageName ? ` · ${slot.booking.packageName}` : ""}
                           </div>
@@ -304,12 +305,12 @@ export function SlotTable({
                       ) : slot.price > 0 ? (
                         <>
                           <div className="text-white font-medium">{formatPrice(slot.price)}</div>
-                          <div className="text-[10px] text-zinc-500">Dep: {formatPrice(slot.depositRequired)}</div>
+                          <div className="text-[11px] text-zinc-400">Dep: {formatPrice(slot.depositRequired)}</div>
                         </>
                       ) : (
                         <>
                           <div className="text-zinc-300 text-xs">By package</div>
-                          <div className="text-[10px] text-zinc-500">Dep: {formatPrice(slot.depositRequired)} if none</div>
+                          <div className="text-[11px] text-zinc-400">Dep: {formatPrice(slot.depositRequired)} if none</div>
                         </>
                       )}
                     </td>
@@ -317,26 +318,26 @@ export function SlotTable({
                     {/* Status Pill & Details */}
                     <td className="px-4 py-3 font-sans">
                       {slot.status === "AVAILABLE" && pastOpen && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
                           <Clock className="size-3" /> Passed · not booked
                         </span>
                       )}
                       {slot.status === "AVAILABLE" && !pastOpen && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                           <CheckCircle className="size-3" /> Available
                         </span>
                       )}
 
                       {slot.status === "HELD" && (
                         <div className="space-y-1">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
                             <Clock className="size-3" /> Held in Checkout
                           </span>
                           {canManage && (
                             <button
                               type="button"
                               onClick={() => onForceRelease(slot)}
-                              className="block text-[10px] font-mono text-amber-400 hover:underline"
+                              className="block text-[11px] font-mono text-amber-400 hover:underline"
                             >
                               Force release hold
                             </button>
@@ -346,7 +347,7 @@ export function SlotTable({
 
                       {slot.status === "PENDING_VERIFICATION" && (
                         <div className="space-y-0.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
                             Awaiting verification
                           </span>
                           {slot.booking && (
@@ -357,7 +358,7 @@ export function SlotTable({
 
                       {slot.status === "BOOKED" && (
                         <div className="space-y-0.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
                             Booked Session
                           </span>
                           {slot.booking && <BookingClientLink slot={slot} onViewBooking={onViewBooking} />}
@@ -365,7 +366,7 @@ export function SlotTable({
                       )}
 
                       {slot.status === "BLOCKED" && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
                           <Lock className="size-3" /> Blocked / Blackout
                         </span>
                       )}
@@ -473,7 +474,7 @@ function BookingClientLink({
   const name = slot.booking?.clientName;
   const content = (
     <>
-      {withIcon && <User className="size-3 text-zinc-500" />}
+      {withIcon && <User className="size-3 text-zinc-400" />}
       <span>{name}</span>
     </>
   );
