@@ -19,7 +19,7 @@ interface SetupChecklistProps {
 
 const STEP_COPY: Record<SetupStepId, { label: string; hint: string; path: string | null }> = {
   brand: { label: "Brand your studio", hint: "Add your logo so clients recognise you.", path: "settings" },
-  services: { label: "Add your first service and price", hint: "What clients can book, and for how much.", path: "services" },
+  services: { label: "Add your first service and price", hint: "Edit the hidden sample or add your own, then switch it on.", path: "services" },
   availability: { label: "Open your booking times", hint: "Pick the dates and hours clients can book.", path: "calendar" },
   payments: { label: "Set up how clients pay you", hint: "A QR code, bank details or Toyyibpay.", path: "settings" },
   showcase: { label: "Show your best work", hint: "A few projects on your public page.", path: "cms" },

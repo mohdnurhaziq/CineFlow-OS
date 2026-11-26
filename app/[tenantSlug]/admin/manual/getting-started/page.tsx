@@ -202,8 +202,8 @@ export default async function GettingStartedManualPage({ params }: GettingStarte
               <ManualLink href={`${admin}/settings`}>Settings</ManualLink>.
             </>,
             <>
-              <B>Add your first service and price.</B> Create a category and a package in{" "}
-              <ManualLink href={`${admin}/services`}>Services</ManualLink>.
+              <B>Add your first service and price.</B> Your studio starts with one sample package, hidden from clients. In{" "}
+              <ManualLink href={`${admin}/services`}>Services</ManualLink>, edit it or create your own, then switch it on.
             </>,
             <>
               <B>Open your booking times.</B> Add slots in the <ManualLink href={`${admin}/calendar`}>Calendar</ManualLink>.

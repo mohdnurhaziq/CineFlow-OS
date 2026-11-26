@@ -254,7 +254,7 @@ export default async function SettingsManualPage({ params }: SettingsManualPageP
         <ManualList
           items={[
             <>
-              <Ui>Use one sign-in for all your studios</Ui> on your Overview page emails you a link that confirms your email. You
+              <Ui>Confirm your email</Ui> on your Overview page emails you a link that confirms your email. You
               then choose one password for every studio.
             </>,
             <>

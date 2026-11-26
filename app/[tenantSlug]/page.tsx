@@ -9,6 +9,7 @@ import { STAFF_ROLES } from "@/lib/auth/guard";
 import { ShowcaseIntro } from "@/components/showcase/showcase-intro";
 import { ShowcaseShell } from "@/components/showcase/showcase-shell";
 import { ShowcaseFooter } from "@/components/showcase/showcase-footer";
+import { paymentWaysFor } from "@/lib/payments/offered";
 import { studioPath } from "@/lib/domain-name";
 import { printsOffered } from "@/lib/billing/guard";
 import { loadSwitcher } from "@/lib/auth/switcher";
@@ -76,6 +77,13 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
   if (!tenant || tenant.subscriptionStatus === "CANCELLED") {
     notFound();
   }
+
+  // Read apart from `tenant`, which goes to browser components: only yes/no leaves this page.
+  const paymentRow = await db.tenant.findUniqueOrThrow({
+    where: { id: tenant.id },
+    select: { qrCodeUrl: true, bankDetails: true, toyyibpaySecretEnc: true, toyyibpayCategoryCode: true },
+  });
+  const payments = paymentWaysFor(paymentRow);
 
   // 2. Fetch scoped Campaign Categories
   const categories = await db.campaignCategory.findMany({
@@ -200,7 +208,7 @@ export default async function TenantShowcasePage({ params, searchParams }: PageP
       </main>
 
       {/* Showcase Footer */}
-      <ShowcaseFooter tenant={tenant} studioLead={studioLead} />
+      <ShowcaseFooter tenant={tenant} studioLead={studioLead} payments={payments} />
     </div>
   );
 }

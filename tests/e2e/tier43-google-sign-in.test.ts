@@ -702,7 +702,10 @@ export async function runTier43GoogleSignInTests(harness: TestHarness) {
         harness.assert(c3.success === true, "Created", JSON.stringify(c3));
         const joined = await db.user.findUniqueOrThrow({ where: { id: alone.id } });
         harness.assert(joined.loginId !== null && joined.passwordHash === null, "The stand-alone account elsewhere is joined");
-        harness.assertEqual(inbox.filter((m) => m.to === emailC).length, 1, "One joined email");
+        const toOwner = inbox.filter((m) => m.to === emailC);
+        const welcomes = toOwner.filter((m) => /is ready on CineFlow OS/.test(m.subject));
+        harness.assertEqual(welcomes.length, 1, "One welcome email");
+        harness.assertEqual(toOwner.length - welcomes.length, 1, "One joined email");
       });
       // (d) a ticket made by hand for a super-admin's email
       const superRow = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN" } });

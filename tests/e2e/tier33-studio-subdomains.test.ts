@@ -404,7 +404,7 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       visibleNavItems("lumina-cine", FULL_ACCESS, true).flatMap((e) => (e.kind === "group" ? e.items.map((i) => i.href) : [e.href]));
     const pageHrefs = () => [
       ...hrefsOf(renderToStaticMarkup(ShowcaseNav({ tenant }) as Parameters<typeof renderToStaticMarkup>[0])),
-      ...hrefsOf(renderToStaticMarkup(ShowcaseFooter({ tenant }) as Parameters<typeof renderToStaticMarkup>[0])),
+      ...hrefsOf(renderToStaticMarkup(ShowcaseFooter({ tenant, payments: { online: false, qr: false, bank: false } }) as Parameters<typeof renderToStaticMarkup>[0])),
     ];
 
     await withSubdomains(true, () => {

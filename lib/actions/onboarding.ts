@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import type { Login } from "@prisma/client";
 import { verifyLoginPassword } from "@/lib/auth/login";
+import { sendStudioWelcome } from "@/lib/onboarding/welcome";
 import { googleConfigured } from "@/lib/auth/google";
 import { SIGNUP_TICKET, SIGNUP_TICKET_COOKIE, isSuperAdminEmail, loginForGoogle, type SignupTicket } from "@/lib/auth/google-flow";
 import { cookies } from "next/headers";
@@ -177,7 +178,8 @@ export async function onboardStudio(formData: OnboardStudioInput) {
           discipline: data.discipline,
           currency: data.currency,
           tagline: data.tagline || `${data.name} — Creative Production Studio`,
-          bio: data.bio || "Crafting cinematic visuals, authentic emotion, and timeless milestone imagery.",
+          // Left blank, the public page shows no bio: never made-up words under the studio's name.
+          bio: data.bio?.trim() || null,
           brandColor: data.brandColor || "#f59e0b",
           logoUrl: data.logoUrl || null,
           offersPrints: data.offersPrints,
@@ -349,7 +351,7 @@ export async function onboardStudio(formData: OnboardStudioInput) {
         ],
       });
 
-      // 8. Seed Default Starter Service Package
+      // 8. A sample package to edit. Switched off, so clients never see a price the owner didn't set.
       await tx.servicePackage.create({
         data: {
           tenantId: tenant.id,
@@ -362,6 +364,7 @@ export async function onboardStudio(formData: OnboardStudioInput) {
           deliverables: "High-resolution edited masters, private deliverables vault, 50% milestone paywall protection.",
           turnaround: "7 business days",
           isFeatured: true,
+          isActive: false,
         },
       });
 
@@ -371,6 +374,8 @@ export async function onboardStudio(formData: OnboardStudioInput) {
         ownerId: owner.id,
         ownerEmail: owner.email,
         ownerName: owner.name,
+        studioName: tenant.name,
+        trialEndsAt: tenant.trialEndsAt!,
       };
     });
 
@@ -389,6 +394,13 @@ export async function onboardStudio(formData: OnboardStudioInput) {
         tenantSlug: result.slug,
       });
     }
+
+    // Never fails the sign-up. A stand-alone account's email isn't proven yet, so it gets the link.
+    await sendStudioWelcome(
+      { id: result.ownerId, email: result.ownerEmail, name: result.ownerName },
+      { name: result.studioName, slug: result.slug, trialEndsAt: result.trialEndsAt },
+      { confirmEmail: !login }
+    );
 
     return {
       success: true,

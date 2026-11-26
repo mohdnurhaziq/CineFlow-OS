@@ -814,7 +814,7 @@ export default function CreateStudioPage() {
                     {formData.offersPrints !== false && <div>✓ 3 Frame Moldings (Black, Walnut, Gold)</div>}
                     {formData.offersPrints !== false && <div>✓ 3 Wall Print Sizing Specs (8R, 12R, 16R)</div>}
                     <div>✓ 4 Proposal Add-On Templates</div>
-                    <div>✓ 1 Seed Starter Service Package</div>
+                    <div>✓ 1 sample package (hidden until you switch it on)</div>
                     <div>✓ Clash-Free Online Booking Calendar</div>
                   </div>
                 </div>
@@ -936,7 +936,7 @@ export default function CreateStudioPage() {
                 {/* Bio */}
                 <p className="text-xs text-zinc-400 leading-relaxed border-t border-zinc-800/80 pt-3">
                   {formData.bio ||
-                    "Crafting cinematic visuals, authentic emotion, and timeless milestone imagery."}
+                    "Your studio bio will show here. Leave it blank to show none."}
                 </p>
 
                 {/* Sample Action CTA */}

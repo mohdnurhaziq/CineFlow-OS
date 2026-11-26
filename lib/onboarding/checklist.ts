@@ -31,7 +31,8 @@ export async function getSetupChecklist(tenantId: string): Promise<SetupChecklis
       qrCodeUrl: true,
       bankDetails: true,
       toyyibpaySecretEnc: true,
-      _count: { select: { servicePackages: true, bookingSlots: true, showcaseItems: true, clientBookings: true } },
+      // Only packages clients can book count: the sample starts switched off.
+      _count: { select: { servicePackages: { where: { isActive: true } }, bookingSlots: true, showcaseItems: true, clientBookings: true } },
     },
   });
 

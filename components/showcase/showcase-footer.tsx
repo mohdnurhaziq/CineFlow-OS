@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MessageSquare, ShieldCheck, CreditCard, QrCode } from "lucide-react";
 import { disciplineLabel } from "@/lib/labels";
 import { platformUrl, studioPath } from "@/lib/domain-name";
+import type { PaymentWays } from "@/lib/payments/offered";
 
 interface ShowcaseFooterProps {
   tenant: {
@@ -11,6 +12,8 @@ interface ShowcaseFooterProps {
     currency: string;
     brandColor?: string | null;
   };
+  /** The payment ways the studio has set up; the footer names no others. */
+  payments: PaymentWays;
   studioLead?: {
     name: string;
     phone?: string | null;
@@ -18,7 +21,7 @@ interface ShowcaseFooterProps {
   } | null;
 }
 
-export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
+export function ShowcaseFooter({ tenant, studioLead, payments }: ShowcaseFooterProps) {
   const whatsappNumber = studioLead?.phone ? studioLead.phone.replace(/[^0-9]/g, "") : "60123456789";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
     `Hello ${tenant.name}! I have a question regarding bookings and studio rates.`
@@ -57,12 +60,16 @@ export function ShowcaseFooter({ tenant, studioLead }: ShowcaseFooterProps) {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] font-mono text-zinc-400">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="flex items-center gap-1 whitespace-nowrap">
-              <CreditCard className="size-3 text-zinc-500" /> Pay online
-            </span>
-            <span className="flex items-center gap-1 whitespace-nowrap">
-              <QrCode className="size-3 text-zinc-500" /> Pay by QR transfer
-            </span>
+            {payments.online && (
+              <span className="flex items-center gap-1 whitespace-nowrap">
+                <CreditCard className="size-3 text-zinc-500" /> Pay online
+              </span>
+            )}
+            {(payments.qr || payments.bank) && (
+              <span className="flex items-center gap-1 whitespace-nowrap">
+                <QrCode className="size-3 text-zinc-500" /> {payments.qr ? "Pay by QR transfer" : "Pay by bank transfer"}
+              </span>
+            )}
             <span className="flex items-center gap-1 whitespace-nowrap">
               <ShieldCheck className="size-3 text-zinc-500" /> Your private online gallery
             </span>

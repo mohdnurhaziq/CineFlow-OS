@@ -7,8 +7,8 @@ import { sendOneLoginLink } from "@/lib/actions/password-reset";
 const DISMISSED_KEY = "cineflow:one-login-invite-dismissed";
 
 /**
- * A card for a stand-alone account: "use one sign-in for all your studios". Emails a link that
- * proves the email and asks for one password for every studio. Dismissible (remembered in this browser).
+ * A card for a stand-alone account: "confirm your email". Emails a link that proves the email and
+ * sets up one sign-in for every studio. Dismissible (remembered in this browser).
  */
 export function OneLoginInvite() {
   const [hidden, setHidden] = useState(true);
@@ -51,14 +51,14 @@ export function OneLoginInvite() {
   };
 
   return (
-    <section aria-label="Use one sign-in" className="relative rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 pr-11 sm:p-5 sm:pr-12">
+    <section aria-label="Confirm your email" className="relative rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 pr-11 sm:p-5 sm:pr-12">
       <button type="button" onClick={dismiss} aria-label="Dismiss" className="absolute right-2 top-2 rounded-lg p-2 text-zinc-400 hover:text-white">
         <X className="size-4" aria-hidden="true" />
       </button>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-white">Use one sign-in for all your studios</h2>
-          <p className="mt-1 text-xs text-zinc-400">Confirm your email and choose one password for every CineFlow studio you work with or book.</p>
+          <h2 className="text-sm font-semibold text-white">Confirm your email</h2>
+          <p className="mt-1 text-xs text-zinc-400">We&apos;ll email you a link. It also gives you one sign-in for every CineFlow studio you work with or book.</p>
           {error && (
             <p role="alert" className="mt-2 text-xs text-rose-300">
               {error}

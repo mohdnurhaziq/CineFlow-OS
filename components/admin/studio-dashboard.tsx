@@ -23,6 +23,7 @@ import type { StudioAnalyticsData } from "@/lib/analytics/studio-analytics";
 import { conditionLabel, invoiceStatusLabel, milestoneLabel } from "@/lib/labels";
 import { formatCurrency as formatMoneyAmount } from "@/lib/utils";
 import { studioPath } from "@/lib/domain-name";
+import { gearNotes, gearPanelAllClear, revenueNote } from "@/lib/analytics/kpi-notes";
 
 interface StudioDashboardProps {
   data: StudioAnalyticsData;
@@ -36,6 +37,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
   const { sections, tenant, kpis, proposalsSummary, recentInvoices, upcomingCallSheets, gearAlerts } = data;
   const nothingToShow = !sections.money && !sections.work && !sections.gear && !sections.proposals && !sections.shoots;
   const currency = tenant.currency || "USD";
+  const gear = gearNotes({ total: kpis.gearTotalCount, maintenance: kpis.gearMaintenanceCount, utilization: kpis.gearUtilizationRate });
 
   // Same two-decimal money format as Invoices, Clients and Galleries.
   const formatCurrency = (amount: number) => formatMoneyAmount(amount, currency);
@@ -159,7 +161,7 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="size-3.5 text-emerald-400" />
-                <span className="text-emerald-400 font-mono">100% verified</span>
+                <span className={`font-mono ${kpis.totalRevenue > 0 ? "text-emerald-400" : "text-zinc-400"}`}>{revenueNote(kpis.totalRevenue)}</span>
               </div>
               <span className="text-zinc-500 group-hover:text-emerald-400 font-mono text-[11px] flex items-center gap-0.5">
                 View <ChevronRight className="size-3" />
@@ -248,11 +250,9 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
               <span className="text-xs font-mono text-zinc-400">ready to book</span>
             </div>
             <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
-              <span className="text-zinc-400 font-mono whitespace-nowrap">{kpis.gearUtilizationRate}% in use</span>
-              {kpis.gearMaintenanceCount > 0 ? (
-                <span className="text-rose-400 font-mono whitespace-nowrap">{kpis.gearMaintenanceCount} in repair</span>
-              ) : (
-                <span className="text-emerald-400 font-mono whitespace-nowrap">fleet 100% operational</span>
+              <span className="text-zinc-400 font-mono whitespace-nowrap">{gear.use}</span>
+              {gear.condition && (
+                <span className={`font-mono whitespace-nowrap ${gear.repair ? "text-rose-400" : "text-emerald-400"}`}>{gear.condition}</span>
               )}
             </div>
           </div>
@@ -451,8 +451,8 @@ export function StudioDashboard({ data, guide, unassignedUpcoming = 0 }: StudioD
             {gearAlerts.length === 0 ? (
               <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-center">
                 <CheckCircle2 className="size-5 text-emerald-400 mx-auto mb-1" />
-                <div className="text-xs font-medium text-emerald-300">All Equipment Operational</div>
-                <div className="text-[11px] text-zinc-400 mt-0.5">Zero items quarantined or under repair</div>
+                <div className="text-xs font-medium text-emerald-300">{gearPanelAllClear(kpis.gearTotalCount).title}</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">{gearPanelAllClear(kpis.gearTotalCount).detail}</div>
               </div>
             ) : (
               <div className="space-y-2">

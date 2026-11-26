@@ -19,6 +19,7 @@ export type NotificationEvent =
   | "PASSWORD_RESET"
   | "TEAM_INVITE"
   | "ONE_LOGIN_CONFIRM"
+  | "STUDIO_WELCOME"
   | "SHOOT_ASSIGNED"
   | "SHOOT_CHANGED";
 
@@ -167,6 +168,23 @@ export interface OneLoginConfirmPayload {
   expiresMinutes: number;
 }
 
+/** To a new studio owner. With confirmUrl it carries a one-time link (a credential: email only, never logged). */
+export interface StudioWelcomePayload {
+  event: "STUDIO_WELCOME";
+  studioName: string;
+  studioSlug: string;
+  /** The owner. */
+  clientName: string;
+  clientEmail: string;
+  clientPhone?: undefined;
+  adminUrl: string;
+  bookingUrl: string;
+  trialEndsOn: string;
+  /** Only for an email that isn't proven yet. */
+  confirmUrl?: string;
+  confirmExpiresMinutes: number;
+}
+
 /** A studio added someone to its team: a set-password link (a credential: email only, never logged). */
 export interface TeamInvitePayload {
   event: "TEAM_INVITE";
@@ -231,6 +249,7 @@ export type NotificationPayload =
   | StudioUpdatePayload
   | PasswordResetPayload
   | OneLoginConfirmPayload
+  | StudioWelcomePayload
   | TeamInvitePayload
   | ShootAssignedPayload
   | ShootChangedPayload;
@@ -270,6 +289,13 @@ function esc(value: unknown): string {
 }
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+
+/** How the kept log names an email whose body it must not keep. */
+const REDACTED_AS: Partial<Record<string, string>> = {
+  TEAM_INVITE: "team invite",
+  ONE_LOGIN_CONFIRM: "one sign-in link",
+  STUDIO_WELCOME: "studio welcome",
+};
 
 /** Resend's sender when RESEND_FROM_EMAIL isn't set. */
 const DEFAULT_RESEND_FROM = "CineFlow OS <onboarding@resend.dev>";
@@ -682,6 +708,29 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
       whatsappText = "";
       break;
     }
+    case "STUDIO_WELCOME": {
+      emailSubject = `${payload.studioName} is ready on CineFlow OS`;
+      const button = (url: string, label: string) =>
+        `<div style="text-align: center; margin: 24px 0;"><a href="${esc(url)}" style="display: inline-block; padding: 14px 28px; background-color: #f59e0b; color: #000000; font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 14px;">${label}</a></div>`;
+      bodyHtml = `
+        <p>Hi <strong>${esc(payload.clientName)}</strong>,</p>
+        <p>Your studio <strong>${esc(payload.studioName)}</strong> is ready. Your free trial runs until <strong>${esc(payload.trialEndsOn)}</strong>.</p>
+        ${button(payload.adminUrl, "Open my studio admin")}
+        <p>Your booking page, to share with clients once your packages and times are set up:<br><a href="${esc(payload.bookingUrl)}" style="color: #f59e0b;">${esc(payload.bookingUrl)}</a></p>
+        ${
+          payload.confirmUrl
+            ? `<p>Please also confirm this is your email. It lets you use one sign-in for every CineFlow studio you work with or book. The link asks you to set the password for that sign-in; it can be the same one you just chose.</p>
+        ${button(payload.confirmUrl, "Confirm my email")}
+        <p style="font-size: 12px; color: #a1a1aa;">The confirm link works once and expires in ${esc(payload.confirmExpiresMinutes)} minutes. You can ask for a new one from your studio's Overview page.</p>`
+            : ""
+        }
+        <p style="font-size: 12px; color: #a1a1aa;">If you didn't create this studio, don't open the links. You can ignore this email.</p>
+      `;
+      emailText = `Your studio ${payload.studioName} is ready. Free trial until ${payload.trialEndsOn}.\nStudio admin: ${payload.adminUrl}\nBooking page: ${payload.bookingUrl}${payload.confirmUrl ? `\nConfirm your email (works once, expires in ${payload.confirmExpiresMinutes} minutes): ${payload.confirmUrl}` : ""}\nIf you didn't create this studio, ignore this email.`;
+      // Deliberately no WhatsApp text: it can carry a one-time link.
+      whatsappText = "";
+      break;
+    }
     case "TEAM_INVITE": {
       emailSubject = `You're invited to join ${payload.studioName} on CineFlow`;
       bodyHtml = `
@@ -763,7 +812,8 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
     emailText += `\n\nNot in your calendar yet? Add it to Google Calendar: ${calendar.googleUrl} or open the attached invite.ics (Outlook, Apple Calendar). A copy added from the link won't update by itself; we'll email you if anything changes.`;
   }
 
-  const emailHtml = wrapEmailTemplate(payload.studioName, emailSubject, bodyHtml);
+  const senderName = payload.event === "STUDIO_WELCOME" ? "CineFlow OS" : payload.studioName;
+  const emailHtml = wrapEmailTemplate(senderName, emailSubject, bodyHtml);
   let whatsappUrl: string | undefined;
 
   if (recipientPhone && (channel === "WHATSAPP" || channel === "BOTH")) {
@@ -774,7 +824,7 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
   const wantsEmail = channel === "EMAIL" || channel === "BOTH";
   const delivery =
     wantsEmail && recipientEmail
-      ? await deliverEmail({ to: recipientEmail, subject: emailSubject, html: emailHtml, text: emailText, fromName: payload.studioName, calendar })
+      ? await deliverEmail({ to: recipientEmail, subject: emailSubject, html: emailHtml, text: emailText, fromName: senderName, calendar })
       : { delivery: "SKIPPED" as const };
 
   const result: NotificationResult = {
@@ -796,11 +846,11 @@ Hi ${payload.clientName}, we've uploaded ${what} for *${payload.projectTitle}*. 
 
   // The log keeps recent sends for auditing; reset and invite links are credentials, so never keep them.
   notificationLog.push(
-    payload.event === "PASSWORD_RESET" || payload.event === "TEAM_INVITE" || payload.event === "ONE_LOGIN_CONFIRM"
+    payload.event === "PASSWORD_RESET" || payload.event === "TEAM_INVITE" || payload.event === "ONE_LOGIN_CONFIRM" || payload.event === "STUDIO_WELCOME"
       ? {
           ...result,
-          emailHtml: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : payload.event === "ONE_LOGIN_CONFIRM" ? "one sign-in link" : "password reset"}]`,
-          emailText: `[redacted: ${payload.event === "TEAM_INVITE" ? "team invite" : payload.event === "ONE_LOGIN_CONFIRM" ? "one sign-in link" : "password reset"}]`,
+          emailHtml: `[redacted: ${REDACTED_AS[payload.event] ?? "password reset"}]`,
+          emailText: `[redacted: ${REDACTED_AS[payload.event] ?? "password reset"}]`,
           whatsappMessage: undefined,
         }
       : result
