@@ -524,6 +524,7 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       NEXT_PUBLIC_APP_DOMAIN: "cineflow-os.app",
       NEXT_PUBLIC_STUDIO_SUBDOMAINS: "true",
       RESEND_API_KEY: "re_123",
+      RESEND_FROM_EMAIL: "CineFlow OS <hello@cineflow-os.app>",
     };
     harness.assertDeepEqual(productionSettingProblems(good), [], "Domain and address agree: fine");
     harness.assertDeepEqual(productionSettingProblems({ ...good, NEXT_PUBLIC_APP_DOMAIN: "www.cineflow-os.app" }), [], "A www. form is the same domain");
@@ -597,6 +598,7 @@ export async function runTier33StudioSubdomainsTests(harness: TestHarness) {
       AUTH_SECRET: "k".repeat(20) + "Q9".repeat(10),
       NEXT_PUBLIC_STUDIO_SUBDOMAINS: "true",
       RESEND_API_KEY: "re_123",
+      RESEND_FROM_EMAIL: "CineFlow OS <hello@cineflow-os.app>",
     };
     const check = (url: string, domain: string) => productionSettingProblems({ ...base, NEXT_PUBLIC_APP_URL: url, NEXT_PUBLIC_APP_DOMAIN: domain });
     harness.assertDeepEqual(check("https://cineflow-os.app", "cineflow-os.app"), [], "Bare domain: fine");

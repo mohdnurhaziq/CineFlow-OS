@@ -10,6 +10,7 @@ import { studioLink } from "@/lib/domain-name";
 import { ManageStudioPanel } from "@/components/super-admin/manage-studio-panel";
 import { InviteRequestsPanel } from "@/components/super-admin/invite-requests-panel";
 import type { InviteRequestRow } from "@/lib/actions/invite-requests";
+import type { HealthItem, HealthState } from "@/lib/ops/system-health";
 
 export interface TenantSummaryItem {
   id: string;
@@ -42,7 +43,15 @@ interface SuperAdminViewProps {
   metrics: PlatformMetrics;
   tenants: TenantSummaryItem[];
   invites?: InviteRequestRow[];
+  /** Plain lines about this copy of the app (backups, email, database). Left out: no card. */
+  health?: HealthItem[];
 }
+
+const HEALTH_STYLE: Record<HealthState, { word: string; chip: string }> = {
+  ok: { word: "OK", chip: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30" },
+  warn: { word: "Needs attention", chip: "bg-amber-500/10 text-amber-300 border-amber-500/40" },
+  info: { word: "Note", chip: "bg-zinc-800 text-zinc-300 border-zinc-700" },
+};
 
 const STATE_STYLE: Record<PlanState, { label: string; chip: string }> = {
   TRIAL: { label: "Trial", chip: "bg-sky-500/10 text-sky-300 border-sky-500/30" },
@@ -67,7 +76,7 @@ function dateLine(t: TenantSummaryItem): string {
   return t.endsOn ? `Paid until ${day(t.endsOn)}` : "No end date";
 }
 
-export function SuperAdminView({ metrics, tenants, invites = [] }: SuperAdminViewProps) {
+export function SuperAdminView({ metrics, tenants, invites = [], health }: SuperAdminViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<"ALL" | PlanState>("ALL");
   const [managingId, setManagingId] = useState<string | null>(null);
@@ -137,6 +146,25 @@ export function SuperAdminView({ metrics, tenants, invites = [] }: SuperAdminVie
             </p>
           </div>
         </section>
+
+        {health && health.length > 0 && (
+          <section aria-labelledby="system-health-h" className="rounded-xl border border-zinc-800 bg-[#121215] p-5">
+            <h2 id="system-health-h" className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+              System health
+            </h2>
+            <ul className="mt-3 divide-y divide-zinc-800">
+              {health.map((h) => (
+                <li key={h.key} className="grid gap-1 py-3 sm:grid-cols-[9rem_9rem_1fr] sm:items-baseline sm:gap-4">
+                  <span className="text-sm font-medium text-white">{h.label}</span>
+                  <span className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider ${HEALTH_STYLE[h.state].chip}`}>
+                    {HEALTH_STYLE[h.state].word}
+                  </span>
+                  <span className="text-sm text-zinc-300">{h.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section aria-label="Studios" className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">

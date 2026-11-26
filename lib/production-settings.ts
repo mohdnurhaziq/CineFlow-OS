@@ -33,6 +33,68 @@ export function isLiveAddress(appUrl: string | undefined): boolean {
   return url.protocol === "https:" && !LOCAL_HOSTS.has(host) && !isPlaceholderHost(host);
 }
 
+/** The address inside "Name <addr>", or a bare address; null when it isn't one. */
+export function senderAddress(from: string | undefined): string | null {
+  const text = (from ?? "").trim();
+  const inside = /<([^<>]+)>\s*$/.exec(text);
+  const addr = (inside?.[1] ?? text).trim();
+  return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(addr) ? addr : null;
+}
+
+export interface EmailSetup {
+  /** How the app sends: SMTP, Resend, a local test inbox, or nothing. */
+  kind: "smtp" | "resend" | "test-inbox" | "none";
+  /** What it is, in words, for the super-admin's health card. */
+  summary: string;
+  /** Why real people would not get email with these settings; null when they would. */
+  problem: string | null;
+}
+
+/**
+ * Where the app's email goes with these settings, the way lib/notifications.ts picks it: SMTP
+ * first, then Resend. Resend without a sender on your own domain falls back to Resend's test
+ * sender, which only delivers to the Resend account's owner, so it counts as a problem.
+ */
+export function emailSetup(env: Record<string, string | undefined> = process.env): EmailSetup {
+  const smtp = smtpConfigFromEnv(env as NodeJS.ProcessEnv);
+  const resend = Boolean(env.RESEND_API_KEY?.trim());
+  if (smtp && LOCAL_HOSTS.has(smtp.host.toLowerCase())) {
+    return {
+      kind: "test-inbox",
+      summary: `A test inbox (${smtp.host}): nothing is delivered to real people`,
+      problem: `SMTP_HOST is "${smtp.host}", a test inbox: emails would never reach anyone. Set a real email service.`,
+    };
+  }
+  if (smtp) return { kind: "smtp", summary: `SMTP through ${smtp.host}`, problem: null };
+  if (!resend) {
+    return {
+      kind: "none",
+      summary: "Not set up: no email is sent",
+      problem: "No email is set up: add SMTP settings (SMTP_HOST, SMTP_USER, SMTP_PASS) or RESEND_API_KEY.",
+    };
+  }
+  const raw = env.RESEND_FROM_EMAIL?.trim() ?? "";
+  const addr = senderAddress(raw);
+  const host = addr ? addr.slice(addr.lastIndexOf("@") + 1).toLowerCase() : "";
+  if (!addr) {
+    return {
+      kind: "resend",
+      summary: raw ? `Resend, but the sender "${raw}" isn't an address` : "Resend, with no sender set: only the Resend account owner would get email",
+      problem: raw
+        ? `RESEND_FROM_EMAIL ("${raw}") isn't an email address. Use something like "CineFlow OS <hello@your-domain>".`
+        : 'RESEND_FROM_EMAIL is missing. Without it Resend only delivers to your own address, so clients would get nothing. Set it to an address on your verified domain, like "CineFlow OS <hello@your-domain>".',
+    };
+  }
+  if (host === "resend.dev" || host.endsWith(".resend.dev") || isPlaceholderHost(host)) {
+    return {
+      kind: "resend",
+      summary: `Resend, sending as ${addr}: a test address that only reaches the account owner`,
+      problem: `RESEND_FROM_EMAIL (${addr}) is a test address, so clients would get nothing. Use an address on your verified domain.`,
+    };
+  }
+  return { kind: "resend", summary: `Resend, sending as ${addr}`, problem: null };
+}
+
 export function productionSettingProblems(env: Record<string, string | undefined> = process.env): string[] {
   const problems: string[] = [];
 
@@ -75,13 +137,8 @@ export function productionSettingProblems(env: Record<string, string | undefined
     }
   }
 
-  const smtp = smtpConfigFromEnv(env as NodeJS.ProcessEnv);
-  const resend = Boolean(env.RESEND_API_KEY?.trim());
-  if (smtp && LOCAL_HOSTS.has(smtp.host.toLowerCase())) {
-    problems.push(`SMTP_HOST is "${smtp.host}", a test inbox: emails would never reach anyone. Set a real email service.`);
-  } else if (!smtp && !resend) {
-    problems.push("No email is set up: add SMTP settings (SMTP_HOST, SMTP_USER, SMTP_PASS) or RESEND_API_KEY.");
-  }
+  const email = emailSetup(env);
+  if (email.problem) problems.push(email.problem);
 
   if (/(^|\/\/)dev\.toyyibpay\.com/i.test(env.TOYYIBPAY_BASE_URL?.trim() ?? "")) {
     problems.push("TOYYIBPAY_BASE_URL is the Toyyibpay sandbox, so payments wouldn't be real. Remove it.");

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPlatformMetrics, getAllTenantsSummary } from "@/lib/actions/super-admin";
 import { listInviteRequests } from "@/lib/actions/invite-requests";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getSystemHealth } from "@/lib/ops/system-health";
 import { SuperAdminView } from "@/components/super-admin/super-admin-view";
 
 export const dynamic = "force-dynamic";
@@ -17,11 +18,12 @@ export default async function SuperAdminPage() {
   const session = await getCurrentUser();
   if (session?.role !== "SUPER_ADMIN") notFound();
 
-  const [metrics, tenants, invites] = await Promise.all([
+  const [metrics, tenants, invites, health] = await Promise.all([
     getPlatformMetrics(),
     getAllTenantsSummary(),
     listInviteRequests(),
+    getSystemHealth(),
   ]);
 
-  return <SuperAdminView metrics={metrics} tenants={tenants} invites={invites} />;
+  return <SuperAdminView metrics={metrics} tenants={tenants} invites={invites} health={health} />;
 }

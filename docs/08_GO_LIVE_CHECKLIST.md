@@ -51,7 +51,7 @@ setting. Never commit the real `.env`.
 | `NEXT_PUBLIC_APP_DOMAIN` | `cineflow-os.my` |
 | `NEXT_PUBLIC_STUDIO_SUBDOMAINS` | `true` |
 | `STUDIO_SIGNUP_CODE` | A long random code you give to invited studios. Empty means sign-up is closed. |
-| Email (pick one) | **Resend** (the domain is already verified in DNS): `RESEND_API_KEY=` and `RESEND_FROM_EMAIL="CineFlow OS <hello@cineflow-os.my>"`. Or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`). Production will not start without one. |
+| Email (pick one) | **Resend** (the domain is already verified in DNS): `RESEND_API_KEY=` and `RESEND_FROM_EMAIL="CineFlow OS <hello@cineflow-os.my>"`. Or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`). Production will not start without one, and with Resend it also refuses to start if `RESEND_FROM_EMAIL` is missing or is a test address (`resend.dev`, `example.com`), because clients would get nothing. |
 | `PLATFORM_CONTACT_EMAIL` | Optional. Defaults to `hello@cineflow-os.my`, which is what the landing page, Privacy Policy and Terms show. |
 | `BACKUP_DIR` | Point it inside a Google Drive or OneDrive folder so a copy leaves the PC. |
 
@@ -148,7 +148,19 @@ On **staging** first (`https://staging.cineflow-os.my`), then on **production**.
 - [ ] A studio owner sees the admin tour on first sign-in. A client sees the client tour.
 - [ ] On staging and production: `node scripts/ops.mjs email-report`. It only reads. It should say "Nothing to clean up"; if it lists duplicates, tell Claude before any change.
 - [ ] Production only: `node scripts/ops.mjs test-alert` emails every super-admin within a minute.
+- [ ] Production only: sign in at `/super-admin/login`. The **System health** card shows Email as OK with `hello@cineflow-os.my`, and Backups as OK once the first nightly backup has run (run `node scripts/ops.mjs backup now` to see it straight away). "Needs attention" says what to fix.
 - [ ] Production only: UptimeRobot monitor on `https://cineflow-os.my/api/health` (every 5 minutes).
+
+---
+
+## 6b. Watching the system after go-live
+
+The super-admin console (`/super-admin`) is for the business: studios, plans, payments and invite
+requests, plus a **System health** card (app version, database, email setup, last backup). It is
+not a server monitor, so also use:
+
+- the UptimeRobot monitor on `/api/health` (tells you the site is down);
+- the backup and disk alert emails, which go to every super-admin (use an inbox you read daily).
 
 ---
 

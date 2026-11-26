@@ -40,6 +40,7 @@ services:
       - cineflow-data:/app/data              # SQLite database
       - cineflow-uploads:/app/public/uploads # user uploads (logos, previews…)
       - cineflow-storage:/app/storage        # private deliverable masters
+      - ${BACKUP_DIR:-./backups}:/backups:ro # backups, read-only: the super-admin's health card shows the last one
 
   # Test mail catcher (profile "mail": dev and staging): accepts every email the app sends and
   # shows it in a web inbox at http://localhost:${MAILPIT_PORT}. It never delivers to real

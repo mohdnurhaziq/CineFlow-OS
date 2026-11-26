@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "app/(saas)/super-admin/page.tsx": {
-    "mtime": 1795517773.2063537,
-    "seen": 1795544287.5026588,
-    "ast_hash": "6e9c27f48a388e53b2c67345110fb6ef",
+    "mtime": 1795709082.482423,
+    "seen": 1795709798.1378176,
+    "ast_hash": "4c19cc7114eb2c2f371b923ecc22b1ed",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/calendar/page.tsx": {
@@ -810,9 +810,9 @@
     "semantic_hash": ""
   },
   "components/super-admin/super-admin-view.tsx": {
-    "mtime": 1795517773.2363062,
-    "seen": 1795544287.5822587,
-    "ast_hash": "853c2268e1a364a3e5eab40d8b713e1d",
+    "mtime": 1795709082.4814255,
+    "seen": 1795709798.2142863,
+    "ast_hash": "c0647a53f9d9e5297b6886602550c753",
     "semantic_hash": ""
   },
   "components/ui/badge.tsx": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/runner.ts": {
-    "mtime": 1795669688.3532991,
-    "seen": 1795672087.0349143,
-    "ast_hash": "e5ef2fc1b7c49396bfbccd0dc940d8fb",
+    "mtime": 1795709082.4854572,
+    "seen": 1795709798.30202,
+    "ast_hash": "99cd05998aec4d9018e56c71954a2150",
     "semantic_hash": ""
   },
   "tests/e2e/test-harness.ts": {
@@ -2676,9 +2676,9 @@
     "semantic_hash": ""
   },
   "docker-compose.yml": {
-    "mtime": 1795112034.1856966,
-    "seen": 1795148239.2161686,
-    "ast_hash": "f526962574510805d34a567d5cbe55bb",
+    "mtime": 1795709082.4834242,
+    "seen": 1795709798.2210734,
+    "ast_hash": "3610a24ee700b8f2182c19f3ab2b29e6",
     "semantic_hash": ""
   },
   "app/[tenantSlug]/admin/bookings/[bookingId]/page.tsx": {
@@ -3744,9 +3744,9 @@
     "semantic_hash": ""
   },
   "lib/production-settings.ts": {
-    "mtime": 1795112034.237325,
-    "seen": 1795148239.2349248,
-    "ast_hash": "6ba3dd3d6870d46bffb08cf7bcae01a0",
+    "mtime": 1795708998.825873,
+    "seen": 1795709798.274535,
+    "ast_hash": "daae3078e58dc1572e06524b7ca44d44",
     "semantic_hash": ""
   },
   "scripts/check-migrations.mjs": {
@@ -3786,9 +3786,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier30-environments.test.ts": {
-    "mtime": 1795510886.1529195,
-    "seen": 1795544287.6612809,
-    "ast_hash": "15588e5772f160f6e6562a7c95d31e84",
+    "mtime": 1795708918.773555,
+    "seen": 1795709798.3088717,
+    "ast_hash": "b4efc15b550cb1233d24b12b057c031a",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-18-environments.md": {
@@ -3858,9 +3858,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/tier33-studio-subdomains.test.ts": {
-    "mtime": 1795635905.8882997,
-    "seen": 1795636201.9528308,
-    "ast_hash": "0075f68fa45f560d1e699508f1451aed",
+    "mtime": 1795709303.714599,
+    "seen": 1795709798.3092644,
+    "ast_hash": "a6565cfef58022d9035a2e9eae4a0e54",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-19-studio-subdomains.md": {
@@ -4854,15 +4854,33 @@
     "semantic_hash": ""
   },
   "docs/08_GO_LIVE_CHECKLIST.md": {
-    "mtime": 1795670205.851325,
-    "seen": 1795672087.0850437,
-    "ast_hash": "187a504776d8662e5f32628c61ea2982",
+    "mtime": 1795709175.0013845,
+    "seen": 1795709798.3518367,
+    "ast_hash": "84b1d0cf8176b3c7cf4d793911f7c48f",
     "semantic_hash": ""
   },
   "docs/AUDIT_2026-11-26.md": {
     "mtime": 1795670205.851325,
     "seen": 1795672087.085411,
     "ast_hash": "717560638ccc79dd0a6130a43332b252",
+    "semantic_hash": ""
+  },
+  "lib/ops/system-health.ts": {
+    "mtime": 1795709157.9020896,
+    "seen": 1795709798.2679539,
+    "ast_hash": "77d0c25e8a14983bc856c664f83d9aeb",
+    "semantic_hash": ""
+  },
+  "tests/e2e/.t46-only.ts": {
+    "mtime": 1795709048.694017,
+    "seen": 1795709798.300042,
+    "ast_hash": "e7dd04f2414e7ec6b4450263d4da9e84",
+    "semantic_hash": ""
+  },
+  "tests/e2e/tier46-system-health.test.ts": {
+    "mtime": 1795709133.3398323,
+    "seen": 1795709798.312031,
+    "ast_hash": "0e19e9ffdfb04376b7488abd7eb5955a",
     "semantic_hash": ""
   },
   "pnpm-lock.yaml": {

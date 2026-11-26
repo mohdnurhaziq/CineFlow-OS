@@ -197,10 +197,41 @@ export async function runTier30EnvironmentsTests(harness: TestHarness) {
   await harness.test("T30-ENV-02: safe production settings pass", async () => {
     harness.assertDeepEqual(productionSettingProblems(goodProduction), [], "No problems");
     harness.assertDeepEqual(
-      problemsWith({ RESEND_API_KEY: "re_123" }, ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"]),
+      problemsWith({ RESEND_API_KEY: "re_123", RESEND_FROM_EMAIL: "CineFlow OS <hello@cineflow-os.my>" }, ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"]),
       [],
-      "Resend alone is real email"
+      "Resend with a sender on your own domain is real email"
     );
+    harness.assertDeepEqual(
+      problemsWith({ RESEND_API_KEY: "re_123", RESEND_FROM_EMAIL: "hello@cineflow-os.my" }, ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"]),
+      [],
+      "A bare sender address works too"
+    );
+    harness.assertDeepEqual(
+      problemsWith({ RESEND_API_KEY: "re_123" }),
+      [],
+      "With real SMTP set, SMTP sends the email, so Resend's sender doesn't matter"
+    );
+  });
+
+  await harness.test("T30-ENV-02b: Resend without a sender on your own domain is refused", async () => {
+    const noSmtp = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"];
+    const cases: Array<[string, string | undefined]> = [
+      ["no sender at all (Resend's test sender only reaches the account owner)", undefined],
+      ["an empty sender", "   "],
+      ["Resend's own test sender", "CineFlow OS <onboarding@resend.dev>"],
+      ["a bare resend.dev address", "onboarding@resend.dev"],
+      ["the example address from .env.production.example", "CineFlow OS <noreply@example.com>"],
+      ["something that isn't an address", "hello"],
+    ];
+    for (const [label, from] of cases) {
+      const problems = problemsWith({ RESEND_API_KEY: "re_123", RESEND_FROM_EMAIL: from }, noSmtp);
+      harness.assertEqual(problems.length, 1, `${label}: one problem`);
+      harness.assert((problems[0] ?? "").includes("RESEND_FROM_EMAIL"), `${label}: names RESEND_FROM_EMAIL`, problems[0]);
+    }
+    // A test inbox for SMTP stays one problem (the SMTP one), not two.
+    const mailpit = problemsWith({ SMTP_HOST: "mailpit", RESEND_API_KEY: "re_123" }, ["SMTP_USER", "SMTP_PASS"]);
+    harness.assertEqual(mailpit.length, 1, "Mailpit plus a bare Resend key: only the SMTP problem is named");
+    harness.assert((mailpit[0] ?? "").includes("SMTP_HOST"), "...and it names SMTP_HOST");
   });
 
   await harness.test("T30-ENV-03: each unsafe production setting is named", async () => {
